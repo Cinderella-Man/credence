@@ -108,13 +108,15 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   any resume is invalid until the dataset repo is pinned back to its
   run-contemporaneous commit (`git rev-list -1 --before="2026-07-06" HEAD` in
   `elixir-sft-dataset`) or indices become content-addressed.
-- [ ] **B5. Minimum in-loop gates: T4.2 (c) and (d)** [H]. (c) require the
-  classifier to quote the verbatim offending line from the `credence_fix`
-  trace — the `Spec` struct has no field that could even carry it
-  (`classify.ex:152-172`, `spec.ex:18-28`); (d) mechanically validate the
-  repro against the accused rule before booking a BUGFIX (rows 40/50/59 were
-  live over-fires talked away exactly here). Strongly recommended alongside:
-  **T2.3** — see C1.
+- [ ] **B5. Minimum in-loop gate residue: T4.2 (c)** [H]. **(d) is DONE**
+  (harness `3f7e64a` + credence `6b64aba`): a BUGFIX report whose repro does not
+  make the accused rule fire now fails classification, via the new
+  `mix credence.fires <rule>` probe. Note it is inert until B2 — the sister
+  clone has no such task yet, and a clone without it answers `:unknown`, which
+  passes by design. **(c) remains**: require the classifier to quote the
+  verbatim offending line from the `credence_fix` trace. The `Spec` struct
+  (`spec.ex:18-28`) has no field that could carry it, so this is a parser +
+  prompt + validator change, not just a check.
 - [ ] **B6. Secrets, endpoint, spend.** `config/secrets.exs` now exists with
   all three key groups, but the Mimo console cookie expires by design —
   validate with `mix cev.budget`. The solve stage points at
