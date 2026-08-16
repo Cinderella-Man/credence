@@ -1246,10 +1246,22 @@ its own tests run under real `mix test`.
   unattributed. Each: read the rule, declare `unsafe_in_dsl/0` or earn
   `@verified_dsl_safe` with a written reason; ledger shrinks; delete the sweep
   tooling when empty (docs/19 §3).
-- [ ] **T5.2 [C] C13(b) paydown.** Ranked order is the budget file itself:
-  `prefer_heredoc_for_multi_line_doc` (1,298 = 20%) first — narrow, demote
-  behind an opt-in, or retire; `prefer_erlang_float` taste-review (37 gold
-  findings); run `corpus_whitelist_validator` on a cadence.
+- [ ] **T5.2 [C] C13(b) paydown — the stated action is REFUTED; see STATUS.md D4.**
+  This item said *"`prefer_heredoc_for_multi_line_doc` (1,298 = 20%) first —
+  narrow, demote behind an opt-in, or retire"*, inheriting C13's argument that
+  *"a rule that fires thousands of times on idiomatic production code is a style
+  rule"*. **Measured 2026-08-16: the premise is false.** All **1,298** of that
+  rule's accepted findings, and all **167** of `no_trailing_newline_in_doc`'s,
+  are inside `lib/generated/` — two projects, 202 files. Outside generated code
+  both rules fire **zero** times across ~19,400 hand-written `.ex` files. All
+  three proposed actions would be acting on a measurement artifact: nobody had
+  read a path, only a count.
+
+  What remains here is a corpus-composition question, not a rule question, and
+  it is framed for decision in `STATUS.md` **D4**. The `prefer_erlang_float`
+  taste review and the `corpus_whitelist_validator` cadence run are unaffected
+  and still open.
+
 - [ ] **T5.3 [C] C15 rule-card template + intent line** — one-sentence intent
   first (feeds the dedup index that T2.2's H8 consumes), Bad/Good, safety
   argument; enforce via meta-test; backfill mechanically. Directly improves

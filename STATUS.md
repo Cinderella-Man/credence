@@ -230,12 +230,47 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   other flagged rules needed a bare-expression fixture added before that gate
   could see them at all.
 
-- [ ] **D4. T5.2 — C13(b) paydown**: `prefer_heredoc_for_multi_line_doc`
-  holds 1,298 of 6,366 accepted findings (20%) — narrow, demote, or retire;
-  `prefer_erlang_float` taste review (37 gold findings); re-run
-  `corpus_whitelist_validator` — its local snapshot is the stale 2026-07-03
-  7,113-row copy vs the live 6,155-row whitelist, so the current whitelist has
-  **never** been validated.
+- [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
+
+  **Measured, and it kills the item's stated action.** T5.2 said to narrow,
+  demote or retire `prefer_heredoc_for_multi_line_doc` because it holds 1,298 of
+  6,366 accepted findings (20%). Reading the *paths* rather than the count:
+  **1,298 of 1,298** of its findings, and **167 of 167** of
+  `no_trailing_newline_in_doc`'s, are inside `lib/generated/` — 2% of the corpus
+  (426 files, two projects) carrying **24% of the entire debt**. Outside
+  generated code both rules fire **zero** times across ~19,400 hand-written
+  files. The rule is not a style rule firing on idiomatic code; it is a rule
+  that found exactly its documented target (machine-emitted Python-style
+  docstrings) and nothing else. Do not narrow, demote or retire it.
+
+  **THE DECISION — corpus composition, and it is genuinely yours.** Add
+  `"/generated/"` to `@excluded_segments` (`lib/credence/corpus.ex:697`, beside
+  `/deps/`, `/test/`, `/node_modules/`) and re-pin, or leave it.
+  * *For:* the corpus's own premise is "well-reviewed code, Credence should find
+    nothing", and generated output is reviewed at its generator, never at its
+    output. One deletions-only diff removes 1,466 findings, and the budget
+    gate's invariant 4 then **permanently retires two of the fifteen
+    grandfathered rows** — they can never exceed the cap again without a
+    deliberate re-grandfathering.
+  * *Against, and this is the strong half:* generated-ness is not what causes
+    the noise — **one template decision replicated across 202 files** is.
+    `lexical`'s 221 generated files produce zero findings. So the path predicate
+    is 100% precise on *this* corpus and is still a proxy. It is also incomplete
+    the other way: `date_time_parser/lib/combinators.ex` is machine-generated,
+    carries ~161 findings, and no `/generated/` segment can see it. And after
+    the exclusion all three affected rules have **zero corpus evidence in either
+    direction** — `--only-rule` would answer "clean" from having scanned
+    nothing, which is the vacuous answer the corpus gates exist to prevent.
+  * *If you take it:* the corpus is local (1 GB, 500 entries) so
+    `mix credence.corpus --update-snapshot --update-budget` needs no fetch, and
+    the two grandfathered rows must come off `findings_budget_test.exs` in the
+    same commit or the gate fails on invariant 4.
+
+  **Not decisions, still open:** the `prefer_erlang_float` taste review (37 gold
+  findings), and running `corpus_whitelist_validator` on its cadence — its local
+  snapshot is the stale 2026-07-03 copy (7,113 rows) against a live 6,155-row
+  whitelist, so the current whitelist has never been validated.
+
 - [ ] **D5. C15 — backfill `## Bad`/`## Good` on Pattern and Semantic.** The
   gate landed (`test/rule_card_test.exs`, Rule Standard requirement 6) and
   covers the two parts that were cheap or load-bearing:
