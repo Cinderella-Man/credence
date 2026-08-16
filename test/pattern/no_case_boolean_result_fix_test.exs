@@ -131,4 +131,28 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       confirm_fix(fix(NoCaseBooleanResult, code), code)
     end
   end
+
+  # ── An EMBEDDABLE fixture, for `test/dsl_macro_protection_test.exs`. ──
+  #
+  # This rule declares `unsafe_in_dsl/0`, and that gate proves the declaration
+  # actually protects the macro by wrapping a fixture in an `expr(...)` or a
+  # `defn` body and requiring the fix to be dropped. It can only wrap a BARE
+  # EXPRESSION, and every other fixture in this file is a whole `defmodule` — so
+  # without this one the gate has nothing to embed and reports the rule as
+  # having vacuous coverage. It pins the ordinary rewrite too, so it is a real
+  # test rather than a fixture parked for another file to find.
+  describe "embeddable fixture (DSL macro protection)" do
+    test "the bare expression form rewrites" do
+      input = """
+      case a do
+        {:f, _} -> false
+        _ -> true
+      end
+      """
+
+      expected = "not match?({:f, _}, a)"
+
+      confirm_fix(fix(Credence.Pattern.NoCaseBooleanResult, input), expected)
+    end
+  end
 end

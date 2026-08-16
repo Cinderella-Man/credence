@@ -37,7 +37,7 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 2 | **The rule actually does something** — `check` asserted in both directions; a real `fix` whose output differs from its input; the output parses | *gated* (`semantic_meta_test`, `syntax_meta_test`, `fix_meta_test`) |
 | 3 | **No parser calls in rule tests** — everything routes through `Credence.RuleCase` | *gated* (`no_parser_calls_in_rule_tests_test`) |
 | 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
-| 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B |
+| 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B. **Ledger EMPTY 2026-08-16**: all 40 swept, so this is satisfied by every rule rather than merely ratcheted |
 | 6 | **Message and moduledoc follow the template** | *partly gated* 2026-08-16 (`rule_card_test`, C15) — the **intent line** is gated for all 289 rules (274 complied, 14 ledgered) and **`## Bad`/`## Good` for Syntax**, where those examples are what makes the self-corruption oracle adversarial. The Pattern (120/157) and Semantic (6/89) example backfill is **not** gated — an 83-entry ledger is a wall, not a ratchet |
 | 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | *gated* 2026-08-16 (`alpha_rename_test`, C12(a)) — measured **0 offenders**; C12(c), over-fitting by *shape*, is separate and still open |
 | 8 | **Within the accepted-corpus-findings budget** | *gated* 2026-07-28 (`findings_budget_test`, C13) — §2 row C |
@@ -125,8 +125,22 @@ pattern variable — the ordinary way to write it — was flagged. Worth recordi
 because it is the shape a static scan gets wrong: `{name, meta, ctx}` is
 indistinguishable from a divisor once the enclosing `&` is out of view.
 
-*Cost to fix:* **the gate is landed** (`test/dsl_static_scan_test.exs`), the 40
-are frozen in its `@unclassified` ledger, and `mix credence.gen.rule` now emits a
+*Cost to fix:* **PAID, 2026-08-16 — the ledger is empty.** All 40 were swept:
+**10** declare a family they diverge in, **9** declare a deliberate `[]` in the
+rule, **21** earned a `@verified_dsl_safe` reason. The three-way split matters:
+the source scan and the fixture-level oracle flag different populations, so a
+rule the scan flags but the fixture oracle does not is answered in the rule with
+`[]` rather than by an allowlist entry the other gate then calls stale.
+
+One declaration did not survive contact with `dsl_macro_protection_test.exs`,
+which requires every flagged rule to be *shown* gated by a fixture that fires
+inside an embedded block: `no_repeated_div_rem` was proposed as `[:ash_expr]`
+and is `[]`, because its matcher needs a multi-statement block with a rebinding
+and an Ash `expr(...)` holds one expression. Six other flagged rules needed a
+bare-expression fixture added before that gate could see them at all.
+
+The historical text follows. The gate is landed (`test/dsl_static_scan_test.exs`), the 40
+were frozen in its `@unclassified` ledger, and `mix credence.gen.rule` now emits a
 deliberate `unsafe_in_dsl/0` so a newly generated rule is classified by
 construction. **Requirement 5 of §1 is now gated.** The remaining work is the
 sweep over those 40, which now runs behind a ratchet instead of racing one — the

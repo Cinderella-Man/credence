@@ -41,6 +41,14 @@ defmodule Credence.Pattern.FixMapFetchCaseMatch do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: matches an existing `case Map.fetch(map, key)`
+  # and rewrites only a clause PATTERN (`%{…}` → `{:ok, %{…}}`), keeping the
+  # `case`, its subject and every body verbatim. The source scan flags this rule
+  # because the construct appears in it, but the matcher cannot reach a DSL
+  # expression, so the deliberate answer is the empty list rather than an
+  # allowlist entry — the fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
 
   @impl true

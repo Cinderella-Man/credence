@@ -56,6 +56,20 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   """
 
   use Credence.Pattern.Rule
+  # diverges in ash_expr: the fix rewrites the bare expression `Enum.count(<list
+  # expr>)` to a BARE local call `length(x)` (or `map_size(m)`) anywhere it
+  # appears, and inside `expr(...)` Ash reinterprets bare local calls as
+  # expression functions (it has a `length/1`), so the rewrite changes what the
+  # macro builds while still compiling — unlike its six siblings here, which
+  # only ever emit qualified `Enum.*`/`List.*`/`Map.*` calls. Ecto/Nx are
+  # omitted because `Enum.count/1` and `length/1` are both compile errors in a
+  # query expression / defn body, so the rule only ever touches code already
+  # broken there. The one check that would settle it: confirm
+  # `Ash.Query.Function.Length` (bare `length/1` inside `expr`) exists in the
+  # targeted Ash version — I could not verify it offline (no `ash` in deps/, no
+  # network)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   # Functions whose result is always a list. Keys are the AST alias atoms.

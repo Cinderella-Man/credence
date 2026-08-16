@@ -21,6 +21,21 @@ defmodule Credence.Pattern.NoMapPutGetIncrement do
   """
 
   use Credence.Pattern.Rule
+  # CONSERVATIVE. The fix's only anchor is `Map.put/3` wrapping `Map.get/3` —
+  # and `Map` is precisely the module the repo's own scan leaves "unaudited;
+  # treated as reachable" (test/support/dsl_static_scan.ex:150-158), unlike
+  # Enum/List/MapSet. Ecto rejects the call (not a valid query expression) and
+  # defn's remote-call restriction bars it, so only Ash is open: if `Ash.Expr`
+  # leaves an unrecognised remote call as plain Elixir while still rewriting the
+  # `+` in its arguments into `%Ash.Query.Operator.Basic.Plus{}`, then
+  # `expr(Map.put(m, k, Map.get(m, k, 0) + 1))` stores that operator struct and
+  # the rewritten `Map.update(m, k, 1, fn x -> x + 1 end)` stores something else
+  # — no crash, silently different. Declared rather than allowlisted because the
+  # deciding check needs the DSL itself as a dependency, which this repo does
+  # not carry; declaring costs a missed fix inside the block, allowlisting would
+  # cost a wrong rewrite.
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   @impl true

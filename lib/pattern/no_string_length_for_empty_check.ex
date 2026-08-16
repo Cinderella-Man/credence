@@ -32,6 +32,13 @@ defmodule Credence.Pattern.NoStringLengthForEmptyCheck do
   """
 
   use Credence.Pattern.Rule
+  # ash_expr: rewriting the bare `String.length(e) == 0` to `e == ""` lifts `e`
+  # out of a raw remote call into Ash-expression operand position —
+  # `binary_expr?/1` admits a `<>` concat, which Ash then rebuilds as its concat
+  # operator over field refs; same family its sibling
+  # `no_string_length_for_char_check` declares
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   # String functions that ALWAYS return a binary (never nil, never a list/int).

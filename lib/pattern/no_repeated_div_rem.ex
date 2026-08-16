@@ -53,6 +53,17 @@ defmodule Credence.Pattern.NoRepeatedDivRem do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families, and the reason is structural: the matcher
+  # requires a multi-statement block in which the same `div`/`rem` call is bound
+  # and then recomputed (`a = rem(x, 2)` … `b = rem(x, 2)`). An Ash `expr(...)`
+  # and an Ecto query expression each take ONE expression, so neither can
+  # contain the rebinding this rule keys on. The C14 sweep first proposed
+  # `[:ash_expr]` here; `dsl_macro_protection_test.exs` refused it, because a
+  # declaration has to be demonstrated by a fixture that fires inside an
+  # embedded block and no such fixture exists — which is the gate doing exactly
+  # its job.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
 
   @ops [:div, :rem]

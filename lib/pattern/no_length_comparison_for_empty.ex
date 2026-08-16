@@ -36,6 +36,17 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   """
 
   use Credence.Pattern.Rule
+  # a bare comparison rewritten wherever it appears — only `when` guards and
+  # `quote` blocks are skipped — so it reaches inside an Ash `expr`, where
+  # `length/1` and `==` are Ash expression nodes (`length(items) == 0` and
+  # `items == []` are different Ash expressions) and the introduced `!`/`match?`
+  # have no Ash translation (`!` builds %Ash.Query.Call{name: :!}). Ecto.Query
+  # and Nx.Defn are not listed: neither grammar can express `length/1`
+  # (Ecto.Query.API has no `length`; defn admits no Kernel.length), so there the
+  # rule only touches code already broken — the same reasoning
+  # no_string_length_for_char_check records.
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   @max_n 5

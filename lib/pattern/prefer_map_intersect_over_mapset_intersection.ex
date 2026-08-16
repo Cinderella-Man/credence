@@ -62,6 +62,17 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: requires a `Map.keys |> MapSet.new |>
+  # MapSet.intersection |> MapSet.to_list` binding plus an `Enum.map(fn ... end)
+  # |> Enum.sort` over it in the same block; `MapSet.*`/`Enum.*` are never DSL-
+  # expression constructs, and the arithmetic merge expression
+  # (`+`/`-`/`*`/`div`/`rem`) is carried verbatim into the new `Map.intersect/3`
+  # lambda, no operator changed. The source scan flags this rule because the
+  # construct appears in it, but the matcher cannot reach a DSL expression, so
+  # the deliberate answer is the empty list rather than an allowlist entry — the
+  # fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 

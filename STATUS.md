@@ -209,8 +209,27 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   call-boundary anchoring; `exit/2` also needs the arity check
   `replace_call_on_line/4` doesn't do. Salvage sources survive in the sister
   tree (never deleted by its 4.6c purge).
-- [ ] **D3. T5.1 — C14 sweep**: exactly 40 DSL-unclassified rules remain
-  (17 family-attributed first, then 23); delete the sweep tooling when empty.
+- [ ] **D3a. Delete the C14 sweep tooling.** The sweep itself is **DONE** — the
+  `@unclassified` ledger is EMPTY, so Rule Standard requirement 5 is satisfied by
+  every Pattern rule rather than merely ratcheted. All 40 classified: **10**
+  declare a family they diverge in, **9** a deliberate `[]`, **21** a
+  `@verified_dsl_safe` reason. docs/19 §3 says the sweep tooling gets deleted
+  once the ledger empties; that is what is left, and it needs a decision rather
+  than a reflex — the scanner is also what keeps the gate non-vacuous, so only
+  the *paydown-ordering* helpers (`ranked/1` and the attributed/unattributed
+  split) are genuinely dead, not `scan/2` itself.
+
+  Two things the sweep produced that were not asked for. The gates disagree by
+  design and that is now documented: the source scan and the fixture-level
+  oracle flag different populations, so nine rules are answered in the rule with
+  `[]` rather than by an allowlist entry the other gate would call stale. And
+  `dsl_macro_protection_test.exs` **rejected one declaration** — it requires a
+  flagged rule to be *shown* gated by a fixture firing inside an embedded block,
+  and `no_repeated_div_rem` cannot be: its matcher needs a multi-statement block
+  with a rebinding, which an Ash `expr(...)` cannot contain. It is `[]` now. Six
+  other flagged rules needed a bare-expression fixture added before that gate
+  could see them at all.
+
 - [ ] **D4. T5.2 — C13(b) paydown**: `prefer_heredoc_for_multi_line_doc`
   holds 1,298 of 6,366 accepted findings (20%) — narrow, demote, or retire;
   `prefer_erlang_float` taste review (37 gold findings); re-run

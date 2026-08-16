@@ -42,6 +42,16 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: the only fixable pair is `Enum.min(v)` +
+  # `Enum.max(v)` on the same bare variable in one block, replaced by
+  # `Enum.min_max(v)`; `Enum.*` is never a DSL-expression construct, and the
+  # count+sum reduce (the branch that would build `c + 1`/`s + x`) is excluded
+  # from @fixable_pairs and unreachable from the fix. The source scan flags this
+  # rule because the construct appears in it, but the matcher cannot reach a DSL
+  # expression, so the deliberate answer is the empty list rather than an
+  # allowlist entry — the fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 

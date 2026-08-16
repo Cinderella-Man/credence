@@ -34,6 +34,22 @@ defmodule Credence.Pattern.NoUnusedComputation do
   """
 
   use Credence.Pattern.Rule
+  # CONSERVATIVE. The rule rewrites no construct — it deletes a whole non-last
+  # `_v = <total call>` statement from a `__block__` — but a block of statements
+  # with `=` bindings is exactly what a `defn` body is, so the matcher is NOT
+  # structurally out of reach of nx_defn (Ash expr and Ecto query expressions
+  # admit neither blocks nor `=`, so those two are settled). Inside a defn, `x =
+  # a + b` types `x` as :number via expr_type's `[:+, :-, :*, :/]` clause, and
+  # `_n = abs(x)` is then deletable — dropping an `abs`/`+` node from what Nx
+  # traces. I believe the removed node is dead in the Nx expression graph (the
+  # graph is reachability from the returned value, and every whitelisted call is
+  # pure), but that is a semantic argument about Nx, not a structural one about
+  # the matcher. Declared rather than allowlisted because the deciding check
+  # needs the DSL itself as a dependency, which this repo does not carry;
+  # declaring costs a missed fix inside the block, allowlisting would cost a
+  # wrong rewrite.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   # `{module_or_nil, fun} => required arg type`. TOTAL when the argument has that

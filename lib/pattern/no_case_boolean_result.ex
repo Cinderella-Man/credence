@@ -36,6 +36,22 @@ defmodule Credence.Pattern.NoCaseBooleanResult do
   """
 
   use Credence.Pattern.Rule
+  # CONSERVATIVE. Ash.Expr and Ecto.Query are closed — neither admits `case` in
+  # an expression (Ecto raises a CompileError; Ash has if/cond only and turns a
+  # `case` node into an unresolvable Call), so the matcher cannot fire in
+  # compiling code there. Nx.Defn is NOT closed: defn does admit `case` on
+  # trace-time values (e.g. `case Nx.type(t) do {:f, _} -> false; _ -> true
+  # end`), and defn's `not` is element-wise `Nx.logical_not`, so the `pattern ->
+  # false; _ -> true` variant returns a u8 tensor where the `case` returned a
+  # plain boolean — a silent divergence. What I could not settle: whether defn
+  # accepts `match?/2` at all (if it compile-errors, the compile gate reverts
+  # the fix and no family needs listing — the same reason
+  # `prefer_negate_if_true_false` omits Ecto). Declared rather than allowlisted
+  # because the deciding check needs the DSL itself as a dependency, which this
+  # repo does not carry; declaring costs a missed fix inside the block,
+  # allowlisting would cost a wrong rewrite.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   @impl true

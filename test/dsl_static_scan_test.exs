@@ -82,53 +82,19 @@ defmodule Credence.DslStaticScanTest do
   # declare `unsafe_in_dsl/0` or earn a `@verified_dsl_safe` entry. This list may
   # only shrink — see "The ledger, and why it is not a wall" above.
   #
-  # ── 17 that name a real DSL family (the paydown order) ──
-  @unclassified_attributed ~w(
-    no_manual_count_with_predicate
-    no_case_boolean_result
-    prefer_regex_match
-    no_grapheme_palindrome
-    prefer_graphemes_for_character_uniqueness
-    prefer_mapset_for_set_equality
-    no_length_comparison_for_empty
-    no_manual_find
-    no_if_empty_for_enum_min_max
-    no_string_length_for_empty_check
-    prefer_map_put_new
-    no_find_value_default_case
-    no_map_keys_for_membership
-    prefer_string_split_trim
-    no_map_keys_or_values_for_iteration
-    no_double_filter
-    avoid_graphemes_enum_count_with_predicate
-  )
+  # ── EMPTY. The 40 rules frozen here on 2026-07-28 were all classified in the
+  # C14 sweep of 2026-08-16: 10 declare a family they diverge in, 9 declare a
+  # deliberate `[]`, and 21 earned a `@verified_dsl_safe` reason. Requirement 5
+  # of the Rule Standard is now satisfied by every Pattern rule, not merely
+  # gated against getting worse.
+  #
+  # The gate does NOT become vacuous at zero: its controls (below) drive the
+  # scanner over fabricated rules and assert population floors, so "nobody is
+  # unclassified" and "the scanner stopped working" stay distinguishable — the
+  # T3.10a lesson, which this ledger reaching empty is exactly the moment for.
+  @unclassified_attributed ~w()
 
-  # ── 23 flagged only on constructs no family reinterprets (weaker evidence) ──
-  @unclassified_unattributed ~w(
-    no_fetch_then_update
-    fix_map_fetch_case_match
-    no_destructure_reconstruct
-    no_eager_with_index_in_reduce
-    no_list_delete_at_length
-    no_map_put_get_increment
-    prefer_frequencies_over_group_by
-    no_redundant_list_traversal
-    no_unused_computation
-    prefer_map_intersect_over_mapset_intersection
-    no_case_destructure_in_pipe
-    no_dead_map_update
-    no_enum_count_for_length
-    no_explicit_product_reduce
-    no_keyword_get_integer_key
-    no_length_based_indexing
-    no_list_delete_at_with_length
-    no_list_foldl
-    no_manual_frequencies
-    no_sort_then_reverse
-    no_hd_tl_when_cons_bound
-    no_repeated_div_rem
-    prefer_explicit_binary_arithmetic
-  )
+  @unclassified_unattributed ~w()
 
   @unclassified @unclassified_attributed ++ @unclassified_unattributed
 

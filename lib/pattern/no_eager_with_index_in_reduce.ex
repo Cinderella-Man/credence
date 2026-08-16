@@ -40,6 +40,15 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: matches `Enum.reduce(Enum.with_index(list), acc,
+  # fn …)` (or its pipe form), so the `idx + 1` the :reduce strategy introduces
+  # lands in a reduce lambda that no DSL expression grammar can contain. The
+  # source scan flags this rule because the construct appears in it, but the
+  # matcher cannot reach a DSL expression, so the deliberate answer is the empty
+  # list rather than an allowlist entry — the fixture-level oracle does not flag
+  # it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 

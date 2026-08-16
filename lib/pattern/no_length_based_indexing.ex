@@ -30,6 +30,16 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: rewrites only the index argument of
+  # `Enum.at(list, n - K)` selected by a sibling `n = length(list)` assignment
+  # statement in the same `__block__`; a qualified `Enum.at` call plus a bound
+  # length statement is not DSL-expression code, so the `-` is never a
+  # reinterpreted operator. The source scan flags this rule because the
+  # construct appears in it, but the matcher cannot reach a DSL expression, so
+  # the deliberate answer is the empty list rather than an allowlist entry — the
+  # fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
 
   @impl true

@@ -40,6 +40,15 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: matches only a def/defp clause head or an
+  # existing `case` clause whose pattern is a list of ≥2 bare variables, and
+  # rewrites that pattern plus the list literal it rebuilds — never an operator
+  # or a control construct. The source scan flags this rule because the
+  # construct appears in it, but the matcher cannot reach a DSL expression, so
+  # the deliberate answer is the empty list rather than an allowlist entry — the
+  # fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 
