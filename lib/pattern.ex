@@ -64,10 +64,11 @@ defmodule Credence.Pattern do
   rule name, issue count, whether the source changed, and a before/after
   diff of the lines that were modified.
 
-  Pattern rules operate on AST and assume semantically valid code.
-  If the source does not compile, the pipeline is skipped entirely —
-  applying AST transforms to code with undefined variables or functions
-  risks introducing new errors and wasting an LLM retry attempt.
+  Pattern rules operate on the AST, so they need the source to *parse*, not to
+  compile. A file that does not compile is still fixed — every fix just has to
+  clear a higher bar: it may not add a compile error the source did not already
+  have. See `Credence.RuleHelpers.compiles_no_worse?/2` for why that replaced
+  skipping the round outright, and what it measured.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
           {String.t(),
@@ -77,18 +78,29 @@ defmodule Credence.Pattern do
 
     Logger.debug("[credence_fix] starting pattern fix pipeline (#{length(all_rules)} rules)")
 
-    if RuleHelpers.compiles?(code_string) do
-      run_fixable_rules(all_rules, code_string, opts)
-    else
-      Logger.debug("[credence_fix] source does not compile, skipping pattern fix pipeline")
+    # The baseline: whatever was already broken about this file before the
+    # Pattern round touched it. Empty when the source compiles, which is the
+    # ordinary case and reduces every check below to the old `compiles?/1`.
+    #
+    # This used to be a gate — `if compiles?(code_string)`, else skip all 156
+    # rules — and the cost of that was measured: 625 of 1,724 Pattern test
+    # fixtures parse but do not compile, and 292 of those have a Pattern rule
+    # firing that never ran. See `RuleHelpers.compiles_no_worse?/2`.
+    baseline = RuleHelpers.compile_errors(code_string)
 
-      {code_string, []}
+    if MapSet.size(baseline) > 0 do
+      Logger.debug(
+        "[credence_fix] source has #{MapSet.size(baseline)} pre-existing compile error(s); " <>
+          "pattern fixes must not add to them"
+      )
     end
+
+    run_fixable_rules(all_rules, code_string, opts, baseline)
   end
 
-  defp run_fixable_rules(fixable, code_string, opts) do
-    {code, applied} =
-      Enum.reduce(fixable, {code_string, []}, fn rule, {source, applied} ->
+  defp run_fixable_rules(fixable, code_string, opts, baseline) do
+    {code, applied, _baseline} =
+      Enum.reduce(fixable, {code_string, [], baseline}, fn rule, {source, applied, baseline} ->
         name = RuleHelpers.rule_name(rule)
 
         case Sourceror.parse_string(source) do
@@ -105,19 +117,19 @@ defmodule Credence.Pattern do
                      invoke_fix(rule, source, check_opts)
                    end) do
                 :crashed ->
-                  {source, [{rule, :crashed} | applied]}
+                  {source, [{rule, :crashed} | applied], baseline}
 
                 {status, fixed} ->
-                  apply_or_revert(rule, name, source, fixed, status, issues, applied)
+                  apply_or_revert(rule, name, source, fixed, status, issues, applied, baseline)
               end
             else
-              {source, applied}
+              {source, applied, baseline}
             end
 
           {:error, reason} ->
             Logger.debug("[credence_fix] source no longer parses at #{name}: #{inspect(reason)}")
 
-            {source, applied}
+            {source, applied, baseline}
         end
       end)
 
@@ -179,7 +191,7 @@ defmodule Credence.Pattern do
   #   - be returned silently to the caller as a "successful" fix.
   # Instead we revert to the pre-fix source for that rule and mark
   # it as `:reverted` in the trace so the offending rule is visible.
-  defp apply_or_revert(rule, name, source, fixed, status, issues, applied) do
+  defp apply_or_revert(rule, name, source, fixed, status, issues, applied, baseline) do
     cond do
       # C5. Patches WERE produced and then discarded by the safety invariants in
       # `apply_rule_fix_with_status/3` (output did not parse, or the comment
@@ -194,7 +206,7 @@ defmodule Credence.Pattern do
             "#{length(issues)} finding(s) reported and left unfixed"
         )
 
-        {source, [{rule, :patch_rejected} | applied]}
+        {source, [{rule, :patch_rejected} | applied], baseline}
 
       # T3.2. The check fired and the fix changed nothing. Before this branch the
       # rule vanished from the trace entirely (a `Logger.debug` and no entry), so
@@ -209,20 +221,31 @@ defmodule Credence.Pattern do
             "IDENTICAL source — the finding is reported and left unfixed"
         )
 
-        {source, [{rule, :no_op} | applied]}
+        {source, [{rule, :no_op} | applied], baseline}
 
-      not RuleHelpers.compiles?(fixed) ->
-        Logger.warning("[credence_fix] #{name}: fix produced non-compiling output, reverting")
+      not RuleHelpers.compiles_no_worse?(fixed, baseline) ->
+        Logger.warning(
+          "[credence_fix] #{name}: fix ADDED a compile error the source did not have, reverting"
+        )
+
         # Visibility (Tunex `08` T1.3): log the broken before/after so a reverted
         # fix's diff lands in the row log for the deterministic bugfix-lane seed.
         # The revert *logic* is unchanged — `:reverted` is already a clean signal.
         RuleHelpers.log_diff(name, source, fixed)
 
-        {source, [{rule, :reverted} | applied]}
+        {source, [{rule, :reverted} | applied], baseline}
 
       true ->
         RuleHelpers.log_diff(name, source, fixed)
-        {fixed, [{rule, length(issues)} | applied]}
+        # Re-baseline on the accepted output. Keeping the ORIGINAL baseline
+        # would be a hole: if this fix removed a pre-existing error, a later
+        # rule could re-introduce it and still pass the subset test. The errors
+        # were just computed by the check above, so this costs no extra compile
+        # in the common case where the file compiles (both sets are empty).
+        new_baseline =
+          if MapSet.size(baseline) == 0, do: baseline, else: RuleHelpers.compile_errors(fixed)
+
+        {fixed, [{rule, length(issues)} | applied], new_baseline}
     end
   end
 

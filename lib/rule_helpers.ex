@@ -378,6 +378,67 @@ defmodule Credence.RuleHelpers do
     match?({:ok, _}, compile_and_capture(source))
   end
 
+  @doc """
+  The set of compile *errors* `source` produces, each reduced to a signature.
+
+  `:ok` means it compiled — the empty set. Warnings are excluded: `compiles?/1`
+  has always accepted them, and a fix that trades one warning for another must
+  not be reverted on that basis alone.
+
+  A signature is the message alone, with no position. A fix legitimately moves
+  code, so the same error would otherwise look like a different one purely
+  because it now sits on line 7 instead of line 6 — which would make every
+  repair on a broken file look like a regression.
+  """
+  @spec compile_errors(String.t()) :: MapSet.t()
+  def compile_errors(source) do
+    case compile_and_capture(source) do
+      {:ok, _diagnostics} ->
+        MapSet.new()
+
+      {:error, diagnostics} ->
+        diagnostics
+        |> Enum.filter(&(Map.get(&1, :severity) == :error))
+        |> MapSet.new(&to_string(Map.get(&1, :message, "")))
+    end
+  end
+
+  @doc """
+  Whether `fixed` compiles no worse than the source that produced it, given that
+  source's `baseline` error signatures (from `compile_errors/1`).
+
+  ## Why this replaced `compiles?(fixed)`
+
+  The Pattern round used to demand that a fixed file compile outright, and skip
+  the entire round when the input did not. Both halves came from the same
+  assumption, and the consequence was measured: **625 of 1,724 Pattern test
+  fixtures parse but do not compile, and 292 of those have at least one Pattern
+  rule firing that the pipeline refuses to run.** A single undefined helper —
+  `&even?/1` with no `def even?` anywhere, which is what LLM-generated code looks
+  like before anyone has written the rest of the module — disabled all 156 rules
+  for that file.
+
+  Demanding an absolute property (`it compiles`) of a repair to a file that
+  never compiled is asking the wrong question. The right one is relative: did
+  this fix make anything worse? So a fix is accepted when its errors are a
+  subset of the errors that were already there.
+
+  **On input that compiles this is exactly the old behaviour** — the baseline is
+  empty, so the output's error set must also be empty, which is `compiles?/1`.
+  The generalisation costs nothing on the path that already worked, which is why
+  it is safe to make.
+
+  It is deliberately conservative in one direction: a fix that *removes* one
+  error and *introduces* a different one is rejected, even though the error
+  count went down. Trading one compile error for another is not a repair the
+  Pattern round is allowed to make on its own — that is the Semantic round's
+  job, and it has already run by this point.
+  """
+  @spec compiles_no_worse?(String.t(), MapSet.t()) :: boolean()
+  def compiles_no_worse?(fixed, baseline) do
+    MapSet.subset?(compile_errors(fixed), baseline)
+  end
+
   defp safe_cleanup_modules(modules) do
     for {mod, _binary} <- modules do
       # soft_purge any pre-existing old code so that delete can proceed

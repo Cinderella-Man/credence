@@ -167,6 +167,19 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
 
+- [x] **D12. The Pattern round no longer skips files that do not compile.** Not
+  on the original list — found while backfilling D5, when six rules' own test
+  fixtures turned out to get zero repair from `Credence.fix/1` despite their
+  `fix/2` working perfectly in isolation. The cause was a single gate in
+  `Credence.Pattern.fix_with_trace/2`: `if compiles?(code_string)`, else skip all
+  156 rules. Measured cost: **625 of 1,724 Pattern test fixtures parse but do not
+  compile, and 275 of them now receive a repair the old gate refused** — none of
+  which gained a compile error. Replaced by a relative oracle
+  (`RuleHelpers.compiles_no_worse?/2`): a fix is accepted when its compile errors
+  are a subset of the ones already present. On compiling input the baseline is
+  empty, so the check is byte-for-byte the old one. Full suite 10,109/0.
+
+
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
   **Measured, and it kills the item's stated action.** T5.2 said to narrow,

@@ -202,11 +202,27 @@ defmodule Credence.PipelineTest do
 
   # ── 2. Pattern phase gating on compilation status ───────────────────
 
-  describe "pattern gating: pattern skipped when code does not compile" do
-    test "skips pattern when code has undefined variables" do
-      # This code parses fine but does NOT compile (undefined_var is not bound).
-      # Pattern rules MUST be skipped — applying AST transforms on semantically
-      # broken code risks making it worse and wasting an LLM retry.
+  describe "pattern gating: a file that does not compile is still fixed" do
+    # These four tests used to assert the opposite — that the Pattern round was
+    # skipped entirely on non-compiling source. The reason given was that
+    # "applying AST transforms on semantically broken code risks making it
+    # worse". That risk is real; skipping 156 rules was the wrong answer to it.
+    #
+    # Measured before changing anything: 625 of 1,724 Pattern test fixtures parse
+    # but do not compile, and 292 of those have a Pattern rule firing that never
+    # ran. `&even?/1` with nothing defining `even?` is enough to disable the
+    # whole round, and that is what LLM output looks like mid-generation — the
+    # input Credence exists for.
+    #
+    # The risk is now handled where it belongs, per fix rather than per file:
+    # `RuleHelpers.compiles_no_worse?/2` reverts any fix that ADDS a compile
+    # error. What is kept is the guarantee ("we never make it worse"); what is
+    # dropped is the blunt instrument.
+    #
+    # Checked before relying on it: the Elixir compiler COLLECTS errors rather
+    # than stopping at the first, so a pre-existing error does not mask one a fix
+    # introduces. A module with two undefined variables reports both.
+    test "fixes the anti-pattern when code has an undefined variable" do
       source = ~S"""
       defmodule CrdPT_UndefVar do
         def foo(list) do
@@ -221,15 +237,16 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      refute has_pattern_rules?(result.applied_rules),
-             "pattern rules should be skipped on non-compiling code, " <>
-               "but these fired: #{inspect(pattern_rules(result.applied_rules))}"
+      assert has_pattern_rules?(result.applied_rules)
+      assert result.code =~ "Enum.sum(list)"
 
-      # The Enum.reduce anti-pattern should NOT have been touched
-      assert result.code == source
+      # And the pre-existing breakage is still there, untouched: the round
+      # repaired the idiom it understands and invented nothing.
+      assert result.code =~ "undefined_var"
+      refute code_compiles?(result.code)
     end
 
-    test "skips pattern when code has multiple undefined variables" do
+    test "fixes the anti-pattern when code has several undefined variables" do
       source = ~S"""
       defmodule CrdPT_MultiUndef do
         def bar(list) do
@@ -244,11 +261,11 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      refute has_pattern_rules?(result.applied_rules)
-      assert result.code == source
+      assert has_pattern_rules?(result.applied_rules)
+      assert result.code =~ "Enum.sum(list)"
     end
 
-    test "skips pattern when code has type/guard errors" do
+    test "fixes the anti-pattern when code has a guard error" do
       source = ~S"""
       defmodule CrdPT_BadGuard do
         def check(x) when custom_guard(x) do
@@ -260,12 +277,14 @@ defmodule Credence.PipelineTest do
       assert code_parses?(source)
       refute code_compiles?(source)
 
-      result = Credence.fix(source)
-
-      refute has_pattern_rules?(result.applied_rules)
+      assert has_pattern_rules?(Credence.fix(source).applied_rules)
     end
 
-    test "Pattern.fix_with_trace returns unchanged source for non-compiling code" do
+    test "Pattern.fix_with_trace still returns unchanged source when no rule fires" do
+      # Nothing here is an anti-pattern, so the round finding nothing is the
+      # right answer — but now for the right reason. Under the old gate this
+      # passed on ANY non-compiling input, which made it indistinguishable from
+      # a test of the skip itself.
       source = ~S"""
       defmodule CrdPT_PatternDirect do
         def broken do
@@ -314,7 +333,7 @@ defmodule Credence.PipelineTest do
       assert has_pattern_rules?(result.applied_rules)
     end
 
-    test "logs that pattern was skipped on non-compiling code" do
+    test "logs the pre-existing errors a fix is not allowed to add to" do
       source = ~S"""
       defmodule CrdPT_SkipLog do
         def broken, do: undefined_var
@@ -324,15 +343,12 @@ defmodule Credence.PipelineTest do
       previous_level = Logger.level()
       Logger.configure(level: :debug)
 
-      log =
-        capture_log(fn ->
-          Credence.Pattern.fix_with_trace(source)
-        end)
+      log = capture_log(fn -> Credence.Pattern.fix_with_trace(source) end)
 
       Logger.configure(level: previous_level)
 
-      assert log =~ "does not compile" or log =~ "skipping pattern",
-             "expected a log message indicating pattern was skipped, got:\n#{log}"
+      assert log =~ "pre-existing compile error",
+             "expected the round to announce the baseline it is holding fixes to, got:\n#{log}"
     end
   end
 
