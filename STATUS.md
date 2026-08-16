@@ -186,29 +186,25 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
-- [ ] **D2b. Commit the Pattern half of the byte-scope oracle — measured clean,
-  but by an uncommitted probe.** The Semantic half is **DONE**
-  (`test/fix_byte_scope_test.exs` + `test/support/fix_byte_scope.ex`): it flags a
-  **literal that survives the edit with different content**, the phase is clean
-  apart from the ledgered `OutdentedHeredoc`, and it is proven by reverting the
-  `UndefinedFunction` masking (2 hits) and restoring it (0), plus six controls on
-  fabricated rules so it stays provable at ledger size zero. Cost ~26 s.
+- [ ] **D2c. Sweep the 20 remaining unmasked Semantic line-editors.** The
+  byte-scope oracle now covers **all three phases** — Syntax (a rule's `fix/1`
+  over its own source), Semantic (a literal surviving `fix/2` with changed
+  content), and Pattern (a patch range that *splits* a literal,
+  `test/pattern_patch_scope_test.exs`). Pattern measures **zero** offenders and
+  its ledger starts empty, so its five controls carry the proof.
 
-  Pattern was then probed ad-hoc rather than gated, and the result is **0 real
-  hits** — but read the two refinements before rebuilding it, because the naive
-  predicates are badly wrong here:
-  * "the patch range touches a masked byte" → **70 hits, all false.** Masking
-    blanks a literal's *quotes* as well as its body, so a patch replacing a whole
-    literal necessarily lands on masked bytes at both ends. The bug is a range
-    that **splits** a literal — begins inside a run that started earlier, or ends
-    inside one that continues past it. That predicate gives **1 hit**.
-  * That last hit is also false, and instructively so: the fixture is
-    `Keyword.get(opts, name: "café 🚀")`, and **Sourceror ranges are in
-    characters while my arithmetic was in bytes**, so the offset landed inside
-    the emoji's continuation bytes. A committed Pattern gate must convert
-    columns to byte offsets per line, or it will accuse every rule whose
-    fixtures contain a non-ASCII literal. This is CONTEXT.md's codepoint /
-    grapheme warning arriving one level down, in the gate rather than the rule.
+  Both obvious Pattern predicates were wrong and are pinned as controls: "the
+  range touches a masked byte" gives 70 false hits, because masking blanks a
+  literal's delimiters and any whole-literal replacement lands on them; and the
+  splitting predicate with **columns treated as bytes** gives one, because
+  Sourceror columns are characters — `Keyword.get(opts, name: "café 🚀")` put
+  the offset inside the emoji's continuation bytes.
+
+  What remains is the manual sweep: of the 21 Semantic rules that edit source by
+  splitting it into lines, **20 do not mask**, and three spot-checks came back
+  clean because they replace one token at a known position. So the honest prior
+  is "some of 20", one probe each (a string and a comment containing the token
+  the rule rewrites). `grep -rln 'String.split(source' lib/semantic/`.
 
 - [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
