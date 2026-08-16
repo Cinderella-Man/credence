@@ -39,7 +39,7 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
 | 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B |
 | 6 | **Message and moduledoc follow the template** | **not gated** (C15) |
-| 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | **not gated** (C12) |
+| 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | *gated* 2026-08-16 (`alpha_rename_test`, C12(a)) — measured **0 offenders**; C12(c), over-fitting by *shape*, is separate and still open |
 | 8 | **Within the accepted-corpus-findings budget** | *gated* 2026-07-28 (`findings_budget_test`, C13) — §2 row C |
 | 9 | **Semantic-mutant kill rate above the floor** | **not measured** (C18) — report-only first |
 

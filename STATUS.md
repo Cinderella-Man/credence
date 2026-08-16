@@ -219,8 +219,29 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   **never** been validated.
 - [ ] **D5. T5.3 — C15 rule cards + intent line** (docs/19 requirement 6, the
   first of the three still ungated) — also the dedup signal H8 consumes.
-- [ ] **D6. T5.4 — C12 alpha-rename generality** (requirement 7) + the three
-  named over-fit rules, all still shipped un-generalized.
+- [ ] **D6. C12(c) — the SHAPE half of over-fitting.** The **name** half is
+  done: requirement 7 is now gated by `test/alpha_rename_test.exs`, and the
+  answer is **zero** — no Pattern rule is keyed to a variable name. Two findings
+  came out of measuring it rather than assuming it. First, docs/12 named three
+  rules as over-fit (`prefer_map_intersect_over_mapset_intersection`,
+  `prefer_lookup_for_digit_conversion`,
+  `prefer_string_slice_for_trim_last_char`) and **all three pass the name bar**;
+  they are over-fit in *shape* — a hard-coded four-stage pipeline, a byte-exact
+  16-clause hex table, one 3-clause `case` — which is real and is what remains
+  here. Second, the first three "offenders" the probe reported were all **its
+  own bugs**: an attribute reference (`@re`) and a zero-arity definition name
+  both parse as `{name, meta, nil}`, exactly like a variable, and the third was
+  `Sourceror.to_string/1` normalising `'abc'` to `~c"abc"` on round-trip, which
+  is why the gate now compares against a reprinted baseline rather than the
+  original source.
+
+  So C12(c) is the open part: retire or generalise those three matchers to the
+  idiom's core. **Trade-off worth stating before anyone starts** — generalising
+  a matcher widens what it fires on, and this project's standing rule is that a
+  wider rule is often strictly worse than a narrow one. Each of the three needs
+  its own corpus scan and equivalence argument, not a blanket widening. C12(b),
+  fire-rate telemetry, stays blocked on the harness's H10/H11.
+
 - [ ] **D7. T5.7** — C9 hot-path (the Pattern fix loop re-parses the source
   once **per rule**; discovery re-scans `Application.spec` every call), C10
   observability (no `Issue.column`, no telemetry — and nothing downstream yet
