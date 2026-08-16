@@ -179,31 +179,31 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
-- [ ] **D2b. Extend the byte-scope oracle to Pattern, the last blind phase.**
-  The Semantic half is **DONE** — `test/fix_byte_scope_test.exs` +
-  `test/support/fix_byte_scope.ex`. It compiles each rule's own witness
-  fixtures, finds a diagnostic the rule claims, runs `fix/2`, and flags a
-  **literal that survives the edit with different content**. That predicate took
-  three tries and the two rejected ones are the useful record: "the edit
-  overlapped a literal" accuses every rule that *removes* a default argument;
-  "every output literal was an input literal" accuses every rule that
-  *introduces* one, e.g. `UndefinedStringAlphanumeric` adding the regex its
-  repair is made of. Only "one vanished AND one appeared" isolates the bug.
+- [ ] **D2b. Commit the Pattern half of the byte-scope oracle — measured clean,
+  but by an uncommitted probe.** The Semantic half is **DONE**
+  (`test/fix_byte_scope_test.exs` + `test/support/fix_byte_scope.ex`): it flags a
+  **literal that survives the edit with different content**, the phase is clean
+  apart from the ledgered `OutdentedHeredoc`, and it is proven by reverting the
+  `UndefinedFunction` masking (2 hits) and restoring it (0), plus six controls on
+  fabricated rules so it stays provable at ledger size zero. Cost ~26 s.
 
-  Result: **the Semantic phase is clean**, with one ledgered entry —
-  `OutdentedHeredoc`, whose entire purpose is re-indenting heredoc bodies. The
-  gate is proven rather than assumed: with the `UndefinedFunction` masking
-  reverted it reports 2 hits from that rule's own fixtures, and 0 with it in
-  place, so it catches the real defect without a planted decoy. Six controls
-  drive fabricated rules (corrupts / rewrites-only-code / removes / introduces /
-  declines / raises) so it stays provable at ledger size zero.
+  Pattern was then probed ad-hoc rather than gated, and the result is **0 real
+  hits** — but read the two refinements before rebuilding it, because the naive
+  predicates are badly wrong here:
+  * "the patch range touches a masked byte" → **70 hits, all false.** Masking
+    blanks a literal's *quotes* as well as its body, so a patch replacing a whole
+    literal necessarily lands on masked bytes at both ends. The bug is a range
+    that **splits** a literal — begins inside a run that started earlier, or ends
+    inside one that continues past it. That predicate gives **1 hit**.
+  * That last hit is also false, and instructively so: the fixture is
+    `Keyword.get(opts, name: "café 🚀")`, and **Sourceror ranges are in
+    characters while my arithmetic was in bytes**, so the offset landed inside
+    the emoji's continuation bytes. A committed Pattern gate must convert
+    columns to byte offsets per line, or it will accuse every rule whose
+    fixtures contain a non-ASCII literal. This is CONTEXT.md's codepoint /
+    grapheme warning arriving one level down, in the gate rather than the rule.
 
-  What remains is **Pattern**, which is blind for a third reason: its rules
-  return patch ranges rather than a new source, so the check is whether a patch
-  *range* overlaps masked bytes — cheaper than either other phase, and not yet
-  written. Cost note: the Semantic scan adds ~26 s to the suite.
-
-- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
+- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
   call-boundary anchoring; `exit/2` also needs the arity check
   `replace_call_on_line/4` doesn't do. Salvage sources survive in the sister
