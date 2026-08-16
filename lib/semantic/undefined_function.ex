@@ -130,6 +130,11 @@ defmodule Credence.Semantic.UndefinedFunction do
     # :queue.empty/0 does not exist — :queue.new/0 builds the empty queue.
     # (:queue.is_empty/1 is the predicate, a different function.)
     {":queue", "empty", 0} => {:rename, ":queue", "new"},
+    # `:queue.empty/1` is a different mistake from `:queue.empty/0`: arity 0 is
+    # reaching for the constructor (`:queue.new/0`), arity 1 is asking a
+    # question (`:queue.is_empty/1`). Same name, opposite meanings — which is
+    # why the table is keyed on arity and why one row could never cover both.
+    {":queue", "empty", 1} => {:rename, ":queue", "is_empty"},
     # :math has no min/max — those are Kernel guards.
     {":math", "min", 2} => {:rename, "Kernel", "min"},
     {":math", "max", 2} => {:rename, "Kernel", "max"},

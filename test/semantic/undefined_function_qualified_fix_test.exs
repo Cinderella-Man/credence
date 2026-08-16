@@ -1149,4 +1149,46 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       assert keystore(source) == source
     end
   end
+
+  # `:queue.empty/0` and `:queue.empty/1` are DIFFERENT mistakes wearing one
+  # name: arity 0 is reaching for the constructor, arity 1 is asking a question.
+  # The table is keyed on arity precisely so one row cannot answer both, and the
+  # /1 row was missing until the docs/18 rebuild list was checked by running it.
+  describe ":queue.empty" do
+    test "arity 1 is the is_empty? question" do
+      confirm_fix(
+        UndefinedFunction.fix(
+          """
+          defmodule QueueOne do
+            def f(q), do: :queue.empty(q)
+          end
+          """,
+          %{severity: :error, message: ":queue.empty/1 is undefined or private", position: {2, 1}}
+        ),
+        """
+        defmodule QueueOne do
+          def f(q), do: :queue.is_empty(q)
+        end
+        """
+      )
+    end
+
+    test "arity 0 is still the constructor" do
+      confirm_fix(
+        UndefinedFunction.fix(
+          """
+          defmodule QueueZero do
+            def f, do: :queue.empty()
+          end
+          """,
+          %{severity: :error, message: ":queue.empty/0 is undefined or private", position: {2, 1}}
+        ),
+        """
+        defmodule QueueZero do
+          def f, do: :queue.new()
+        end
+        """
+      )
+    end
+  end
 end

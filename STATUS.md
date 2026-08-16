@@ -410,36 +410,24 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   Worth keeping the metric: nothing measured fix coverage before, so "does
   coverage go up or down across an evolution" had no answer. It does now.
 
-- [ ] **D11. T5.8 — write the honest build list.** Residue after refutation, and
-  it is now **4 rules, not 6**:
-  `no_enum_sort_then_map_values`, `no_raw_send_in_genserver_handle_call`,
-  `no_stream_data_constant_with_range`, `fix_ets_new_string_name`,
-  `fix_ets_options_bare_keypos`.
-  * **`no_agent_update_tuple_wrapper` is off the list for good** — built,
-    tested green, and deleted the same day: its "before" returns a valid value
-    on every input, so the rewrite silently breaks working code. Failure mode
-    catalogued as docs/17 entry 28.
-  * The `hex_encode64`/`hex_encode32` widening (ledger row 119) **landed** as
-    `@qualified_replacements` rows, so it is not build-list work either.
+- [ ] **D11a. Work the build list — it is written and measured.**
+  `docs/23-build-list.md` replaces docs/17's ranked list (which docs/18 §5.3
+  records as having taken heavy damage on review). Every candidate was checked
+  by **running its target through the live pipeline**, not by reading.
 
-  What is left is the writing: produce the short verified list, respec catalogue
-  items 3/5/11, and leave the 56 banked observations banked. The source line is
-  docs/18 **end of §3** (~1676), not §5 as T5.8 cites.
+  Of the 25 rebuild/salvage candidates, **8 are already repaired** — and the
+  reason that number is so high is that the honest repair for most was never a
+  new rule but a row in `UndefinedFunction`'s tables. One of the eight,
+  `no_agent_update_tuple_wrapper`, is repaired by *not existing*.
 
-All five items landed. The logs are archived, and the reasoning inside them now
-lives in `docs/17`: entries **26** and **27** (rows 55 and 73 — `trap_exit`
-without an `{:EXIT, _, _}` clause, which fires on the happy path; and the
-early-exit belief with `return` removed), a third corruption path on entry
-**11** (the `:do =>` emission, re-confirmed on Elixir 1.20.2), and the sister
-tree's **25 drop rationales**, which existed nowhere in this repo. One recovered
-regression test landed; three others were duplicates and deliberately did not.
-
-Two findings worth carrying: the survivor probes answered both ledger questions
-(`FixFunctionInModuleAttributeInlineUsages` is fine; `catch` inside `case` was
-owned by nobody, now fixed in `af7b140`), and **one rescued rationale was
-refuted by re-running it** — `prefer_enum_frequencies` was dropped for an
-enumeration-order divergence that does not reproduce at any size. The drop still
-stands, on a stronger argument: the two constructs return different *types*.
+  **17 remain, each verified still uncovered today.** Three are one-line table
+  rows (`Map.reduce/3`, `StreamData.string/0`, `:crypto.compare/2`) and the rest
+  need their own equivalence argument. Two of the Syntax ones
+  (`fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension`)
+  must be built **together** — they emit the byte-identical parse error and need
+  opposite repairs, so a shared backward scanner is the only safe way to build
+  either. And `no_remote_function_in_guard` has three recorded corruption paths
+  in docs/17 entry 11, one of which emits output that does not parse.
 
 ## F. Tracker & doc hygiene
 
