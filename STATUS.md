@@ -364,12 +364,33 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   per-rule rather than corpus-wide, since the distribution runs from 0.475 to
   0.875 and a single number hides both ends.
 
-- [ ] **D10. Fix-coverage decision** — untracked until now: FIX_LOG.md defers
-  "make ~20 Tier-3 no-op/self-revert rules check-only or comment-preserving".
-  Check-only collides with the *fix-or-drop* policy, so the real choice per
-  rule is comment-preserving vs retire-with-failure-mode. No metric exists for
-  fixable-fraction of corpus findings; decide before Phase 9 generates against
-  these rules.
+- [ ] **D10. Fix coverage is 97.2%, and the deferred decision was about a
+  population that does not exist.** FIX_LOG deferred "make ~20 Tier-3 rules
+  check-only or comment-preserving" for a design decision. Two things are wrong
+  with that framing, and measuring settles both.
+
+  **Check-only is not available.** CONTEXT.md's standing policy is *fix or drop
+  it* — a rule that can only find a problem is deleted, not kept as a warning.
+  So the decision as posed had one legal option out of two.
+
+  **And the population is one rule, not twenty.** Measured over every Pattern
+  rule's own fixtures: **1,798 of 1,849 flagged fixtures produce a change —
+  97.2%**. **Zero** rules flag without ever fixing. Exactly one sits below 50%:
+  `NoRedundantListTraversal`, at 6/19.
+
+  That rule is a real check/fix parity violation rather than a cosmetic
+  self-revert: on three traversals of one list bound to separate variables,
+  `check/2` returns an issue and `fix_patches/2` returns **zero patches** — so it
+  reports what it cannot repair, which is the shape the policy forbids. The
+  repair is either to narrow `check/2` to what the fix handles, or to widen the
+  fix; Semantic solved the same problem with the `should_report?/2` idiom
+  (*the decline guard IS the fix*) and Pattern has no equivalent. **Trade-off:**
+  narrowing loses a true finding the tool could report, widening needs its own
+  equivalence argument for a multi-traversal rewrite.
+
+  Worth keeping the metric: nothing measured fix coverage before, so "does
+  coverage go up or down across an evolution" had no answer. It does now.
+
 - [ ] **D11. T5.8 — write the honest build list.** Residue after refutation, and
   it is now **4 rules, not 6**:
   `no_enum_sort_then_map_values`, `no_raw_send_in_genserver_handle_call`,
