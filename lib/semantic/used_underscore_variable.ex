@@ -20,6 +20,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @impl true
   def match?(%{severity: :warning, message: msg}) do
@@ -94,18 +95,26 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
 
   # Replace the variable throughout the enclosing function clause,
   # covering both the parameter declaration and all body/guard usages.
+  # Renames only in CODE position. The rename used to run a plain
+  # `Regex.replace` over each raw line in the clause, so a mention of the same
+  # variable in a trailing comment or a string was renamed too — measured:
+  # `def check(_limit, v) do  # def check(_limit, v) do` came back with the
+  # comment rewritten. That is the byte-scope class (docs/22 T3.7, T3.10), and
+  # `Credence.SourceMask` is the repair: match on the shadow, splice into the
+  # line. Mask the whole FILE, never a line alone — heredoc state crosses lines.
   defp replace_in_clause(source, target_idx, old, new) do
-    lines = String.split(source, "\n")
+    pairs = SourceMask.lines(source)
+    lines = Enum.map(pairs, &elem(&1, 0))
     {clause_start, clause_end} = find_clause_bounds(lines, target_idx)
 
     pattern =
       Regex.compile!("(?<![a-zA-Z0-9_?!])" <> Regex.escape(old) <> "(?![a-zA-Z0-9_?!])")
 
-    lines
+    pairs
     |> Enum.with_index()
-    |> Enum.map_join("\n", fn {line, idx} ->
+    |> Enum.map_join("\n", fn {{line, shadow}, idx} ->
       if idx >= clause_start and idx <= clause_end do
-        Regex.replace(pattern, line, new)
+        SourceMask.replace_code(line, shadow, pattern, new)
       else
         line
       end

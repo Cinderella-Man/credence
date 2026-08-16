@@ -398,4 +398,59 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       refute fixed =~ "_target_n"
     end
   end
+
+  # ── Byte scope: a mention in a comment or a string is not code. ──
+  #
+  # Found by planting a decoy rather than by reading: the rename ran a plain
+  # `Regex.replace` over every raw line in the clause, so `_limit` in a trailing
+  # comment was renamed along with the parameter. Same class as
+  # `UndefinedFunction` (docs/22 T3.7, T3.10); the repair is `SourceMask`.
+
+  describe "byte scope" do
+    test "a mention of the variable in a trailing comment is left alone" do
+      source = """
+      defmodule UuvComment do
+        def check(_limit, value) do  # def check(_limit, value) do
+          _limit + value
+        end
+      end
+      """
+
+      fixed = UsedUnderscoreVariable.fix(source, diag("_limit", 2))
+
+      assert fixed =~ "def check(limit, value) do"
+      assert fixed =~ "# def check(_limit, value) do"
+      assert fixed =~ "limit + value"
+    end
+
+    test "a mention inside a string literal is left alone" do
+      source = """
+      defmodule UuvString do
+        def check(_limit, value) do
+          IO.puts("_limit is the cap")
+          _limit + value
+        end
+      end
+      """
+
+      fixed = UsedUnderscoreVariable.fix(source, diag("_limit", 2))
+
+      assert fixed =~ ~s|IO.puts("_limit is the cap")|
+      assert fixed =~ "limit + value"
+    end
+
+    # The control: masking must not blind the rename to ordinary code. Two real
+    # usages on one line still both rename.
+    test "CONTROL: two code usages on one line both rename" do
+      source = """
+      defmodule UuvTwice do
+        def check(_limit, value) do
+          _limit + _limit + value
+        end
+      end
+      """
+
+      assert UsedUnderscoreVariable.fix(source, diag("_limit", 2)) =~ "limit + limit + value"
+    end
+  end
 end

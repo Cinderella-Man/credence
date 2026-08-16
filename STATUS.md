@@ -186,25 +186,31 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
-- [ ] **D2c. Sweep the 20 remaining unmasked Semantic line-editors.** The
-  byte-scope oracle now covers **all three phases** — Syntax (a rule's `fix/1`
-  over its own source), Semantic (a literal surviving `fix/2` with changed
-  content), and Pattern (a patch range that *splits* a literal,
-  `test/pattern_patch_scope_test.exs`). Pattern measures **zero** offenders and
-  its ledger starts empty, so its five controls carry the proof.
+- [ ] **D2d. `NoDocOnPrivateFunction` deletes a trailing comment with the line.**
+  The 20-rule sweep is **DONE** — the byte-scope oracle now covers all three
+  phases, and all 20 unmasked Semantic line-editors were probed with a **planted
+  decoy** (the target line's own text duplicated into a trailing comment), which
+  is the input their own fixtures cannot supply because rule and fixtures share
+  an author. Two of the 20 were real, not the 20 the naive prior suggested:
 
-  Both obvious Pattern predicates were wrong and are pinned as controls: "the
-  range touches a masked byte" gives 70 false hits, because masking blanks a
-  literal's delimiters and any whole-literal replacement lands on them; and the
-  splitting predicate with **columns treated as bytes** gives one, because
-  Sourceror columns are characters — `Keyword.get(opts, name: "café 🚀")` put
-  the offset inside the emoji's continuation bytes.
+  * **`UsedUnderscoreVariable` — fixed.** It renamed `_limit` → `limit` *inside
+    a trailing comment*, because the rename ran a plain `Regex.replace` over
+    every raw line in the clause. Now goes through `SourceMask.replace_code/5`;
+    two regressions plus a control that two real usages on one line still both
+    rename. Note this rule had already been repaired once (T3.12) for a
+    different defect — the byte-scope one was underneath and survived.
+  * **`NoDocOnPrivateFunction` — recorded, not fixed.** It deletes the whole
+    `@doc` line, so `@doc "x"  # keep this note` loses the comment too. That is
+    a deletion-scope question rather than a rewrite-scope one, and the honest
+    answer is not obvious: the comment may belong to the `@doc` being removed or
+    to the code below it. **Trade-off if you pick it up:** preserving the
+    comment means re-attaching it to the next line, which can move a comment
+    away from what it described; deleting it silently loses author intent.
 
-  What remains is the manual sweep: of the 21 Semantic rules that edit source by
-  splitting it into lines, **20 do not mask**, and three spot-checks came back
-  clean because they replace one token at a known position. So the honest prior
-  is "some of 20", one probe each (a string and a comment containing the token
-  the rule rewrites). `grep -rln 'String.split(source' lib/semantic/`.
+  Three more rules flagged in the first pass were **false positives of the probe
+  itself** — the fix inserts or deletes lines, so comparing the same line index
+  before and after finds a different line. Searching the whole output for the
+  intact comment settles it.
 
 - [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
