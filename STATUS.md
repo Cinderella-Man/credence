@@ -175,19 +175,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (novelty is advisory; `router.ex:132-143` logs and builds anyway), H3
   (equiv single-var only; `:error` silently `:skipped`), H10, H11
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
-- [ ] **C7a. Drive the corpus-reject path red with a fixture bad rule.** The
-  `sweep_scratch` half of H5's residue **landed** (harness `1a51baf`): the one
-  destructive step in the Gate now has three end-to-end assertions and two
-  perturbations, and the safety contract it pins is that the candidate's own new
-  files are untracked exactly like a stray probe script — only the `lib/`/`test/`
-  exclusion tells them apart, and dropping it deletes the thing being judged.
-
-  Still open, and it is the original H5 wording: the corpus-reject path is
-  exercised only by unit tests of `Corpus.findings/diff`, never by a fixture bad
-  rule driven red through `Gate.check/1`. That needs the stub `mix` to emit a
-  realistic drift block, which `corpus_dispatch_anchors_test.exs` already has
-  captured output for.
-
 ## D. Credence rule work (independent of the merge)
 
 - [ ] **D1a. Re-audit the other message-matching Semantic rules for the same
