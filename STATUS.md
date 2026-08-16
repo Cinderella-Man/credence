@@ -177,15 +177,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
 
-- [ ] **D1a. Re-audit the other message-matching Semantic rules for the same
-  shape.** Row 183 turned out to be *three* unrepaired shapes, not the one it
-  recorded: the matcher's trailing `/` excluded `defpstructp`, and the fix knew
-  only the block form, so `defpstruct now: 0` — no `p` involved — was claimed
-  and no-opped too. Both are now repaired. The transferable question is how many
-  other rules pair a literal `@match_msg` with a `fix/2` that covers a narrower
-  set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
-  story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
-  every input its `match?/1` accepts have a `fix/2` branch?
 - [ ] **D2d. `NoDocOnPrivateFunction` deletes a trailing comment with the line.**
   The 20-rule sweep is **DONE** — the byte-scope oracle now covers all three
   phases, and all 20 unmasked Semantic line-editors were probed with a **planted
