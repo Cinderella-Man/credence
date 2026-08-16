@@ -102,13 +102,24 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   mode. Set both: `CEV_CREDENCE_CLONE=/home/kamil/projects/credence_evolution
   CEV_ACCEPTING_REPO=/home/kamil/projects/credence`. (`config.exs:168`'s
   commented example is still another machine's path.)
-- [ ] **B4. Pin the task dataset — row indices have silently drifted.** The
-  `0*01` glob now matches **282** task dirs vs the 230 the run saw; indices
-  are positional (`Path.wildcard |> Enum.sort`), so run-index 225 now names a
-  *different task* than the one in `rows.jsonl`. Every re-queue row number and
-  any resume is invalid until the dataset repo is pinned back to its
-  run-contemporaneous commit (`git rev-list -1 --before="2026-07-06" HEAD` in
-  `elixir-sft-dataset`) or indices become content-addressed.
+- [ ] **B4a. Decide how row indices survive the NEXT run.** The immediate
+  problem is solved: the `0*01` glob matched **230** dirs at run time and **282**
+  now, so index 225 named
+  `095_004_multi_currency_money_with_fx_conversion_01` then and
+  `077_001_interval_tree_…` today — but `var/run/rows.jsonl` records `task`
+  beside `index` for every row, so the mapping was never lost, only
+  unmaterialised. `harness/docs/REQUEUE_ROWS.md` now carries all **28**
+  re-queue rows resolved to names, and **all 28 task directories still exist**.
+  No dataset pin needed, and pinning would have discarded 52 tasks the next run
+  wants.
+
+  What remains is a choice for the next run, not this one: either make the
+  orchestrator resume by **task name** rather than bare index (`var/run/progress`
+  stores an index today), or pin `:task_glob`/the dataset SHA per run so indices
+  mean something for the run's lifetime. **Trade-off:** names are stable and
+  verbose; a pinned SHA keeps indices meaningful but freezes the corpus of tasks
+  a run can see.
+
 - [ ] **B5. Minimum in-loop gate residue: T4.2 (c)** [H]. **(d) is DONE**
   (harness `3f7e64a` + credence `6b64aba`): a BUGFIX report whose repro does not
   make the accused rule fire now fails classification, via the new
