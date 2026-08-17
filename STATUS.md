@@ -17,23 +17,36 @@ act and is the *last* step of Part B below, not the first.
 
 # The release map — everything left to close out the 3rd evolution
 
-**As of 2026-08-16, credence `evolution_accepted` @ `6962b7c`, harness `main` @
-`1f62e16`, both clean and level with their remotes.** Produced by a 6-agent
-audit (4 read-only auditors + code-level verifier + adversarial critic) with
-every load-bearing claim either executed today or marked as a hypothesis.
-Nothing on this map is done; when an item lands, strike it in
-`docs/22-remaining-work.md` (still the item-level tracker) and delete it here.
+**As of 2026-08-17, credence `evolution_accepted`, harness `main`, both clean and
+level with their remotes.** Originally produced by a 6-agent audit; since then a
+long working session has closed a number of items and, more usefully, found
+things that were not on any list. Nothing left on this map is done; when an item
+lands, strike it in `docs/22-remaining-work.md` (still the item-level tracker)
+and delete it here.
 
-**Verified green today at `6962b7c`, so not on the map:** full suite
-**9,975 tests + 6 properties, 0 failures** (corpus layer runs in the default
-suite); `mix format --check-formatted` clean; every rule witnesses its failure
-mode through the real pipeline (T1 gate — so "rules that never trigger" is a
-closed class); the self-corruption, dispatch-contention, idempotency-ratchet,
-DSL and budget gates all green; maintainer_tools queues all drained
-(candidates, unfixable_unreviewed, assumption proposals — empty); escalation
-ledger 95 decisions, all dispositioned except row 183 (D2 below).
+**Verified green, so not on the map:** full suite **10,213 tests + 6 properties,
+0 failures** (corpus layer included); `mix format --check-formatted` clean; every
+rule witnesses its failure mode through the real pipeline AND repairs its own
+documented example (Pattern 153 direct + 3 ledgered cascades, Semantic 89/89);
+every `## Bad`/`## Good` example on all 289 rules verified TRUE by execution;
+self-corruption, dispatch-contention, idempotency-ratchet, duplicate, DSL and
+budget gates all green; maintainer_tools queues drained.
 
----
+**What this session changed that alters earlier assumptions** — read these before
+trusting an older note:
+
+* **The Pattern round used to skip every file that does not compile.** 625 of
+  1,724 Pattern fixtures parse but do not compile; 275 now get a repair they
+  never got. Any earlier statement about fix coverage predates this.
+* **Credence returned NO issues for a file analysed concurrently with another
+  defining the same module** — a silent false negative, 30 of 30 runs. Fixed
+  with a module-keyed compile lock (`docs/24` §A8).
+* **Four harness defects**, two of which change what its logs mean: a `KeyError`
+  on every bugfix row, and crash handlers that DELETED the row log, which is why
+  89 rows (7.6%) of the 3rd evolution have no evidence at all.
+* **`docs/24-improvement-research.md` is new** — ranked improvements for both
+  repos, every claim marked MEASURED, READ or DONE, with the experiment that
+  must precede acting on the READ ones. It also records one change NOT to make.
 
 ## A. Merge + cut 0.8.1 (release-blocking, in order)
 
@@ -151,17 +164,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
 
 ## C. Harness loop quality (valuable before Phase 9, not gating it)
 
-- [x] **C19. Four harness defects found and fixed** (harness repo, 366 tests
-  green). Listed here because two of them change what earlier measurements mean:
-  `Implement.wrote_nothing?/1` raised `KeyError` on **every** bugfix row (a
-  one-word key mismatch, landed after the 3rd evolution so never seen); both
-  crash handlers **deleted** the row log, which is why **89 rows (7.6%) of the
-  3rd evolution have no evidence at all**; `mix test` wrote into the live run
-  dir, putting 25 ExUnit fixtures inside the durable archive and ~$35,700 of
-  synthetic spend into `usage.jsonl`; and the runaway budget ceiling reset to
-  zero on every restart, so a crash-restart loop could never trip it.
-  Full research: `docs/24-improvement-research.md` §B.
-
 - [ ] **C20. Work the rest of `docs/24-improvement-research.md`.** Ranked, with
   the experiment that must precede each. Next by value: B5 (`:rule_name_not_in_closed_set`
   is 83% of classifier errors and is recoverable), B4 (the `:solved` classifier
@@ -169,7 +171,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   nothing), B3 (`Cev.Distill` removes 0.08% of the log; classify is half the
   run's cost). **B6 is a do-NOT-build note:** making the novelty gate blocking
   would have destroyed 14 accepted rules to catch 6 duplicates.
-
 
 - [ ] **C1. T2.3 — land the LD3+LD4 merge.** ~60% done in salvage
   `b2-ld34/` (six modules, **zero tests**, agent killed at "Now the tests").
@@ -186,34 +187,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (equiv single-var only; `:error` silently `:skipped`), H10, H11
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
-
-- [x] **D14. Hot-path performance, three of eight.** See
-  `docs/24-improvement-research.md` §A5 for the ranked table and the five that
-  remain. Landed: the Pattern round threads its parse through the reduce instead
-  of re-parsing per rule (~150 Sourceror parses per file), the accept/revert
-  decision computes the output's compile errors once instead of twice, and the
-  Syntax round builds its rule list only on the branch that uses it.
-
-
-- [x] **D13. Every Pattern rule's own anti-pattern is now repaired end-to-end**
-  (`test/rule_self_repair_test.exs`, 153 direct + 3 ledgered cascades). Not on
-  the original list. Recorded because the *method* generalises: reporting and
-  fixing were each gated, and nothing checked that the two met. Six rules passed
-  both and repaired nothing through the pipeline.
-
-
-- [x] **D12. The Pattern round no longer skips files that do not compile.** Not
-  on the original list — found while backfilling D5, when six rules' own test
-  fixtures turned out to get zero repair from `Credence.fix/1` despite their
-  `fix/2` working perfectly in isolation. The cause was a single gate in
-  `Credence.Pattern.fix_with_trace/2`: `if compiles?(code_string)`, else skip all
-  156 rules. Measured cost: **625 of 1,724 Pattern test fixtures parse but do not
-  compile, and 275 of them now receive a repair the old gate refused** — none of
-  which gained a compile error. Replaced by a relative oracle
-  (`RuleHelpers.compiles_no_worse?/2`): a fix is accepted when its compile errors
-  are a subset of the ones already present. On compiling input the baseline is
-  empty, so the check is byte-for-byte the old one. Full suite 10,109/0.
-
 
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
@@ -255,22 +228,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   findings), and running `corpus_whitelist_validator` on its cadence — its local
   snapshot is the stale 2026-07-03 copy (7,113 rows) against a live 6,155-row
   whitelist, so the current whitelist has never been validated.
-
-- [x] **D5. C15 — DONE. `## Bad`/`## Good` on all three rounds, every example
-  verified true by execution.** Pattern 156/156, Semantic 86/89 (three declined:
-  two whose fixture contains a heredoc delimiter, one already covered). Gated in
-  `rule_card_test.exs` and `semantic_rule_card_test.exs`, both directions —
-  every Bad example must make its rule report, no Good example may.
-
-  **The Semantic backfill did NOT produce a duplicate signal, and that is the
-  finding.** Pointed at Semantic, the D8a intersection reports zero pairs, and
-  the zero is structural rather than earned: dispatch is first-match-wins, so
-  **84 of 89 rules fire on exactly one snippet** — their own — and containment
-  between two singletons is false unless they are the same singleton. A gate on
-  it would pass by construction, which is the T3.10a vacuity failure. The
-  Semantic duplicate question is already answered by `dispatch_contention_test.exs`
-  (a duplicate is a rule that never wins its slot). The backfill's real value is
-  the shared adversarial corpus and the truth gate over it.
 
 - [ ] **D6. C12(c) — two of the three shape-over-fit matchers are generalised;
   one is untouched.** The name half was already done (zero Pattern rules keyed to
