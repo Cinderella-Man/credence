@@ -104,14 +104,6 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B7. Work the re-queue list** (escalation_ledger.md:940-972; every cited
-  row log verified present in `var/run/logs`). 26 rows: diverged 1+18, 7, 106,
-  107, 162, 164, 205 (+31/185/33 only after C2/T3.4 lands; 105 stays out — it
-  is the probe's positive control); escalated 2, 6, 100, 119, 144, 169, 225,
-  95; classifier-error rows 1/23/125/138/139/141/203/227 (unblocked by T3.2);
-  **row 199** — the run's one ACCEPT — apply `199.patch` by hand after
-  narrowing `bare_neg_one_range?/1`. Plus the 105 remaining pass-5 rows
-  (230 − 125 distinct completed) — all subject to B4's re-pinning first.
 - [ ] **B8. Quota headroom** for the 26-row transient tail (11 classifier
   timeouts, 7 `:closed`, 5 HTTP 429, 3 implementer kills): raise the Mimo
   quota or add backoff.
