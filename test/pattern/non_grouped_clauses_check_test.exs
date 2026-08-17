@@ -41,8 +41,17 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
 
       assert length(check(NonGroupedClauses, code)) == 2
     end
+  end
 
-    test "def separated by another def is still flagged when later clause has an attribute" do
+  # These are the cases the fix deliberately declines, so the check must decline
+  # them too — the rule reported all of them and repaired none, which is the
+  # report-without-repair shape CONTEXT.md forbids and
+  # test/fix_or_drop_test.exs now gates. Both remain worth WIDENING later (the
+  # attribute run can travel with its clause; the block body needs a
+  # layout-metadata strip), and the fix-side no-op tests pin the current
+  # behaviour either way.
+  describe "does not flag strays the fix cannot move" do
+    test "a stray preceded by a module attribute, which would be orphaned" do
       code = """
       defmodule M do
         def foo(1), do: 1
@@ -53,7 +62,23 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert [%Issue{rule: :non_grouped_clauses}] = check(NonGroupedClauses, code)
+      assert clean?(NonGroupedClauses, code)
+    end
+
+    test "a stray whose body is a multi-statement block" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        def foo(x) do
+          y = x + 1
+          y * 2
+        end
+      end
+      """
+
+      assert clean?(NonGroupedClauses, code)
     end
   end
 

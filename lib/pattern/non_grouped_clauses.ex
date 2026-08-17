@@ -53,39 +53,68 @@ defmodule Credence.Pattern.NonGroupedClauses do
     end)
   end
 
+  # `check/2` reports exactly the strays `group_clauses/1` will move, because both
+  # go through `movable_stray_indices/1`.
+  #
+  # This used to be its own near-copy of phase 1 of `group_clauses/1` with no
+  # movability test at all, so it flagged every stray whether or not the fix could
+  # move it. The two declines were deliberate, and each of their in-file comments
+  # ended with the words "`check/2` still flags them" — the report-without-repair
+  # was written down in the source rather than overlooked.
   defp check_body(body) do
-    {_, _, _, issues} =
-      Enum.reduce(body, {nil, MapSet.new(), MapSet.new(), []}, fn expr,
-                                                                  {prev_key, seen, flagged,
-                                                                   issues} ->
+    body
+    |> movable_stray_indices()
+    |> Enum.uniq_by(&function_key(Enum.at(body, &1)))
+    |> Enum.map(&build_issue(body, &1))
+  end
+
+  defp build_issue(body, idx) do
+    expr = Enum.at(body, idx)
+    {name, arity} = function_key(expr)
+
+    %Issue{
+      rule: :non_grouped_clauses,
+      message:
+        "Clauses of `#{name}/#{arity}` are not grouped together. " <>
+          "Move all clauses to be consecutive.",
+      meta: %{line: Keyword.get(elem(expr, 1), :line)}
+    }
+  end
+
+  # Every index whose clause is a stray: a clause for a name/arity already seen
+  # earlier, with something else in between.
+  defp stray_indices(body) do
+    {_, _, strays} =
+      body
+      |> Enum.with_index()
+      |> Enum.reduce({nil, MapSet.new(), MapSet.new()}, fn {expr, idx},
+                                                           {prev_key, seen, strays} ->
         case function_key(expr) do
           nil ->
-            {previous_key_after_non_function(expr, prev_key), seen, flagged, issues}
+            {previous_key_after_non_function(expr, prev_key), seen, strays}
 
           key when key == prev_key ->
-            {key, seen, flagged, issues}
+            {key, seen, strays}
 
           key ->
-            if key in seen and key not in flagged do
-              {name, arity} = key
-              meta = elem(expr, 1)
-
-              issue = %Issue{
-                rule: :non_grouped_clauses,
-                message:
-                  "Clauses of `#{name}/#{arity}` are not grouped together. " <>
-                    "Move all clauses to be consecutive.",
-                meta: %{line: Keyword.get(meta, :line)}
-              }
-
-              {key, seen, MapSet.put(flagged, key), [issue | issues]}
+            if key in seen do
+              {key, seen, MapSet.put(strays, idx)}
             else
-              {key, MapSet.put(seen, key), flagged, issues}
+              {key, MapSet.put(seen, key), strays}
             end
         end
       end)
 
-    Enum.reverse(issues)
+    strays
+  end
+
+  # The single admission decision, in one place, consumed by both callbacks.
+  defp movable_stray_indices(body) do
+    body |> stray_indices() |> Enum.filter(&movable_stray?(body, &1)) |> Enum.sort()
+  end
+
+  defp movable_stray?(body, idx) do
+    not preceded_by_attr?(body, idx) and not unsafe_to_move_body?(Enum.at(body, idx))
   end
 
   defp fix_module_node({:defmodule, meta, [alias_node, [do: {:__block__, block_meta, body}]]}) do
@@ -105,40 +134,24 @@ defmodule Credence.Pattern.NonGroupedClauses do
   defp group_clauses(body) do
     indexed = Enum.with_index(body)
 
-    # Phase 1: find stray clause indices
-    {_, _, stray_set} =
-      Enum.reduce(indexed, {nil, MapSet.new(), MapSet.new()}, fn {expr, idx},
-                                                                 {prev_key, seen, strays} ->
-        case function_key(expr) do
-          nil ->
-            {previous_key_after_non_function(expr, prev_key), seen, strays}
-
-          key when key == prev_key ->
-            {key, seen, strays}
-
-          key ->
-            if key in seen do
-              {key, seen, MapSet.put(strays, idx)}
-            else
-              {key, MapSet.put(seen, key), strays}
-            end
-        end
-      end)
-
-    # Don't move clauses preceded by a module attribute (`@impl true`, `@doc`,
-    # etc.) — the attribute would be orphaned. `check/2` still flags them.
+    # One admission decision, shared with `check_body/1`.
     #
-    # Also don't move a clause with a MULTI-STATEMENT block body: reordering it
-    # leaves stale Sourceror `do`/`end` positions that make `Sourceror.to_string`
-    # render the block as a `do:` one-liner, dropping every statement after the
-    # first (uncompilable → the whole fix is reverted, losing all the other
-    # groupings too). Skipping just those strays lets the safe clauses regroup.
-    stray_set =
-      stray_set
-      |> Enum.reject(fn i ->
-        preceded_by_attr?(body, i) or unsafe_to_move_body?(Enum.at(body, i))
-      end)
-      |> MapSet.new()
+    # A stray preceded by a module attribute is skipped — moving the clause alone
+    # would orphan its `@impl true`. Moving the attribute run WITH the clause is a
+    # real widening and is specified, but it is not done here: attempted, the moved
+    # slice keeps the `do:`/`end:` positions it had at its old location and
+    # `patches_from_ast_transform/3` renders with a plain `Sourceror.to_string/1`
+    # that honours them, so two clauses print onto one line. It needs the
+    # layout-metadata strip and its own verification, on the code path docs/17
+    # entry 11 records emitting unparseable output three times.
+    #
+    # A stray with a MULTI-STATEMENT block body is skipped for the same underlying
+    # reason: stale `do`/`end` positions make the block render as a `do:`
+    # one-liner, dropping every statement after the first — uncompilable, so the
+    # whole fix reverts and every other grouping is lost with it.
+    #
+    # Because `check/2` now shares this predicate, neither case is reported.
+    stray_set = body |> movable_stray_indices() |> MapSet.new()
 
     if MapSet.size(stray_set) == 0 do
       body

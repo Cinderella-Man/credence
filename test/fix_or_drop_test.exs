@@ -48,7 +48,7 @@ defmodule Credence.FixOrDropTest do
   third way.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 9 rules; 23 remain. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules; 17 remain. May only SHRINK.
   #
   # Paid down the same day:
   #   * `NoRedundantListTraversal` — 13 findings; see below.
@@ -57,6 +57,13 @@ defmodule Credence.FixOrDropTest do
   #     `normalize_pattern/1` was a byte-identical duplicate of
   #     `unwrap_pattern/1` — two copies of one predicate is how they drifted.
   #     Both now go through `fixable_clause_pair/2`.
+  #   * `NonGroupedClauses` — 6. `check_body/1` was a near-copy of phase 1 of
+  #     `group_clauses/1` with NO movability test, so it flagged every stray
+  #     whether or not the fix could move it. Both now consume
+  #     `movable_stray_indices/1`. Two widenings remain specified but undone —
+  #     moving an annotation run with its clause, and a layout-metadata strip for
+  #     block bodies — because both need fresh rendering on the code path docs/17
+  #     entry 11 records emitting unparseable output three times.
   #
   # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
@@ -84,12 +91,6 @@ defmodule Credence.FixOrDropTest do
     {Credence.Pattern.NoTrailingNewlineInDoc, "94395476e95e"},
     {Credence.Pattern.NoTrailingNewlineInDoc, "a0d335190fde"},
     {Credence.Pattern.NoTrailingNewlineInDoc, "aea390ea1b81"},
-    {Credence.Pattern.NonGroupedClauses, "71e38a0f00d8"},
-    {Credence.Pattern.NonGroupedClauses, "940d04f005ea"},
-    {Credence.Pattern.NonGroupedClauses, "b5c1a8b8642f"},
-    {Credence.Pattern.NonGroupedClauses, "d50acf813b00"},
-    {Credence.Pattern.NonGroupedClauses, "f58078dad656"},
-    {Credence.Pattern.NonGroupedClauses, "f7c621ddf5e1"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "2e913809e50c"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "36f7bb2558bb"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "37cfea92ba71"}

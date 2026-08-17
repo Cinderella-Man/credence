@@ -25,8 +25,8 @@
 # The cap and the ledger are frozen in that test. Changing either is a
 # deliberate, reviewable edit — which is the whole mechanism.
 #
-# TOTAL 6361 accepted findings across 87 rules.
-#      15 over the cap of 100 (grandfathered; they hold 4734 = 74% of the debt)
+# TOTAL 6351 accepted findings across 87 rules.
+#      15 over the cap of 100 (grandfathered; they hold 4734 = 75% of the debt)
 #      72 at or under the cap
 #
 # Paydown ranking is this file's own order. Top target (docs/16, C13(b)):
@@ -66,9 +66,9 @@
    41  prefer_explicit_binary_arithmetic
    39  no_destructure_reconstruct
    39  no_guard_equality_for_pattern_match
-   37  non_grouped_clauses
    35  no_redundant_binary_syntax
    27  no_manual_list_reduce
+   27  non_grouped_clauses
    26  no_kernel_op_in_pipeline
    26  no_map_keys_or_values_for_iteration
    22  no_duplicate_spec
