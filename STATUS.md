@@ -104,12 +104,16 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B6. Secrets, endpoint, spend.** `config/secrets.exs` now exists with
-  all three key groups, but the Mimo console cookie expires by design —
-  validate with `mix cev.budget`. The solve stage points at
-  `http://localhost:8000/v1/chat/completions` (`:local_qwen_thinking`) —
-  `curl -m 5 http://localhost:8000/v1/models` before launch. The **spend
-  decision has no recorded artifact** — still a human call.
+- [ ] **B6. Three pre-launch checks. Run them; do not read a recorded verdict —
+  two of the three go stale on their own.**
+  * `curl -m 5 http://localhost:8000/v1/models` — the solve stage
+    (`:local_qwen_thinking`, `config.exs:71`) posts to that host. `curl` exit 7 /
+    HTTP 000 means nothing is serving it and every solve will fail.
+  * `mix cev.budget` — prints the authoritative MiMo balance, or tells you the
+    console cookie has expired (it expires **by design**) and to re-grab it from
+    DevTools into `config/secrets.exs`.
+  * **The spend ceiling is a human call and has no recorded artifact.** Decide it
+    before launch rather than during.
 - [ ] **B7. Work the re-queue list** (escalation_ledger.md:940-972; every cited
   row log verified present in `var/run/logs`). 26 rows: diverged 1+18, 7, 106,
   107, 162, 164, 205 (+31/185/33 only after C2/T3.4 lands; 105 stays out — it
