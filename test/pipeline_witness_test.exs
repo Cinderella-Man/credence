@@ -59,9 +59,11 @@ defmodule Credence.PipelineWitnessTest do
   # file was run alone. A false "this rule is dead" is the most expensive kind of
   # flake here, because the whole point of this gate is to be believed.
   #
-  # Serialising is the containment, not the cure. See
-  # `docs/24-improvement-research.md` §A8 for the real fix and why it was not
-  # done at the same time.
+  # The root cause is fixed now — `compile_and_capture/1` takes a lock keyed on
+  # the module names in the source, so two compiles of `Example` serialise while
+  # unrelated ones still run in parallel (see `concurrent_analysis_test.exs`).
+  # This stays `async: false` anyway: it compiles hundreds of fixtures, and with
+  # the lock in place running it concurrently buys contention rather than speed.
   use ExUnit.Case, async: false
 
   # Builds an index over every rule test file and probes 290 rules; ~4 s total,

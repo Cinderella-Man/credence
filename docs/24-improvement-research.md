@@ -139,40 +139,43 @@ hazard is gone at the source and both gates are concurrent again. A gate in
 both rounds, so it cannot quietly come back — and perturbing two rules to share
 a name turns it red naming both.
 
-### A8. Test fixtures share module names on a scale that makes concurrent compilation unsafe — [MEASURED]
+### A8. Credence silently reported NOTHING for a file analysed concurrently with another defining the same module — [DONE]
+
+Found as a test flake and it was not a test problem.
 
 Measured across `test/semantic` and `test/syntax` fixtures: **413 say
-`defmodule M`, 304 say `Example`, 167 say `Solution`**, plus a long tail.
+`defmodule M`, 304 say `Example`, 167 say `Solution`**. Any gate that compiles
+fixtures races against any other test compiling the same name, and
+`pipeline_witness` duly reported the healthy `NoMapUpdateMissingKey` as DEAD.
 
-Any gate that COMPILES fixtures — `pipeline_witness`, `dispatch_contention`, the
-rule-card truth gates — races against any other test compiling the same name,
-because the Erlang code server is global and `compile_and_capture/1` deletes the
-modules it created. The symptom is the worst one available: a healthy rule
-reported as **dead**. Observed exactly that way on `NoMapUpdateMissingKey`, whose
-fixtures are `defmodule Example` — unwitnessed in a full run, green alone.
+Chasing the flake found the real defect. Compiling is a global side effect:
+`Code.compile_string/2` loads modules into the code server and
+`safe_cleanup_modules/1` deletes them again, so two concurrent analyses of
+different files that share a module name interfere. Measured on two files each
+containing one unused variable:
 
-Contained for now by making the compiling gates `async: false`, which is what
-`dispatch_contention_test.exs` already did. That is containment, not a cure:
-every future compiling test has to remember, and the underlying hazard is still
-there.
+    same module name        30 of 30 runs divergent
+    different module names   0 of 30 runs divergent
 
-**Three real fixes, in increasing order of ambition:**
+and the divergence was a false **negative** — `[]` where `[:unused_variable]`
+was expected. For a linter that is the worst direction: it does not fail loudly,
+it quietly approves broken code. Anything analysing files in parallel hit it,
+and `defmodule Example` is not a rare name in the generated code this tool is
+for.
 
-1. **Rename the fixtures.** Mechanical but not trivial — a handful of rules are
-   ABOUT module names (`FixPlugDependencyModuleOrder`,
-   `FixCyclicStructReference` were both broken by exactly this rename in their
-   doc examples and had to be reverted), so it needs the truth gates green after
-   every batch.
-2. **Serialise `compile_and_capture/1`** behind a lock. Fixes tests and
-   production in one move — two concurrent `Credence.analyze/1` calls on files
-   defining the same module race today, which is a real library-level defect and
-   not only a test one. Costs suite wall-clock, since the suite is compile-heavy.
-3. **Compile into a unique namespace.** Correct in principle, but it means
-   rewriting the user's module names before compiling and mapping diagnostics
-   back, which is a large surface for a subtle class of bug.
+`compile_and_capture/1` now takes a lock keyed on the module names in the
+source, so files defining different modules still compile concurrently — the
+common case, and the one that would otherwise pay for this. `:global` because
+the library has no supervision tree; `[node()]` keeps it local. Cost: ~3% on
+full-suite wall clock (345s → 355s).
 
-(2) is the one worth pricing first: **the production race is the finding here**,
-and the test flake is only how it was noticed.
+Pinned by `test/concurrent_analysis_test.exs`, which reproduces 20/20 divergent
+against the pre-fix code and includes the control that matters — different
+module names must still run concurrently, so the fix cannot silently become
+"serialise everything".
+
+Renaming the fixtures is now optional rather than required. Worth doing anyway,
+but it is hygiene, not a correctness fix.
 
 ### A7. The Semantic backfill is done, and it REFUTED its own motivation — [DONE]
 

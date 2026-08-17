@@ -184,6 +184,54 @@ defmodule Credence.RuleHelpers do
   """
   @spec compile_and_capture(String.t()) :: {:ok, [map()]} | {:error, [map()]}
   def compile_and_capture(source) do
+    with_module_lock(source, fn -> do_compile_and_capture(source) end)
+  end
+
+  # Compiling is a GLOBAL side effect: `Code.compile_string/2` loads the modules
+  # into the code server, and `safe_cleanup_modules/1` deletes them again. Two
+  # concurrent analyses of DIFFERENT files that happen to define the SAME module
+  # name therefore race — one deletes the module the other is still working
+  # with — and the loser silently reports **no issues at all**.
+  #
+  # Measured, and it is not marginal: two files each containing one unused
+  # variable, analysed concurrently.
+  #
+  #     same module name       30 of 30 runs divergent
+  #     different module names  0 of 30 runs divergent
+  #
+  # The divergence is a false NEGATIVE — `[]` where `[:unused_variable]` was
+  # expected — which is the worst direction for a linter: it does not fail, it
+  # quietly approves. It was found as a test flake (`pipeline_witness` reporting
+  # a healthy rule as dead) but the flake was only the symptom; anything that
+  # analyses files in parallel hits it, and `defmodule Example` is not a rare
+  # name in generated code.
+  #
+  # The lock is keyed on the module names in the source rather than held
+  # globally. Files defining different modules still compile concurrently, which
+  # is the common case and the one that would otherwise pay for this. `:global`
+  # is used because it needs no supervision tree — this library has none — and
+  # `[node()]` keeps it local.
+  defp with_module_lock(source, fun) do
+    case module_key(source) do
+      nil -> fun.()
+      key -> :global.trans({{__MODULE__, key}, self()}, fun, [node()])
+    end
+  end
+
+  # The module names a source defines, as one key. A cheap regex rather than a
+  # parse: this runs before every compile, the answer only has to be *stable*
+  # for a given source, and over-matching (a `defmodule` inside a string) costs
+  # a little needless serialisation rather than a wrong answer.
+  @defmodule ~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/m
+
+  defp module_key(source) do
+    case Regex.scan(@defmodule, source, capture: :all_but_first) do
+      [] -> nil
+      names -> names |> List.flatten() |> Enum.sort() |> Enum.uniq() |> Enum.join(",")
+    end
+  end
+
+  defp do_compile_and_capture(source) do
     case bounded_compile(source) do
       {:ok, {result, diagnostics}} ->
         case result do
