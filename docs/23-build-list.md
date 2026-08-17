@@ -44,10 +44,13 @@ tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (10)
+## Still unbuilt, and each verified still uncovered (9)
 
-Every one was confirmed uncovered by running its target: the pipeline returns the
-source unchanged today.
+Every one was re-confirmed uncovered on 2026-08-17 by running its target through
+`Credence.fix/1`: the pipeline returns the source unchanged. That re-check
+mattered — the Pattern round no longer skips files that fail to compile, which
+could have covered some of these silently, and one item turned out to be covered
+by an existing rule.
 
 **No table rows remain** — the three this list identified as cheapest were added
 the same day. Everything below needs a rule and its own equivalence argument:
@@ -64,8 +67,14 @@ the same day. Everything below needs a rule and its own equivalence argument:
   `fix_when_guard_in_for_comprehension` — Syntax, and the last two must be built
   **together** sharing one backward lexer-aware scanner, because they emit the
   byte-identical error and need opposite repairs
-* `fix_undefined_struct_in_pattern`, `fix_undefined_type_t_in_spec`,
-  `fix_mixed_required_optional_map_keys`
+* `fix_undefined_struct_in_pattern`, `fix_mixed_required_optional_map_keys`
+
+  (`fix_undefined_type_t_in_spec` is **covered**, re-verified 2026-08-17 — but by
+  a different reading than this list assumed. `NoBareNamesInSpec` rewrites
+  `@spec f(t) :: :ok` to `@spec f(t :: any())`, treating the bare name as a
+  parameter LABEL rather than as a reference to the type `t()`. Both are valid
+  readings of what the author meant; the output compiles, so the item is closed
+  rather than pending a second interpretation.)
 * `no_remote_function_in_guard` — **read docs/17 entry 11 first**: it has three
   recorded corruption paths, including output that does not parse
 
