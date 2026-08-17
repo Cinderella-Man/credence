@@ -50,7 +50,7 @@ And the extractor that found them had two bugs of its own, each of which
 manufactured a fake finding. `test/rule_card_test.exs` now gates both directions:
 every `## Bad` example must make its rule fire, and no `## Good` example may.
 
-### A4. Over-fitting in shape — partially [DONE], the third is open
+### A4. Over-fitting in shape — [DONE], all three settled (two widened, one measured and deliberately not)
 
 docs/12 C12(c) named three rules as over-fit in shape. Probing them agreed, but
 not where the doc said:

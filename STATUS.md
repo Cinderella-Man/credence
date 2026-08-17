@@ -242,15 +242,27 @@ rather than to this section.
   once **per rule**; discovery re-scans `Application.spec` every call), C10
   observability (no `Issue.column`, no telemetry — and nothing downstream yet
   consumes the `:reverted|:patch_rejected|:crashed|:no_op` vocabulary), C16
-  (`rule_status/1` exposes neither `priority` nor `unsafe_in_dsl`; no
-  `max_passes` config).
+  (`rule_status/1` exposes neither `priority` nor `unsafe_in_dsl`; no `max_passes`
+  for the **Pattern** round — the Semantic round already has one,
+  `lib/semantic.ex:115`, so do not go looking for a missing mechanism).
 - [ ] **D9. Mutant-survivor triage — a decision, plus the expensive half.** Rule
   Standard requirement 9 is the last ungated one, and C18 stages it: sweep →
   publish → fix the tail → only then a floor. Sweep done and deterministic
   (**0.740**, 629 killed / 221 survived, 39 rules, seed 0 — reproduced exactly
-  three weeks and ~20 commits apart). The 221 survivors classify structurally
+  three weeks and ~20 commits apart). The survivors classify structurally
   (121 need individual review; the rest are catch-all constants, comparison
   boundaries, position arithmetic and unreached defaults), and 10 rules hold 56%.
+
+  **The sweep's only copy is `tmp/mutants/mutants.tsv`, which is gitignored**
+  (`.gitignore:18`) — 852 rows, one per mutant, with the rule, operator,
+  before/after and context. Losing it costs the whole sweep to regenerate, which is
+  affordable only because seed 0 is deterministic. Triage without re-running by
+  reading that file.
+
+  **Those numbers are the PRE-improvement snapshot** (re-checked 2026-08-17): the file
+  still has `no_python_multi_return` at 0.475, the rate this item records taking to
+  0.525. So a fresh sweep reads ~0.742 / 219 survivors, and that is the fix landing —
+  not a regression to chase.
 
   **The decision is the floor, and it is yours.** Do not set `--fail-under` at
   0.740 — that fails rules for carrying defensive clauses rather than weak tests,
