@@ -264,20 +264,50 @@ logs for the crash markers returns zero hits. `raised` rows also carry
 
 **Fix:** add a `"crashed"` outcome dir and `move/2` instead of removing.
 
-### B3. The classifier reads the whole log, and `Cev.Distill` removes 0.08% of it
+### B3. `Cev.Distill` really does remove 0.08% — but the proposed replacement would remove ~0.3% — [EXPERIMENT RUN]
 
-Median archived log 171,663 bytes; median after distillation 171,532. The
-sentinel it splits on is emitted immediately before solve, so "everything below"
-is the whole file. Classify then averages 54,511 input tokens per call over 1,296
-calls — **$33.60 of the run's $66.73**, with zero cache reads on that stage.
+**The premise is confirmed.** Across all 489 archived row logs: median full log
+**171,663 bytes**, median after `distill/1` **171,532**. It is functionally an
+identity, because the sentinel it splits on is emitted immediately before solve,
+so "everything below" is the whole file. And classify really is the run's biggest
+line item — 1,296 calls averaging 54,511 input tokens, $33.60 of $66.73, with
+zero cache reads on that stage.
 
-What the bytes are, over a 124-log sample: 16.3% is
-`[credence_fix] done. Applied: []` — a message whose content is that nothing
-happened — and ~20% is `Code.compile_string raised:` dumps.
+**The proposed replacement does not follow, because the byte attribution behind
+it is wrong by two orders of magnitude.** It was to drop
+`[credence_fix] done. Applied: []` bodies (claimed 16.3% of the log) and
+`Code.compile_string raised:` dumps (claimed ~20%). Measured over the same logs:
 
-**Fix:** make `distill/1` structure-aware. **Experiment:** replay the 489 archived
-logs through the candidate distiller offline (no LLM) for the byte reduction,
-then re-classify 30 rows with known verdicts and measure decision agreement.
+| bucket | share of distilled bytes |
+|---|---|
+| `[credence_fix] done. Applied: []` | **0.04%** |
+| `Code.compile_string raised:` | **0.29%** |
+| `credence_fix` `log_diff` blocks (`L66 - / L66 +`) | 3.27% |
+| `[Validator …]` | 2.53% |
+| `[corpus]` progress lines | 1.13% |
+| blank lines | 0.77% |
+| `[ClaudeCode]` agent transcript | 0.69% |
+| everything else | **91.6%** |
+
+So the proposed distiller would remove about **0.3%**, not 36%.
+
+And "everything else" has no fat to cut — bucketing it by normalised line prefix
+gives a long tail whose largest single entry is 2.1% (comment separator rules),
+followed by bare `end` lines at 1.9%. It is the **solve attempts themselves**:
+Elixir source, plus the prompts. That is the evidence the classifier is being
+asked to judge, so it is not obviously removable at all.
+
+**Conclusion: there is no cheap distillation win here.** The identifiable
+removable categories — corpus progress lines, Budget heartbeats, `[LLM.call]`
+debug — total perhaps 3–5%. Reducing classify cost means sending fewer *rows* or
+fewer *attempts*, not trimming noise out of the ones sent, and B4's zero-yield
+`:solved` lens is where that conversation actually starts.
+
+One caveat on this measurement, stated because it cuts against my own numbers:
+the archived log is the FINAL one, and for a row that reached the implementer it
+contains transcript that classify never saw. It is the right corpus for the 713
+`no_action` rows (nothing ran after classify) and an overestimate for the rest.
+That does not change the conclusion — the proposed categories are small in both.
 
 ### B4. The `:solved` lens yields exactly zero — and the proposed gate for it does not work — [EXPERIMENT RUN]
 
@@ -488,10 +518,24 @@ fixed. The one performance item still worth pricing is the **compile count** —
 see the end of §A5 — and it needs a gate before anyone attempts it, because a
 stale baseline on that path silently accepts or reverts fixes.
 
-**Harness:** B1, B2, B10 and B9(a) are **done**. Next: B5 and B4 (pure token
-savings, both with offline replay experiments), then B3, the largest single cost
-lever, which needs the replay harness B4 and B5 build. Then B8 and B7. Leave B6
-as a "do not build H7 as specified" note.
+**Harness:** B1, B2, B7 (step 1), B8, B9(a), B9(b) and B10 are **done**.
+
+**B3 and B4 have both been replayed against the archive and both proposals
+failed** — B4's gate lets 154 of 238 rows through against its own bar of 20, and
+B3's distiller would remove 0.3% rather than 36%. Neither should be built as
+specified. B4 leaves a real maintainer decision (delete the zero-yield lens or
+re-measure it next run); B3 leaves the conclusion that classify cost is inherent
+to the evidence being sent.
+
+That leaves **B5** (the `fires?` reordering for out-of-closed-set rule names, 43
+recoverable rows) as the only unstarted item with an intact case — and it too has
+a named replay experiment that should precede it. **B6 stays a do-NOT-build
+note.**
+
+Worth noting how this document has aged: of nine harness proposals, four were
+built roughly as written, two were refuted by replaying them, one (B6) was
+refuted before anyone started, and the two most expensive-looking wins turned out
+not to exist. The experiments were the point.
 
 **One correction to B10 worth keeping:** the existing `var/run/usage.jsonl`
 pollution is NOT cleaned up. Those are the maintainer's files, and deleting run
