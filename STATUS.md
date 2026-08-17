@@ -90,25 +90,20 @@ rather than to this section.
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
-- [ ] **B1a. The 2026-07-06 archive is the only copy of an open experiment's input.**
-  `credence-evolution-harness/var/archive/run-2026-07-06/` (83 MB, 531 files) survives
-  `cev.reset` but not a disk — `var/` is gitignored. It is **not** merely historical:
-  **docs/24 B5 is open and its experiment reads these files** — "replay the 43 archived
-  specs through the reordered gate". `classifier_errors/` holds the 52 logs B5 counts, 44
-  of them carrying `rule_name_not_in_closed_set`. B4 was answered by replaying the same
-  rows. A rerun does not substitute: ~$6 and 5.5 h, and it generates *different* rows.
+- [ ] **B1b. The Gate runs the clone's FULL suite per candidate — and `mix test` just
+  got ~9 minutes longer.** `Gate.phase_args(:non_corpus)` is `["--exclude", "corpus"]`
+  (`lib/cev/evolve/gate.ex:589`) and `attempt/2` runs `mix test` with no file list
+  (`:560`), once per candidate, with retries. Now that `:idempotency` runs by default,
+  every one of those gains the ~9-minute sweep, under a 1800 s cap
+  (`Config.gate_test_timeout_s`) that used to have 5× headroom and now has ~1.6×.
+  Decide before the 4th run:
+  * add `--exclude idempotency` to `phase_args(:non_corpus)`, mirroring CI — fast, but
+    a generated rule can then ship non-idempotent, which is the blind spot that let the
+    sweep sit red across four rules; or
+  * scope the sweep to the candidate's own fixtures, which is the check the Gate
+    actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
+    needs the sweep to take a scope.
 
-  So the cheaper resolution is probably not "copy 83 MB somewhere" — it is **run B5's
-  replay while the data exists** (it needs a built clone, which is why it has not been),
-  after which the archive is only history and can be dropped. Either closes this.
-- [ ] **B2. After the merge: reset sister `evolution` onto the new `main`.**
-  The sister (`/home/kamil/projects/credence_evolution`, `b83d623`) contains
-  **none of the five new meta-gate files** (pipeline_witness,
-  dispatch_contention, self_corruption, idempotency, rule_helpers_ast_diff —
-  docs/22 says "three"; it is five), has no STATUS.md, still ships the retired
-  `no_else_if` live, and its CONTEXT.md understates the rule inventory. Until
-  the reset, **no new gate binds the harness Gate**. After it, run the five
-  gate files inside the sister once, as proof they bind.
 - [ ] **B3. Repoint the clone — two env vars, not one.** The docs/22 runbook
   line (`CEV_CREDENCE_CLONE=…/credence_evolution`) is **incomplete since T4.1
   landed**: `Config.accepting_repo/0` falls back to the clone, which has no
@@ -170,15 +165,17 @@ rather than to this section.
   B3's byte attribution was wrong by two orders of magnitude, B6 would have
   destroyed 14 accepted rules to catch 6 duplicates).
 
-  * **B4 is a maintainer decision.** The `:solved` classifier lens has zero yield
-    over 238 rows at $6.02 and 5.5 h per run, but the proposed replacement gate
-    lets **154 of 238** through against its own bar of 20, and the variant that
-    skips all 238 is untestable from the archive. Delete the lens, or keep it one
-    more run and re-measure now that the outcome atoms reach the classifier.
-  * **B5 is open with an intact case.** `:rule_name_not_in_closed_set` is 83% of
-    classifier errors and the names are real live rules; reordering the `fires?`
-    probe ahead of the closed-set check would recover ~43 rows per run. Its replay
-    experiment needs a built clone, so it has not been run.
+  Both are now decisions **for the 4th run**, not archive questions — the 2026-07-06
+  archive is being dropped rather than preserved, so neither is settled by replay.
+  * **B4.** The `:solved` classifier lens had zero yield, but the proposed replacement
+    let 154 of 238 through against its own bar of 20. With a 4th run happening, the
+    live option is "keep the lens one more run and re-measure now that the outcome
+    atoms reach the classifier" — the delete-it option forecloses that measurement.
+  * **B5. Apply the fix, do not re-measure it.** `:rule_name_not_in_closed_set` was 83%
+    of classifier errors and the names were real live rules; running the `fires?` probe
+    when a resolvable rule sits outside the closed set recovers an estimated ~43 rows
+    per run. The replay was only ever there to quantify that, and it needs the archive.
+    Land it in `classify.ex:161-193` before the 4th run and let the run measure it.
 
 ## D. Credence rule work (independent of the merge)
 
