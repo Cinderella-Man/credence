@@ -17,12 +17,10 @@ A note on words used a lot here:
 
 ## Parser: Sourceror only
 
-Credence parses code with **Sourceror, and nothing else**. Sourceror is a
-parsing library; the tree it makes keeps extra notes about spacing and position
-that Elixir's built-in parser throws away. `Code.string_to_quoted/1` (Elixir's
-built-in parser) does **not** appear anywhere in `lib/` or `test/` — you can
-check this with grep, and it should stay that way. Every bit of parsing goes
-through `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
+Credence builds every **tree** with **Sourceror, and nothing else**. Sourceror is
+a parsing library; the tree it makes keeps extra notes about spacing and position
+that Elixir's built-in parser throws away. Every tree a rule reads or rewrites
+comes from `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
 
 - Both Pattern callbacks (`check/2` and `fix_patches/2`).
 - The Syntax round's "did it parse?" check.
@@ -30,6 +28,33 @@ through `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
 - Tests calling `check/2` (test files parse with `Sourceror.parse_string!/1`).
 - Building little bits of code inside a rule (e.g.
   `Sourceror.parse_string!("require Logger")`).
+
+### `Code.string_to_quoted` is not banned — it answers a different question
+
+This section used to say `Code.string_to_quoted/1` "does not appear anywhere in
+`lib/` or `test/` — you can check this with grep, and it should stay that way."
+That was false, and checkable: it is in **28 files under `lib/`** and 16 under
+`test/`, most of them Syntax rules. Corrected rather than enforced, because the
+files using it are right to.
+
+The real division is by *question asked*, not by library:
+
+* **"What is the tree?"** — Sourceror, always. Only it keeps the literal wrappers,
+  delimiters and positions a rule needs to patch bytes.
+* **"Does this parse, and if not, where does it stop?"** — either works and they
+  agree exactly. Measured on `x = :helper(1)`: both return
+  `{:error, {[line: 1, column: 12], "syntax error before: ", "'('"}}`, columns
+  included, with or without `columns: true`.
+
+So a Syntax rule that locates a defect by the parser's own error position may use
+either. `Code.string_to_quoted/2` is preferred where the source is *expected* to
+emit warnings, because `emit_warnings: false` suppresses them and Sourceror exposes
+no equivalent — a charlist elsewhere in the file otherwise adds a deprecation
+diagnostic to every probe.
+
+What is still true: never build or rewrite a tree with the built-in parser. A match
+written for its shape, like `{:==, _, [_, 1]}`, silently fails against Sourceror's
+`{:==, _, [_, {:__block__, _, [1]}]}`.
 
 Sourceror's tree is **not** the same shape as the built-in parser's tree. That
 shape difference is the main thing to keep in your head when writing or reading
