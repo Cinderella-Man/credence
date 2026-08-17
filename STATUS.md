@@ -52,49 +52,24 @@ the sister reset (B2) produce a tree unrelated to the documented history.
   hex.publish — `mix.exs` carries hex-shaped `package()` metadata but nothing
   was ever published.
 
-  **Prepared 2026-08-17, and one blocker found for (5).** `CHANGELOG.md` is now current
-  (it had not been touched since `4e9d16d`, so ten rules and a public API change were
-  undocumented — the date stamp in (2) means nothing until the file says what is being
-  released). Confirmed: zero tags, one `[0.8.1]` section with 0.7.0 already folded in,
-  and `mix.exs`'s version matches it.
+  Prepared (`51a4d96`): `CHANGELOG.md` now describes the release — it had not been touched
+  since `4e9d16d`, so ten rules and a public API change were undocumented, and the date
+  stamp in (2) means nothing until it does. Confirmed: zero tags, one `[0.8.1]` section,
+  `mix.exs` version agreeing.
 
-  **But `package()` declares `licenses: ["MIT"]` and there is no LICENSE file in the
-  repo.** `mix hex.publish` objects, and more to the point a published package would
-  carry an MIT claim with no grant text in it. Writing that file is a legal declaration
-  with a named copyright holder, so it is yours, not mine — but it has to happen before
-  (5) can be answered yes. **Trade-off for you:** publishing makes the rule set
-  installable and also makes every future rename a breaking change for
-  downstreams; not publishing keeps the project git-only, which is what every
-  doc currently assumes.
-- [ ] **A6. CI is written but has never run — treat it as a hypothesis until it
-  goes green once.** `.github/workflows/ci.yml` now exists (there was no
-  `.github/` at all), with three jobs matching A5's list: `check` (format,
-  `--force --warnings-as-errors`, `mix test --exclude corpus --exclude idempotency`
-  — the two layers the other jobs own — plus a `git diff --exit-code` that catches a
-  fixture the healer rewrites), `corpus`
-  (`mix credence.corpus.fetch` then `mix test --only corpus`, cached on
-  `lib/credence/corpus.ex` since every entry is an immutable version or SHA), and
-  `idempotency` (the ~9-minute sweep, which a local `mix test` also runs — only CI
-  splits it out, for parallelism). The YAML parses and
-  every command in it is one this session ran locally and green — but **no job
-  has executed on a runner**, because that needs a push, which is yours. Expect
-  the first run to need adjustment; the corpus job in particular fetches ~1 GB
-  on a cold cache.
+  **Blocker for (5):** `package()` declares `licenses: ["MIT"]` and there is no LICENSE
+  file. `mix hex.publish` objects, and a published package would assert MIT with no grant
+  text. Writing one names a copyright holder, so it is yours.
 
-  **Pre-flighted 2026-08-17, to shrink what the first run can surprise you with.**
-  Everything checkable without a runner was checked: the pinned pair matches this
-  machine exactly (`elixir 1.20.2`, OTP `29`); all five mix tasks it invokes exist
-  (`deps.get`, `format`, `compile`, `test`, `credence.corpus.fetch`); and — the
-  usual first-run killer — **zero absolute local paths** in `lib/` or `test/`, and no
-  env-var dependency outside a fixture string. What genuinely cannot be known
-  without a push: runner behaviour, the action versions, the cache keys, and the
-  cold-cache corpus fetch.
+- [ ] **A6. CI has never executed on a runner — it needs this push.**
+  `.github/workflows/ci.yml`, three jobs on a pinned Elixir 1.20.2 / OTP 29 (one pair by
+  design, not a matrix: every behavioural claim in `docs/` was executed on it, and docs/17
+  records 1.19.5 and 1.20.2 disagreeing about whether a rule's output parsed).
 
-  Deliberately **one** Elixir/OTP pair (1.20.2 / OTP 29), not a version matrix,
-  even though `mix.exs` allows `~> 1.17`: every behavioural claim in `docs/` was
-  executed on that pair, and docs/17 entry 11 records 1.19.5 and 1.20.2
-  disagreeing about whether a rule's output parsed. Widening it is worth doing
-  and owns whatever it turns red.
+  Pre-flighted as far as is possible off a runner (`c898948`): pinned pair matches, all
+  five mix tasks exist, no absolute local paths or env dependencies in `lib/` or `test/`.
+  What remains unknowable without running it: runner behaviour, action versions, cache
+  keys, and the cold ~1 GB corpus fetch. Treat the first run as a hypothesis.
 
 **A1 and A4 are done and deleted from this map** (A1 by the maintainer's
 confirmation above; A4's matrix was re-run 2026-08-17 — green, including the
@@ -143,14 +118,11 @@ rather than to this section.
 
 ## D. Credence rule work (independent of the merge)
 
-- [ ] **D4. C13(b) — one corpus-composition decision, and two small jobs.**
+- [ ] **D4. C13(b) — one corpus-composition decision, and one job that is yours to start.**
 
-  T5.2's stated action (narrow, demote or retire
-  `prefer_heredoc_for_multi_line_doc`) is **refuted and should not be done**:
-  1,298 of 1,298 of its findings, and 167 of 167 of
-  `no_trailing_newline_in_doc`'s, sit inside `lib/generated/` — 2% of the corpus
-  carrying ~24% of the debt — and both fire **zero** times across ~19,400
-  hand-written files. The rules found exactly their documented target.
+  (T5.2's "narrow or retire `prefer_heredoc_for_multi_line_doc`" is refuted and closed:
+  all 1,298 of its findings sit in `lib/generated/`, and it fires zero times across
+  ~19,400 hand-written files. The rules found exactly their documented target.)
 
   **THE DECISION — corpus composition, and it is genuinely yours.** Add
   `"/generated/"` to `@excluded_segments` (`lib/credence/corpus.ex:697`, beside
@@ -175,16 +147,9 @@ rather than to this section.
     the two grandfathered rows must come off `findings_budget_test.exs` in the
     same commit or the gate fails on invariant 4.
 
-  **Not decisions, still open:**
-  * **`corpus_whitelist_validator` is now staged and has still never run.** Re-staged
-    2026-08-17 from the live whitelist: 6,131 findings into 62 batches, replacing the
-    2026-07-03 copy that was ~1,000 rows out. Non-destructive (there were no reports to
-    clear) and it leaves the repo clean — `data/` is gitignored.
-
-    **Starting it is yours** — `validate_loop.sh` spends one billed Claude session per
-    batch, ~62 of them, sleeping between. It is resumable: a batch with a non-empty
-    report is skipped, so it can be run in slices (`validate_loop.sh 3 2` does three
-    batches, two minutes apart).
+  **Not a decision:** `corpus_whitelist_validator` is staged and has never run — 6,131
+  findings in 62 batches (`95defc1`). Starting it is yours: one billed Claude session per
+  batch, resumable in slices (`validate_loop.sh 3 2`).
 
 - [ ] **D6. C12(b) — fire-rate telemetry. Genuinely blocked on the harness's H10/H11,
   re-checked 2026-08-17.** C12(c) is done (`b3ffd62`, `d857b5d`).
@@ -200,134 +165,54 @@ rather than to this section.
   obvious wrong move: the corpus premise is "well-reviewed code, credence should find
   nothing", so zero findings there is the desired state, not a retirement signal.
 
-- [ ] **D7. T5.7 — the C9 half is closed; C10/C16 are scope decisions, not defects.**
-  Re-checked 2026-08-17 against the tree, because as written this item invited work
-  that is already done or already refuted:
+- [ ] **D7. Only C10 is left, and it is a scope call rather than a gap.**
+  C9 is closed three ways and C16 is built (`0007208` — `rule_status/1` now reports
+  `:priority` and `:unsafe_in_dsl`). The C9 detail is in docs/24 §A5: row 1 DONE, row 7
+  refuted (8 discoveries = 1 ms against a 410 ms fix), row 9 refuted on measurement (zero
+  rules fire on four of five real files, so the prize there is exactly 0%). **Do not
+  re-derive those** — they are recorded specifically so nobody does.
 
-  * **C9 "re-parses once per rule" — DONE** (`b3ffd62`; docs/24 §A5 row 1). The reduce
-    in `lib/pattern.ex:117-176` threads `parsed` through every exit.
-  * **C9 "discovery re-scans `Application.spec` every call" — true, and its fix is
-    REFUTED** (docs/24 §A5 row 7): 8 discoveries measured at 1 ms against a 410 ms
-    fix, plus a code-reload staleness hazard. Roughly 4 calls per `Credence.fix/2`.
-    Do not memoise it; docs/24 recorded the refutation so nobody re-derives it.
-  * **The one uncosted residue is now measured, and REFUTED** (docs/24 §A5 row 9).
-    `apply_rule_fix_with_status/3` re-parses at `lib/rule_helpers.ex:592`, once per
-    firing rule. Over five real `lib/` files: zero rules fire on four of them, so the
-    prize there is exactly 0%; the whole 4.9% total comes from one firing rule on the
-    largest file. Against that, the function is public and is the documented path rule
-    tests use. Nothing left in C9.
-  * **C10/C16 are real but are scope calls, not gaps.** `Issue` needs no change for a
-    column — `meta` is a free map — so the work is populating ~290 rules, against 9
-    tests that assert `meta` as an exact map. Keep the corpus key on line only
-    (`credence.corpus.ex:522` and `accepted_findings.txt` are `path:line rule`; adding a
-    column rewrites the snapshot and churns the budget gate). Telemetry means a new
-    runtime dep for a library whose one consumer parses stdout.
-- [ ] **D9. Mutant-survivor triage — a decision, plus the expensive half.** Rule
-  Standard requirement 9 is the last ungated one, and C18 stages it: sweep →
-  publish → fix the tail → only then a floor. Sweep done and deterministic
-  (**0.740**, 629 killed / 221 survived, 39 rules, seed 0 — reproduced exactly
-  three weeks and ~20 commits apart). The survivors classify structurally
-  (121 need individual review; the rest are catch-all constants, comparison
-  boundaries, position arithmetic and unreached defaults), and 10 rules hold 56%.
+  **C10, and it is a decision about scope, not a defect.** `Issue` needs no change to
+  carry a column — `meta` is a free map — so the work is populating ~290 rules against 9
+  tests that assert `meta` as an exact map. If you take it, keep the corpus key on line
+  only: `credence.corpus.ex:522` and `accepted_findings.txt` are `path:line  rule`, and
+  adding a column rewrites the snapshot and churns the budget gate. Telemetry is a
+  separate question and means a new runtime dep for a library whose one consumer parses
+  stdout.
 
-  Triage by reading **`tmp/mutants/mutants.tsv`** (852 rows, rule/operator/context) —
-  gitignored, so the only copy is local; regenerable only because seed 0 is
-  deterministic. Its rows predate this item's own `no_python_multi_return` fix, so a
-  fresh sweep reads ~0.742 / 219: that is the fix, not a regression.
+- [ ] **D9. Set the mutation floor. The ceiling is ~0.77, so 0.740 is below it.**
+  Sweep: 0.740, 629 killed / 221 survived, seed 0, from `tmp/mutants/mutants.tsv`
+  (gitignored — the only copy; its rows predate the `no_python_multi_return` fix, so a
+  fresh sweep reads ~0.742 / 219).
 
-  **The decision is the floor, and it is yours.** Do not set `--fail-under` at
-  0.740 — that fails rules for carrying defensive clauses rather than weak tests,
-  which is C18's own reason for staging. Either (a) triage the 121, ledger the
-  equivalent ones, and set the floor against the *triaged* rate — correct and a
-  week's work; or (b) set a floor well below the rate (0.60 kills nothing today)
-  purely as a regression ratchet — a day's work, much less bought. Per-rule either
-  way: the distribution runs 0.475–0.875 and one number hides both ends.
+  A 14-row sample triaged in `0007208` put **~14% of survivors beyond any input** — one
+  proven, `arity in 1..255` widened to `1..256`, where `&f/256` is a CompileError. So a
+  fully triaged rate is **≈0.77 (0.75-0.80)**, and `--fail-under 0.740` would sit below
+  the honest ceiling — the failure C18 staged this work to avoid.
 
-  **Sample-triaged 2026-08-17, so the floor is a number rather than a guess.** 14
-  survivors drawn from `tmp/mutants/mutants.tsv` and classified by reading the code
-  each mutant sits in:
+  * **(a)** triage the remaining survivors, ledger the equivalent ones, floor against the
+    triaged rate. Correct, about a week. `comparison_swap` is the worst by rate (48%) and
+    52 of 221 sit in catch-all clauses.
+  * **(b)** floor well below the rate as a pure regression ratchet. A day, buys much less.
 
-  * **2 of 14 are equivalent** — no input distinguishes them. One is proven:
-    `fix_negated_capture_with_arity` guards `arity in 1..255`, and the mutant widens
-    it to `1..256`; `&Foo.bar/256` is a `CompileError` ("capture argument &256 must be
-    numbered between 1 and 255"), so the extra value is unreachable in valid Elixir.
-    The other is `no_python_multi_return`'s reduce seed, which only decides line 1,
-    and line 1 can never be a bare-atom `defstruct` (it must sit inside a module).
-  * **11 of 14 are real gaps** with a writable fixture. Two are worth doing for their
-    own sake rather than for the score: `fix_plug_dependency_module_order` mutates
-    `Enum.with_index(lines, 1)` to `2` and survives — **nothing asserts its reported
-    line numbers**, which are user-visible; and `fix_extra_brace_in_ets_match`'s
-    `at/2` guard `index < 0 -> nil` exists precisely to stop `Enum.at/2` wrapping to
-    the end of the list, and nothing feeds it the `col - 2 == -1` that reaches it.
-  * 1 unclear without deeper reading.
+  Either way per-rule, not global: the distribution runs 0.475-0.875 and one number hides
+  both ends. Method note that survives whichever you pick — a survivor is not an "add a
+  test" item, it is a request to construct an input that *separates two programs*, and for
+  many no such input exists that anyone would write.
 
-  **So the achievable rate is ~0.77, not 1.0.** At 14% equivalent, ~31 of the 221
-  survivors are unkillable and the triaged rate is 629/(629+190) ≈ **0.77** — on a
-  14-row sample, so read it as 0.75-0.80. That is the number option (a) sets a floor
-  against, and it says a floor at today's **0.740** would sit *below* the honest
-  ceiling, which is exactly what C18 staged the work to avoid.
+- [ ] **D11a. Build list worked out; one item left and it is not buildable as it stands.**
+  `docs/23-build-list.md` is the list and carries every disposition — what was built, what
+  is banked for want of a field sample, and the three that are dead as specified because
+  report-only is not something this project ships.
 
-  Where the mass is, across all 221: `comparison_swap` survives at **48%** (25 of 52),
-  `boolean_flip` 31%, `off_by_one` 25%, `ok_error_swap` 19%; and **52 of 221** sit in
-  a catch-all clause (`defp f(_), do: X` / `_ -> X`), which is the defensive-clause
-  category — killable, but each needs a fixture that reaches the fallback AND makes
-  its wrong answer observable.
-
-  Method note worth keeping, from working the worst rule end to end
-  (`no_python_multi_return`, 0.475 → 0.525, three failed attempts first): a
-  survivor is not an "add a test" item, it is a request to construct an input that
-  *separates two programs*. Exercising a path is not distinguishing it, disjoint
-  clauses need one fixture each, and the assertion has to be the decline. For many
-  survivors no such input exists that anyone would write.
-
-- [ ] **D11a. Build list: one mechanism decision left, and it is yours.**
-  `docs/23-build-list.md` is the list; every candidate was verified by running its
-  target through the live pipeline, and each entry carries its own hazards. Of the
-  25 rebuild/salvage candidates, 17 are repaired.
-
-  What remains, after report-only was closed as an option (2026-08-17):
-
-  * **Nothing left here.** `fix_undefined_struct_in_pattern` is done — the nested
-    scope now hoists in `Semantic.FixCyclicStructReference`, which also closes the
-    report-without-fix case it had on that shape.
-  * **Banked, not buildable (1):** `fix_when_guard_in_with_clause` — no field sample;
-    it exists only in a disposition sentence that this session refuted. The unsafe
-    widen it guards against is already blocked by a tested `:none` in
-    `Credence.Syntax.WhenGuardPosition`.
-  * **Closed by building only its sound half (1):** `no_remote_function_in_guard` —
-    dead as named (report-only, plus three corruption paths in docs/17 §787). The one
-    repair docs/17 certifies ships as `Semantic.FixStructTestInGuard`, gated on the
-    target parameter being a bare variable; the other shapes stay banked.
-  * **Dead as specified (2):** the GenServer reply-protocol pair and
-    `no_stream_data_constant_with_range`. Their dispositions require report-only,
-    which this project deletes; the failure modes stay banked in docs/17.
-  * **`no_process_send_after_infinity` — the blocker is the REPAIR, not the switch**
-    (re-analysed 2026-08-17; the item used to say it needed a mechanism decision on a
-    third `assumptions/0` switch).
-
-    The disposition covers two shapes and only one of them is conditional:
-
-    - **Literal** `Process.send_after(pid, msg, :infinity)` — **unconditionally
-      broken**, measured: it always raises `ArgumentError` ("1st argument: not an
-      integer"), on every input, with zero compile diagnostics. `:infinity` is a
-      legal timeout for `GenServer.call`, `Task.await`, `receive ... after` and
-      `:timer.sleep`, which is why it gets over-generalised. **No switch applies to
-      an always-raising call.**
-    - **Dataflow** `Keyword.get(opts, :interval, :infinity)` feeding the delay —
-      breaks only when the default is actually reached, so this is the half where a
-      promise about callers would live.
-
-    So the third switch is not what blocks the literal half. What blocks it is that
-    **no sound repair is known**: the disposition proposes inserting an
-    `if arg == :infinity` guard, which for a literal is statically decidable and
-    emits dead code; and deleting the call trades a loud crash for a timer that
-    silently never fires. That is a behaviour change of exactly the kind this project
-    rejects, and it is why the fossil was implementation-dead.
-
-    For the record, a switch's real cost if the dataflow half is ever built: one
-    `@registry` entry in `lib/assumptions.ex` (name, default, summary) plus a
-    property test at `test/pattern/<snake>_property_test.exs`, which
-    `assumptions_meta_test` enforces for any rule with a non-empty `assumptions/0`.
+  * **`no_process_send_after_infinity` — blocked on the REPAIR, not on the
+    `assumptions/0` switch the item used to name** (`c3ba0d6`). The literal
+    `Process.send_after(pid, msg, :infinity)` always raises `ArgumentError`, so no promise
+    about running data applies to it; and no sound fix is known — the proposed
+    `if arg == :infinity` guard is dead code on a literal, and deleting the call trades a
+    loud crash for a timer that silently never fires. The dataflow shape
+    (`Keyword.get(opts, _, :infinity)`) is where a switch would live, and it is the half
+    with the corruption history.
 
 ## F. Tracker & doc hygiene
 
