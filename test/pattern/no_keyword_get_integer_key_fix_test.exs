@@ -142,4 +142,67 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       assert valid_syntax?(fix(NoKeywordGetIntegerKey, code))
     end
   end
+
+  # The list argument was once required to be a bare identifier, and the reason was
+  # a regex predecessor's `(\w+)` capture group rather than anything about safety.
+  # `check/2` never had the restriction, so these four were reported and left
+  # unfixed — the report-without-fix shape this project does not ship.
+  #
+  # Widening is sound for any expression: `Keyword.get/2` is guarded
+  # `when is_atom(key)`, so an integer key raises FunctionClauseError on every
+  # input whatever the first argument is, and the expression is evaluated exactly
+  # once before and after.
+  describe "the list argument may be any expression" do
+    test "a module attribute" do
+      confirm_fix(fix(NoKeywordGetIntegerKey, "Keyword.get(@acc, -1)"), "List.last(@acc)")
+    end
+
+    test "a dotted access" do
+      confirm_fix(
+        fix(NoKeywordGetIntegerKey, "Keyword.get(state.items, -1)"),
+        "List.last(state.items)"
+      )
+    end
+
+    test "a function call" do
+      confirm_fix(
+        fix(NoKeywordGetIntegerKey, "Keyword.get(build_list(), 0)"),
+        "List.first(build_list())"
+      )
+    end
+
+    test "a literal list" do
+      confirm_fix(fix(NoKeywordGetIntegerKey, "Keyword.get([a: 1], -1)"), "List.last([a: 1])")
+    end
+
+    test "a nested call keeps its arguments" do
+      confirm_fix(
+        fix(NoKeywordGetIntegerKey, "Keyword.get(Map.get(m, :k), 2)"),
+        "Enum.at(Map.get(m, :k), 2)"
+      )
+    end
+
+    # Scope parity: everything the check flags, the fix now changes — and nothing
+    # else. This is what the widening was for.
+    test "every flagged shape is a changed shape, and vice versa" do
+      for src <- [
+            "Keyword.get(acc, -1)",
+            "Keyword.get(@acc, -1)",
+            "Keyword.get(state.items, -1)",
+            "Keyword.get(build_list(), 0)",
+            "Keyword.get([a: 1], -1)",
+            "acc |> Keyword.get(-1)",
+            "Keyword.get(opts, :name)",
+            "Keyword.get(opts, :name, 1)",
+            "Keyword.get(opts, key)",
+            "Keyword.get(:timeout, 5000)"
+          ] do
+        flagged = flagged?(NoKeywordGetIntegerKey, src)
+        changed = fix(NoKeywordGetIntegerKey, src) != src
+
+        assert flagged == changed,
+               "#{src}: check flagged=#{flagged} but fix changed=#{changed}"
+      end
+    end
+  end
 end

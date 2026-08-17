@@ -31,11 +31,28 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   Rewrites based on the index value:
 
-      Keyword.get(var, -1)  →  List.last(var)
-      Keyword.get(var, 0)   →  List.first(var)
-      Keyword.get(var, n)   →  Enum.at(var, n)
+      Keyword.get(list, -1)  →  List.last(list)
+      Keyword.get(list, 0)   →  List.first(list)
+      Keyword.get(list, n)   →  Enum.at(list, n)
 
-  Only fixes when the list argument is a simple variable name.
+  ## The list argument may be any expression
+
+  It was once "only a simple variable name", and the reason was not a safety
+  property — the comment beside it said "matches the legacy regex's `(\w+)`
+  capture group". A regex could only name a bare identifier; this rule works on
+  the AST and has no such limit. Meanwhile `check/2` never had the restriction, so
+  four shapes were reported and left unfixed:
+
+      Keyword.get(@acc, -1)            module attribute
+      Keyword.get(state.items, -1)     dotted access
+      Keyword.get(build_list(), 0)     function call
+      Keyword.get([a: 1], -1)          literal list
+
+  Widening is sound for any expression, because `Keyword.get/2` is guarded
+  `when is_atom(key)` — an integer key raises `FunctionClauseError` on **every**
+  input, whatever the first argument is. There is no working behaviour to
+  preserve, and the argument is evaluated exactly once before and after, so a
+  side-effecting expression is not run twice.
   """
 
   use Credence.Pattern.Rule
@@ -60,10 +77,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   # node that is the RHS of a pipe is really `Keyword.get/3` (piped list + key +
   # default), so its second arg is the DEFAULT, not the key (the rule does not
   # flag 3-arg calls).
-  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [_list, key]}, piped) do
-    if not MapSet.member?(piped, position(meta)) and integer_literal?(key),
-      do: {:ok, meta},
-      else: :skip
+  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [list, key]}, piped) do
+    if not MapSet.member?(piped, position(meta)) and not atom_literal?(list) and
+         integer_literal?(key),
+       do: {:ok, meta},
+       else: :skip
   end
 
   # Piped call: expr |> Keyword.get(integer_key). A 1-arg node only ever occurs
@@ -121,9 +139,13 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
          piped
        ) do
     with false <- MapSet.member?(piped, position(meta)),
-         {:ok, n} <- integer_value(key),
-         {:ok, var} <- simple_var(list) do
-      {:ok, %{range: Sourceror.get_range(node), change: direct_replacement(var, n)}}
+         false <- atom_literal?(list),
+         {:ok, n} <- integer_value(key) do
+      {:ok,
+       %{
+         range: Sourceror.get_range(node),
+         change: direct_replacement(Sourceror.to_string(list), n)
+       }}
     else
       _ -> :skip
     end
@@ -142,14 +164,21 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   defp detect_fix(_, _), do: :skip
 
+  # `Keyword.get(:timeout, 5000)` is not an integer-key lookup — it is
+  # `NoKeywordGetWithAtomFirstArg`'s defect, arguments swapped, repaired by
+  # unwrapping to the second argument. Rewriting it to `Enum.at(:timeout, 5000)`
+  # is nonsense, and two rules claiming one defect is dispatch contention.
+  #
+  # This was masked rather than handled: the fix used to require the first
+  # argument to be a bare identifier, which excluded an atom literal by accident,
+  # while `check/2` reported it all along. Widening the fix removed the accident
+  # and exposed the over-report underneath, so both callbacks now decline it.
+  defp atom_literal?({:__block__, _, [atom]}) when is_atom(atom), do: true
+  defp atom_literal?(_node), do: false
+
   defp integer_value({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp integer_value({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
   defp integer_value(_), do: :error
-
-  defp simple_var({name, _, ctx}) when is_atom(name) and is_atom(ctx),
-    do: {:ok, Atom.to_string(name)}
-
-  defp simple_var(_), do: :error
 
   defp direct_replacement(var, -1), do: "List.last(#{var})"
   defp direct_replacement(var, 0), do: "List.first(#{var})"

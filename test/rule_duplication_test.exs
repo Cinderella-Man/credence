@@ -41,14 +41,20 @@ defmodule Credence.RuleDuplicationTest do
   # knowing about this signal: containment gets STRICTER as the corpus grows, so
   # a pair surviving a larger corpus means more than one surviving a small one.
   @ledger [
-    # Two views of ONE bug — `Keyword.get/2,3` called with its arguments
-    # swapped — and neither view covers the other. Probed:
-    #   Keyword.get(acc, -1)                 -> IntegerKey only
-    #   Keyword.get(:key, :lookup, :fallback) -> AtomFirstArg only (key is an atom)
-    #   Keyword.get(:timeout, 5000)          -> both; IntegerKey no_ops and
-    #                                           AtomFirstArg completes the repair
-    # The `:no_op` is the cascade working, not a rule failing.
-    {Credence.Pattern.NoKeywordGetIntegerKey, Credence.Pattern.NoKeywordGetWithAtomFirstArg},
+    # RETIRED 2026-08-17 — the pair stopped scoring because the overlap was
+    # removed, which is what this ratchet is for. It used to read: "both;
+    # IntegerKey no_ops and AtomFirstArg completes the repair. The `:no_op` is the
+    # cascade working, not a rule failing."
+    #
+    # That defence held for the FIX and not for the REPORT. On
+    # `Keyword.get(:timeout, 5000)` IntegerKey told the user "integer keys always
+    # crash" and suggested `List.last/1`, which is the wrong advice — the defect is
+    # swapped arguments, and AtomFirstArg says so. Two findings where one misleads
+    # is worse than one, whichever rule ends up doing the repair.
+    #
+    # IntegerKey now declines an atom-literal first argument in both callbacks, so
+    # the shape has exactly one owner. `no_keyword_get_integer_key_check_test.exs`
+    # pins the boundary from both sides, including that the sibling still claims it.
 
     # A general rule deferring to a specific one, which is the cascade the
     # Pattern round is built on. Probed:

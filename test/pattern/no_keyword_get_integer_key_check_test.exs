@@ -110,4 +110,32 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
       assert issue.meta.line != nil
     end
   end
+
+  # The boundary with `NoKeywordGetWithAtomFirstArg`. `Keyword.get(:timeout, 5000)`
+  # has an integer second argument, but it is not an integer-KEY lookup — it is
+  # that rule's swapped-arguments defect, repaired by unwrapping to the second
+  # argument. `Enum.at(:timeout, 5000)` would be nonsense, and two rules claiming
+  # one defect is dispatch contention.
+  #
+  # This was previously masked, not handled: the fix required a bare identifier as
+  # the first argument, which excluded an atom literal by accident, while this
+  # check reported it anyway. Widening the fix removed the accident and exposed the
+  # over-report, which `rule_self_repair_test` then caught as the sibling's own
+  # `## Bad` example failing to survive the pipeline.
+  describe "an atom-literal first argument belongs to the sibling rule" do
+    test "Keyword.get(:timeout, 5000) is not ours" do
+      assert check(NoKeywordGetIntegerKey, "Keyword.get(:timeout, 5000)") == []
+    end
+
+    test "the sibling rule does claim it" do
+      assert flagged?(
+               Credence.Pattern.NoKeywordGetWithAtomFirstArg,
+               "Keyword.get(:timeout, 5000)"
+             )
+    end
+
+    test "a non-atom first argument with an integer key is still ours" do
+      assert check(NoKeywordGetIntegerKey, "Keyword.get(timeout, 5000)") != []
+    end
+  end
 end
