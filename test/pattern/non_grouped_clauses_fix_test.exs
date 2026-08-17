@@ -142,7 +142,11 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       confirm_fix(fix(NonGroupedClauses, input), input)
     end
 
-    test "does not move a stray clause preceded by @impl true" do
+    # These five used to assert no-ops. All are repaired now — the annotation run
+    # moves with its clause, and the fix emits ONE patch covering the whole module
+    # instead of relying on a positional statement-by-statement diff, which is what
+    # spliced two clauses onto one line the first time this was attempted.
+    test "moves a stray clause together with its @impl true" do
       input = """
       defmodule M do
         @impl true
@@ -155,10 +159,21 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      confirm_fix(fix(NonGroupedClauses, input), input)
+      expected = """
+      defmodule M do
+        @impl true
+        def handle_event("a", _, s), do: s
+
+        @impl true
+        def handle_event("b", _, s), do: s
+        def helper(x), do: x
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
-    test "does not move a stray clause preceded by @decorate" do
+    test "moves a stray clause together with its @decorate" do
       input = """
       defmodule M do
         def foo(1), do: 1
@@ -170,13 +185,24 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      confirm_fix(fix(NonGroupedClauses, input), input)
+      expected = """
+      defmodule M do
+        def foo(1), do: 1
+
+        @decorate telemetry([:demo])
+        def foo(x), do: x + 1
+        def bar(x), do: x
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
-    # Regression (row 96344): a stray clause with a MULTI-STATEMENT block body
-    # used to be reordered into a broken `def ..., do: stmt1` one-liner (dropping
-    # stmt2) → non-compiling → the whole fix reverted. It is now left in place.
-    test "does not move a stray clause with a multi-statement block body" do
+    # Regression (row 96344), now inverted. This stray USED to be reordered into a
+    # broken `def …, do: stmt1` one-liner that dropped stmt2, so it was declined.
+    # The whole-module patch renders the block from its own metadata, so both
+    # statements survive.
+    test "moves a stray clause with a multi-statement block body" do
       input = """
       defmodule M do
         def foo(_x), do: -1
@@ -190,11 +216,22 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      confirm_fix(fix(NonGroupedClauses, input), input)
+      expected = """
+      defmodule M do
+        def foo(_x), do: -1
+
+        def foo([_ | _] = z) do
+          t = Enum.sum(z)
+          t + 1
+        end
+        def bar(y), do: y
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
-    # ...but other safe strays still regroup even when a block-body stray is present.
-    test "groups do: strays while leaving the block-body stray alone" do
+    test "groups several functions' strays in one pass" do
       input = """
       defmodule M do
         def foo(0), do: :zero
@@ -218,17 +255,16 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       defmodule M do
         def foo(0), do: :zero
 
-        def bar(y), do: y
-
         def foo([_ | _] = z) do
           t = Enum.sum(z)
           t + 1
         end
 
+        def bar(y), do: y
+
         def baz(1), do: :one
 
         def baz(n), do: n
-
         def qux(w), do: w
       end
       """
@@ -236,12 +272,10 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
-    # A stray clause whose single-statement body is a `do…end` block (here a
-    # `case`) must not be moved — re-rendering it would collapse the block to a
-    # `do:` one-liner and re-bind the trailing block to `def` (uncompilable). It
-    # is left in place (check still flags it).
-    test "does not move a stray clause whose body is a single do-block construct" do
-      code = """
+    # A body that is itself a `do…end` construct. Declining this was the third
+    # decline reason; the block is now re-rendered from its own metadata intact.
+    test "moves a stray clause whose body is a single do-block construct" do
+      input = """
       defmodule M do
         def foo(1), do: 1
         def bar(x), do: x
@@ -254,7 +288,36 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      confirm_fix(fix(NonGroupedClauses, code), code)
+      expected = """
+      defmodule M do
+        def foo(1), do: 1
+        def foo(x) do
+          case x do
+            _ -> x
+          end
+        end
+        def bar(x), do: x
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, input), expected)
+    end
+
+    # Still declined: `@threshold` is a value definition, not an annotation, so the
+    # run is `:unmovable` and `check/2` declines with it.
+    test "leaves a stray behind a non-annotation attribute alone" do
+      input = """
+      defmodule M do
+        @threshold 5
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        @threshold 9
+        def foo(x), do: x + @threshold
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
   end
 end

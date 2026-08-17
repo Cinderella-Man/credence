@@ -2154,6 +2154,7 @@ ex_cldr_dates_times/lib/cldr/backend/format.ex:1308  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/backend/format.ex:1310  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/backend/format.ex:1313  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/backend/format.ex:1316  non_grouped_clauses
+ex_cldr_dates_times/lib/cldr/backend/format.ex:1433  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/backend/format.ex:1443  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/date_time.ex:1011  use_map_join
 ex_cldr_dates_times/lib/cldr/format/compiler.ex:64  prefer_map_new_with_transform
@@ -2165,11 +2166,14 @@ ex_cldr_dates_times/lib/cldr/format/match.ex:290  no_case_on_param_dispatch
 ex_cldr_dates_times/lib/cldr/format/match.ex:499  no_doc_false_on_private
 ex_cldr_dates_times/lib/cldr/format/match.ex:518  prefer_map_new_with_transform
 ex_cldr_dates_times/lib/cldr/format/match.ex:548  use_map_join
+ex_cldr_dates_times/lib/cldr/interval.ex:311  non_grouped_clauses
+ex_cldr_dates_times/lib/cldr/interval.ex:323  non_grouped_clauses
 ex_cldr_dates_times/lib/cldr/interval/date.ex:845  no_doc_false_on_private
 ex_cldr_dates_times/lib/cldr/interval/date.ex:854  no_doc_false_on_private
 ex_cldr_dates_times/lib/cldr/interval/date_time.ex:?  no_destructure_reconstruct
 ex_cldr_lists/lib/cldr/list/backend.ex:286  prefer_map_new_with_transform
 ex_cldr_lists/lib/cldr/list/backend.ex:?  no_destructure_reconstruct  (x2)
+ex_cldr_numbers/lib/cldr/number/backend/decimal_formatter.ex:58  non_grouped_clauses
 ex_cldr_numbers/lib/cldr/number/backend/format.ex:229  prefer_map_new
 ex_cldr_numbers/lib/cldr/number/backend/symbol.ex:25  prefer_map_new
 ex_cldr_numbers/lib/cldr/number/backend/transliterate.ex:293  use_map_join
@@ -2183,6 +2187,12 @@ ex_cldr_numbers/lib/cldr/number/string.ex:138  no_list_concat_with_recursive_res
 ex_cldr_numbers/lib/cldr/number/string.ex:28  use_map_join
 ex_cldr_numbers/lib/cldr/number/system.ex:1049  prefer_map_new
 ex_cldr_numbers/lib/cldr/number/transliterate.ex:133  use_map_join
+ex_cldr_territories/lib/cldr/backend.ex:830  non_grouped_clauses
+ex_cldr_territories/lib/cldr/backend.ex:841  non_grouped_clauses
+ex_cldr_territories/lib/cldr/backend.ex:853  non_grouped_clauses
+ex_cldr_territories/lib/cldr/backend.ex:859  non_grouped_clauses
+ex_cldr_territories/lib/cldr/backend.ex:865  non_grouped_clauses
+ex_cldr_territories/lib/cldr/backend.ex:871  non_grouped_clauses
 ex_cldr_territories/lib/cldr/territory.ex:774  no_redundant_enum_join_separator
 ex_cldr_units/lib/cldr/unit.ex:153  prefer_map_new_with_transform
 ex_cldr_units/lib/cldr/unit.ex:2095  prefer_map_new_with_transform

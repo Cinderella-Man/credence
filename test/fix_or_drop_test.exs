@@ -70,13 +70,13 @@ defmodule Credence.FixOrDropTest do
   #     `normalize_pattern/1` was a byte-identical duplicate of
   #     `unwrap_pattern/1` — two copies of one predicate is how they drifted.
   #     Both now go through `fixable_clause_pair/2`.
-  #   * `NonGroupedClauses` — 6. `check_body/1` was a near-copy of phase 1 of
-  #     `group_clauses/1` with NO movability test, so it flagged every stray
-  #     whether or not the fix could move it. Both now consume
-  #     `movable_stray_indices/1`. Two widenings remain specified but undone —
-  #     moving an annotation run with its clause, and a layout-metadata strip for
-  #     block bodies — because both need fresh rendering on the code path docs/17
-  #     entry 11 records emitting unparseable output three times.
+  #   * `NonGroupedClauses` — 6. First closed by NARROWING (`check_body/1` was a
+  #     near-copy of phase 1 of `group_clauses/1` with no movability test), then
+  #     reopened and closed properly by WIDENING: both declines are repaired now.
+  #     The rendering fix was not the metadata strip everyone predicted — see the
+  #     rule's `fix_patches/2`. It also uncovered a pre-existing silent behaviour
+  #     change: `insert_after_last_sibling/3` reordered a stray against siblings
+  #     that followed it in source order, and clause order is semantic.
   #   * `NoTrailingNewlineInDoc` — 6, and the only FIX_BUG of the set rather than a
   #     scope decision. Its `:patch_rejected` reason was the tell: the fix emitted
   #     patches the safety invariants DISCARDED. `String.ends_with?(value, "\\n")`

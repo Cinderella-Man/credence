@@ -608,6 +608,20 @@ its own tests run under real `mix test`.
   declines is holding a slot no other rule can have. `Credence.rule_outcomes/0`
   is new — the closed set as data.
 
+  **Sequel, 2026-08-17 — T3.2 made no-ops VISIBLE; it did not forbid them.**
+  `test/fix_or_drop_test.exs` + `test/support/fix_or_drop.ex` now gate the stronger
+  claim: no rule may report a finding that nothing repairs (Rule Standard v1.1
+  requirement **2a**, docs/19). The gap mattered — 24 findings across 9 rules were
+  reported and never repaired, at a fix coverage of 1486/1515 = 98.1%. Ledger
+  opened at 24 and was paid to **zero** the same day: 18 findings gained a repair,
+  6 were removed as unrepairable. Every one of the nine was the same defect — the
+  admission decision kept in two copies, one per callback, drifted apart — so the
+  repair was always to delete the second copy rather than synchronise them. Three
+  were also **silent behaviour changes** (parsing, compiling, warning-free output
+  returning a different answer), which no other gate can catch because
+  `apply_or_revert` reverts only on non-compiling output. This closes STATUS.md's
+  D10, which is deleted from the map.
+
   **Correction to this item's framing.** It said the harness "will silently
   drop" the new vocabulary "the moment the sister resets onto main". It has been
   dropping it *all along*: `@pair` accepted `:reverted|\d+` and `Regex.scan/3`

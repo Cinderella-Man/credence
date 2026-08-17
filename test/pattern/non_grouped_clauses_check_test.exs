@@ -50,8 +50,13 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
   # attribute run can travel with its clause; the block body needs a
   # layout-metadata strip), and the fix-side no-op tests pin the current
   # behaviour either way.
-  describe "does not flag strays the fix cannot move" do
-    test "a stray preceded by a module attribute, which would be orphaned" do
+  # Both of these used to be declines — the fix could not move a stray preceded by
+  # a module attribute (it would orphan the attribute) nor one with a multi-statement
+  # block body (it re-rendered as a `do:` one-liner, dropping every statement after
+  # the first). Both are repaired now: the annotation run travels with its clause,
+  # and the patch covers the whole module rather than diffing statements pairwise.
+  describe "flags strays that used to be unmovable" do
+    test "a stray preceded by an annotation attribute" do
       code = """
       defmodule M do
         def foo(1), do: 1
@@ -62,7 +67,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert clean?(NonGroupedClauses, code)
+      assert flagged?(NonGroupedClauses, code)
     end
 
     test "a stray whose body is a multi-statement block" do
@@ -75,6 +80,27 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
           y = x + 1
           y * 2
         end
+      end
+      """
+
+      assert flagged?(NonGroupedClauses, code)
+    end
+  end
+
+  # The one run that still cannot move. `@threshold 5` is a VALUE definition rather
+  # than an annotation: later clauses may read it and its position relative to them
+  # is load-bearing, so `attr_run_start/2` answers `:unmovable` and the check
+  # declines alongside the fix.
+  describe "does not flag a stray behind a non-annotation attribute" do
+    test "a value-defining attribute in the run" do
+      code = """
+      defmodule M do
+        @threshold 5
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        @threshold 9
+        def foo(x), do: x + @threshold
       end
       """
 

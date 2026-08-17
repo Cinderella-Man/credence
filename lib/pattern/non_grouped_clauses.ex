@@ -25,7 +25,6 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
-  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -44,13 +43,164 @@ defmodule Credence.Pattern.NonGroupedClauses do
     issues
   end
 
+  # Moves the original BYTES of each out-of-place clause, as line-level delete +
+  # insert patches. Nothing is re-rendered.
+  #
+  # Two earlier designs were wrong, in instructive ways.
+  #
+  # **`patches_from_ast_transform/3` cannot express a reorder.** It renders the
+  # transform, re-parses it, then `diff_patches/2` pairs the block's statements
+  # POSITIONALLY. That is right for a substitution and structurally wrong for a
+  # permutation: every position from the move onward differs, so it emitted one
+  # patch per statement whose range covered the statement but NOT the whitespace
+  # between statements. Observed:
+  #
+  #     def handle_event("b", _, s), do: s  def helper(x), do: x
+  #
+  # — and it PARSES, as an ambiguous keyword call, so the re-parse gate could not
+  # catch it either. (Two spaces, not one, because `Sourceror.Range` overshoots the
+  # end column by one for a bare `true`/`false`/`nil` — range.ex adds +1 for "just
+  # the colon" on an atom, and those three are written without one — so the patch
+  # range for `@impl true` swallowed the trailing newline as well.)
+  #
+  # **Re-rendering the whole module is correct but far too blunt.** Measured on
+  # `corpus/ex_cldr_territories/lib/cldr/backend.ex`: 1104 lines became 1276, with
+  # 534 lines differing that the rule never meant to touch. Sourceror cannot
+  # reproduce every original line-wrapping decision from metadata alone, so a
+  # whole-module render reformats untouched code. Semantically identical, and still
+  # not something to hand a user as a diff.
+  #
+  # So: slice the original text and move it. The moved region keeps its own bytes,
+  # comments included (`include_comments: true`), and every other line in the file
+  # is untouched by construction.
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
+    lines = String.split(source, "\n")
 
-    RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-      Macro.postwalk(input, &fix_module_node/1)
-    end)
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case node do
+          {:defmodule, _, [_, [{_, {:__block__, _, body}}]]} when is_list(body) ->
+            {node, move_patches(body, lines) ++ acc}
+
+          _ ->
+            {node, acc}
+        end
+      end)
+
+    patches
+  end
+
+  # ONE patch for the module body, its text reassembled from the ORIGINAL line
+  # slices in the new order.
+  #
+  # A previous attempt emitted a delete + insert pair per moved slice. That is
+  # correct for a single move and corrupts as soon as two functions both move:
+  # `foo`'s deletion range and `bar`'s insertion point overlap, and
+  # `Sourceror.patch_string/2` applies patches bottom-up without knowing they
+  # interact. Measured on `foo(1)/bar(1)/foo(x)/bar(x)`: `foo(x)` came out
+  # duplicated and `bar(x)` was lost.
+  #
+  # One patch cannot overlap itself. And because the text is made of the source's
+  # own lines rather than a render, the blast radius is still nil — measured on
+  # `corpus/ex_cldr_territories/lib/cldr/backend.ex`, 1104 lines in and 1098 out,
+  # the six removed being blank lines absorbed by the moves.
+  defp move_patches(body, lines) do
+    groupable = groupable_keys(body)
+    original = Enum.to_list(0..(length(body) - 1))
+    order = new_index_order(body, groupable)
+
+    if groupable == %{} or order == original do
+      []
+    else
+      blocks = index_blocks(body, lines)
+
+      # Separators travel with the statement above them, so whichever statement
+      # ends up last brings its trailing blank line along and would leave a gap
+      # before the module's `end`. Drop them.
+      text =
+        order
+        |> Enum.flat_map(&Map.fetch!(blocks, &1))
+        |> Enum.reverse()
+        |> Enum.drop_while(&(String.trim(&1) == ""))
+        |> Enum.reverse()
+        |> Enum.join("\n")
+
+      first = block_start(body, 0)
+      last = block_end(body, length(body) - 1, lines)
+
+      [
+        %{
+          range: %{start: [line: first, column: 1], end: [line: last + 1, column: 1]},
+          change: text <> "\n"
+        }
+      ]
+    end
+  end
+
+  # Statement indices after grouping: each groupable function's clauses are emitted
+  # consecutively at the position of its FIRST clause, everything else stays put.
+  defp new_index_order(body, groupable) do
+    owner =
+      for {key, slices} <- groupable,
+          range <- slices,
+          idx <- Enum.to_list(range),
+          into: %{},
+          do: {idx, key}
+
+    {order, _} =
+      Enum.reduce(0..(length(body) - 1), {[], MapSet.new()}, fn idx, {acc, done} ->
+        case Map.fetch(owner, idx) do
+          {:ok, key} ->
+            if MapSet.member?(done, key) do
+              {acc, done}
+            else
+              indices = groupable |> Map.fetch!(key) |> Enum.flat_map(&Enum.to_list/1)
+              {Enum.reverse(indices) ++ acc, MapSet.put(done, key)}
+            end
+
+          :error ->
+            {[idx | acc], done}
+        end
+      end)
+
+    Enum.reverse(order)
+  end
+
+  # `%{index => [source line]}`. Each statement owns the lines from its own start
+  # (comments included) up to the line before the NEXT statement's start, so the
+  # blank lines that separate statements travel with the statement above them and
+  # reassembly cannot lose them.
+  defp index_blocks(body, lines) do
+    last_idx = length(body) - 1
+
+    for idx <- 0..last_idx, into: %{} do
+      from = block_start(body, idx)
+      to = block_end(body, idx, lines)
+      {idx, Enum.slice(lines, (from - 1)..(to - 1))}
+    end
+  end
+
+  defp block_start(body, idx) do
+    body
+    |> Enum.at(idx)
+    |> Sourceror.get_range(include_comments: true)
+    |> Map.fetch!(:start)
+    |> Keyword.fetch!(:line)
+  end
+
+  defp block_end(body, idx, lines) do
+    if idx < length(body) - 1 do
+      block_start(body, idx + 1) - 1
+    else
+      body
+      |> Enum.at(idx)
+      |> Sourceror.get_range(include_comments: true)
+      |> Map.fetch!(:end)
+      |> Keyword.fetch!(:line)
+      |> min(length(lines))
+    end
   end
 
   # `check/2` reports exactly the strays `group_clauses/1` will move, because both
@@ -113,135 +263,57 @@ defmodule Credence.Pattern.NonGroupedClauses do
     body |> stray_indices() |> Enum.filter(&movable_stray?(body, &1)) |> Enum.sort()
   end
 
-  defp movable_stray?(body, idx) do
-    not preceded_by_attr?(body, idx) and not unsafe_to_move_body?(Enum.at(body, idx))
-  end
+  defp movable_stray?(body, idx), do: attr_run_start(body, idx) != :unmovable
 
-  defp fix_module_node({:defmodule, meta, [alias_node, [do: {:__block__, block_meta, body}]]}) do
-    new_body = group_clauses(body)
-    {:defmodule, meta, [alias_node, [do: {:__block__, block_meta, new_body}]]}
-  end
+  # The index the moved slice must START at: walk back over the contiguous run of
+  # ANNOTATION attributes directly above `idx`, so `@impl true` / `@doc` / `@spec`
+  # travel with the clause they annotate instead of being orphaned by the move.
+  #
+  # `:unmovable` when the run contains a non-annotation attribute such as
+  # `@threshold 5`. That is a value definition, not an annotation: later clauses may
+  # read it, and where it sits relative to them is load-bearing.
+  @annotation_attrs [:doc, :typedoc, :impl, :spec, :deprecated, :decorate, :decorate_all]
 
-  defp fix_module_node(
-         {:defmodule, meta, [alias_node, [{do_tag, {:__block__, block_meta, body}}]]}
-       ) do
-    new_body = group_clauses(body)
-    {:defmodule, meta, [alias_node, [{do_tag, {:__block__, block_meta, new_body}}]]}
-  end
+  defp attr_run_start(_body, 0), do: 0
 
-  defp fix_module_node(node), do: node
-
-  defp group_clauses(body) do
-    indexed = Enum.with_index(body)
-
-    # One admission decision, shared with `check_body/1`.
-    #
-    # A stray preceded by a module attribute is skipped — moving the clause alone
-    # would orphan its `@impl true`. Moving the attribute run WITH the clause is a
-    # real widening and is specified, but it is not done here: attempted, the moved
-    # slice keeps the `do:`/`end:` positions it had at its old location and
-    # `patches_from_ast_transform/3` renders with a plain `Sourceror.to_string/1`
-    # that honours them, so two clauses print onto one line. It needs the
-    # layout-metadata strip and its own verification, on the code path docs/17
-    # entry 11 records emitting unparseable output three times.
-    #
-    # A stray with a MULTI-STATEMENT block body is skipped for the same underlying
-    # reason: stale `do`/`end` positions make the block render as a `do:`
-    # one-liner, dropping every statement after the first — uncompilable, so the
-    # whole fix reverts and every other grouping is lost with it.
-    #
-    # Because `check/2` now shares this predicate, neither case is reported.
-    stray_set = body |> movable_stray_indices() |> MapSet.new()
-
-    if MapSet.size(stray_set) == 0 do
-      body
-    else
-      # Phase 2: remove strays, grouped by function key
-      strays_by_key =
-        indexed
-        |> Enum.filter(fn {_, idx} -> idx in stray_set end)
-        |> Enum.group_by(fn {expr, _} -> function_key(expr) end, fn {expr, _} -> expr end)
-
-      cleaned =
-        indexed
-        |> Enum.reject(fn {_, idx} -> idx in stray_set end)
-        |> Enum.map(fn {expr, _} -> expr end)
-
-      # Phase 3: insert each group of strays after the last existing sibling
-      Enum.reduce(strays_by_key, cleaned, fn {key, clauses}, acc ->
-        insert_after_last_sibling(acc, key, clauses)
-      end)
+  defp attr_run_start(body, idx) do
+    case Enum.at(body, idx - 1) do
+      {:@, _, [{name, _, [_]}]} when name in @annotation_attrs -> attr_run_start(body, idx - 1)
+      {:@, _, _} -> :unmovable
+      _ -> idx
     end
   end
 
-  # A clause whose do-body cannot be safely moved/re-rendered by Sourceror:
-  #   * a multi-statement block (`do s1\n s2 end`), OR
-  #   * a single statement that is itself a `do…end` block construct
-  #     (`with`/`case`/`if`/`unless`/`cond`/`for`/`receive`/`try`).
-  # In both cases moving the clause leaves stale `do`/`end` positions, so
-  # `Sourceror.to_string` renders the body as a `do:` one-liner — for a do-block
-  # statement that re-binds the trailing block to `def`, yielding `def/3`
-  # (uncompilable, whole fix reverted). Skipping just these strays lets the safe
-  # clauses regroup. `check/2` still flags them.
-  defp unsafe_to_move_body?({kind, _, args}) when kind in [:def, :defp] and is_list(args) do
-    case List.last(args) do
-      kw when is_list(kw) ->
-        body = do_body_value(kw)
-        multi_statement?(body) or do_block_statement?(body)
+  # `%{key => [slice_range]}` for every function whose clauses are scattered and
+  # whose scattered clauses can all move.
+  #
+  # The FIRST clause's slice is just itself: the group forms at its position, so it
+  # does not move and whatever sits above it — `@moduledoc false`, a `use`, a
+  # comment — stays above it. Only the LATER clauses travel, and each takes the run
+  # of annotation attributes directly above it. Computing a run for the first clause
+  # too was a bug: `@moduledoc false` above it is module-level, not an annotation of
+  # that clause, and reading it as `:unmovable` declined the whole function.
+  #
+  # A key with even one unmovable later slice is left entirely alone — moving only
+  # some of them could not preserve relative order.
+  defp groupable_keys(body) do
+    strays = stray_indices(body)
 
-      _ ->
-        false
-    end
-  end
+    body
+    |> Enum.with_index()
+    |> Enum.filter(fn {expr, _idx} -> function_key(expr) != nil end)
+    |> Enum.group_by(fn {expr, _idx} -> function_key(expr) end, fn {_expr, idx} -> idx end)
+    |> Enum.filter(fn {_key, indices} ->
+      [_first | rest] = indices
 
-  defp unsafe_to_move_body?(_), do: false
-
-  defp multi_statement?({:__block__, _, [_, _ | _]}), do: true
-  defp multi_statement?(_), do: false
-
-  # A single statement that is itself a `do…end` block construct — its node's
-  # last argument is a keyword list carrying a `:do` key.
-  defp do_block_statement?({:__block__, _, [inner]}), do: do_block_statement?(inner)
-
-  defp do_block_statement?({_form, _meta, args}) when is_list(args) and args != [] do
-    case List.last(args) do
-      kw when is_list(kw) ->
-        Enum.any?(kw, fn
-          {{:__block__, _, [:do]}, _} -> true
-          {:do, _} -> true
-          _ -> false
-        end)
-
-      _ ->
-        false
-    end
-  end
-
-  defp do_block_statement?(_), do: false
-
-  defp do_body_value(kw) do
-    Enum.find_value(kw, fn
-      {{:__block__, _, [:do]}, value} -> value
-      {:do, value} -> value
-      _ -> nil
+      Enum.any?(indices, &MapSet.member?(strays, &1)) and
+        Enum.all?(rest, &(attr_run_start(body, &1) != :unmovable))
+    end)
+    |> Map.new(fn {key, [first | rest]} ->
+      {key, [first..first | Enum.map(rest, fn idx -> attr_run_start(body, idx)..idx end)]}
     end)
   end
 
-  defp insert_after_last_sibling(body, key, clauses) do
-    last_idx =
-      body
-      |> Enum.with_index()
-      |> Enum.filter(fn {expr, _} -> function_key(expr) == key end)
-      |> List.last()
-      |> elem(1)
-
-    {before, after_part} = Enum.split(body, last_idx + 1)
-    before ++ clauses ++ after_part
-  end
-
-  # Require a body (`[head, _body]`): a bodiless head (`def f(a, b)` — a forward
-  # declaration for default args / docs) generates no clause and must not be
-  # counted toward grouping.
   defp function_key({kind, _, [{:when, _, [{name, _, args} | _]}, _body]})
        when kind in [:def, :defp] and is_atom(name) do
     arity = if is_list(args), do: length(args), else: 0
@@ -294,9 +366,5 @@ defmodule Credence.Pattern.NonGroupedClauses do
       end)
 
     found
-  end
-
-  defp preceded_by_attr?(body, idx) do
-    idx > 0 and match?({:@, _, _}, Enum.at(body, idx - 1))
   end
 end

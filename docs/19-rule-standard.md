@@ -55,9 +55,11 @@ gated only the converse direction (where check is silent, the fix must not act).
 
 Every one of the nine was the same structural defect: the admission decision existed
 in two copies, one per callback, and they had drifted. The remedy in each case was to
-delete the second copy. Two of the nine were also silent miscompilations — output
-that parses, compiles, warns about nothing, and returns a different answer — which no
-other gate can catch, because the safety net reverts only on non-compiling output.
+delete the second copy. **Three of the nine were also silent behaviour changes** —
+output that parses, compiles, warns about nothing, and returns a different answer —
+which no other gate can catch, because the safety net reverts only on non-compiling
+output. The third's symptom was a compiler *warning*, and `compiles_no_worse?/2`
+compares error sets, not warnings.
 
 **Four of items 4–9 have since been gated** — 4 by C2.2, 5 by C14 and 8 by C13
 on 2026-07-28, then 7 by C12(a) on 2026-08-16 — each with its positive controls
@@ -247,20 +249,31 @@ PR-#20-style retrofit:
 |---|---|---|---|
 | — | (pre-standard) | 2026-05 → 2026-07 | 60 + 87 + 9 rules, three eras, no recorded bar |
 | v1 | this document | 2026-07-28 | standard written; items 1–3 already gated, 4–9 audited in §2 |
-| v1.1 | requirement **2a** | 2026-08-17 | *fix or drop it* gated per FINDING. Ran in §3's order: gate first (`fix_or_drop_test`, default suite), then the sweep, then verify. Ledger 24 → 0 across 9 rules. **Step 4 does not apply** — `FixOrDrop` is the gate, not a sweep tool, the same call made for `DslStaticScan`'s `scan`/`tally` |
+| v1.1 | requirement **2a** | 2026-08-17 | *fix or drop it* gated per FINDING. Ran in §3's order: gate first (`fix_or_drop_test`, default suite), then the sweep, then verify. Ledger 24 → 0 across 9 rules; 18 findings gained a repair, 6 were removed as unrepairable. **Step 4 does not apply** — `FixOrDrop` is the gate, not a sweep tool, the same call made for `DslStaticScan`'s `scan`/`tally` |
 
 **What v1.1 cost, since §2's value is saying how much a checklist implies.** Nine
 rules, all one defect — the admission decision kept in two copies that had drifted
 — so the repair was always to delete the second copy rather than synchronise them.
-Twelve findings gained a repair, six were removed as unrepairable, six were removed
-where a repair exists but needs a rendering fix first (both `NonGroupedClauses`
-shapes; specified in the source). Corpus 6367 → 6347, deletions only.
+**18 findings gained a repair, 6 were removed as unrepairable** (verified: no stdlib
+`count_and_sum`; an unreachable clause after a leading `_`; `"c-b-a"` is not
+`"cba"`; a base clause consuming its accumulator through a call). Corpus
+6367 → 6357 over five re-pins.
 
-Two of the nine were **silent miscompilations** — parsing, compiling,
+**Three of the nine were silent behaviour changes** — parsing, compiling,
 warning-free output that returns a different answer. Worth recording against §5's
-warning about treating a green suite as compliance: these had been green under every
-gate in the repo, because `apply_or_revert` reverts on non-compiling output and
-these compile.
+warning about treating a green suite as compliance: all three had been green under
+every gate in the repo, because `apply_or_revert` reverts only on non-compiling
+output and all three compile. Two were found by asking why a rule DECLINED to fix
+something; the third only surfaced when a widen let the rule reach more corpus code,
+and its symptom was a compiler *warning*, which `compiles_no_worse?/2` does not
+compare.
+
+The `NonGroupedClauses` widen is also the cautionary tale about diagnosing from the
+symptom. Three independent analyses — two agents and me — attributed its garbled
+output to stale layout metadata on moved nodes. Rendering was never the problem:
+`patches_from_ast_transform/3` renders, re-parses, and diffs POSITIONALLY, which is
+correct for a substitution and wrong for a reorder. A reorder's minimal correct patch
+is the whole reordered region.
 
 ---
 
