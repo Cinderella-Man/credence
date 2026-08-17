@@ -70,6 +70,25 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
 
 1. **Syntax** (`lib/syntax/`) — text fixes for code that won't parse. No tree
    yet. Rules are `String.t() -> String.t()`.
+
+   ⚠️ **Two facts a Syntax rule author must know, because the per-rule gates
+   cannot see either.** The round is a single `Enum.reduce` over the rules
+   (`lib/syntax.ex:93`): each `fix/1` is called **exactly once**, and there is no
+   repeat-until-fixpoint loop. And `commit_or_roll_back/4` (`lib/syntax.ex:151`)
+   is **all-or-nothing** — if the source still does not parse at the end of the
+   round, every kept change is discarded and the ORIGINAL is returned, each rule's
+   trace entry rewritten to `{rule, :rolled_back}` (unless the caller passes
+   `syntax_partial_repairs: true`).
+
+   Together those mean **a rule must repair every occurrence it can in one call**.
+   One-per-call looks correct in isolation, passes every per-rule gate, and is
+   inert end to end: on a file with two defects it fixes one, the round still
+   fails to parse, and the work is thrown away. That happened to
+   `no_atom_as_function_name` while it was being written — its own 23 tests were
+   green and the full suite was green at 10,282, because nothing asserts the
+   round-level outcome. Assert it yourself:
+   `Credence.Syntax.fix_with_trace(src)` should come back `{rule, n}`, never
+   `{rule, :rolled_back}`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
    against `Code.with_diagnostics/1` output and patch the text.
 3. **Pattern** (`lib/pattern/`) — the bulk of Credence, and the largest round by

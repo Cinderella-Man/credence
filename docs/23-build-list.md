@@ -44,7 +44,7 @@ tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (8)
+## Still unbuilt, and each verified still uncovered (7)
 
 Every one was re-confirmed uncovered on 2026-08-17 by running its target through
 `Credence.fix/1`: the pipeline returns the source unchanged. That re-check
@@ -79,10 +79,11 @@ the same day. Everything below needs a rule and its own equivalence argument:
   safety switch, not a narrowing" is still the most promising route, and it is
   the only one of the three with a route at all — but `assumptions/0` is a
   mechanism with two switches today, so adding one is its own justification.
-* `no_atom_as_function_name`, `fix_stray_comma_before_when_guard`,
-  `fix_when_guard_in_for_comprehension` — Syntax, and the last two must be built
-  **together** sharing one backward lexer-aware scanner, because they emit the
-  byte-identical error and need opposite repairs
+* ~~`no_atom_as_function_name`~~ **BUILT 2026-08-17** —
+  `lib/syntax/no_atom_as_function_name.ex`. See the note below.
+* `fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension` —
+  Syntax, and must be built **together** sharing one backward lexer-aware scanner,
+  because they emit the byte-identical error and need opposite repairs
 * `fix_undefined_struct_in_pattern`, `fix_mixed_required_optional_map_keys`
 
   (`fix_undefined_type_t_in_spec` is **covered**, re-verified 2026-08-17 — but by
@@ -175,8 +176,18 @@ the only third option any of the four has.
 **So the honest count is 5 workable + 2 dead + 1 needing a mechanism decision**,
 not 8 remaining — and one of the five is not a rule build at all. Workable:
 
-* `no_atom_as_function_name` — Syntax, re-author around the parser's own error
-  position rather than a regex.
+* ~~`no_atom_as_function_name`~~ **BUILT 2026-08-17.** Re-authored around the
+  parser's own error position, as the disposition specified — and the payoff is
+  larger than "no regex". A rule that acts only where parsing STOPPED cannot touch
+  a file that parses, so the whole string/comment/heredoc decoy class is
+  *unreachable* rather than merely filtered: measured, `fix/1` alters **0 of ~300**
+  files in `lib/`, which answers the self-corruption oracle's question
+  structurally. Scope is `\w+` plus an optional trailing `?`/`!`, every boundary
+  executed — `:valid?(1)` and `:save!(1)` repair to valid code, `:"my fun"(1)` and
+  `:+(1, 2)` do not, so those decline on both sides. Both fixtures are the recorded
+  field samples, including `:ets.whereis(:ets_table_name(name))`, where the parser
+  reports the inner `(` and so the correct colon is repaired without the rule
+  knowing which module names are real.
 * `fix_stray_comma_before_when_guard` + `fix_when_guard_in_for_comprehension` —
   one item, both gated on `Code.string_to_quoted(source, columns: true)`
   returning the same `'when'` error, which is exactly why they share a scanner.
