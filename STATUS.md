@@ -284,6 +284,14 @@ rather than to this section.
     — extend the live `Semantic.FixCyclicStructReference` to hoist struct-defining
     nested modules above their first reference, keeping that rule's compile-verifying
     `confirm_reorder/2` gate.
+
+    **Also a report-without-fix case, so D10's policy applies:** on the nested shape
+    that rule reports (`analyze` → `:fix_cyclic_struct_reference`) and declines
+    (`fix` → `:no_op`), because `extract_top_level_modules/2` accepts only a file of
+    top-level `defmodule`s. `fix_or_drop_test` cannot see it — that gate asks whether
+    a rule fixes nothing *at all*. Premise verified: same diagnostic for bare and
+    qualified spellings, and the hoist compiles for both. Reuse `has_defstruct?/1`,
+    `struct_refs/1`, `covers_all_content?/2`, `confirm_reorder/2`.
   * **Banked, not buildable (1):** `fix_when_guard_in_with_clause` — no field sample;
     it exists only in a disposition sentence that this session refuted. The unsafe
     widen it guards against is already blocked by a tested `:none` in
