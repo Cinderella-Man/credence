@@ -681,6 +681,69 @@ Four of the twenty-five rationales are housekeeping, not traps, and a rebuild lo
 
 ---
 
+### 19. A rewrite that names its operands cannot assume the names still denote the same values
+
+**Executed 2026-08-17, on the live rule** — unlike §§1–18 above, which were carried over
+from the sister tree and not re-executed.
+
+`prefer_map_intersect_over_mapset_intersection` matched its two operands by **atom name**
+and accepted the consumer statement at any index after the binding, passing every
+statement in between through verbatim. So a statement that rebound an operand was
+invisible to it, while the emitted `Map.intersect/3` read the *new* value for both the key
+set and the values — where the original took its key set from the *old* one:
+
+    freq1 = %{a: 1, b: 2}; freq2 = %{b: 5, x: 7}
+    common_keys = Map.keys(freq1) |> MapSet.new()
+                  |> MapSet.intersection(MapSet.new(Map.keys(freq2))) |> MapSet.to_list()
+    freq1 = Map.put(freq1, :x, 9)          # <- nothing gated this
+    common_keys |> Enum.map(...) |> Enum.sort()
+
+    original  [b: 2]            repair  [b: 2, x: 7]    a key the original never had
+    original  raises KeyError   repair  []              loud failure made silent
+
+(second row with `Map.delete(freq1, :b)`.) Both outputs compile, so the accept/revert gate
+could not see either — it reverts only on non-compiling output.
+
+**The general law.** A rule that lifts an expression across statements owns every binding
+it names, not only the one it deletes. This rule already had a use-site gate,
+`var_used_once?/2` — it guarded the intersection variable and never the operands, which is
+the easy mistake: the variable the fix *removes* looks like the one at risk, while the
+variables it *relocates* are the ones that actually move relative to their assignments.
+
+**The cheap sound form.** Decline if any intervening statement so much as *mentions* an
+operand. A read is harmless, but "does this statement mention the name" is checkable at a
+glance where "does it rebind it" must chase `=`, `for`/`with` generators, `case` results
+and comprehension variables. Every fixture in that rule's three test files has the two
+statements adjacent, so the conservative form costs nothing measurable.
+
+### 20. A hard-coded generated identifier collides with a captured one
+
+**Executed 2026-08-17, on the live rule.** Same rule, independent defect.
+
+The repair emitted `fn _key, count1, count2 -> … end` with `_key` as a **literal atom**,
+while the captured count names were guarded only by `count1 != count2`. `_key` is an
+ordinary Elixir variable — the leading underscore only suppresses the unused-variable
+warning — so nothing stops an author writing `_key = Map.fetch!(freq1, element)`, and the
+matcher admitted it. The emission was then:
+
+    fn _key, _key, count2 -> min(_key, count2) end
+
+which is a **match on one name**, not two parameters: it compiles with warnings and raises
+`FunctionClauseError` as soon as `Map.intersect/3` passes a key that differs from the
+value. Executed, the emitted form raised where the correct form returned `[b: 2]`.
+
+**The general law.** Any identifier a fix *synthesises* must be checked against every
+identifier it *captures* from the source. A literal atom in a `build_*` function is the
+tell. The repair is a fresh-name search, not a decline — `_key`, then `_key1`, … — so the
+rule keeps firing on a shape it was always right about.
+
+**Why no gate caught it.** Repeated parameters compile, so accept/revert passes; the
+output parses, so the parse gate passes; and the shape needs a fixture where a *captured*
+name equals the *generated* one, which no author of the rule would think to write. This is
+the same blind spot as §3 ("the parse gate is not a correctness gate") in a new place.
+
+---
+
 ## Already handled by the compiler
 
 30 rules are tagged `compiler-already-catches` and another 18 are outright parse failures — 48 of 140 need no rule at all for *detection*. What follows is the frequency table of what generated Elixir actually gets wrong, ordered by how many rules were written about each diagnostic. This is the most directly useful signal in the corpus for prompt-level correction.

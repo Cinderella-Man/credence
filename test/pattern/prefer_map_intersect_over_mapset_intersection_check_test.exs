@@ -193,4 +193,85 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionCheckTest do
       refute flagged?(PreferMapIntersectOverMapsetIntersection, pipeline(binding?: false))
     end
   end
+
+  # Two defects that shipped, both found by reading the matcher against its emission and
+  # then EXECUTED. Neither was catchable by the accept/revert gate, which reverts only on
+  # non-compiling output — both of these compile.
+  describe "soundness gates" do
+    # The operands are matched by name only and the consumer may sit at any later index,
+    # so a statement in between could rebind `freq1` and be passed through verbatim while
+    # the emitted Map.intersect/3 read the NEW value. Measured before the gate:
+    #   ADD a key: original [b: 2]          -> repair [b: 2, x: 7]
+    #   DEL a key: original raises KeyError -> repair []
+    test "declines when a statement between the two halves rebinds an operand" do
+      source = """
+      freq1 = %{a: 1, b: 2}
+      freq2 = %{b: 5, x: 7}
+
+      common_keys =
+        Map.keys(freq1)
+        |> MapSet.new()
+        |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+        |> MapSet.to_list()
+
+      freq1 = Map.put(freq1, :x, 9)
+
+      common_keys
+      |> Enum.map(fn element ->
+        count1 = Map.fetch!(freq1, element)
+        count2 = Map.fetch!(freq2, element)
+        {element, min(count1, count2)}
+      end)
+      |> Enum.sort()
+      """
+
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, source)
+    end
+
+    test "declines when the rebinding is of the second operand" do
+      source = """
+      common_keys =
+        Map.keys(freq1)
+        |> MapSet.new()
+        |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+        |> MapSet.to_list()
+
+      freq2 = Map.delete(freq2, :b)
+
+      common_keys
+      |> Enum.map(fn element ->
+        count1 = Map.fetch!(freq1, element)
+        count2 = Map.fetch!(freq2, element)
+        {element, min(count1, count2)}
+      end)
+      |> Enum.sort()
+      """
+
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, source)
+    end
+
+    # An intervening statement that does not touch either operand is still fine — the gate
+    # must not turn the rule off wholesale.
+    test "still fires with an unrelated statement between the two halves" do
+      source = """
+      common_keys =
+        Map.keys(freq1)
+        |> MapSet.new()
+        |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+        |> MapSet.to_list()
+
+      total = 0
+
+      common_keys
+      |> Enum.map(fn element ->
+        count1 = Map.fetch!(freq1, element)
+        count2 = Map.fetch!(freq2, element)
+        {element, min(count1, count2)}
+      end)
+      |> Enum.sort()
+      """
+
+      assert flagged?(PreferMapIntersectOverMapsetIntersection, source)
+    end
+  end
 end

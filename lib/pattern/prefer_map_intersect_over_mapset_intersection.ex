@@ -22,15 +22,25 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
       producing a sorted list is what makes the rewrite order-identical. Without
       it the original returns an unsorted list and the repair would silently
       reorder the result.
-    * **`Map.fetch!`** — it raises on a missing key. `Map.get` returns `nil`, and
-      although the keys here come from the intersection so both are present, the
-      two differ the moment the pipeline is edited.
+    * **`Map.fetch!`** — and the reason first written here was wrong, so it is worth
+      stating what actually held. The claim was "`Map.get` returns `nil` … the two
+      differ the moment the pipeline is edited". Within the shape as documented they
+      cannot differ at all: the keys provably come from
+      `Map.keys(f1) ∩ Map.keys(f2)`, so `Map.fetch!` never raises and `Map.get` never
+      reaches its default. What made the distinction real was a **defect**, not the
+      shape — nothing gated an intervening statement from rebinding `freq1`, and with
+      one, `Map.fetch!` raised `KeyError` where `Map.get` would have returned `nil`
+      and the repair diverged from both. That hole is now closed by
+      `operands_untouched_between?/5`, which makes `Map.get` a genuinely free widen
+      rather than a refused one. It is still not taken — the check test pins the
+      boundary and the same fire-rate argument applies — but it is now on the
+      incidental list below, not the load-bearing one.
     * **the `min`/`max` combiner** is already generalised — both fire, and the
       combiner is carried into the repair rather than assumed.
 
-  Two are incidental syntax and could be widened safely: an inlined pipeline with
-  no `common_keys` binding, and `MapSet.new(Map.keys(x))` written as a call
-  rather than a pipe. That is the whole available gain, and it is not taken here.
+  Three are incidental and could be widened safely: an inlined pipeline with no
+  `common_keys` binding, `MapSet.new(Map.keys(x))` written as a call rather than a pipe,
+  and — since the rebinding gate landed — `Map.get` in place of `Map.fetch!`. That is the whole available gain, and it is not taken here.
   Widening a five-stage structural matcher is not a one-line change, and this
   project's standing rule is that a wider rule is often strictly worse than a
   narrow one — so the measurement is recorded, the boundary is pinned in
@@ -151,6 +161,7 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
          true <- bare_var?(freq1) and bare_var?(freq2),
          {:ok, map_idx, count1, count2, merge_expr} <-
            find_enum_map(exprs, assign_idx + 1, var_name, freq1, freq2),
+         true <- operands_untouched_between?(exprs, assign_idx, map_idx, freq1, freq2),
          true <- pure_merge?(merge_expr, count1, count2),
          true <- var_used_once?(exprs, var_name) do
       {:ok,
@@ -351,6 +362,73 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
 
   # ── build replacement AST ─────────────────────────────────────────
 
+  # `_key` unless a captured count is already called that. `_key` is an ordinary variable
+  # — the underscore only suppresses the unused warning — so nothing stops an author
+  # writing `_key = Map.fetch!(freq1, element)`, and `match_merge_stmts/4` admits it
+  # (its only name guard is `count1 != count2`). Emitting the literal atom then produced
+  #
+  #     fn _key, _key, count2 -> min(_key, count2) end
+  #
+  # which is a MATCH on one name, not two parameters: it compiles with warnings and
+  # raises FunctionClauseError the moment `Map.intersect/3` calls it with a key that
+  # differs from the value. Executed: the emitted form raised where the correct form
+  # returned `[b: 2]`. Compiling means the accept/revert gate never saw it.
+  defp key_param(count1, count2) do
+    Stream.iterate(0, &(&1 + 1))
+    |> Stream.map(fn
+      0 -> :_key
+      n -> :"_key#{n}"
+    end)
+    |> Enum.find(&(&1 not in [count1, count2]))
+  end
+
+  # The operands are matched by NAME only, and `find_enum_map/5` accepts the consumer at
+  # any later index, so without this gate a statement in between may rebind `freq1` or
+  # `freq2` — it is passed through verbatim while the emitted `Map.intersect/3` reads the
+  # NEW value for both the key set and the values, where the original took the key set
+  # from the OLD one. `var_used_once?/2` does not cover it: that guards the intersection
+  # variable, never the operands.
+  #
+  # Executed, on `freq1 = Map.put(freq1, :x, 9)` between the two statements:
+  #
+  #     original  [b: 2]            repair  [b: 2, x: 7]     a key the original never had
+  #     original  raises KeyError   repair  []               loud failure made silent
+  #
+  # (with `Map.delete(freq1, :b)` for the second row). Both compile, so the accept/revert
+  # gate cannot see either — it reverts only on non-compiling output.
+  #
+  # Mentioning an operand is enough to decline, not just rebinding it. A read is in fact
+  # harmless, but "does this statement mention the name" is checkable at a glance whereas
+  # "does it rebind it" has to chase `=`, `for`/`with` generators, `case` results and
+  # comprehension vars. Every fixture in all three test files has the two statements
+  # adjacent, so the conservative form costs nothing measurable.
+  # Adjacent statements have nothing in between, and the empty range would be descending
+  # (`2..1`), which `Enum.slice/2` warns about rather than treating as empty.
+  defp operands_untouched_between?(_exprs, assign_idx, map_idx, _freq1, _freq2)
+       when map_idx <= assign_idx + 1,
+       do: true
+
+  defp operands_untouched_between?(exprs, assign_idx, map_idx, freq1, freq2) do
+    names = [elem(freq1, 0), elem(freq2, 0)]
+
+    exprs
+    |> Enum.slice((assign_idx + 1)..(map_idx - 1)//1)
+    |> Enum.all?(fn expr -> not mentions_any?(expr, names) end)
+  end
+
+  defp mentions_any?(node, names) do
+    {_node, found} =
+      Macro.prewalk(node, false, fn
+        {name, _, context} = n, _found when is_atom(name) and is_atom(context) ->
+          {n, name in names}
+
+        n, found ->
+          {n, found}
+      end)
+
+    found
+  end
+
   defp build_map_intersect(freq1_ast, freq2_ast, {count1, count2, merge_expr}) do
     # fn _key, count1, count2 -> merge_expr end
     intersect_fn =
@@ -358,7 +436,7 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
        [
          {:->, [],
           [
-            [{:_key, [], nil}, {count1, [], nil}, {count2, [], nil}],
+            [{key_param(count1, count2), [], nil}, {count1, [], nil}, {count2, [], nil}],
             merge_expr
           ]}
        ]}
