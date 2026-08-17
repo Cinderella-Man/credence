@@ -28,17 +28,27 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
 
   @impl true
   def check(ast, _opts) do
+    # The SAME whole-AST analysis `fix_patches/2` runs, for the same reason: the
+    # rewrite `acc ++ [h]` -> `[h | acc]` accumulates in reverse, so it is only
+    # correct if there is a base clause returning that accumulator to reverse on
+    # the way out. `check_clause/6` looks at one clause at a time and cannot see
+    # that, so it used to report every `acc ++ [h]` in a self-call — including
+    # functions with no base clause at all, and ones whose base returns
+    # `{:ok, result}` rather than a bare variable. `analyze_functions/1` is
+    # per-function-group and already knows; both callbacks now consult it.
+    fixable = analyze_functions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {kind, meta, [{:when, _, [{name, _, params}, _guard]}, body_kw]} = node, issues
         when kind in [:def, :defp] and is_atom(name) and is_list(params) ->
           body = extract_body(body_kw)
-          {node, check_clause(body, name, params, meta, issues)}
+          {node, check_clause(body, name, params, meta, issues, fixable)}
 
         {kind, meta, [{name, _, params}, body_kw]} = node, issues
         when kind in [:def, :defp] and is_atom(name) and is_list(params) ->
           body = extract_body(body_kw)
-          {node, check_clause(body, name, params, meta, issues)}
+          {node, check_clause(body, name, params, meta, issues, fixable)}
 
         node, issues ->
           {node, issues}
@@ -59,8 +69,9 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   end
 
   # Check
-  defp check_clause(body, name, params, meta, issues) do
-    if body_calls_self?(body, name) and direct_append_in_call?(body, name, params) do
+  defp check_clause(body, name, params, meta, issues, fixable) do
+    if Map.has_key?(fixable, {name, length(params)}) and body_calls_self?(body, name) and
+         direct_append_in_call?(body, name, params) do
       pp_meta = find_append_meta(body, name) || meta
       line = Keyword.get(pp_meta, :line) || Keyword.get(meta, :line)
 

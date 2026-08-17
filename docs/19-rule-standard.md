@@ -35,6 +35,7 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 |---|---|---|
 | 1 | **Test triplet present** — `_check_test`, `_fix_test` (or a combined file), and for Pattern rules an `_equivalence_test` | *gated* (`check_meta_test`, `fix_meta_test`, `equivalence_meta_test`, `rule_test_completeness_test`) |
 | 2 | **The rule actually does something** — `check` asserted in both directions; a real `fix` whose output differs from its input; the output parses | *gated* (`semantic_meta_test`, `syntax_meta_test`, `fix_meta_test`) |
+| 2a | **No rule reports a finding that nothing repairs** — *fix or drop it*, per finding rather than per rule | *gated* 2026-08-17 (`fix_or_drop_test`), ledger opened at 24 across 9 rules and **paid to zero the same day** |
 | 3 | **No parser calls in rule tests** — everything routes through `Credence.RuleCase` | *gated* (`no_parser_calls_in_rule_tests_test`) |
 | 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
 | 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B. **Ledger EMPTY 2026-08-16**: all 40 swept, so this is satisfied by every rule rather than merely ratcheted |
@@ -44,6 +45,19 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 9 | **Semantic-mutant kill rate above the floor** | **not measured** (C18) — report-only first |
 
 Items 1–3 are why the suite is 8,261 tests.
+
+**Requirement 2a is new, and it is the teeth on requirement 2.** Requirement 2 asks
+whether a rule fixes *something*; 2a asks whether any individual finding is reported
+and left unrepaired. All 289-odd rules satisfied 2 while 24 findings across 9 rules
+violated 2a — `test/no_op_trace_test.exs` made those no-ops *visible* in the trace,
+which is a different claim from forbidding them, and `corpus/scope_parity_test.exs`
+gated only the converse direction (where check is silent, the fix must not act).
+
+Every one of the nine was the same structural defect: the admission decision existed
+in two copies, one per callback, and they had drifted. The remedy in each case was to
+delete the second copy. Two of the nine were also silent miscompilations — output
+that parses, compiles, warns about nothing, and returns a different answer — which no
+other gate can catch, because the safety net reverts only on non-compiling output.
 
 **Four of items 4–9 have since been gated** — 4 by C2.2, 5 by C14 and 8 by C13
 on 2026-07-28, then 7 by C12(a) on 2026-08-16 — each with its positive controls
@@ -233,6 +247,20 @@ PR-#20-style retrofit:
 |---|---|---|---|
 | — | (pre-standard) | 2026-05 → 2026-07 | 60 + 87 + 9 rules, three eras, no recorded bar |
 | v1 | this document | 2026-07-28 | standard written; items 1–3 already gated, 4–9 audited in §2 |
+| v1.1 | requirement **2a** | 2026-08-17 | *fix or drop it* gated per FINDING. Ran in §3's order: gate first (`fix_or_drop_test`, default suite), then the sweep, then verify. Ledger 24 → 0 across 9 rules. **Step 4 does not apply** — `FixOrDrop` is the gate, not a sweep tool, the same call made for `DslStaticScan`'s `scan`/`tally` |
+
+**What v1.1 cost, since §2's value is saying how much a checklist implies.** Nine
+rules, all one defect — the admission decision kept in two copies that had drifted
+— so the repair was always to delete the second copy rather than synchronise them.
+Twelve findings gained a repair, six were removed as unrepairable, six were removed
+where a repair exists but needs a rendering fix first (both `NonGroupedClauses`
+shapes; specified in the source). Corpus 6367 → 6347, deletions only.
+
+Two of the nine were **silent miscompilations** — parsing, compiling,
+warning-free output that returns a different answer. Worth recording against §5's
+warning about treating a green suite as compliance: these had been green under every
+gate in the repo, because `apply_or_revert` reverts on non-compiling output and
+these compile.
 
 ---
 

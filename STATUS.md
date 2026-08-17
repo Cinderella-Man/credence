@@ -363,67 +363,69 @@ rather than to this section.
   per-rule rather than corpus-wide, since the distribution runs from 0.475 to
   0.875 and a single number hides both ends.
 
-- [x] **D10. DECIDED by the maintainer 2026-08-17, and it is now gated rather
-  than tracked.** The instruction: *"if rules can't fix the code they need to be
-  removed. Try to check can you improve them; if yes go ahead, if not, remove
-  them. WE DO NOT HAVE 'warn only' rules — Credence is FIXING code, not just
-  complaining about it."* So report-only is closed, and the three options this
-  item used to offer collapse to two: widen the fix, or stop reporting.
+- [x] **D10. DONE. Decided by the maintainer, gated, and paid to zero the same
+  day.** The instruction: *"if rules can't fix the code they need to be removed.
+  Try to check can you improve them; if yes go ahead, if not, remove them. WE DO
+  NOT HAVE 'warn only' rules — Credence is FIXING code, not just complaining
+  about it."*
 
-  **The population was bigger than this item said, and the first re-measurement
-  of it was wrong.** D10 read "zero rules flag without ever fixing; exactly one
-  sits below 50%" — true, and it measures the wrong thing. The question is not
-  whether a rule fixes *something*, it is whether any individual finding is
-  reported and left unrepaired. Measured that way, and excluding the 6 findings a
-  sibling rule legitimately repairs by cascade: **24 findings across 9 rules**,
-  at a fix coverage of 1486/1515 = 98.1%.
+  **The population was 24 findings across 9 rules, not the one this item named.**
+  D10 asked whether a rule fixes *something*; the question that matters is whether
+  any individual finding is reported and left unrepaired. Fix coverage was
+  1486/1515 = 98.1%, and the missing 1.9% was real.
 
-  ⚠️ The first sweep said 46 across 13 rules and was wrong, in a way worth
-  remembering: it drew fixtures from `PipelineWitness.candidates/1`, whose index
-  **over-collects on purpose** (a witness only has to be found once, so a false
-  candidate is free there). 22 of the 46 were *prose* — test names and doc
-  sentences that happen to parse. One of them,
-  `"detects nested call: Enum.join(Enum.map(...))"`, made `UseMapJoin` fire and
-  then crashed its fix, and would have been filed as a rule defect. A gate whose
-  failure message accuses a rule of a bug needs the precise index
-  (`MetaTestSupport.fixtures/1`), not the generous one.
+  ⚠️ **The first measurement said 46 across 13 and was wrong.** It drew fixtures
+  from `PipelineWitness.candidates/1`, whose index over-collects by design — a
+  witness only has to be found once, so a false candidate is free there. 22 of the
+  46 were *prose*: test names and doc sentences that happen to parse. One made
+  `UseMapJoin` fire and crash its fix, and would have been filed as a rule defect.
+  A gate whose failure message accuses a rule of a bug needs the precise index
+  (`MetaTestSupport.fixtures/1`).
 
-  **Gated, not tracked.** `test/fix_or_drop_test.exs` + `test/support/fix_or_drop.ex`
-  now assert that no rule reports a finding nothing repairs, with a shrink-only
-  ledger for the paydown and its vacuity checks in the *machinery* rather than the
-  result. Nothing enforced this before: `no_op_trace_test` proves a no-op is
-  **reported** in the trace, which is a different claim, and
-  `corpus/scope_parity_test` gates only the converse (where check is silent, the
-  fix must not act). It runs in the **default** suite at 2.7 s — deliberately
-  untagged, because this same session found the excluded `:idempotency` sweep had
-  been red for four rules with nobody looking.
+  **Gated:** `test/fix_or_drop_test.exs` + `test/support/fix_or_drop.ex`. Nothing
+  enforced this before — `no_op_trace_test` proves a no-op is *reported*, which is
+  a different claim, and `corpus/scope_parity_test` gates only the converse. Runs
+  in the **default** suite at 2.7 s, deliberately untagged, because A4 above is
+  what happens to an excluded gate. Ledger **24 → 0**; its vacuity checks are in
+  the machinery, not the result, so it still means something at zero.
 
-  **`NoRedundantListTraversal` is paid — 13 of the 24 — and it took three
-  attempts.** (1) Narrowed `check/2` onto `find_fixable_groups/1`, the predicate
-  the fix already used, and deleted `build_reduce_ast/3`: an emitter for the
-  count+sum reduce that `@fixable_pairs` had made unreachable, i.e. dead code for
-  a rewrite the rule's own rationale rejects. (2) That **over-shot** — a
-  `min`+`max` pair went silent whenever a `length/1` shared the block, because
-  every tracked call joins one group and the group then had three members. The
-  repair was a *widen* that deletes code: stop tracking `count`/`sum`/`length`
-  altogether. Corpus: **6 accepted findings gone, 0 new**, a deletions-only
-  re-pin (6367 → 6361). (3) The widen then left **28 of 45 fixtures vacuous** —
-  the rebinding, scope, arity-2 and not-a-plain-variable negatives contained no
-  tracked call at all, so each would have passed with its mechanism deleted.
-  Every mechanism negative is now written on `min`/`max`.
+  **Every one of the nine was the same defect: one decision kept in two copies.**
+  `find_valid_groups` vs `find_fixable_groups`; `boolean_clause_pair?` vs a `cond`
+  over `unwrap_pattern` (with `normalize_pattern/1` a byte-identical duplicate);
+  `reassemble_call?` vs `reassemble_fixable?` (twice, in two sibling rules);
+  `check_body/1` as a copy of `group_clauses/1`'s phase 1 with the safety test
+  removed; `safe_callback?/1` re-listing what `wrap_arg/2` accepts;
+  `check_clause/6` per-clause against a per-function-group fix. In each case the
+  remedy was to delete the second copy, not to synchronise the two.
 
-  **Remaining: 8 rules, 11 findings, each with an implementable spec** —
-  `NoCaseTrueFalse` and `NoCodepointStringReverse` narrow (no behaviour-preserving
-  target exists: a leading `_` makes the second clause unreachable, and
-  `join("-")` after a reverse is not `String.reverse/1`);
-  `NoGuardEqualityForPatternMatch` and `PreferFunctionClausesForListPatterns`
-  widen; `NonGroupedClauses` is mixed; `NoListAppendInRecursion`,
-  `NoManualStringReverse`, `NoMapKeysOrValuesForIteration`,
-  `NoTrailingNewlineInDoc` remain. **`NoTrailingNewlineInDoc`'s 6 are
-  `:patch_rejected`, not `:no_patches`** — its fix emits patches that
-  `apply_rule_fix_with_status/3` discards for non-parsing output or a changed
-  comment multiset. That is a bug in the fix, not a scope decision, and it is
-  invisible to a test because it looks identical to "nothing to do".
+  **Two silent miscompilations came out of it, both in shipped rules, both found
+  by asking why a rule DECLINED rather than by hunting bugs:**
+  * `NoGuardEqualityForPatternMatch` rewrote `def f(x, {x, y}) when x == :a` to
+    `def f(:a, {x, y})`, dropping the repeated-variable match constraint —
+    executed, `f(:a, {:b, 2})` went from `:nomatch` to `2`.
+  * `NoMapKeysOrValuesForIteration` passed an unrecognised callback through while
+    rewriting `Map.values(m)` to `m` — executed with `cb = fn v -> v > 0 end` and
+    `m = %{a: -1, b: 2}`, `false` became `true`, because the callback then receives
+    `{:a, -1}` and a tuple outranks any integer in Erlang term order.
+
+  Both compile, warn about nothing, and return a different answer, so no existing
+  gate could see them: the net reverts on non-compiling output and these compile.
+  `:no_patches` has two meanings that look identical from outside — "the fix knows
+  something the check doesn't" and "the fix is quietly wrong".
+
+  **One compromise, and it is the thing to revisit first.** Six of the 24 (both
+  `NonGroupedClauses` shapes) were closed by removing reporting where a repair
+  *does* exist. Moving an annotation run with its clause was implemented and
+  reverted: the moves were right, the rendering was not — a moved slice keeps its
+  old `do:`/`end:` positions and `patches_from_ast_transform/3` honours them, so
+  two clauses printed onto one line, the failure docs/17 entry 11 records from this
+  code path three times. The layout-metadata strip is specified in the source.
+  Every other removal was verified to have no possible repair (no stdlib
+  `count_and_sum`; an unreachable clause after a leading `_`; `"c-b-a"` is not
+  `"cba"`; a base clause consuming its accumulator via `to_string/1`).
+
+  Corpus effect across the sweep: **6367 → 6347** accepted findings, deletions
+  only, 0 new over four re-pins.
 
 - [ ] **D11a. Work the build list — it is written and measured.**
   `docs/23-build-list.md` replaces docs/17's ranked list (which docs/18 §5.3

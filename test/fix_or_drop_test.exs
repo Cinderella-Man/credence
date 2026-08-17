@@ -37,18 +37,31 @@ defmodule Credence.FixOrDropTest do
   rule still reports the finding afterwards. Measured at adoption: 30 no-ops, 6
   cascade-rescued, **24 violations**.
 
-  ## The ledger is a paydown list, not a permission slip
+  ## The ledger is EMPTY, and that is the dangerous state
 
-  Every row is a finding a user sees and nothing fixes. The ratchet exists so the
-  paydown can happen behind a gate instead of racing one (docs/19 §3: wire the
-  check in first, then sweep). It may only SHRINK. There are exactly two ways to
-  remove a row — widen the fix so it repairs the case, or narrow `check/2` so it
-  stops reporting what the fix will not repair, sharing one predicate between the
-  two so they cannot drift (commit 4115c59's remedy). Adding a row is not a
-  third way.
+  It opened at 24 findings across 9 rules and was paid to zero the same day. Two
+  ways out were used and there was never a third: widen the fix so it repairs the
+  case, or narrow `check/2` so it stops reporting what the fix will not repair —
+  in every instance by making the two callbacks share ONE predicate, which is what
+  commit 4115c59 established and what every one of these nine rules had failed to
+  do. Adding a row was never an option.
+
+  **Zero is when a ratchet like this normally stops working.** The
+  self-corruption gate paid for that lesson: its vacuity test asserted "some rule
+  still corrupts", which is correct against a non-empty ledger and worthless at
+  zero, because that is exactly when "nobody violates" and "the probe stopped
+  working" become the same observation from outside. So the vacuity checks here
+  live in the MACHINERY, not the result — three fabricated rules (one that never
+  fixes, one that does, one that raises) plus a floor on the candidate index. Those
+  four assertions are what still mean something now that the sweep finds nothing,
+  and they must not be deleted as redundant.
+
+  The two ledger-policing tests below now iterate an empty list and pass trivially.
+  That is correct and expected; they exist for the next non-empty ledger.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 9 rules; 2 remain. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules. PAID DOWN TO ZERO the same
+  # day. May only SHRINK — which now means it may only stay empty.
   #
   # Paid down the same day:
   #   * `NoRedundantListTraversal` — 13 findings; see below.
@@ -99,6 +112,13 @@ defmodule Credence.FixOrDropTest do
   #     and a tuple outranks any integer in Erlang term order. `safe_callback?/1`
   #     now asks `wrap_arg/2` directly instead of re-listing the accepted shapes,
   #     which is what let the two drift apart.
+  #   * `NoListAppendInRecursion` — 2, NARROW. `acc ++ [h]` -> `[h | acc]`
+  #     accumulates in reverse, so it is only correct when a base clause returns
+  #     that accumulator to reverse on the way out. `check_clause/6` sees ONE
+  #     clause and cannot know that, so it reported functions with no base clause
+  #     at all, and ones whose base returns `to_string(acc)` or `{:ok, acc}` —
+  #     where no reverse can be inserted mechanically. Both callbacks now consult
+  #     the same whole-AST `analyze_functions/1`.
   #
   # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
@@ -111,10 +131,7 @@ defmodule Credence.FixOrDropTest do
   #                     DISCARDED because the output did not parse or the comment
   #                     multiset changed. A bug in the fix, not a scope decision.
   #   {:crashed, _}   — `fix_patches/2` raised. Crash isolation makes it silent.
-  @ledger [
-    {Credence.Pattern.NoListAppendInRecursion, "1e554d1fbc60"},
-    {Credence.Pattern.NoListAppendInRecursion, "717abec90223"}
-  ]
+  @ledger []
 
   defp hash(source),
     do: :crypto.hash(:sha256, source) |> Base.encode16(case: :lower) |> binary_part(0, 12)

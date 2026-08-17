@@ -58,7 +58,6 @@ absinthe/lib/absinthe/utils.ex:121  no_identity_function_in_enum
 absinthe/lib/absinthe/utils.ex:136  no_identity_function_in_enum
 absinthe/lib/absinthe/utils.ex:45  prefer_map_new
 absinthe/lib/absinthe/utils.ex:98  no_identity_function_in_enum
-absinthe/lib/absinthe/utils/render.ex:51  no_list_append_in_recursion
 absinthe_error_payload/lib/absinthe_error_payload/test_helper.ex:33  prefer_map_new
 absinthe_federation/lib/absinthe/federation/notation.ex:630  prefer_then_over_capture_invocation
 absinthe_federation/lib/absinthe/federation/notation.ex:639  prefer_then_over_capture_invocation
@@ -3684,7 +3683,6 @@ livebook/lib/livebook/hubs/team_client.ex:1248  no_unless_else
 livebook/lib/livebook/intellisense/elixir.ex:193  no_cond_two_clauses
 livebook/lib/livebook/intellisense/elixir/docs.ex:112  no_empty_map_new
 livebook/lib/livebook/k8s_api.ex:252  prefer_map_new
-livebook/lib/livebook/live_markdown/import.ex:322  no_list_append_in_recursion
 livebook/lib/livebook/live_markdown/import.ex:649  prefer_enum_reverse_two
 livebook/lib/livebook/live_markdown/markdown_helpers.ex:361  no_zip_then_map
 livebook/lib/livebook/runtime/evaluator/formatter.ex:202  no_case_on_param_dispatch
@@ -5772,8 +5770,6 @@ surface/lib/surface/formatter/phases/render.ex:293  use_map_join
 surface/lib/surface/formatter/phases/render.ex:421  no_case_on_param_dispatch
 surface/lib/surface/formatter/phases/render.ex:422  no_case_boolean_result
 surface/lib/surface/formatter/phases/render.ex:486  no_length_comparison_for_empty
-surface/lib/surface/formatter/phases/spaces_to_newlines.ex:128  no_list_append_in_recursion
-surface/lib/surface/formatter/phases/spaces_to_newlines.ex:60  no_list_append_in_recursion
 surface/lib/surface/type_handler.ex:223  no_length_comparison_for_empty
 surface/lib/surface/type_handler/css_class.ex:39  prefer_enum_reverse_two
 surface/lib/surface/type_handler/types_helper.ex:4  no_case_on_param_dispatch
