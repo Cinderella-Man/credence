@@ -34,6 +34,7 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
 
   use Credence.Syntax.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # One edit removes one stray colon; a file with more needs more passes. The
   # cap is a belt-and-braces guard against a rewrite loop.
@@ -77,7 +78,7 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
          true <- String.contains?(message_to_string(msg), "unexpected token"),
          line when is_integer(line) <- Keyword.get(meta, :line),
          col when is_integer(col) <- Keyword.get(meta, :column),
-         {:ok, pos} <- line_col_to_pos(source, line, col),
+         {:ok, pos} <- SourceMask.byte_offset(source, line, col),
          {:ok, identifier, first_colon} <- keyword_colon_at(source, pos) do
       fixed =
         binary_part(source, 0, first_colon) <>
@@ -128,25 +129,6 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
   defp identifier_byte?(b) do
     (b >= ?a and b <= ?z) or (b >= ?A and b <= ?Z) or (b >= ?0 and b <= ?9) or
       b in [?_, ??, ?!]
-  end
-
-  # Convert 1-indexed line/column (the parser counts columns in codepoints) to a
-  # 0-indexed *byte* position in the source.
-  defp line_col_to_pos(source, line, col) do
-    lines = String.split(source, "\n")
-
-    with true <- line >= 1 and line <= length(lines),
-         target = Enum.at(lines, line - 1),
-         true <- col >= 1 and col - 1 <= String.length(target) do
-      preceding =
-        lines
-        |> Enum.take(line - 1)
-        |> Enum.reduce(0, fn l, acc -> acc + byte_size(l) + 1 end)
-
-      {:ok, preceding + byte_size(String.slice(target, 0, col - 1))}
-    else
-      _ -> :error
-    end
   end
 
   defp build_issue(line, identifier) do

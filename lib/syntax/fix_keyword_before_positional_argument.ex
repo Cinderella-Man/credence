@@ -51,6 +51,7 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
   use Credence.Syntax.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @error_fragment "unexpected expression after keyword list"
 
@@ -117,7 +118,7 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
     line = Keyword.get(meta, :line, 1)
     col = Keyword.get(meta, :column, 1)
 
-    with {:ok, error_pos} <- line_col_to_pos(source, line, col),
+    with {:ok, error_pos} <- SourceMask.byte_offset(source, line, col),
          {:ok, open_pos} <- find_open_paren(source, error_pos, 0),
          {:ok, close_pos} <- find_close_paren(source, open_pos + 1, 0),
          args_text = binary_part(source, open_pos + 1, close_pos - open_pos - 1),
@@ -149,25 +150,6 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
   defp valid_call?(args_text), do: match?({:ok, _}, Code.string_to_quoted(wrap(args_text)))
 
   defp wrap(args_text), do: "credence_probe(" <> args_text <> ")"
-
-  # Convert 1-indexed line/column (the parser counts columns in codepoints) to a
-  # 0-indexed *byte* position in the source.
-  defp line_col_to_pos(source, line, col) do
-    lines = String.split(source, "\n")
-
-    with true <- line >= 1 and line <= length(lines),
-         target = Enum.at(lines, line - 1),
-         true <- col >= 1 and col - 1 <= String.length(target) do
-      preceding =
-        lines
-        |> Enum.take(line - 1)
-        |> Enum.reduce(0, fn l, acc -> acc + byte_size(l) + 1 end)
-
-      {:ok, preceding + byte_size(String.slice(target, 0, col - 1))}
-    else
-      _ -> :error
-    end
-  end
 
   # Walk backward from `pos` to the nearest "(" at nesting depth 0. Scanning
   # bytes is safe: a UTF-8 continuation byte is never an ASCII paren.

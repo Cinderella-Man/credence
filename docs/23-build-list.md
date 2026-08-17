@@ -44,7 +44,7 @@ tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (7)
+## Still unbuilt, and each verified still uncovered (7 → 6, plus 1 new)
 
 Every one was re-confirmed uncovered on 2026-08-17 by running its target through
 `Credence.fix/1`: the pipeline returns the source unchanged. That re-check
@@ -53,7 +53,16 @@ could have covered some of these silently, and one item turned out to be covered
 by an existing rule.
 
 **No table rows remain** — the three this list identified as cheapest were added
-the same day. Everything below needs a rule and its own equivalence argument:
+the same day. Everything below needs a rule and its own equivalence argument.
+
+Two items have since been struck (`no_enum_sort_then_map_values`,
+`no_atom_as_function_name`) and a third closed by one rule rather than the two it
+listed (the `when`-guard pair). Building that pair added `fix_when_guard_in_with_clause`
+— a shape docs/18 dispositioned wrongly, whose repair is a move rather than a
+deletion. **Three buildable items remain:** `fix_when_guard_in_with_clause`,
+`fix_mixed_required_optional_map_keys`, `no_remote_function_in_guard`; plus the three
+blocked on the report-only policy question and `fix_undefined_struct_in_pattern`,
+which is an extension to a live Semantic rule rather than a new rule.
 
 * ~~`no_enum_sort_then_map_values`~~ **BUILT 2026-08-17** —
   `lib/pattern/no_enum_sort_then_map_values.ex`. Shipped much narrower than the
@@ -81,9 +90,11 @@ the same day. Everything below needs a rule and its own equivalence argument:
   mechanism with two switches today, so adding one is its own justification.
 * ~~`no_atom_as_function_name`~~ **BUILT 2026-08-17** —
   `lib/syntax/no_atom_as_function_name.ex`. See the note below.
-* `fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension` —
-  Syntax, and must be built **together** sharing one backward lexer-aware scanner,
-  because they emit the byte-identical error and need opposite repairs
+* ~~`fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension`~~
+  **BUILT 2026-08-17 as ONE rule**, `lib/syntax/fix_misplaced_when_guard.ex`, on the
+  shared `lib/syntax/when_guard_position.ex`. See the note below.
+* `fix_when_guard_in_with_clause` — **NEW, discovered while building the pair.** Not a
+  variant of them: the repair is a **move**, not a deletion. See the note below.
 * `fix_undefined_struct_in_pattern`, `fix_mixed_required_optional_map_keys`
 
   (`fix_undefined_type_t_in_spec` is **covered**, re-verified 2026-08-17 — but by
@@ -188,9 +199,45 @@ not 8 remaining — and one of the five is not a rule build at all. Workable:
   field samples, including `:ets.whereis(:ets_table_name(name))`, where the parser
   reports the inner `(` and so the correct colon is repaired without the rule
   knowing which module names are real.
-* `fix_stray_comma_before_when_guard` + `fix_when_guard_in_for_comprehension` —
-  one item, both gated on `Code.string_to_quoted(source, columns: true)`
-  returning the same `'when'` error, which is exactly why they share a scanner.
+* ~~`fix_stray_comma_before_when_guard` + `fix_when_guard_in_for_comprehension`~~ —
+  **BUILT as one rule, and it had to be.** They do share a scanner
+  (`Credence.Syntax.WhenGuardPosition`, on `SourceMask.mask/1` rather than a second
+  hand-written lexer), but two *rules* cannot do the job. The Syntax round is a single
+  `Enum.reduce` (`lib/syntax.ex:93`) — each `fix/1` runs once — and the parser reports
+  only the first error, so on a file whose `for` defect precedes its `def` defect the
+  comma rule declines, the `for` rule repairs its own shape and stops, and
+  `commit_or_roll_back/4` discards the round. Measured with the two as separate rules:
+
+      def THEN for  ->  parses,       [{FixStrayComma…, 1}, {FixWhenGuard…, 1}]
+      for THEN def  ->  parses=false, [{FixWhenGuard…, :rolled_back}]
+
+  No rule order fixes it; reversing moves the failure to the other interleaving. One
+  rule converges in one pass, and both interleavings are pinned at round level.
+
+  Three further corrections came out of building it, each executed:
+
+  - **Re-parsing does not discriminate the two shapes.** For `def`, `for`, `with`,
+    `case` and `fn`, deleting the comma AND deleting the `when` each yield source that
+    parses. Compiling is what separates them, so it derived the mapping; the runtime
+    discriminator is structural.
+  - **`with` must decline, which corrects docs/18** — see the new item above.
+  - **`for`'s repair is not ambiguous after all.** A guard is legal in a generator
+    pattern, so "move it left of the `<-`" looked like a second valid repair. Executed,
+    the two return identical results on the heterogeneous list proposed as the
+    counterexample (a generator pattern already skips what it does not match), and
+    delete-the-`when` is strictly more general: a filter may be any expression, so
+    `for a <- l, String.length(inspect(a)) > 0` runs where the moved form is a
+    `CompileError`.
+* `fix_when_guard_in_with_clause` — **the repair is a MOVE.** docs/18 groups
+  `with ... <- ..., when` with the `def` shape, "delete the comma". That does not
+  compile. Deleting the `when` does compile and is worse: a bare `with` clause is
+  evaluated for its value and the value discarded, so the guard silently stops
+  filtering — `with {:ok, x} <- {:ok, -5}, x > 0` returns `{:passed, -5}`. `with` does
+  take a guard, before the `<-` (as Elixir's own `partition_supervisor.ex:446` and
+  `uri.ex:493` write it), so the repair is `with {:ok, x} when x > 0 <- f()`. That is a
+  move across the `<-`, which is why `FixMisplacedWhenGuard` — which only deletes —
+  declines it rather than guessing. `WhenGuardPosition` already classifies the shape
+  and returns `:none` for it, so this item is a new repair on an existing locator.
 * `fix_mixed_required_optional_map_keys` — Syntax, built as a sibling of the live
   `Credence.Syntax.FixKeywordBeforePositionalArgument`.
 * `no_remote_function_in_guard` — keep only the pattern-move repair; docs/18

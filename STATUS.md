@@ -280,12 +280,12 @@ rather than to this section.
 
   What remains, after report-only was closed as an option (2026-08-17):
 
-  * **Buildable (3):** `fix_stray_comma_before_when_guard` +
-    `fix_when_guard_in_for_comprehension` (one item — byte-identical parse error,
-    opposite repairs, so a shared backward scanner is the only safe way to build
-    either); `fix_mixed_required_optional_map_keys`; `no_remote_function_in_guard`
-    (**read docs/17 entry 11 first** — three recorded corruption paths, one
-    emitting output that does not parse).
+  * **Buildable (3):** `fix_when_guard_in_with_clause` (**new** — the `when`-guard
+    build turned up a third shape docs/18 dispositioned wrongly; its repair is a
+    move across the `<-`, not a deletion, and the locator already classifies it);
+    `fix_mixed_required_optional_map_keys`; `no_remote_function_in_guard` (**read
+    docs/17 entry 11 first** — three recorded corruption paths, one emitting output
+    that does not parse).
   * **Not a rule build:** `fix_undefined_struct_in_pattern` is a redirect — extend
     the live `Semantic.FixCyclicStructReference`.
   * **Dead as specified (2):** the GenServer reply-protocol pair and

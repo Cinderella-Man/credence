@@ -273,4 +273,75 @@ defmodule Credence.SourceMaskTest do
       assert SourceMask.replace_code(line, shadow, "len(", "length(") == line
     end
   end
+
+  describe "byte_offset/3" do
+    test "the first column of the first line is offset zero" do
+      assert SourceMask.byte_offset("abc\ndef\n", 1, 1) == {:ok, 0}
+    end
+
+    test "counts the newline that ends each preceding line" do
+      assert SourceMask.byte_offset("abc\ndef\n", 2, 1) == {:ok, 4}
+      assert SourceMask.byte_offset("abc\ndef\n", 2, 3) == {:ok, 6}
+    end
+
+    test "one past the last character of a line is in range" do
+      assert SourceMask.byte_offset("abc", 1, 4) == {:ok, 3}
+    end
+
+    test "out of range is :error rather than a wrong number" do
+      assert SourceMask.byte_offset("abc\n", 9, 1) == :error
+      assert SourceMask.byte_offset("abc\n", 1, 99) == :error
+      assert SourceMask.byte_offset("abc\n", 1, 0) == :error
+    end
+
+    # The whole reason this returns bytes. The parser counts COLUMNS in graphemes, so
+    # the conversion has to cross into byte space — and it must, because the shadow is
+    # byte-aligned with the source and not grapheme-aligned.
+    test "crosses from the parser's grapheme columns into byte space" do
+      source = ~s|x = "héllo" + y|
+
+      # `é` is two bytes, so every column after it is one byte further along than it
+      # is columns along.
+      assert SourceMask.byte_offset(source, 1, 15) == {:ok, 15}
+      assert String.at(source, 14) == "y"
+      assert :binary.at(source, 15) == ?y
+    end
+
+    # The invariant that makes a byte offset transferable to the shadow at all, and
+    # the one a grapheme offset does NOT have. `WhenGuardPosition` went inert on every
+    # file with a non-ASCII comment before this was understood.
+    test "the shadow matches the source in bytes but not in graphemes" do
+      for source <- [~s|x = "héllo"\n|, "# 🇵🇱 note\n", ~s|x = ~s(caf\u00e9)\n|] do
+        shadow = SourceMask.mask(source)
+
+        assert byte_size(shadow) == byte_size(source)
+        assert String.length(shadow) > String.length(source)
+      end
+    end
+
+    test "the offset it returns indexes the shadow and the source identically" do
+      source = ~s|x = "héllo"\ny = 1\n|
+      shadow = SourceMask.mask(source)
+      {:ok, offset} = SourceMask.byte_offset(source, 2, 1)
+
+      assert binary_part(source, offset, 1) == "y"
+      assert binary_part(shadow, offset, 1) == "y"
+    end
+  end
+
+  describe "blank?/1" do
+    test "true for the fill byte, as a byte and as a one-byte binary" do
+      shadow = SourceMask.mask(~s|x = "ab"|)
+
+      assert SourceMask.blank?(:binary.at(shadow, 5))
+      assert SourceMask.blank?(binary_part(shadow, 5, 1))
+    end
+
+    test "false for code bytes and for whitespace" do
+      refute SourceMask.blank?(?x)
+      refute SourceMask.blank?("x")
+      refute SourceMask.blank?(?\s)
+      refute SourceMask.blank?(?\n)
+    end
+  end
 end

@@ -99,6 +99,69 @@ defmodule Credence.SourceMask do
   end
 
   @doc """
+  The parser's 1-indexed `{line, column}` as a 0-indexed **byte** offset into
+  `source`. `:error` when the position is not inside `source`.
+
+  ## Bytes, and why that is not a detail
+
+  The parser counts columns in **graphemes** — a combining accent, a ZWJ emoji and a
+  flag are each one column. So the conversion has to cross from grapheme space to
+  byte space, which is the `byte_size(String.slice(...))` below.
+
+  It has to land in *byte* space because that is the only space `mask/1` shares with
+  its input. The shadow is byte-for-byte the same length, and deliberately so — but
+  it is **not** the same number of graphemes, because a multi-byte character is
+  replaced by one blank byte per byte. Measured on `x = "héllo"`: 41 bytes of source
+  and 41 of shadow, 40 graphemes of source and 41 of shadow; on a comment holding one
+  flag emoji, 44 bytes each but 37 graphemes against 44.
+
+  A scan that computes grapheme offsets from the source and then indexes the shadow
+  therefore drifts by one position per extra byte, and any rule doing it goes inert
+  on the first file containing a non-ASCII comment. `Credence.Syntax.WhenGuardPosition`
+  did exactly that and was silently declining every such file before this existed.
+  """
+  @spec byte_offset(String.t(), pos_integer(), pos_integer()) ::
+          {:ok, non_neg_integer()} | :error
+  def byte_offset(source, line, column) do
+    lines = String.split(source, "\n")
+
+    with true <- line >= 1 and line <= length(lines),
+         target = Enum.at(lines, line - 1),
+         true <- column >= 1 and column - 1 <= String.length(target) do
+      preceding =
+        lines
+        |> Enum.take(line - 1)
+        |> Enum.reduce(0, fn l, acc -> acc + byte_size(l) + 1 end)
+
+      {:ok, preceding + byte_size(String.slice(target, 0, column - 1))}
+    else
+      _ -> :error
+    end
+  end
+
+  @doc """
+  True for a single byte of `mask/1`'s output that stands in for non-code.
+
+  For a rule that scans the shadow **character by character** rather than with a
+  regex. `0x01` is not whitespace and not a word byte, so a hand-written scan that
+  only knows about `" "`, `"\\t"` and `"\\n"` stops dead at the first blanked comment
+  or string and silently declines. Ask this instead of comparing to `0x01`, which
+  would put a second copy of that constant outside this module.
+
+  Skipping blanks cannot reach *into* a literal: `mask/1` blanks a string's quotes
+  along with its contents, so a scan that steps over blanks steps over the whole
+  literal and lands on the code byte before it.
+
+  Takes either the one-byte binary a `String.slice/3` yields or the integer an
+  `:binary.at/2` yields, because a byte-wise scan wants the latter — see
+  `byte_offset/3` for why such a scan must be byte-wise in the first place.
+  """
+  @spec blank?(String.t() | byte()) :: boolean()
+  def blank?(@blank), do: true
+  def blank?(<<@blank>>), do: true
+  def blank?(_byte), do: false
+
+  @doc """
   Pairs every source line with its shadow, as `{line, shadow}`.
 
   `mask/1` preserves newlines byte-for-byte, so both splits always produce the
