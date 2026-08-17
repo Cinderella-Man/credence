@@ -205,16 +205,6 @@ rather than to this section.
   clauses need one fixture each, and the assertion has to be the decline. For many
   survivors no such input exists that anyone would write.
 
-- [ ] **D12. One undocumented report-without-fix, found by tallying the corpus run.**
-  Across 20,076 corpus files the whole suite logs `check found N issue(s) but fix
-  returned IDENTICAL source` for exactly three rules: `NoEnumTakeNegative` (7),
-  `NoMapKeysEnumLookup` (1) and **`NoKeywordGetIntegerKey` (1)**. The first two decline
-  for safety reasons docs/07 records (order-independence, bounds/negatives). The third
-  documents no decline anywhere — so under D10's settled policy it either gets a widened
-  fix or stops reporting that shape. Reproduce by grepping a full `mix test` for
-  `IDENTICAL source`; `fix_or_drop_test` cannot see any of them, since it asks whether a
-  rule fixes nothing *at all*.
-
 - [ ] **D11a. Build list: one mechanism decision left, and it is yours.**
   `docs/23-build-list.md` is the list; every candidate was verified by running its
   target through the live pipeline, and each entry carries its own hazards. Of the
