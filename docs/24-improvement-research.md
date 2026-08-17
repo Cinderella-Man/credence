@@ -96,6 +96,7 @@ gain/risk.
 | 6 | `DslGuard.count_subtrees/2` O(N·depth) → O(N) | — | low | **REFUTED, see below** |
 | 7 | Memoize `discover_rules/1` in `:persistent_term` | — | medium | **REFUTED, see below** |
 | 8 | Lockstep meta-insensitive equality in `diff_patches/2` | — | medium | **REFUTED, see below** |
+| 9 | Thread the accumulator's AST into `apply_rule_fix_with_status/3` | 1 parse per FIRING rule | low | **REFUTED 2026-08-17, measured** |
 
 ### The measurement that settles items 5–8
 
@@ -141,6 +142,33 @@ computes the same thing again. Threading that through would remove ~25% of a
 fix — but it puts a stale baseline on the critical path, where a wrong answer
 silently accepts or reverts fixes, so it needs its own gate before anyone tries
 it.
+
+#### Row 9 — the last uncosted parse, refuted on measurement
+
+STATUS.md D7 carried "the Pattern fix loop re-parses the source once per rule" long after
+row 1 fixed it. Reading the call graph turned up a *different* site that row 1 did not
+touch: `RuleHelpers.apply_rule_fix_with_status/3` calls `Sourceror.parse_string!` at
+`rule_helpers.ex:592`, discarding the AST the Pattern accumulator already holds for
+byte-identical source. One extra parse per **firing** rule.
+
+Measured over five real files from this repo's own `lib/`:
+
+    file                lines   fix ms   firing   parse ms   prize
+    rule_helpers.ex      1335    553.6        1       43.4    7.8%
+    pattern.ex            373     87.6        0        8.4    0.0%
+    semantic.ex           577    146.9        0       15.2    0.0%
+    credence.ex           156      33.5       0        2.3    0.0%
+    syntax.ex             222      55.5        0        4.4    0.0%
+    TOTAL                         877.3        1       —      4.9%
+
+**Zero rules fire on four of the five, so the prize there is not small — it is exactly
+zero.** The whole 4.9% comes from a single firing rule on the largest file. That is the
+same arithmetic rows 5-8 were refuted on.
+
+Against it: `apply_rule_fix_with_status/3` is public and is the documented path rule tests
+use, so "test assertions run through the exact bytes the pipeline ships"
+(`rule_helpers.ex:559-562`). Threading an AST in means a new arity and a decision about
+which callers get it. Paying that for 0% on typical input is the trade rows 5-8 declined.
 
 ### A6. Examples shared module names, and it bit three times — [DONE]
 

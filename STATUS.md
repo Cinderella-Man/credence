@@ -182,12 +182,12 @@ rather than to this section.
     REFUTED** (docs/24 §A5 row 7): 8 discoveries measured at 1 ms against a 410 ms
     fix, plus a code-reload staleness hazard. Roughly 4 calls per `Credence.fix/2`.
     Do not memoise it; docs/24 recorded the refutation so nobody re-derives it.
-  * **One uncosted residue**, and the only genuinely open perf question here:
-    `RuleHelpers.apply_rule_fix_with_status/3` re-parses at `lib/rule_helpers.ex:592`,
-    discarding the AST the Pattern accumulator already holds for the same bytes. A
-    different call site from A5 row 1, never measured. **Measure before touching it** —
-    if the firing-rule count is 0-1 on real input the prize is one ~9 ms parse against a
-    ~380 ms fix, and it joins rows 5-8.
+  * **The one uncosted residue is now measured, and REFUTED** (docs/24 §A5 row 9).
+    `apply_rule_fix_with_status/3` re-parses at `lib/rule_helpers.ex:592`, once per
+    firing rule. Over five real `lib/` files: zero rules fire on four of them, so the
+    prize there is exactly 0%; the whole 4.9% total comes from one firing rule on the
+    largest file. Against that, the function is public and is the documented path rule
+    tests use. Nothing left in C9.
   * **C10/C16 are real but are scope calls, not gaps.** `Issue` needs no change for a
     column — `meta` is a free map — so the work is populating ~290 rules, against 9
     tests that assert `meta` as an exact map. Keep the corpus key on line only
