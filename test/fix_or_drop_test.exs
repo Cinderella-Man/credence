@@ -48,9 +48,17 @@ defmodule Credence.FixOrDropTest do
   third way.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 8 rules. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules; 23 remain. May only SHRINK.
   #
-  # `NoRedundantListTraversal` was the 9th and is already paid: its 13 findings
+  # Paid down the same day:
+  #   * `NoRedundantListTraversal` — 13 findings; see below.
+  #   * `NoCaseTrueFalse` — 1. `boolean_clause_pair?/2` (check) accepted
+  #     wildcard-FIRST orderings that `rewrite_clauses/2` (fix) declined, and
+  #     `normalize_pattern/1` was a byte-identical duplicate of
+  #     `unwrap_pattern/1` — two copies of one predicate is how they drifted.
+  #     Both now go through `fixable_clause_pair/2`.
+  #
+  # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
   # `fix_patches/2` now share `find_fixable_groups/1`, and the corpus lost 6
   # accepted findings with 0 new — a deletions-only re-pin.
@@ -62,7 +70,6 @@ defmodule Credence.FixOrDropTest do
   #                     multiset changed. A bug in the fix, not a scope decision.
   #   {:crashed, _}   — `fix_patches/2` raised. Crash isolation makes it silent.
   @ledger [
-    {Credence.Pattern.NoCaseTrueFalse, "6a9a7b00a810"},
     {Credence.Pattern.NoGuardEqualityForPatternMatch, "043856d1c848"},
     {Credence.Pattern.NoGuardEqualityForPatternMatch, "1b8090d9e5ff"},
     {Credence.Pattern.NoGuardEqualityForPatternMatch, "ebdfbb4e3c49"},

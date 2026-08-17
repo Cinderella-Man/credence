@@ -422,4 +422,19 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
   end
+
+  # The decline half, pinned. There was no fix-side test for wildcard-first
+  # before, so nothing would have caught the fix silently starting to rewrite it.
+  describe "declines wildcard-first, byte for byte" do
+    test "wildcard then true" do
+      input = """
+      case x > 0 do
+        _ -> :non_positive
+        true -> :positive
+      end
+      """
+
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
+    end
+  end
 end
