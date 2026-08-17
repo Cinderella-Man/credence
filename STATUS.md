@@ -164,28 +164,30 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
 
 ## C. Harness loop quality (valuable before Phase 9, not gating it)
 
-- [ ] **C20. Work the rest of `docs/24-improvement-research.md`.** Ranked, with
-  the experiment that must precede each. Next by value: B5 (`:rule_name_not_in_closed_set`
-  is 83% of classifier errors and is recoverable), B4 (the `:solved` classifier
-  lens has a measured yield of exactly **zero** — $6.02 and 5.5 hours for
-  nothing), B3 (`Cev.Distill` removes 0.08% of the log; classify is half the
-  run's cost). **B6 is a do-NOT-build note:** making the novelty gate blocking
-  would have destroyed 14 accepted rules to catch 6 duplicates.
+- [ ] **C20. `docs/24-improvement-research.md` is worked down to one item, and
+  two of its proposals were refuted by replaying them.** Done: B1, B2, B7 (step
+  1 — the classifier now SEES `:crashed`/`:no_op`/`:patch_rejected` per rule),
+  B8 (positive controls for both mutation-check rejects), B9(a), B9(b) (a row
+  that kills the VM is no longer retried forever), B10.
 
-- [ ] **C1. T2.3 — land the LD3+LD4 merge.** ~60% done in salvage
-  `b2-ld34/` (six modules, **zero tests**, agent killed at "Now the tests").
-  Gate/Router integration was never designed; note the tracker's cite drifted:
-  the bare `:no_lib_change` reject is now `gate.ex:128` + `check_touches` at
-  `gate.ex:198-202`, tree discarded at `:148-151`. Take T2.2's H8 as merge
-  base. Its own `probe.exs` is the first executable check.
-- [ ] **C5. T4.9** H1 gold over-fire ratchet (diff against an
-  accepted-gold-findings snapshot — 76/304 golds carry findings, never
-  zero-assert) + H2 executable fix-safety oracle (needs H10's solve archive).
-- [ ] **C6. T4.10** — all eight sub-items open: H4 (mutation check's vacuous
-  RED for new rules — `gate.ex:231-262`'s own comment concedes it), H7
-  (novelty is advisory; `router.ex:132-143` logs and builds anyway), H3
-  (equiv single-var only; `:error` silently `:skipped`), H10, H11
-  (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
+  **Refuted, do not build as specified:**
+  * **B4** — the `:solved` classifier lens has zero yield over 238 rows ($6.02
+    and 5.5h per run), but the proposed gate lets **154 of 238** through against
+    its own bar of 20. The variant that skips all 238 is worse: it works only
+    because no outcome atom occurred in the whole run, so it is untestable from
+    the archive. **This is now a maintainer decision** — delete the lens, or keep
+    it one more run and re-measure now that the atoms reach the classifier.
+  * **B3** — `Cev.Distill` really does remove only 0.08%, but the replacement
+    would remove **0.3%, not 36%**: the byte attribution behind it was wrong by
+    two orders of magnitude. 91.6% of the log is the solve attempts themselves.
+  * **B6** — making the novelty gate blocking would have destroyed 14 accepted
+    rules to catch 6 duplicates. Was never started.
+
+  **Left open with an intact case: B5** — `:rule_name_not_in_closed_set` is 83%
+  of classifier errors and the names are real live rules; reordering the
+  `fires?` probe ahead of the closed-set check would recover ~43 rows per run.
+  Its replay experiment needs a built clone, so it was not run here.
+
 ## D. Credence rule work (independent of the merge)
 
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
