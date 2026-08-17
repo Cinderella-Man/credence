@@ -47,8 +47,10 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
    yet. Rules are `String.t() -> String.t()`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
    against `Code.with_diagnostics/1` output and patch the text.
-3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 157 rules that work on
-   the tree.
+3. **Pattern** (`lib/pattern/`) — the bulk of Credence, and the largest round by
+   far. (No count here on purpose: hand-copied rule totals in this repo have
+   drifted every time one landed. `Credence.Pattern.default_rules/0` is the
+   answer, and the gates compute it at run time.)
 
 The rounds run one after another; if syntax problems are still there, the
 semantic and pattern rounds are skipped.
@@ -94,8 +96,18 @@ Rules differ in *how* they work out their patches, not in what they hand back:
   hands back one patch per outermost change. The most common path (~75 rules).
 - **`RuleHelpers.patches_from_ast_transform(ast, source, transform_fn)`** — any
   tree-to-tree change; the helper prints the result with `Sourceror.to_string/1`,
-  re-parses, and compares. Use this when the change drops or reorders siblings,
-  or adds statements into a block (a single walk-matcher can't say that).
+  re-parses, and compares. Use it when the change drops siblings or adds statements
+  into a block (a single walk-matcher can't say that).
+
+  ⚠️ **Do NOT use it to REORDER siblings.** The comparison underneath pairs a
+  block's statements *positionally*, which is right for a substitution and wrong for
+  a permutation: after a move every position differs, so it emits one patch per
+  statement whose range covers the statement but **not the whitespace between
+  statements**. The result splices two statements onto one line — and it parses, as
+  an ambiguous keyword call, so the helper's own re-parse check does not catch it.
+  For a reorder, build the patches by hand from the original bytes (below);
+  `non_grouped_clauses` is the worked example, and its `fix_patches/2` records the
+  two other designs that failed first.
 - **Building the patches by hand** — the rule walks the tree itself and builds
   `[%{range: ..., change: ...}]`. Use this when the *original bytes* of the kept
   part must stay exactly as written — usually because Sourceror's printer would
