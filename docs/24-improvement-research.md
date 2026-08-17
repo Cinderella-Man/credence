@@ -397,6 +397,38 @@ run `fires?` — `:fires` accepts and widens the set, `:inert` rejects, `:unknow
 passes. **Experiment:** replay the 43 archived specs through the reordered gate
 and count how many become valid BUGFIX rows.
 
+**Re-measured 2026-08-17, and the prize is much smaller than this entry says. Do not
+build it yet.** The ordering claim itself still holds verbatim (the cond is now
+`classify.ex:183-232`; closed-set at :194, `RulePaths.resolve` at :197, the `fires?` probe
+not until :226). What does not hold is the arithmetic, and one thing this entry could not
+have known:
+
+* **44, not 43** — immaterial, but counted: 44 `rule_name_not_in_closed_set` of 52 logs.
+* **28 of those 44 name a rule that exists** on the branch the Gate's clone sits on. The
+  other 16 do not, and they do not become recoverable under the reorder — they fall
+  straight into the next gate, `{:rule_name_unresolvable, name}`. The ceiling is 28, not 43.
+* **6, not 28, are actually measurable from the archive.** `bugfix_repro_inert?/2` only
+  shells out `when not is_nil(name) and is_binary(before)`, and only 12 of the 44 replies
+  carry a `===BEFORE===` at all. Intersected with resolvability, six rows can be probed:
+  145, 183, 213, 228, 38, 99. The other 22 would be decided by the default branch — i.e.
+  by nothing.
+* **Zero of the 44 carry `===TRACE_LINE===`**, because T4.2c did not exist when they were
+  written. Replayed against today's gates they would all fail the citation check first, so
+  the replay this entry proposes cannot be run against the archive as-is.
+
+**And the cause is largely already gone.** A rule that is real, live and *absent from the
+closed set* is what this failure is made of — and T4.3 found why: Elixir's `Logger`
+truncates at 8096 bytes by default, this harness *parses* those logs as data, and a row
+firing ~150 rules put the `APPLIED_RULES:` line within a few hundred bytes of the cap. That
+is fixed at source (`config/config.exs:265`, `truncate: :infinity`). The 83% was
+substantially a truncation artefact, and the reorder is defence-in-depth for a cause that
+has already been removed.
+
+**So: measure before building.** The 4th run's own
+`:rule_name_not_in_closed_set` count against this run's 44 is the experiment. If it is near
+zero, the truncation fix was the whole story and this entry closes. If it is still high, the
+reorder has a real target and the case for it is intact.
+
 ### B6. Do NOT make the novelty gate blocking — the run's own data refutes it
 
 This is the item most worth recording, because IMPROVEMENTS.md H7 proposes

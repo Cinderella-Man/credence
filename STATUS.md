@@ -120,11 +120,13 @@ rather than to this section.
     "BIAS STRONGLY TO NO_ACTION" instruction, not the rows, so neither deleting it nor
     re-measuring the skip-gate was the right move. The prior is gone, the bar stayed.
     Next run's measurement: its non-NO_ACTION count against this run's zero.
-  * **B5. Apply the fix, do not re-measure it.** `:rule_name_not_in_closed_set` was 83%
-    of classifier errors and the names were real live rules; running the `fires?` probe
-    when a resolvable rule sits outside the closed set recovers an estimated ~43 rows
-    per run. The replay was only ever there to quantify that, and it needs the archive.
-    Land it in `classify.ex:161-193` before the 4th run and let the run measure it.
+  * **B5. Do NOT build it yet — measure in the 4th run.** I had this backwards earlier:
+    the prize is not ~43 rows. Re-measured against the archive, 28 of the 44 name a rule
+    that exists, and only **6** can be probed at all (the `fires?` gate needs a BEFORE,
+    and 32 of the replies have none). More to the point, the cause is largely gone: a
+    real rule missing from the closed set is what T4.3's `Logger` truncation produced,
+    and that is fixed (`truncate: :infinity`). The experiment is the 4th run's own
+    `:rule_name_not_in_closed_set` count against this run's 44.
 
 ## D. Credence rule work (independent of the merge)
 
@@ -170,13 +172,28 @@ rather than to this section.
 - [ ] **D6. C12(b) — fire-rate telemetry. Blocked on the harness's H10/H11.**
   C12(c) is done (`b3ffd62`, `d857b5d`); nothing here is waiting on a probe.
 
-- [ ] **D7. T5.7** — C9 hot-path (the Pattern fix loop re-parses the source
-  once **per rule**; discovery re-scans `Application.spec` every call), C10
-  observability (no `Issue.column`, no telemetry — and nothing downstream yet
-  consumes the `:reverted|:patch_rejected|:crashed|:no_op` vocabulary), C16
-  (`rule_status/1` exposes neither `priority` nor `unsafe_in_dsl`; no `max_passes`
-  for the **Pattern** round — the Semantic round already has one,
-  `lib/semantic.ex:115`, so do not go looking for a missing mechanism).
+- [ ] **D7. T5.7 — the C9 half is closed; C10/C16 are scope decisions, not defects.**
+  Re-checked 2026-08-17 against the tree, because as written this item invited work
+  that is already done or already refuted:
+
+  * **C9 "re-parses once per rule" — DONE** (`b3ffd62`; docs/24 §A5 row 1). The reduce
+    in `lib/pattern.ex:117-176` threads `parsed` through every exit.
+  * **C9 "discovery re-scans `Application.spec` every call" — true, and its fix is
+    REFUTED** (docs/24 §A5 row 7): 8 discoveries measured at 1 ms against a 410 ms
+    fix, plus a code-reload staleness hazard. Roughly 4 calls per `Credence.fix/2`.
+    Do not memoise it; docs/24 recorded the refutation so nobody re-derives it.
+  * **One uncosted residue**, and the only genuinely open perf question here:
+    `RuleHelpers.apply_rule_fix_with_status/3` re-parses at `lib/rule_helpers.ex:592`,
+    discarding the AST the Pattern accumulator already holds for the same bytes. A
+    different call site from A5 row 1, never measured. **Measure before touching it** —
+    if the firing-rule count is 0-1 on real input the prize is one ~9 ms parse against a
+    ~380 ms fix, and it joins rows 5-8.
+  * **C10/C16 are real but are scope calls, not gaps.** `Issue` needs no change for a
+    column — `meta` is a free map — so the work is populating ~290 rules, against 9
+    tests that assert `meta` as an exact map. Keep the corpus key on line only
+    (`credence.corpus.ex:522` and `accepted_findings.txt` are `path:line rule`; adding a
+    column rewrites the snapshot and churns the budget gate). Telemetry means a new
+    runtime dep for a library whose one consumer parses stdout.
 - [ ] **D9. Mutant-survivor triage — a decision, plus the expensive half.** Rule
   Standard requirement 9 is the last ungated one, and C18 stages it: sweep →
   publish → fix the tail → only then a floor. Sweep done and deterministic
