@@ -34,21 +34,18 @@ carrying the 374 acceptance commits, not `evolution`. `gh` is not authenticated
 on this machine and will not be, so anything needing the GitHub API is yours;
 plain `git` works and the branch is pushed and level with its remote.
 
-- [ ] **A2. Merge with an SHA-preserving method — fast-forward or merge commit,
-  never squash or rebase.** 374 commit ids are cited across docs/16, docs/22
-  Part III, the escalation ledger, IMPROVEMENTS.md and the session memory;
-  squash orphans every one and makes the sister reset (B2) produce a tree
-  unrelated to the documented history. Re-verify at merge time:
-  `git fetch && git merge-base --is-ancestor origin/main evolution_accepted`
-  (true as of 2026-08-16 — 0 commits behind, so a fast-forward is available).
+**The one constraint on the merge itself: fast-forward or merge commit, never
+squash or rebase.** The docs cite commit ids throughout — docs/16, docs/22 Part III,
+the escalation ledger, IMPROVEMENTS.md — and squashing orphans all of them and makes
+the sister reset (B2) produce a tree unrelated to the documented history.
 - [ ] **A3. Paste the refreshed body.** `docs/PR_BODY_phase4.md` is updated and
   pushed — correct commit count, current test numbers, the merge-method warning,
   and a section covering what landed after the original Phase-4 text. Copying it
   into the PR needs the API, so it is yours.
 - [ ] **A5. The release acts on main**, in order: (1) re-run the A4 matrix **on
-  `main` after the merge** — `mix test`, `mix test --only idempotency` on a quiet
-  box, `mix format --check-formatted`, `mix compile --force
-  --warnings-as-errors`; (2) stamp the date on `CHANGELOG.md`'s
+  `main` after the merge** — `mix test` on a quiet box (~19 min: it now includes the
+  `:idempotency` sweep, which no longer needs its own invocation),
+  `mix format --check-formatted`, `mix compile --force --warnings-as-errors`; (2) stamp the date on `CHANGELOG.md`'s
   `## [0.8.1] - Unreleased` (docs/22 T0.4: "stamping a date is the release
   act"); (3) `git tag v0.8.1` — the repo has **zero tags**, and do not cut a
   v0.7.0, it was folded into 0.8.1 by `24ce7df`; (4) push the tag; (5) decide
@@ -60,11 +57,13 @@ plain `git` works and the branch is pushed and level with its remote.
 - [ ] **A6. CI is written but has never run — treat it as a hypothesis until it
   goes green once.** `.github/workflows/ci.yml` now exists (there was no
   `.github/` at all), with three jobs matching A5's list: `check` (format,
-  `--force --warnings-as-errors`, `mix test --exclude corpus`, plus a
-  `git diff --exit-code` that catches a fixture the healer rewrites), `corpus`
+  `--force --warnings-as-errors`, `mix test --exclude corpus --exclude idempotency`
+  — the two layers the other jobs own — plus a `git diff --exit-code` that catches a
+  fixture the healer rewrites), `corpus`
   (`mix credence.corpus.fetch` then `mix test --only corpus`, cached on
   `lib/credence/corpus.ex` since every entry is an immutable version or SHA), and
-  `idempotency` (the ~11-minute sweep nothing else runs). The YAML parses and
+  `idempotency` (the ~9-minute sweep, which a local `mix test` also runs — only CI
+  splits it out, for parallelism). The YAML parses and
   every command in it is one this session ran locally and green — but **no job
   has executed on a runner**, because that needs a push, which is yours. Expect
   the first run to need adjustment; the corpus job in particular fetches ~1 GB
