@@ -273,6 +273,16 @@ rather than to this section.
   clauses need one fixture each, and the assertion has to be the decline. For many
   survivors no such input exists that anyone would write.
 
+- [ ] **D12. One undocumented report-without-fix, found by tallying the corpus run.**
+  Across 20,076 corpus files the whole suite logs `check found N issue(s) but fix
+  returned IDENTICAL source` for exactly three rules: `NoEnumTakeNegative` (7),
+  `NoMapKeysEnumLookup` (1) and **`NoKeywordGetIntegerKey` (1)**. The first two decline
+  for safety reasons docs/07 records (order-independence, bounds/negatives). The third
+  documents no decline anywhere — so under D10's settled policy it either gets a widened
+  fix or stops reporting that shape. Reproduce by grepping a full `mix test` for
+  `IDENTICAL source`; `fix_or_drop_test` cannot see any of them, since it asks whether a
+  rule fixes nothing *at all*.
+
 - [ ] **D11a. Work the build list — no new-rule items left; one extension remains.**
   `docs/23-build-list.md` is the list; every candidate was verified by running its
   target through the live pipeline, and each entry carries its own hazards. Of the
@@ -280,18 +290,9 @@ rather than to this section.
 
   What remains, after report-only was closed as an option (2026-08-17):
 
-  * **Remaining work (1), and it is not a new rule:** `fix_undefined_struct_in_pattern`
-    — extend the live `Semantic.FixCyclicStructReference` to hoist struct-defining
-    nested modules above their first reference, keeping that rule's compile-verifying
-    `confirm_reorder/2` gate.
-
-    **Also a report-without-fix case, so D10's policy applies:** on the nested shape
-    that rule reports (`analyze` → `:fix_cyclic_struct_reference`) and declines
-    (`fix` → `:no_op`), because `extract_top_level_modules/2` accepts only a file of
-    top-level `defmodule`s. `fix_or_drop_test` cannot see it — that gate asks whether
-    a rule fixes nothing *at all*. Premise verified: same diagnostic for bare and
-    qualified spellings, and the hoist compiles for both. Reuse `has_defstruct?/1`,
-    `struct_refs/1`, `covers_all_content?/2`, `confirm_reorder/2`.
+  * **Nothing left here.** `fix_undefined_struct_in_pattern` is done — the nested
+    scope now hoists in `Semantic.FixCyclicStructReference`, which also closes the
+    report-without-fix case it had on that shape.
   * **Banked, not buildable (1):** `fix_when_guard_in_with_clause` — no field sample;
     it exists only in a disposition sentence that this session refuted. The unsafe
     widen it guards against is already blocked by a tested `:none` in

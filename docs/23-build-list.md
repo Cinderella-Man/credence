@@ -327,11 +327,40 @@ not 8 remaining — and one of the five is not a rule build at all. Workable:
   Still banked, in docs/17 and not here: `String.length(name) > 0`,
   `Map.has_key?(m, pid)`, `System.monotonic_time(:millisecond) - a >= b`. Each needs
   the body, and the body is what the three paths make unsafe.
-* `fix_undefined_struct_in_pattern` — **not a new rule.** Its disposition
-  redirects it to extending the live
-  `Credence.Semantic.FixCyclicStructReference` to hoist struct-defining nested
-  modules above their first reference, keeping that rule's existing
-  compile-verifying `confirm_reorder/2` gate.
+* ~~`fix_undefined_struct_in_pattern`~~ **BUILT 2026-08-17**, as the disposition
+  directed: not a new rule, but a second scope inside the live
+  `Credence.Semantic.FixCyclicStructReference`, keeping its compile-verifying
+  `confirm_reorder/2` gate.
+
+  It was not the nice-to-have the redirect implied. That rule already **reported** the
+  nested shape and then declined it — `analyze/1` returned
+  `:fix_cyclic_struct_reference` while `fix/2` returned `:no_op` — because
+  `extract_top_level_modules/2` returns `[]` unless the file is exactly a sequence of
+  top-level `defmodule`s, while `match?/1` keys on a diagnostic the nested shape emits
+  identically. So this closed a report-without-fix case as well as a build-list item.
+  `fix_or_drop_test` could not have caught it: that gate asks whether a rule repairs
+  nothing *at all*, and the top-level scope always worked.
+
+  A test asserted the no-op as expected behaviour. It carried no rationale and was not a
+  safety boundary — it recorded the missing capability — so it is now the positive
+  assertion, with the reason it flipped written beside it. Distinguishing those two cases
+  matters: this project has previously widened a rule and then written a test asserting
+  the over-shoot as intended.
+
+  Both spellings raise the diagnostic and both repair, executed before any code was
+  written: `%U{}` inside `defmodule O` reports `U.__struct__/1 is undefined`, `%O.U{}`
+  reports `O.U.__struct__/1`, and hoisting the nested module above the use compiles in
+  each case. The bare-alias case changes which module the reference NAMES — `Elixir.U`
+  before the hoist, `O.U` after — which is sound only because the rule fires on a
+  diagnostic saying nothing defines the name, so a file where a top-level `U` does exist
+  compiles and never reaches it. `body_deps/2` therefore matches a reference to a nested
+  definition by its own name or by the outer-qualified one.
+
+  The reorder reuses the existing discipline rather than a second copy of it:
+  `has_defstruct?/1`, `struct_refs/1`, `topo_sort/2` and `confirm_reorder/2` are all
+  shared, and `covers_all_content_between?/2` is the body-scoped form of the
+  "a rebuild must not drop a stray comment" guard — a comment between two body
+  statements declines, with a test.
 
 ## What is NOT on this list
 

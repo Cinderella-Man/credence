@@ -198,7 +198,12 @@ defmodule Credence.Semantic.FixCyclicStructReferenceFixTest do
     confirm_fix(fix(input, @message), input)
   end
 
-  test "no-op on a single top-level module (nested forward struct ref)" do
+  # This asserted a no-op until 2026-08-17. Nothing here was a safety boundary — the
+  # assertion recorded a missing capability, and the rule REPORTED this shape while
+  # declining to fix it, which is the report-without-fix pattern this project does not
+  # ship. docs/18 had already asked for the extension. The nested scope now hoists, and
+  # `confirm_reorder/2` still gates on the result compiling.
+  test "hoists a struct-defining nested module above its use in the same body" do
     input = """
     defmodule CsrNested do
       def f, do: %CsrNested.Inner{}
@@ -209,7 +214,17 @@ defmodule Credence.Semantic.FixCyclicStructReferenceFixTest do
     end
     """
 
-    confirm_fix(fix(input, @message), input)
+    expected = """
+    defmodule CsrNested do
+      defmodule Inner do
+        defstruct [:x]
+      end
+
+      def f, do: %CsrNested.Inner{}
+    end
+    """
+
+    confirm_fix(fix(input, @message), expected)
   end
 
   test "no-op on a genuine cycle of struct references" do
