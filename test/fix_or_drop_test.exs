@@ -48,7 +48,7 @@ defmodule Credence.FixOrDropTest do
   third way.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 9 rules; 17 remain. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules; 11 remain. May only SHRINK.
   #
   # Paid down the same day:
   #   * `NoRedundantListTraversal` — 13 findings; see below.
@@ -64,6 +64,13 @@ defmodule Credence.FixOrDropTest do
   #     moving an annotation run with its clause, and a layout-metadata strip for
   #     block bodies — because both need fresh rendering on the code path docs/17
   #     entry 11 records emitting unparseable output three times.
+  #   * `NoTrailingNewlineInDoc` — 6, and the only FIX_BUG of the set rather than a
+  #     scope decision. Its `:patch_rejected` reason was the tell: the fix emitted
+  #     patches the safety invariants DISCARDED. `String.ends_with?(value, "\\n")`
+  #     looked at the last two characters of Sourceror's raw value, so a doc
+  #     containing a literal backslash-then-n fired, and the two-character strip
+  #     left a dangling backslash escaping the closing quote. Now requires an ODD
+  #     backslash run, and peels trailing escapes one at a time.
   #
   # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
@@ -85,12 +92,6 @@ defmodule Credence.FixOrDropTest do
     {Credence.Pattern.NoManualStringReverse, "dd3155e6b3a1"},
     {Credence.Pattern.NoMapKeysOrValuesForIteration, "42bbd80a936a"},
     {Credence.Pattern.NoMapKeysOrValuesForIteration, "e35671a7b522"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "1c4231fc1e36"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "27398e1a89ff"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "53e2070d85d0"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "94395476e95e"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "a0d335190fde"},
-    {Credence.Pattern.NoTrailingNewlineInDoc, "aea390ea1b81"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "2e913809e50c"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "36f7bb2558bb"},
     {Credence.Pattern.PreferFunctionClausesForListPatterns, "37cfea92ba71"}

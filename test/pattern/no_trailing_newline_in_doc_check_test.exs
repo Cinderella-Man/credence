@@ -195,4 +195,37 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       assert issue.rule == :no_trailing_newline_in_doc
     end
   end
+
+  # Regression, and it shipped as a defect. Sourceror hands back the RAW text
+  # between the quotes, so a doc documenting a literal backslash followed by the
+  # letter `n` arrives with those exact characters — no newline anywhere in it.
+  # The old test was `String.ends_with?(value, "\\n")`, which only looks at the
+  # last two characters, so it fired. The fix then removed two characters and left
+  # a dangling backslash escaping the closing quote, the output did not parse, and
+  # `apply_rule_fix_with_status/3` discarded the patch — six findings reported and
+  # never repaired. A real escape needs an ODD run of backslashes before the `n`.
+  describe "does not flag an escaped backslash followed by n" do
+    test "at the end of the doc" do
+      code = """
+      defmodule EscBsA do
+        @doc "a windows path C:\\\\n"
+        def foo, do: :ok
+      end
+      """
+
+      assert clean?(NoTrailingNewlineInDoc, code)
+    end
+
+    test "and the fix leaves it byte-identical" do
+      code = """
+      defmodule EscBsB do
+        @doc "a windows path C:\\\\n"
+        def foo, do: :ok
+      end
+      """
+
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
+      assert valid_syntax?(fix(NoTrailingNewlineInDoc, code))
+    end
+  end
 end
