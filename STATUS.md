@@ -21,20 +21,9 @@ act and is the *last* step of Part B below, not the first.
 level with their remotes.** This file holds **only what is still open**. When an
 item lands, strike it in `docs/22-remaining-work.md` (the item-level tracker) and
 **delete it here** — the reasoning lives in the commit message, the rule source
-and the relevant `docs/` file, not on the map.
-
-**Verified green, so not on the map** (2026-08-17): full suite **10,259 tests +
-6 properties, 0 failures** with the corpus layer included; the `:idempotency`
-sweep green; `mix format --check-formatted` and `mix compile --force
---warnings-as-errors` clean. Two rules for reading that line:
-
-* Say which half of a two-part gate was verified. The `:idempotency` **sweep** is
-  excluded from `mix test`; it went red for three fixtures and sat undetected
-  across four rules because "idempotency green" here meant only the fast
-  stale-entry half. See A5.
-* No hand-copied counts. Per-phase rule totals used to be quoted here and drifted
-  the moment a rule landed. The gates compute them from `default_rules/0` at run
-  time and are green; that is the claim with something behind it.
+and the relevant `docs/` file, not on the map. **Never restate a count here.** The
+gates compute them (`default_rules/0`, `over_firing_test.exs:78`) and every number
+hand-copied onto this map has drifted within hours.
 
 **Read before trusting an older note:** the Pattern round no longer skips files
 that fail to compile (`lib/pattern.ex:85-99`), so any earlier statement about fix

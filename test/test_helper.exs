@@ -31,9 +31,19 @@ Logger.configure(level: :info)
 Credence.FixtureHealer.heal_dirs()
 
 # The `:idempotency` layer (test/idempotency_test.exs) sweeps `Credence.fix/1`
-# twice over all ~5,200 fix-test fixtures — ~8.5 minutes, which would nearly
-# triple the suite. Its fast half (the stale-ledger check) runs by default; only
-# the full no-new-entries sweep carries the tag. Run it deliberately with:
+# twice over all ~5,200 fix-test fixtures — ~9 minutes, roughly tripling the suite.
+# It RUNS BY DEFAULT anyway, like `:corpus` above, and the tag exists only so it can
+# be skipped for a quicker local loop:
 #
-#     MIX_ENV=test mix test --only idempotency
-ExUnit.start(formatters: [Credence.QuietFormatter], exclude: [:idempotency])
+#     mix test --exclude idempotency
+#
+# It used to be excluded by default for exactly the runtime reason, and that is how
+# it went red for three fixtures across four rules and stayed red undetected: the
+# only thing left running by default was the fast stale-ledger half, and "idempotency
+# green" was read as the whole gate. A layer nobody runs is not a gate. Excluding by
+# default puts the burden on remembering; excluding by flag puts it on the person who
+# chose to skip it.
+#
+# NOTHING ELSE IS EXCLUDED HERE. If a layer is too slow to run every time, tag it and
+# document the flag — do not add it to this list.
+ExUnit.start(formatters: [Credence.QuietFormatter])

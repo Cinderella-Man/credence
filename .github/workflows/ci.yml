@@ -29,7 +29,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Format, zero-warning compile, and every layer that does not need the corpus.
+  # Format, zero-warning compile, and every layer the other two jobs do not own.
+  # The split is for CI parallelism only; locally `mix test` runs all three layers.
   # This is the fast gate: no 1 GB fetch, so it answers within a few minutes.
   check:
     name: format · warnings · suite (no corpus)
@@ -60,7 +61,9 @@ jobs:
       # build would surface.
       - run: mix compile --force --warnings-as-errors
 
-      - run: mix test --exclude corpus
+      # `--exclude idempotency` because the `idempotency` job below owns that layer.
+      # It is NOT excluded in test_helper.exs — a local `mix test` runs everything.
+      - run: mix test --exclude corpus --exclude idempotency
 
       # The suite self-heals non-canonical test fixtures on disk before it
       # compiles them (test/test_helper.exs). That is idempotent once everything
