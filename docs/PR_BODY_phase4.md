@@ -1,7 +1,7 @@
 # Accept the 3rd evolution cycle
 
 **PR [#22](https://github.com/Cinderella-Man/credence/pull/22)** —
-`evolution_accepted` → `main`, **374 commits**.
+`evolution_accepted` → `main`, **477 commits**.
 
 Closes the acceptance cycle planned in `docs/16`: 116 rule acceptances from the
 stage-1 drain, the disposition of all 143 rejected rules, the repairs that
@@ -10,12 +10,13 @@ reality-gate program the disposition argued for (`docs/22`) plus the release
 map now in `STATUS.md`.
 
 > **Merge with a method that PRESERVES COMMIT SHAs — fast-forward or a merge
-> commit, never squash or rebase.** 374 commit ids are cited across `docs/16`,
+> commit, never squash or rebase.** Commit ids are cited throughout `docs/16`,
 > `docs/22` Part III, `maintainer_tools/escalation_ledger.md`, the harness's
 > `IMPROVEMENTS.md` and the in-flight record. A squash orphans every one of them
-> and makes the sister-clone reset (`STATUS.md` B2) produce a tree unrelated to
-> the documented history. Verified fast-forward-clean: `origin/main` is an
-> ancestor of `evolution_accepted`, 0 commits behind.
+> and makes the sister-clone reset — delete `evolution`, recreate it from the new
+> `main` — produce a tree unrelated to the documented history. Re-check at merge
+> time rather than trusting this line:
+> `git fetch && git merge-base --is-ancestor origin/main evolution_accepted`.
 
 ## What landed after the original Phase-4 body
 
@@ -145,12 +146,16 @@ source of truth and the prose is generated from it.
 
 ## Verification
 
-- `mix test` (including the 20,076-file corpus scan): **10,023 tests + 6
-  properties, 0 failures** (was 9,615 when this section was first written)
-- the one default-excluded layer, `mix test --only idempotency`: green (~650 s;
-  run it on a quiet box, its timeout has ~38% headroom)
+- `mix test` — **10,496 tests + 6 properties, 0 failures**, with **nothing
+  excluded**: the 20,076-file corpus scan and the `:idempotency` sweep both run in
+  the default suite now (~19 min; `--exclude idempotency` is the fast local loop)
 - `mix format --check-formatted`: clean tree-wide
 - `mix compile --force --warnings-as-errors`: clean
 - sister repo after the deletion: **6,842 tests, 0 failures**
-- **no CI exists in either repo** — the local matrix above is the only
-  verification this release gets
+- **CI exists but has never executed.** `.github/workflows/ci.yml` was added with
+  three jobs on a pinned Elixir 1.20.2 / OTP 29. Every command in it has run
+  locally and green, and everything checkable without a runner has been checked —
+  the pinned pair matches, all five mix tasks exist, and there are no absolute
+  local paths or env dependencies anywhere in `lib/` or `test/`. But no job has run
+  on a runner, because that needs this push. Treat the first run as a hypothesis;
+  the corpus job fetches ~1 GB on a cold cache.
