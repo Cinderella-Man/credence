@@ -279,19 +279,51 @@ happened — and ~20% is `Code.compile_string raised:` dumps.
 logs through the candidate distiller offline (no LLM) for the byte reduction,
 then re-classify 30 rows with known verdicts and measure decision agreement.
 
-### B4. The `:solved` classifier lens has a measured yield of exactly zero
+### B4. The `:solved` lens yields exactly zero — and the proposed gate for it does not work — [EXPERIMENT RUN]
 
-Cross-tabulating solve outcome against rule-gen outcome over 1,177 rows: of the
-238 rows where solve succeeded, **zero** produced a commit, a bugfix, a
-divergence or a switch proposal. Cost: $6.02 and 5.5 wall-hours. This is not a
-bug — the prompt explicitly says "BIAS STRONGLY TO NO_ACTION" for that lens. The
+The yield is confirmed independently. Of the **238** rows where solve succeeded
+and rule-gen ran: 232 `no_action`, 3 `transient_abort`, 2 `raised`, 1 `gave_up`.
+**Zero** commits, bugfixes, divergences or switch proposals. Cost: $6.02 and 5.5
+wall-hours. The prompt tells that lens to "BIAS STRONGLY TO NO_ACTION", so the
 design and the data agree; the design just has no output.
 
-**Fix — gate, do not delete:** skip the classifier when solve succeeded *and* the
-applied-rules sidecar holds no non-integer outcome *and* the log has no
-`source CHANGED` trace. That keeps the one plausible source of value (an
-over-fire visible in a clean solve). **Experiment:** replay the 238 rows through
-the predicate offline; if more than ~20 survive, it is too loose.
+The proposed fix was to gate rather than delete — skip the classifier when solve
+succeeded, the sidecar holds no non-integer outcome, and the log has no
+`source CHANGED` trace — with its own acceptance bar: *if more than ~20 of the
+238 survive, the predicate is too loose*. **Replayed over all 238 archived logs,
+154 survive.** Seven times the bar. It fails.
+
+The reason is the useful part. Every one of those 154 survives on
+`source CHANGED` alone, and **not one** row in the entire run carried a
+non-integer outcome atom. But `source CHANGED` on a *solved* row is not an
+anomaly — it is Credence having fixed something during the solve, i.e. the
+ordinary case. The predicate keys on the normal state of a healthy row.
+
+Two other variants, replayed the same way:
+
+| predicate | survivors of 238 |
+|---|---|
+| A: no outcome atoms AND no `source CHANGED` (the proposal) | 154 |
+| B: no outcome atoms | **0** |
+| C: no outcome atoms AND `APPLIED_RULES` empty | 200 |
+
+**B looks perfect and must not be shipped on this evidence.** It skips all 238 —
+but only because no outcome atom occurred anywhere in the run, so B is
+indistinguishable from "always skip" on this data. It is a check that passes by
+having nothing to find, which is the T3.10a failure exactly. Worse, the atoms it
+keys on (`:crashed`, `:patch_rejected`, `:no_op`) all landed in Credence *after*
+this run, so B is untestable from the archive by construction and would behave
+differently next time.
+
+**So this is a maintainer decision, not a fix**, and it comes down to:
+
+* **Delete the lens.** 238 attempts, zero yield, $6.02 and 5.5 hours per run.
+* **Keep it one more run and re-measure.** The outcome atoms now reach the
+  classifier (§B7), so predicate B becomes genuinely testable next run rather
+  than vacuously true.
+
+Either is defensible. What is not defensible is shipping A, and what is
+seductive is shipping B.
 
 ### B5. `:rule_name_not_in_closed_set` is 83% of classifier errors and is recoverable
 
