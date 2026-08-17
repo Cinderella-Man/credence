@@ -50,7 +50,19 @@ the sister reset (B2) produce a tree unrelated to the documented history.
   act"); (3) `git tag v0.8.1` — the repo has **zero tags**, and do not cut a
   v0.7.0, it was folded into 0.8.1 by `24ce7df`; (4) push the tag; (5) decide
   hex.publish — `mix.exs` carries hex-shaped `package()` metadata but nothing
-  was ever published. **Trade-off for you:** publishing makes the rule set
+  was ever published.
+
+  **Prepared 2026-08-17, and one blocker found for (5).** `CHANGELOG.md` is now current
+  (it had not been touched since `4e9d16d`, so ten rules and a public API change were
+  undocumented — the date stamp in (2) means nothing until the file says what is being
+  released). Confirmed: zero tags, one `[0.8.1]` section with 0.7.0 already folded in,
+  and `mix.exs`'s version matches it.
+
+  **But `package()` declares `licenses: ["MIT"]` and there is no LICENSE file in the
+  repo.** `mix hex.publish` objects, and more to the point a published package would
+  carry an MIT claim with no grant text in it. Writing that file is a legal declaration
+  with a named copyright holder, so it is yours, not mine — but it has to happen before
+  (5) can be answered yes. **Trade-off for you:** publishing makes the rule set
   installable and also makes every future rename a breaking change for
   downstreams; not publishing keeps the project git-only, which is what every
   doc currently assumes.
