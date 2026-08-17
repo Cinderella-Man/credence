@@ -253,16 +253,10 @@ rather than to this section.
   (121 need individual review; the rest are catch-all constants, comparison
   boundaries, position arithmetic and unreached defaults), and 10 rules hold 56%.
 
-  **The sweep's only copy is `tmp/mutants/mutants.tsv`, which is gitignored**
-  (`.gitignore:18`) — 852 rows, one per mutant, with the rule, operator,
-  before/after and context. Losing it costs the whole sweep to regenerate, which is
-  affordable only because seed 0 is deterministic. Triage without re-running by
-  reading that file.
-
-  **Those numbers are the PRE-improvement snapshot** (re-checked 2026-08-17): the file
-  still has `no_python_multi_return` at 0.475, the rate this item records taking to
-  0.525. So a fresh sweep reads ~0.742 / 219 survivors, and that is the fix landing —
-  not a regression to chase.
+  Triage by reading **`tmp/mutants/mutants.tsv`** (852 rows, rule/operator/context) —
+  gitignored, so the only copy is local; regenerable only because seed 0 is
+  deterministic. Its rows predate this item's own `no_python_multi_return` fix, so a
+  fresh sweep reads ~0.742 / 219: that is the fix, not a regression.
 
   **The decision is the floor, and it is yours.** Do not set `--fail-under` at
   0.740 — that fails rules for carrying defensive clauses rather than weak tests,
