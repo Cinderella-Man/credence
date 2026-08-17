@@ -8,6 +8,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.1] - Unreleased
 
 ### Added
+- **Ten new rules.** Each was built from a recorded failure mode rather than from
+  taste, and each ships with its own check/fix tests and — for Pattern — a behaviour
+  equivalence test.
+
+  *Syntax* (these run on source that does not parse, so nothing downstream sees the
+  file at all until they repair it):
+  `no_atom_as_function_name` (`:helper(x)` → `helper(x)`; an atom in call position
+  stops the tokenizer, so the whole file is dark),
+  `fix_misplaced_when_guard` (`def f(x), when x > 0` → `def f(x) when x > 0`, and
+  `for a <- l, when p` → `for a <- l, p` — one rule, because the two shapes emit the
+  byte-identical parse error and the round is a single pass),
+  `fix_mixed_required_optional_map_keys` (`%{state: atom(), optional(k) => v}` →
+  `%{:state => atom(), …}`; keyword entries must come last in a map).
+
+  *Semantic* (keyed on a compiler diagnostic):
+  `no_deprecated_not_in` and `no_pipe_into_unary_arithmetic` — both were already
+  being reported by the compiler and nothing was listening;
+  `fix_struct_test_in_guard` (`when Map.get(v, :__struct__) == Regex` →
+  `%Regex{} = v`), which is the one repair for a remote call in a guard that is
+  sound: it moves the test into the pattern rather than hoisting it into the body.
+
+  *Pattern*: `no_enum_sort_then_map_values`, `fix_ets_new_string_name` and
+  `fix_ets_options_bare_keypos` (both runtime crashes the compiler accepts), and
+  `no_negative_step_in_string_slice` (`String.slice(s, n..-1)` → `n..-1//1`; the
+  implicit step has been deprecated since 1.12 and is headed for a hard error).
+
+- **`Credence.Semantic.FixCyclicStructReference` now reorders NESTED modules too.**
+  A struct defined in a nested module and used earlier in the same body raises the
+  same diagnostic as the top-level case, and the rule reported it and then declined
+  to fix it. It hoists the definition above its first use, keeping the existing
+  compile-verifying gate and the guard that refuses to reorder when a comment sits
+  between the statements.
+
+- **`analyze_after: false` on `Credence.fix/2`.** The call used to end by
+  re-analysing its own output — a compile for the Semantic round plus a parse and
+  every Pattern check — which roughly doubles the cost for a caller that only wants
+  `:code` and `:applied_rules`. Opt-**out** rather than opt-in, because `:issues` is
+  a documented field of the returned map.
+
+- **`Credence.SourceMask` gains three public functions**, all for rules that scan
+  source that does not parse: `byte_offset/3` converts the parser's 1-indexed
+  `{line, column}` to a byte offset (and it must be bytes — the shadow is
+  byte-aligned with the source, not grapheme-aligned, so a grapheme offset drifts on
+  the first non-ASCII character); `blank?/1` recognises the fill byte, for a scan
+  that would otherwise stop dead at the first blanked comment; and
+  `enclosing_opener/2` finds the nearest enclosing bracket, skipping pairs that close
+  before the position.
+
 - **A per-rule budget on accepted corpus findings, and `mix credence.corpus
   --budget` to read it.** The over-firing test already pinned the corpus findings
   exactly, so no rule could start firing without a red test — but nothing gated
@@ -139,6 +187,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Unicode data.
 
 ### Fixed
+- **`prefer_map_intersect_over_mapset_intersection` produced a silently wrong answer
+  when an operand was rebound.** It matched its two operands by name and accepted the
+  consuming statement at any later index, passing everything in between through
+  untouched — so `freq1 = Map.put(freq1, :x, 9)` between the two halves left the
+  emitted `Map.intersect/3` reading the new value where the original took its key set
+  from the old one. Executed: `[b: 2]` became `[b: 2, x: 7]`, and in the
+  key-removing direction a raised `KeyError` became `[]`. A second defect in the same
+  rule emitted `fn _key, _key, count2 -> …` whenever a captured count was itself
+  named `_key`, which compiles and then raises `FunctionClauseError`. Both outputs
+  compiled, so the accept/revert gate could not see either.
+
+- **`no_keyword_get_integer_key` reported four shapes it would never fix**, because
+  the fix required the list argument to be a bare identifier — a limit inherited from
+  a regex predecessor, not a safety property. `Keyword.get(@acc, -1)`,
+  `Keyword.get(state.items, -1)`, `Keyword.get(build_list(), 0)` and
+  `Keyword.get([a: 1], -1)` are now repaired. In the same pass it stopped claiming
+  `Keyword.get(:timeout, 5000)`, which is the swapped-arguments defect
+  `no_keyword_get_with_atom_first_arg` owns and repairs correctly.
+
+- **Nine rules reported a finding their own fix declined to make.** Each turned out
+  to be one decision kept in two copies — a check that had drifted from the fix it
+  was supposed to mirror. Two of them were hiding worse: `no_trailing_newline_in_doc`
+  was emitting source that did not parse (the patch was rejected, and the rejection
+  read as a no-op), and `no_guard_equality_for_pattern_match` was dropping a
+  repeated-variable constraint, which compiles and changes which calls match.
+
+- **`Credence.analyze/1` returned NO issues for a file analysed concurrently with
+  another defining the same module name.** A false negative, which is the worst
+  direction for a linter — it does not fail, it quietly approves. Compiling is now
+  serialised per module name, so files defining different modules still compile in
+  parallel.
+
 - **`@spec` repairs no longer stop at the top level.** `NoBareNamesInSpec` fixes a
   compiler-rejected bare name in a spec by annotating it `name :: any()`, but it
   only ever looked at names sitting as *direct* arguments of the spec's call. A
