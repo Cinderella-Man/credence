@@ -257,6 +257,36 @@ rather than to this section.
   purely as a regression ratchet — a day's work, much less bought. Per-rule either
   way: the distribution runs 0.475–0.875 and one number hides both ends.
 
+  **Sample-triaged 2026-08-17, so the floor is a number rather than a guess.** 14
+  survivors drawn from `tmp/mutants/mutants.tsv` and classified by reading the code
+  each mutant sits in:
+
+  * **2 of 14 are equivalent** — no input distinguishes them. One is proven:
+    `fix_negated_capture_with_arity` guards `arity in 1..255`, and the mutant widens
+    it to `1..256`; `&Foo.bar/256` is a `CompileError` ("capture argument &256 must be
+    numbered between 1 and 255"), so the extra value is unreachable in valid Elixir.
+    The other is `no_python_multi_return`'s reduce seed, which only decides line 1,
+    and line 1 can never be a bare-atom `defstruct` (it must sit inside a module).
+  * **11 of 14 are real gaps** with a writable fixture. Two are worth doing for their
+    own sake rather than for the score: `fix_plug_dependency_module_order` mutates
+    `Enum.with_index(lines, 1)` to `2` and survives — **nothing asserts its reported
+    line numbers**, which are user-visible; and `fix_extra_brace_in_ets_match`'s
+    `at/2` guard `index < 0 -> nil` exists precisely to stop `Enum.at/2` wrapping to
+    the end of the list, and nothing feeds it the `col - 2 == -1` that reaches it.
+  * 1 unclear without deeper reading.
+
+  **So the achievable rate is ~0.77, not 1.0.** At 14% equivalent, ~31 of the 221
+  survivors are unkillable and the triaged rate is 629/(629+190) ≈ **0.77** — on a
+  14-row sample, so read it as 0.75-0.80. That is the number option (a) sets a floor
+  against, and it says a floor at today's **0.740** would sit *below* the honest
+  ceiling, which is exactly what C18 staged the work to avoid.
+
+  Where the mass is, across all 221: `comparison_swap` survives at **48%** (25 of 52),
+  `boolean_flip` 31%, `off_by_one` 25%, `ok_error_swap` 19%; and **52 of 221** sit in
+  a catch-all clause (`defp f(_), do: X` / `_ -> X`), which is the defensive-clause
+  category — killable, but each needs a fixture that reaches the fallback AND makes
+  its wrong answer observable.
+
   Method note worth keeping, from working the worst rule end to end
   (`no_python_multi_return`, 0.475 → 0.525, three failed attempts first): a
   survivor is not an "add a test" item, it is a request to construct an input that

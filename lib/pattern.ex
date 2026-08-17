@@ -338,6 +338,8 @@ defmodule Credence.Pattern do
       %{
         rule: rule,
         name: RuleHelpers.rule_name(rule),
+        priority: rule.priority(),
+        unsafe_in_dsl: rule.unsafe_in_dsl(),
         assumptions: rule.assumptions(),
         enabled: missing == [],
         missing: missing

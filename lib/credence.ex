@@ -17,6 +17,8 @@ defmodule Credence do
           round: :syntax | :semantic | :pattern,
           rule: module(),
           name: String.t(),
+          priority: integer(),
+          unsafe_in_dsl: [atom()] | :all | nil,
           assumptions: [atom()],
           enabled: boolean(),
           missing: [atom()]
@@ -122,6 +124,14 @@ defmodule Credence do
   `enabled: true`. Whether a rule *actually fires* further depends on the code
   itself — Syntax only runs when the source won't parse, Semantic only on the
   compiler diagnostics it matches — which this opts-only view does not inspect.
+
+  `:priority` is the dispatch order within a round (lower first; 500 is the
+  default). It decides which rule wins a diagnostic when two match the same one,
+  and reading it here is how you see that cascade without opening the sources.
+
+  `:unsafe_in_dsl` is the macro-DSL families a Pattern rule declares itself unsafe
+  inside (Rule Standard item 5) — a list, or `:all` for a rule unsafe in every
+  family. It is `nil` for Syntax and Semantic, where the question does not arise.
   """
   @spec rule_status(keyword()) :: [rule_status_entry()]
   def rule_status(opts \\ []) do
@@ -136,6 +146,13 @@ defmodule Credence do
         round: round,
         rule: rule,
         name: RuleHelpers.rule_name(rule),
+        priority: rule.priority(),
+        # `nil`, not `[]`. DSL safety is a Pattern-round question: a Syntax rule
+        # only runs on source that does not parse and a Semantic rule only on a
+        # compiler diagnostic, so neither can land inside a macro DSL's block.
+        # `[]` would claim "declared safe everywhere", which is a different and
+        # unearned statement.
+        unsafe_in_dsl: nil,
         assumptions: [],
         enabled: true,
         missing: []
