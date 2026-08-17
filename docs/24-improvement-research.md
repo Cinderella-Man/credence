@@ -91,32 +91,56 @@ gain/risk.
 | 1 | Thread the parse through `run_fixable_rules/4`'s accumulator | ~150 Sourceror parses per file | very low | **[DONE]** |
 | 2 | Compute `compile_errors(fixed)` once in the accept/revert decision | 1 compile per accepted fix on the 36% of files that do not compile | very low | **[DONE]** |
 | 3 | Hoist `rules/1` into the branch that uses it in `Syntax.fix_with_trace/2` | 1 discovery per file, on the path that discards it | none | **[DONE]** |
-| 4 | `analyze_after: false` opt-out on `Credence.fix/2` | 1 compile + 2 parses + 156 checks per call | low-medium (public return field) | **[DONE]** |
-| 5 | Thread `DslGuard.block_ranges/2` through `dsl_partition` | ~12 AST walks when 4 DSL-unsafe rules fire | low | [READ] |
-| 6 | `DslGuard.count_subtrees/2` is O(N·depth) — `strip_meta/1` prewalks the subtree at every node | quadratic outlier on large patches | low | [READ] |
-| 7 | Memoize `discover_rules/1` in `:persistent_term` | 2–15 ms per file | medium — code-reload staleness; needs a reset hook for `mix credence.mutants` | [READ] |
-| 8 | Lockstep meta-insensitive equality in `diff_patches/2` | O(N·depth) → O(N) per firing rule | medium — equality semantics need a property test first | [READ] |
+| 4 | `analyze_after: false` opt-out on `Credence.fix/2` | 1 compile + 2 parses + 156 checks per call | low-medium | **[DONE]** |
+| 5 | Thread `DslGuard.block_ranges/2` through `dsl_partition` | — | low | **REFUTED, see below** |
+| 6 | `DslGuard.count_subtrees/2` O(N·depth) → O(N) | — | low | **REFUTED, see below** |
+| 7 | Memoize `discover_rules/1` in `:persistent_term` | — | medium | **REFUTED, see below** |
+| 8 | Lockstep meta-insensitive equality in `diff_patches/2` | — | medium | **REFUTED, see below** |
 
-**On #1's safety, since it is the largest:** there are seven ways out of the
-reduce and exactly **one** returns a different source, so the threaded parse is
-only ever stale if that one branch forgets to re-derive it. That is a single
-place to get right rather than a cache with an invalidation window. The
-re-derivation must go through `Sourceror.parse_string/1` and keep the `{:error, _}`
-branch — `apply_rule_fix_with_status/3` only proved the output satisfies
-`Code.string_to_quoted/1`, and Sourceror parses under a different option set, so
-"it was accepted" is not "Sourceror can read it".
+### The measurement that settles items 5–8
 
-**Before doing #7, run the experiment.** It is the one most likely to be
-premature:
+The original table costed these by reading. Running them says the perf story is
+**compiles, and nothing else**.
 
-```
-mix run -e 'Credence.Pattern.default_rules()
-  {us,_} = :timer.tc(fn -> Enum.each(1..8, fn _ -> Credence.RuleHelpers.discover_rules(Credence.Pattern.Rule) end) end)
-  IO.puts("8 discoveries = #{div(us,1000)}ms — this is the entire prize")'
-```
+On a small module where four rules fire:
 
-If that prints under ~10 ms, the two hoists are the whole win and
-`:persistent_term` buys a staleness hazard for nothing.
+    one Credence.fix                    71 ms
+    the same, analyze_after: false      65 ms
+    one compile_and_capture              9 ms
+    ALL 156 Pattern check/2 walks        2 ms
+
+On a ~130-line rule file where none fire:
+
+    one Credence.fix                   380 ms
+      syntax  9 ms · semantic 96 ms · pattern 130 ms · trailing analyze 136 ms
+    one compile_and_capture             93 ms
+    one Sourceror parse                  9 ms
+
+So a `fix` is roughly *(number of compiles) × (cost of one compile)* plus change.
+Every AST-walk optimisation in the list — 5, 6 and 8 — is competing for a share
+of the 2 ms that all 156 rules cost together. **Not worth doing**, and worth
+recording as refuted so nobody re-derives them from the same reading.
+
+Item 7 is the clearest. The experiment the table demanded before touching it:
+
+    8 discoveries = 1 ms — the entire prize
+
+against a 410 ms fix. A `:persistent_term` cache would buy 1 ms and cost a
+code-reload staleness hazard plus a reset hook for `mix credence.mutants`.
+Refuted by its own experiment, which is exactly what that experiment was for.
+
+The same numbers explain why item 1 mattered so much more than its neighbours:
+at 9 ms per parse on the larger file, re-parsing once per rule was **~1.4
+seconds** of pure waste per file, and the Pattern round now runs it in 130 ms.
+
+**What is left worth pricing is the compile count.** A `Credence.fix` on a
+compiling file pays roughly three: one in the Semantic round, one for the Pattern
+round's baseline, one in the trailing analyze (already opt-out). The Semantic
+round finishes knowing whether its output compiles, and the Pattern round then
+computes the same thing again. Threading that through would remove ~25% of a
+fix — but it puts a stale baseline on the critical path, where a wrong answer
+silently accepts or reverts fixes, so it needs its own gate before anyone tries
+it.
 
 ### A6. Examples shared module names, and it bit three times — [DONE]
 
@@ -409,9 +433,11 @@ Recorded because docs/22's four refuted claims taught this project to check:
 
 ## Suggested order
 
-**Credence:** A4's third rule (probe it before deciding), then A5 #4, then A5 #7
-*only if* its experiment justifies it, then A7 as the real argument for the D5
-Semantic backfill.
+**Credence:** the ranked list is worked out. A4 and A5 #1–#4 are done, A5 #5–#8
+are refuted by measurement, A6 and A7 are done, A8 (the concurrency race) is
+fixed. The one performance item still worth pricing is the **compile count** —
+see the end of §A5 — and it needs a gate before anyone attempts it, because a
+stale baseline on that path silently accepts or reverts fixes.
 
 **Harness:** B1, B2, B10 and B9(a) are **done**. Next: B5 and B4 (pure token
 savings, both with offline replay experiments), then B3, the largest single cost
