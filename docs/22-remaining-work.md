@@ -87,8 +87,8 @@ Tiers 0 and 1 are closed (T1, T1.2, T1.3 all landed), as is the whole
 self-corruption line (T3.7 → T3.10 → T3.10a): its ledger is empty and the gate
 that measured it was rebuilt so that being empty does not make it vacuous. Tier
 2 is closed except **T2.3**. The harness half of T1 — defined at this file's own
-T4.1–T4.3 — is done except **T4.2 (c) and (d)**, which are the minimum in-loop
-gates still owed before a Phase-9 run.
+T4.1–T4.3 — is **done**; T4.2's five evidence gates all landed, (c) last
+(harness `9a460be`).
 
 ---
 
@@ -1137,8 +1137,13 @@ its own tests run under real `mix test`.
   so). Add a static check in `Cev.Preflight` reading the *accepting* repo's
   `STATUS.md` (path decision needed — not the sister clone's copy), failing
   while `MODE: CATCHING UP`. Until then the interlock is prose.
-- [ ] **T4.2 [H] BUGFIX-lane evidence gates — (a), (b) and (e) DONE (`c07fb57`,
-  `1f62e16`); (c) and (d) remain.** (a) rejects a BUGFIX whose BEFORE equals its
+- [x] ~~**T4.2 [H] BUGFIX-lane evidence gates**~~ **ALL FIVE DONE** — (a), (b), (e)
+  `c07fb57` / `1f62e16`; (d) `3f7e64a` + credence `6b64aba`; (c) `9a460be`. (c) is a
+  `Spec` field, a prompt section, a parser line and a validator that matches the
+  classifier's quoted trace line against the distilled log, on normalised text with a
+  12-character floor so `end` cannot satisfy it. (d) stays inert until the sister clone
+  is recreated from `main`, since `mix credence.fires` lives in the accepting repo and a
+  clone without it answers `:unknown`, which passes by design.** (a) rejects a BUGFIX whose BEFORE equals its
   AFTER; (b) treats an all-rule-character body (`===`, `---`) as blank — one
   instance burned an 80-turn session, and the emptiness test is deliberately
   `\\A[-=_*\\s]+\\z` because the looser forms start eating real code; (e) is
