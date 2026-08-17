@@ -349,7 +349,7 @@ classifier judgment; (3) then consider `:patch_rejected` and `:no_op`.
 current HEAD and count each atom. If `:no_op` dominates and `:crashed` is
 near-zero, invert that priority.
 
-### B8. Gates with no positive control, and the mutation check's measured yield
+### B8. Gates with no positive control — the two mutation atoms now have them — [DONE]
 
 Census of reject markers across the archive against the harness test suite:
 `:scope`, `:pure_deletion`, `:no_test_change`, `:unstable_tests` and
@@ -363,9 +363,23 @@ candidates — a 0.6% rejection rate. `gate.ex`'s own NOTE concedes why: for a n
 rule, reverting `lib/` deletes the module, the test file cannot compile, and RED
 is automatic. That is STATUS C6 / H4, now with a number attached.
 
-**Experiment that decides whether H4 is worth building:** take 20 committed rules,
-apply a blind mutant (`check/2 -> []`) to each, run its focused tests, and count
-how many stay green. That number is the size of the assertion-free class.
+**Both mutation atoms now have controls.** `{:mutation_no_effect, _}` is driven
+by a stub whose focused run answers 0 regardless of the tree — the assertion-free
+test the check exists to reject. Writing the control for
+`:no_changed_test_to_mutate` showed how narrow it is: `check_touches` runs first
+and counts ANY staged `test/` path under any git status, while `check_mutation`
+wants files ADDED or MODIFIED, so the atom is reachable only by a candidate that
+adds a rule and DELETES an existing test. Everything else is caught one check
+earlier as `:no_test_change`. Both are pinned side by side.
+
+**Open question, deliberately not settled:** a `mutation_no_effect` reject leaves
+`lib/new_rule.ex` absent from the tree. Whether the Gate owes its caller a
+restored tree on a reject is a contract question, not one to settle by writing
+whichever assertion passes.
+
+**Experiment that still decides whether H4 is worth building:** take 20 committed
+rules, apply a blind mutant (`check/2 -> []`) to each, run its focused tests, and
+count how many stay green. That number is the size of the assertive-free class.
 
 ### B9. Resumability — three real gaps
 
@@ -380,11 +394,14 @@ the pass number, so a mid-pass resume re-derives the same order; and
   failure it exists to stop, could never trip it. `init/1` now sums `cost_usd`
   from the run's usage log, skipping malformed lines (which can only
   under-count, failing toward "keep running" rather than a false shutdown).
-* **(b) A row that kills the VM is retried forever with no counter.** Pending is
-  recomputed from progress and the permutation is deterministic, so the same
-  index is retried first on every boot. `TransientAttempts` only counts
-  `:transient_abort`. Fix: an `in_flight` marker written on `RowLog.open` and
-  cleared on completion, with a per-index crash count.
+* **(b) A row that kills the VM was retried forever with no counter — [DONE].**
+  `Cev.InFlight` writes a marker when a row starts and clears it when the row
+  finishes; a marker still present at boot means the previous VM died on that
+  row. Past `row_crash_limit` (default 3) the row is consumed and skipped with a
+  `:vm_crash_loop` outcome — the same trade `TransientAttempts` makes for
+  timeouts. Two failure directions are pinned: the marker names ONE row, so a
+  crash on row 7 cannot condemn row 8; and a malformed marker counts as zero
+  crashes, not many.
 * **(c)** Row indices are positional against an unpinned glob — this is STATUS
   B4a, and the mitigation is confirmed: every `rows.jsonl` line carries `task`
   beside `index`, so the mapping is recoverable.
