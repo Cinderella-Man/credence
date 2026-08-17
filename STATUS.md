@@ -107,12 +107,19 @@ rather than to this section.
 - [ ] **B5. Minimum in-loop gate residue: T4.2 (c)** [H]. **(d) is DONE**
   (harness `3f7e64a` + credence `6b64aba`): a BUGFIX report whose repro does not
   make the accused rule fire now fails classification, via the new
-  `mix credence.fires <rule>` probe. Note it is inert until B2 — the sister
-  clone has no such task yet, and a clone without it answers `:unknown`, which
-  passes by design. **(c) remains**: require the classifier to quote the
-  verbatim offending line from the `credence_fix` trace. The `Spec` struct
-  (`spec.ex:18-28`) has no field that could carry it, so this is a parser +
-  prompt + validator change, not just a check.
+  `mix credence.fires <rule>` probe. It is **inert until the clone is recreated
+  from `main`** — the task lives in this repo (`lib/mix/tasks/credence.fires.ex`)
+  and not in today's clone, and a clone without it answers `:unknown`, which passes
+  by design. Recreating the clone is the whole fix; nothing else is owed.
+
+  **(c) remains, and it is the weakest of the five.** Require the classifier to
+  quote the verbatim offending line from the `credence_fix` trace, so the harness
+  can string-match the citation against the real log. `Cev.Classify.Spec` has nine
+  fields and none can carry it, so it is four changes — field, prompt, parser,
+  validator. Weigh it against (d), which already kills the strong form of a
+  fabricated accusation: if the repro does not make the rule fire the row dies
+  whatever was quoted. (c) only catches the rule firing on a line other than the
+  one claimed.
 - [ ] **B6. Secrets, endpoint, spend.** `config/secrets.exs` now exists with
   all three key groups, but the Mimo console cookie expires by design —
   validate with `mix cev.budget`. The solve stage points at
