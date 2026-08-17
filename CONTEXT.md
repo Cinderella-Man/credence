@@ -108,6 +108,14 @@ compile errors as a baseline and reverts any rule whose output adds to them. On
 source that compiles, the baseline is empty and this reduces exactly to the old
 `compiles?/1` check.
 
+Compiling is **serialised per module name** (`RuleHelpers.with_module_lock/2`,
+`lib/rule_helpers.ex:214`). Two files that define the same module, analysed
+concurrently, returned `[]` — a silent false negative, which is the worst direction
+for a linter, and `defmodule Example` is not a rare name in generated code. Files
+defining different modules still compile in parallel, so the common case pays
+nothing. Anything that adds concurrency around analysis has to keep that lock; the
+measurement and the reasoning are at `lib/rule_helpers.ex:190-224` and `docs/24` §A8.
+
 ## The Pattern round — what a rule looks like
 
 Every rule in `lib/pattern/` has three callbacks:

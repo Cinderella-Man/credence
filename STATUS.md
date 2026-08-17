@@ -25,13 +25,6 @@ and the relevant `docs/` file, not on the map. **Never restate a count here.** T
 gates compute them (`default_rules/0`, `over_firing_test.exs:78`) and every number
 hand-copied onto this map has drifted within hours.
 
-**Read before trusting an older note:** the Pattern round no longer skips files
-that fail to compile (`lib/pattern.ex:85-99`), so any earlier statement about fix
-coverage predates it; concurrent `analyze/1` on two files defining the same module
-returned NO issues, fixed with a module-keyed compile lock (`docs/24` §A8); and
-`docs/24-improvement-research.md` records ranked improvements for both repos with
-one change deliberately NOT to make.
-
 ## A. Merge + cut 0.8.1 (release-blocking, in order)
 
 **PR [#22](https://github.com/Cinderella-Man/credence/pull/22),
