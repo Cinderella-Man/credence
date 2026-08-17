@@ -104,9 +104,6 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B8. Quota headroom** for the 26-row transient tail (11 classifier
-  timeouts, 7 `:closed`, 5 HTTP 429, 3 implementer kills): raise the Mimo
-  quota or add backoff.
 - [ ] **B9. `mix cev.preflight` green, then flip this file to `PRODUCING`.**
   The flip is deliberate and last; preflight now genuinely enforces it.
 
