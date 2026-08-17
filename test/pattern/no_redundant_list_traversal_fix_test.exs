@@ -4,10 +4,17 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   alias Credence.Pattern.NoRedundantListTraversal
 
   # ═══════════════════════════════════════════════════════════════════
-  # length + Enum.sum → NOT auto-fixed (readability downgrade)
+  # length + Enum.sum → not touched, and no longer reported either
+  #
+  # These used to be "reported as a hint, declined by the fix" — the
+  # report-without-repair shape CONTEXT.md forbids. `length/1`,
+  # `Enum.count/1` and `Enum.sum/1` are no longer tracked at all, so
+  # these are now byte-identical for the plainer reason that the rule
+  # sees nothing in them. Kept as scope documentation; the check-side
+  # counterparts in the check test are the ones that pin it.
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not auto-fix length + Enum.sum (idiomatic pattern)" do
+  describe "leaves length + Enum.sum untouched" do
     test "basic case — count then sum" do
       input = """
       def run(numbers) do
@@ -142,10 +149,10 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "does not modify inline calls in the same expression" do
-    test "Enum.sum + length for average" do
+    test "min and max in one expression" do
       input = """
       def run(numbers) do
-        average = Enum.sum(numbers) / length(numbers)
+        spread = Enum.max(numbers) - Enum.min(numbers)
         Enum.filter(numbers, &(&1 >= average))
       end
       """
@@ -153,10 +160,10 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       confirm_fix(fix(NoRedundantListTraversal, input), input)
     end
 
-    test "Enum.sum + Enum.count for average" do
+    test "min and max in one division" do
       input = """
       def run(numbers) do
-        average = Enum.sum(numbers) / Enum.count(numbers)
+        ratio = Enum.max(numbers) / Enum.min(numbers)
         average
       end
       """
@@ -175,10 +182,10 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       confirm_fix(fix(NoRedundantListTraversal, input), input)
     end
 
-    test "Enum.sum + length added together" do
+    test "min and max added together" do
       input = """
       def run(numbers) do
-        result = Enum.sum(numbers) + length(numbers)
+        result = Enum.min(numbers) + Enum.max(numbers)
         result
       end
       """

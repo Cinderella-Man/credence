@@ -1,35 +1,29 @@
 defmodule Credence.Pattern.NoRedundantListTraversal do
   @moduledoc """
-  Detects multiple traversals of the same list that could be merged into
-  a single pass.
+  Merges a separate `Enum.min/1` and `Enum.max/1` over the same list into one
+  `Enum.min_max/1` call.
 
-  Separate `Enum.min/1` and `Enum.max/1` calls can be replaced by the
-  built-in `Enum.min_max/1`. Similarly, `length/1` + `Enum.sum/1` or
-  other pairs on the same list are flagged as a hint, though the
-  `count + sum` pair is not auto-fixed (see below).
-
-  Only flags calls that are:
+  Two traversals become one. Only flags calls that are:
   - bare assignments (`var = func(list)`) in the same block
   - arity-1 calls on a plain variable (not an expression or field access)
   - on the same variable with no rebinding between them
 
-  ## Detected functions
+  ## Scope, and why it is only this pair
 
-      length/1          →  :count
-      Enum.count/1      →  :count
-      Enum.sum/1        →  :sum
-      Enum.min/1        →  :min
-      Enum.max/1        →  :max
+  `length/1`, `Enum.count/1` and `Enum.sum/1` are tracked too, but **only so
+  that a group containing them is recognised as a group** — they are never
+  reported on their own account, because there is nothing to rewrite them into.
+  `Enum.min_max/1` exists; there is no stdlib `count_and_sum`, and hand-building
+  `Enum.reduce(l, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)` is a readability
+  downgrade over `length/1` + `Enum.sum/1`, which is the idiomatic way to
+  compute a mean.
 
-  ## Auto-fixable pairs
-
-      Enum.min + Enum.max           →  Enum.min_max/1
-
-  The `count + sum` pair is flagged but NOT auto-fixed — merging `Enum.sum/1`
-  + `length/1` into a manual `Enum.reduce/3` with a tuple accumulator is a
-  readability downgrade. The built-in functions are the idiomatic pattern.
-
-  Other combinations are flagged but not auto-fixed.
+  This rule used to report those combinations anyway, as a "consider merging"
+  hint — 13 findings across its own fixtures that it would never repair. That is
+  the shape `CONTEXT.md`'s *fix or drop it* policy exists to prevent: Credence
+  fixes code, it does not complain about it. `check/2` and `fix_patches/2` now
+  both go through `find_fixable_groups/1`, so they cannot drift apart again, and
+  `test/fix_or_drop_test.exs` gates the property for every rule.
 
   ## Bad
 
@@ -55,17 +49,25 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   alias Credence.Issue
   alias Credence.RuleHelpers
 
-  # Pairs we know how to auto-fix
-  # Note: [:count, :sum] is NOT fixable — merging Enum.sum + length into a
-  # manual Enum.reduce with a tuple accumulator is a readability downgrade.
-  # Enum.sum/1 + length/1 is the idiomatic Elixir pattern for computing means.
-  # The check still flags it as a "consider merging" hint, but no auto-fix.
+  # The pairs this rule repairs. `check/2` reports exactly these and nothing
+  # else — see `build_issues/1`. [:count, :sum] is absent deliberately and there
+  # is no emitter for it: `Enum.sum/1` + `length/1` IS the idiomatic pattern for
+  # a mean, and the reduce that would replace it is a readability downgrade.
   @fixable_pairs [
     MapSet.new([:min, :max])
   ]
 
-  # Enum functions we track (arity 1 only — arity 2 has different semantics)
-  @tracked_enum_funcs [:count, :sum, :min, :max]
+  # Enum functions we track (arity 1 only — arity 2 has different semantics).
+  #
+  # `:count` and `:sum` are deliberately absent, and so is the `length/1` clause
+  # of `identify_call/1` that used to feed `:count`. Tracking them bought nothing
+  # — no pair containing either is repairable — and it actively SUPPRESSED a
+  # repairable one: `find_valid_groups/1` groups every tracked call on a list
+  # variable into one group, and `find_fixable_groups/1` requires the group to be
+  # exactly the two members of a fixable pair. So a perfectly mergeable
+  # `Enum.min` + `Enum.max` went unreported whenever a `length/1` on the same
+  # list happened to share the block, because the group had three members.
+  @tracked_enum_funcs [:min, :max]
 
   @impl true
   def check(ast, _opts) do
@@ -230,8 +232,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   end
 
   # Generated variable names for inline calls that need a fresh binding.
-  defp generated_name(:count), do: :count
-  defp generated_name(:sum), do: :sum
   defp generated_name(:min), do: :minimum
   defp generated_name(:max), do: :maximum
 
@@ -270,13 +270,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   defp all_inline_same_statement?(entries) do
     Enum.all?(entries, &(&1.mode == :inline)) and
       entries |> Enum.map(& &1.index) |> Enum.uniq() |> length() == 1
-  end
-
-  # length(var) — Kernel BIF
-  defp identify_call({:length, _, [arg]}) do
-    with {:ok, var_name} <- plain_variable_name(arg) do
-      {:ok, var_name, :count, "length/1"}
-    end
   end
 
   # Enum.func(var) — tracked functions, arity 1 only
@@ -341,8 +334,10 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   defp ast_binds_name?(_, _), do: false
 
+  # Reports exactly what `fix_patches/2` repairs — both call `find_fixable_groups/1`,
+  # so the two cannot drift into reporting a finding nothing fixes.
   defp build_issues(statements) do
-    find_valid_groups(statements)
+    find_fixable_groups(statements)
     |> Enum.map(fn %{list_var: list_var, entries: entries} ->
       labels = Enum.map_join(entries, " and ", & &1.label)
 
@@ -350,7 +345,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         rule: :no_redundant_list_traversal,
         message:
           "#{labels} both traverse `#{list_var}` — " <>
-            "consider merging into a single pass.",
+            "`Enum.min_max/1` does it in one pass.",
         meta: %{line: hd(entries).line}
       }
     end)
@@ -485,17 +480,14 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
     end)
   end
 
-  defp build_replacement(list_var, first, second) do
-    types = MapSet.new([first.type, second.type])
-
-    cond do
-      MapSet.equal?(types, MapSet.new([:min, :max])) ->
-        build_min_max_ast(list_var, first, second)
-
-      MapSet.equal?(types, MapSet.new([:count, :sum])) ->
-        build_reduce_ast(list_var, first, second)
-    end
-  end
+  # Only `@fixable_pairs` reaches here, and it holds exactly one pair. The
+  # count+sum branch this `cond` used to carry — a hand-built
+  # `Enum.reduce(l, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)` — was already
+  # unreachable, because `find_fixable_groups/1` filtered those groups out
+  # before `build_replacement/3` ever saw them. It is deleted rather than left
+  # as dead code: it was the emitter for a rewrite the rule's own rationale
+  # rejects, so keeping it invited someone to re-enable it.
+  defp build_replacement(list_var, first, second), do: build_min_max_ast(list_var, first, second)
 
   # {min_var, max_var} = Enum.min_max(list_var)
   # Always min first, max second — matching Enum.min_max/1 return order.
@@ -505,29 +497,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
     Sourceror.parse_string!(
       "{#{min_entry.result_var}, #{max_entry.result_var}} = Enum.min_max(#{list_var})"
-    )
-  end
-
-  # {var_a, var_b} = Enum.reduce(list_var, {init_a, init_b}, fn x, {a, b} -> {upd_a, upd_b} end)
-  # Tuple position follows source order (first-appearing entry first).
-  defp build_reduce_ast(list_var, first, second) do
-    entries = Enum.sort_by([first, second], & &1.index)
-
-    parts =
-      Enum.map(entries, fn entry ->
-        case entry.type do
-          :count -> %{var: entry.result_var, init: "0", acc: "c", update: "c + 1"}
-          :sum -> %{var: entry.result_var, init: "0", acc: "s", update: "s + x"}
-        end
-      end)
-
-    lhs = Enum.map_join(parts, ", ", &"#{&1.var}")
-    inits = Enum.map_join(parts, ", ", & &1.init)
-    accs = Enum.map_join(parts, ", ", & &1.acc)
-    updates = Enum.map_join(parts, ", ", & &1.update)
-
-    Sourceror.parse_string!(
-      "{#{lhs}} = Enum.reduce(#{list_var}, {#{inits}}, fn x, {#{accs}} -> {#{updates}} end)"
     )
   end
 end

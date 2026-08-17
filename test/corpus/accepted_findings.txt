@@ -279,7 +279,6 @@ archethic/lib/archethic_web/dashboard_metrics_aggregator.ex:183  prefer_map_new
 archethic/lib/archethic_web/dashboard_metrics_aggregator.ex:78  prefer_map_new
 archethic/lib/archethic_web/explorer/faucet_rate_limiter.ex:142  prefer_map_new
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:114  prefer_map_new
-archethic/lib/archethic_web/explorer/live/dashboard_live.ex:124  no_redundant_list_traversal
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:143  prefer_map_new
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:93  prefer_map_new
 archethic/lib/archethic_web/explorer/live/node_details_live.ex:39  prefer_guard_over_if
@@ -502,7 +501,6 @@ ash_postgres/lib/migration_generator/migration_generator.ex:760  no_sort_then_re
 ash_postgres/lib/migration_generator/migration_generator.ex:794  no_sort_then_reverse
 ash_postgres/lib/migration_generator/operation.ex:716  prefer_cond_for_nested_if
 ash_postgres/lib/mix/tasks/ash_postgres.install.ex:53  no_case_boolean_result
-ash_postgres/lib/mix/tasks/ash_postgres.squash_snapshots.ex:65  no_redundant_list_traversal
 ash_postgres/lib/mix/tasks/ash_postgres.squash_snapshots.ex:74  no_length_comparison_for_empty
 ash_postgres/lib/resource_generator/spec.ex:521  no_duplicate_function_clauses
 ash_postgres/lib/resource_generator/spec.ex:820  no_length_comparison_for_empty
@@ -846,7 +844,6 @@ blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/messages_to_l2_matcher.ex:2
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/messaging.ex:268  no_reduce_for_map_building
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/utils/helper.ex:116  no_reduce_for_map_building
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/utils/logging.ex:96  no_case_true_false
-blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/backfill.ex:243  no_redundant_list_traversal
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/batches/discovery_utils.ex:65  no_is_nil_guard
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/batches/tasks.ex:318  prefer_guard_over_if
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/confirmations/discovery.ex:291  no_reduce_for_map_building
@@ -4638,7 +4635,6 @@ ratatouille/lib/ratatouille/renderer/canvas.ex:146  use_map_join
 ratatouille/lib/ratatouille/renderer/element/chart.ex:34  no_eager_with_index_in_reduce
 ratatouille/lib/ratatouille/renderer/element/sparkline.ex:20  use_map_join
 ratatouille/lib/ratatouille/renderer/element/sparkline.ex:30  no_redundant_list_traversal
-ratatouille/lib/ratatouille/renderer/element/table.ex:105  no_redundant_list_traversal
 ratatouille/lib/ratatouille/view.ex:141  prefer_map_new
 ratatouille/lib/ratatouille/window.ex:49  prefer_map_new
 ratio/lib/ratio.ex:184  prefer_explicit_binary_arithmetic
@@ -4662,7 +4658,6 @@ realtime/lib/realtime/monitoring/distributed_metrics.ex:27  prefer_map_new
 realtime/lib/realtime/nodes.ex:40  no_case_on_param_dispatch
 realtime/lib/realtime/operations.ex:42  no_identity_enum_map
 realtime/lib/realtime/postgres_cdc.ex:46  no_case_true_false
-realtime/lib/realtime/rate_counter/rate_counter.ex:210  no_redundant_list_traversal
 realtime/lib/realtime/signal_handler.ex:8  no_case_true_false
 realtime/lib/realtime/syn_handler.ex:139  no_enum_take_negative
 realtime/lib/realtime/tenants/connect.ex:475  no_enum_take_negative
@@ -4788,7 +4783,6 @@ sequin/lib/mix/tasks/bench.ex:573  no_map_then_aggregate
 sequin/lib/sequin/aws/sqs.ex:209  no_length_comparison_for_empty
 sequin/lib/sequin/bench/bench.ex:235  prefer_erlang_float
 sequin/lib/sequin/bench/stats_tracker.ex:113  no_length_guard_to_pattern
-sequin/lib/sequin/bench/stats_tracker.ex:132  no_redundant_list_traversal
 sequin/lib/sequin/config_parser.ex:154  no_redundant_assignment
 sequin/lib/sequin/consumers/consumers.ex:1531  prefer_function_capture
 sequin/lib/sequin/consumers/consumers.ex:1790  prefer_cond_for_nested_if

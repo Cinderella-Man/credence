@@ -132,17 +132,39 @@ and the recorded counterexample is this exact cluster — not every `send` to th
 caller pid is a reply, since a chunked-stream `handle_call` sends chunks and
 replies at the end, so the rewrite turns `{:done, 3}` into `{:chunk, 1}`.
 
-**This is the same question as `STATUS.md` D10**, which is currently framed as
-being about one rule. It is not. D10 asks whether `NoRedundantListTraversal` may
-keep reporting 13 findings it deliberately will not repair; the three options
-there are *keep it as a documented exception*, *narrow `check/2`*, or *widen the
-fix*. Whichever is chosen decides these three items too:
+## ✅ DECIDED 2026-08-17 — report-only is closed, so these three are dead as specified
 
-* **Keep it** — the project accepts a documented report-only category, and the
-  three become ordinary build work under a named exception.
-* **Narrow `check/2`** — report-only is confirmed closed, and the three are dead
-  as specified. Their failure modes stay banked in docs/17, which is the right
-  vessel for a verified observation with no shippable repair.
+The maintainer settled it: *"if rules can't fix the code they need to be removed.
+Try to check can you improve them; if yes go ahead, if not, remove them. WE DO NOT
+HAVE 'warn only' rules — Credence is FIXING code, not just complaining about
+it."* `STATUS.md` D10 is decided the same way and is now **gated** by
+`test/fix_or_drop_test.exs`: no rule may report a finding nothing repairs.
+
+So the three items above cannot be built **as their dispositions specify**, and
+that is the end of them as build-list entries rather than a thing to revisit:
+
+| item | disposition | status |
+|---|---|---|
+| GenServer reply protocol (2 rules) | report-only; "emit no fix"; the repair is verified unsound (a chunked-stream `handle_call` sends chunks then replies, so the rewrite turns `{:done, 3}` into `{:chunk, 1}`) | **dead as specified** |
+| `no_stream_data_constant_with_range` | already recorded "REAL-but-not-catchable in the current architecture" | **dead as specified** |
+| `no_process_send_after_infinity` | report-only — *but* has one route left | **open, needs a mechanism decision** |
+
+Their failure modes stay banked in `docs/17`, which is the right vessel for a
+verified observation with no shippable repair. That is not a downgrade: docs/17
+already holds 56 such observations, and the whole point of the catalogue is that
+the observation is the asset and the rule module is a fossil.
+
+**`no_process_send_after_infinity` is the one with a way forward**, and it is a
+mechanism question rather than a rule question: a fix gated behind an
+`assumptions/0` safety switch is neither report-only nor unconditional, because
+the engine only runs a rule when all its named assumptions are on
+(`RuleHelpers.filter_by_assumptions/3`). `lib/assumptions.ex` carries exactly two
+switches today (`:single_codepoint_graphemes`, `:proper_lists`), and adding a
+third needs its own justification plus the property test
+`test/assumptions_meta_test.exs` requires of any rule with a non-empty
+`assumptions/0`. Worth doing only if the repair itself is sound — and docs/18
+records the existing clause-splitting fix as "proven to dead-code sibling
+clauses", so it would be a fresh build, not a salvage.
 
 `no_process_send_after_infinity` has one possible route that does not need the
 policy resolved: `assumptions/0`. A fix gated behind a safety switch is neither
@@ -150,8 +172,8 @@ report-only nor unconditional. That is a mechanism change (`lib/assumptions.ex`
 carries exactly two switches today) and needs its own justification, but it is
 the only third option any of the four has.
 
-**So the honest count is 5 workable + 3 blocked**, not 8 remaining — and one of
-the five is not a rule build at all. Workable:
+**So the honest count is 5 workable + 2 dead + 1 needing a mechanism decision**,
+not 8 remaining — and one of the five is not a rule build at all. Workable:
 
 * `no_atom_as_function_name` — Syntax, re-author around the parser's own error
   position rather than a regex.

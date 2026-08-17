@@ -363,40 +363,67 @@ rather than to this section.
   per-rule rather than corpus-wide, since the distribution runs from 0.475 to
   0.875 and a single number hides both ends.
 
-- [ ] **D10. Fix coverage is 97.2%, and the deferred decision was about a
-  population that does not exist.** FIX_LOG deferred "make ~20 Tier-3 rules
-  check-only or comment-preserving" for a design decision. Two things are wrong
-  with that framing, and measuring settles both.
+- [x] **D10. DECIDED by the maintainer 2026-08-17, and it is now gated rather
+  than tracked.** The instruction: *"if rules can't fix the code they need to be
+  removed. Try to check can you improve them; if yes go ahead, if not, remove
+  them. WE DO NOT HAVE 'warn only' rules — Credence is FIXING code, not just
+  complaining about it."* So report-only is closed, and the three options this
+  item used to offer collapse to two: widen the fix, or stop reporting.
 
-  **Check-only is not available.** CONTEXT.md's standing policy is *fix or drop
-  it* — a rule that can only find a problem is deleted, not kept as a warning.
-  So the decision as posed had one legal option out of two.
+  **The population was bigger than this item said, and the first re-measurement
+  of it was wrong.** D10 read "zero rules flag without ever fixing; exactly one
+  sits below 50%" — true, and it measures the wrong thing. The question is not
+  whether a rule fixes *something*, it is whether any individual finding is
+  reported and left unrepaired. Measured that way, and excluding the 6 findings a
+  sibling rule legitimately repairs by cascade: **24 findings across 9 rules**,
+  at a fix coverage of 1486/1515 = 98.1%.
 
-  **And the population is one rule, not twenty.** Measured over every Pattern
-  rule's own fixtures: **1,798 of 1,849 flagged fixtures produce a change —
-  97.2%**. **Zero** rules flag without ever fixing. Exactly one sits below 50%:
-  `NoRedundantListTraversal`, at 6/19.
+  ⚠️ The first sweep said 46 across 13 rules and was wrong, in a way worth
+  remembering: it drew fixtures from `PipelineWitness.candidates/1`, whose index
+  **over-collects on purpose** (a witness only has to be found once, so a false
+  candidate is free there). 22 of the 46 were *prose* — test names and doc
+  sentences that happen to parse. One of them,
+  `"detects nested call: Enum.join(Enum.map(...))"`, made `UseMapJoin` fire and
+  then crashed its fix, and would have been filed as a rule defect. A gate whose
+  failure message accuses a rule of a bug needs the precise index
+  (`MetaTestSupport.fixtures/1`), not the generous one.
 
-  **That one rule is a deliberate decision, not drift — and it is the decision
-  FIX_LOG meant to defer.** `NoRedundantListTraversal` fixes only
-  `min`+`max` (into `Enum.min_max/1`). `@fixable_pairs` **excludes**
-  `count`+`sum` on a written rationale: merging `length/1` and `Enum.sum/1` into
-  a manual `Enum.reduce` with a tuple accumulator is a readability downgrade,
-  and `sum`/`length` is the idiomatic way to compute a mean. So the rule reports
-  "consider merging" and does not fix, on purpose.
+  **Gated, not tracked.** `test/fix_or_drop_test.exs` + `test/support/fix_or_drop.ex`
+  now assert that no rule reports a finding nothing repairs, with a shrink-only
+  ledger for the paydown and its vacuity checks in the *machinery* rather than the
+  result. Nothing enforced this before: `no_op_trace_test` proves a no-op is
+  **reported** in the trace, which is a different claim, and
+  `corpus/scope_parity_test` gates only the converse (where check is silent, the
+  fix must not act). It runs in the **default** suite at 2.7 s — deliberately
+  untagged, because this same session found the excluded `:idempotency` sweep had
+  been red for four rules with nobody looking.
 
-  I narrowed `check/2` to the fixable set to enforce *fix or drop*, and reverted
-  it: it turned 12 check tests red, all of them pinning that intentional
-  reporting. **The decision is genuinely yours**, and now has numbers attached:
-  * **keep it** — one rule reports 13 findings it will not repair, and the
-    project's "every rule fixes" claim carries a documented exception;
-  * **narrow `check/2`** — the claim becomes true without exception, 12 tests
-    go, and a real redundancy stops being reported;
-  * **widen the fix** — needs an equivalence argument for the count+sum merge
-    *and* a defence of the readability cost the note already rejects.
+  **`NoRedundantListTraversal` is paid — 13 of the 24 — and it took three
+  attempts.** (1) Narrowed `check/2` onto `find_fixable_groups/1`, the predicate
+  the fix already used, and deleted `build_reduce_ast/3`: an emitter for the
+  count+sum reduce that `@fixable_pairs` had made unreachable, i.e. dead code for
+  a rewrite the rule's own rationale rejects. (2) That **over-shot** — a
+  `min`+`max` pair went silent whenever a `length/1` shared the block, because
+  every tracked call joins one group and the group then had three members. The
+  repair was a *widen* that deletes code: stop tracking `count`/`sum`/`length`
+  altogether. Corpus: **6 accepted findings gone, 0 new**, a deletions-only
+  re-pin (6367 → 6361). (3) The widen then left **28 of 45 fixtures vacuous** —
+  the rebinding, scope, arity-2 and not-a-plain-variable negatives contained no
+  tracked call at all, so each would have passed with its mechanism deleted.
+  Every mechanism negative is now written on `min`/`max`.
 
-  Worth keeping the metric: nothing measured fix coverage before, so "does
-  coverage go up or down across an evolution" had no answer. It does now.
+  **Remaining: 8 rules, 11 findings, each with an implementable spec** —
+  `NoCaseTrueFalse` and `NoCodepointStringReverse` narrow (no behaviour-preserving
+  target exists: a leading `_` makes the second clause unreachable, and
+  `join("-")` after a reverse is not `String.reverse/1`);
+  `NoGuardEqualityForPatternMatch` and `PreferFunctionClausesForListPatterns`
+  widen; `NonGroupedClauses` is mixed; `NoListAppendInRecursion`,
+  `NoManualStringReverse`, `NoMapKeysOrValuesForIteration`,
+  `NoTrailingNewlineInDoc` remain. **`NoTrailingNewlineInDoc`'s 6 are
+  `:patch_rejected`, not `:no_patches`** — its fix emits patches that
+  `apply_rule_fix_with_status/3` discards for non-parsing output or a changed
+  comment multiset. That is a bug in the fix, not a scope decision, and it is
+  invisible to a test because it looks identical to "nothing to do".
 
 - [ ] **D11a. Work the build list — it is written and measured.**
   `docs/23-build-list.md` replaces docs/17's ranked list (which docs/18 §5.3
