@@ -69,6 +69,15 @@ the sister reset (B2) produce a tree unrelated to the documented history.
   the first run to need adjustment; the corpus job in particular fetches ~1 GB
   on a cold cache.
 
+  **Pre-flighted 2026-08-17, to shrink what the first run can surprise you with.**
+  Everything checkable without a runner was checked: the pinned pair matches this
+  machine exactly (`elixir 1.20.2`, OTP `29`); all five mix tasks it invokes exist
+  (`deps.get`, `format`, `compile`, `test`, `credence.corpus.fetch`); and — the
+  usual first-run killer — **zero absolute local paths** in `lib/` or `test/`, and no
+  env-var dependency outside a fixture string. What genuinely cannot be known
+  without a push: runner behaviour, the action versions, the cache keys, and the
+  cold-cache corpus fetch.
+
   Deliberately **one** Elixir/OTP pair (1.20.2 / OTP 29), not a version matrix,
   even though `mix.exs` allows `~> 1.17`: every behavioural claim in `docs/` was
   executed on that pair, and docs/17 entry 11 records 1.19.5 and 1.20.2
