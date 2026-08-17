@@ -109,13 +109,12 @@ rather than to this section.
 
 ## C. Harness loop quality (valuable before Phase 9, not gating it)
 
-- [ ] **C20. Two things left in `docs/24-improvement-research.md`; everything else
-  there is done or refuted** (the refutations and the reasoning stay in docs/24 —
-  B3's byte attribution was wrong by two orders of magnitude, B6 would have
-  destroyed 14 accepted rules to catch 6 duplicates).
+- [ ] **C20. Nothing to build — `docs/24-improvement-research.md` is down to two
+  measurements to take DURING the 4th run.** Everything else there is done or refuted
+  (the reasoning stays in docs/24 — B3's byte attribution was wrong by two orders of
+  magnitude, B6 would have destroyed 14 accepted rules to catch 6 duplicates).
 
-  Both are now decisions **for the 4th run**, not archive questions — the 2026-07-06
-  archive is being dropped rather than preserved, so neither is settled by replay.
+  Neither is settled by replay: the 2026-07-06 archive is being dropped.
   * ~~**B4**~~ **resolved** (harness `27873ef`): the lens's zero yield measured its own
     "BIAS STRONGLY TO NO_ACTION" instruction, not the rows, so neither deleting it nor
     re-measuring the skip-gate was the right move. The prior is gone, the bar stayed.
