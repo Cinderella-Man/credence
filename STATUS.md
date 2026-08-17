@@ -190,11 +190,15 @@ rather than to this section.
     same commit or the gate fails on invariant 4.
 
   **Not decisions, still open:**
-  * **`corpus_whitelist_validator` has never run — no batches staged, no reports**
-    (re-measured 2026-08-17; not merely "its snapshot is stale"). Re-stage with
-    `prepare_batches.sh` first: its copy is 2026-07-03 and ~1,000 rows over the live
-    whitelist. **Yours to start** — one billed Claude session per 100-row batch, ~60
-    of them, hours of wall-clock.
+  * **`corpus_whitelist_validator` is now staged and has still never run.** Re-staged
+    2026-08-17 from the live whitelist: 6,131 findings into 62 batches, replacing the
+    2026-07-03 copy that was ~1,000 rows out. Non-destructive (there were no reports to
+    clear) and it leaves the repo clean — `data/` is gitignored.
+
+    **Starting it is yours** — `validate_loop.sh` spends one billed Claude session per
+    batch, ~62 of them, sleeping between. It is resumable: a batch with a non-empty
+    report is skipped, so it can be run in slices (`validate_loop.sh 3 2` does three
+    batches, two minutes apart).
 
 - [ ] **D6. C12(b) — fire-rate telemetry. Genuinely blocked on the harness's H10/H11,
   re-checked 2026-08-17.** C12(c) is done (`b3ffd62`, `d857b5d`).
