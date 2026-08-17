@@ -20,10 +20,20 @@ defmodule Credence.IdempotencyTest do
     * the **stale-entry** check runs by default and is fast (32 fixtures). It
       stops the ledger rotting: pay one down and this goes red until you delete
       the row.
-    * the **no-new-entries** check is the full ~10-minute sweep and is tagged
-      `:idempotency`, excluded by default:
+    * the **no-new-entries** check is the full ~10-minute sweep. It is tagged
+      `:idempotency` and **runs by default** — the tag is an escape hatch, not an
+      exclusion, because a layer nobody runs is not a gate:
 
-          MIX_ENV=test mix test --only idempotency
+          mix test                              # everything, ~19 min
+          mix test --exclude idempotency        # the fast local loop
+          mix test --only idempotency           # just the sweep
+
+      It can also be SCOPED, which is what the evolution harness's Gate wants —
+      it runs the clone's whole suite once per candidate rule, and sweeping all
+      ~5,200 fixtures to judge one new rule costs ~9 minutes per candidate to
+      answer a question about other rules:
+
+          CREDENCE_IDEMPOTENCY_ONLY=no_manual_max mix test --only idempotency
 
   The sweep is what found T3.12 — a rule renaming `__MODULE` toward the alias
   `MODULE`, producing code that compiles clean and raises at runtime. No parse
@@ -164,13 +174,53 @@ defmodule Credence.IdempotencyTest do
     end
   end
 
+  # The scope the harness Gate uses. Untagged, because it is milliseconds and it
+  # guards the sweep against the two ways a filter goes wrong: matching nothing
+  # (a gate that passes by having no work) and matching everything (no saving).
+  describe "sweep scope" do
+    test "an unset scope sweeps every fix-test file" do
+      assert Idempotency.files(nil) == Idempotency.files([])
+      assert length(Idempotency.files(nil)) > 100, "the unscoped sweep must still be the sweep"
+    end
+
+    test "a named rule narrows to exactly its own fix test" do
+      scoped = Idempotency.files(["no_manual_max"])
+
+      assert length(scoped) == 1
+      assert Path.basename(hd(scoped)) == "no_manual_max_fix_test.exs"
+      assert scoped != Idempotency.files(nil), "scoping that changes nothing saves nothing"
+    end
+
+    test "several rules narrow to several files" do
+      scoped = Idempotency.files(["no_manual_max", "no_manual_min"])
+      assert length(scoped) == 2
+    end
+
+    # A name nobody has is the dangerous case: it must be visibly empty, not
+    # silently the whole suite.
+    test "an unknown rule narrows to nothing rather than to everything" do
+      assert Idempotency.files(["no_such_rule_exists"]) == []
+    end
+
+    test "the environment is parsed as a comma-separated list" do
+      System.put_env("CREDENCE_IDEMPOTENCY_ONLY", " a , b ")
+      assert Idempotency.scope_from_env() == ["a", "b"]
+
+      System.put_env("CREDENCE_IDEMPOTENCY_ONLY", "")
+      assert Idempotency.scope_from_env() == nil
+    after
+      System.delete_env("CREDENCE_IDEMPOTENCY_ONLY")
+    end
+  end
+
   @tag :idempotency
   @tag timeout: 900_000
   test "no fixture outside the ledger is non-idempotent" do
     ledgered = MapSet.new(@ledger)
 
     offenders =
-      Idempotency.files()
+      Idempotency.scope_from_env()
+      |> Idempotency.files()
       |> Enum.flat_map(fn file ->
         file
         |> Idempotency.fixtures_of()

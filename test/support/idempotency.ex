@@ -27,12 +27,44 @@ defmodule Credence.Idempotency do
 
   @dirs ["test/pattern", "test/semantic", "test/syntax"]
 
-  @doc "Every fix-test file, sorted."
-  @spec files() :: [String.t()]
-  def files do
-    @dirs
-    |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_fix_test.exs"))
-    |> Enum.sort()
+  @doc """
+  Every fix-test file, sorted — or just the ones belonging to `only`.
+
+  `only` is a list of rule snake names (`["no_manual_max"]`); `nil` means all.
+
+  The scope exists for the evolution harness's Gate, which runs the clone's whole
+  suite once per candidate rule. Sweeping all ~5,200 fixtures to judge one new rule
+  costs ~9 minutes per candidate and answers a question nobody asked — whether
+  some OTHER rule is idempotent. Scoped to the candidate it is seconds, and it is
+  the check the Gate actually wants.
+  """
+  @spec files(nil | [String.t()]) :: [String.t()]
+  def files(only \\ nil) do
+    all =
+      @dirs
+      |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_fix_test.exs"))
+      |> Enum.sort()
+
+    case only do
+      nil -> all
+      [] -> all
+      names -> Enum.filter(all, &(Path.basename(&1, "_fix_test.exs") in names))
+    end
+  end
+
+  @doc """
+  The scope from the environment, as `files/1` wants it.
+
+  `CREDENCE_IDEMPOTENCY_ONLY=no_manual_max,no_manual_min` narrows the sweep;
+  unset or blank sweeps everything.
+  """
+  @spec scope_from_env() :: nil | [String.t()]
+  def scope_from_env do
+    case System.get_env("CREDENCE_IDEMPOTENCY_ONLY") do
+      nil -> nil
+      "" -> nil
+      s -> s |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
+    end
   end
 
   @doc """

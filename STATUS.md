@@ -111,20 +111,6 @@ rather than to this section.
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
-- [ ] **B1b. The Gate runs the clone's FULL suite per candidate — and `mix test` just
-  got ~9 minutes longer.** `Gate.phase_args(:non_corpus)` is `["--exclude", "corpus"]`
-  (`lib/cev/evolve/gate.ex:589`) and `attempt/2` runs `mix test` with no file list
-  (`:560`), once per candidate, with retries. Now that `:idempotency` runs by default,
-  every one of those gains the ~9-minute sweep, under a 1800 s cap
-  (`Config.gate_test_timeout_s`) that used to have 5× headroom and now has ~1.6×.
-  Decide before the 4th run:
-  * add `--exclude idempotency` to `phase_args(:non_corpus)`, mirroring CI — fast, but
-    a generated rule can then ship non-idempotent, which is the blind spot that let the
-    sweep sit red across four rules; or
-  * scope the sweep to the candidate's own fixtures, which is the check the Gate
-    actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
-    needs the sweep to take a scope.
-
 - [ ] **B9. Only the flip is left — preflight is green up to it.** Run 2026-08-17: it
   passes the clone check (right path, right branch), the dataset check, and the secrets
   check, then halts on the mode interlock exactly as designed, reading the mode from the
