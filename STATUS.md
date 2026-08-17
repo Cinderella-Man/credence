@@ -104,8 +104,15 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B9. `mix cev.preflight` green, then flip this file to `PRODUCING`.**
-  The flip is deliberate and last; preflight now genuinely enforces it.
+- [ ] **B9. Only the flip is left — preflight is green up to it.** Run 2026-08-17: it
+  passes the clone check (right path, right branch), the dataset check, and the secrets
+  check, then halts on the mode interlock exactly as designed, reading the mode from the
+  ACCEPTING repo's STATUS.md. Nothing else is owed.
+
+  Note it halts inside `static_checks!()`, BEFORE `reconcile!()` — which does
+  `git reset --hard`, `git clean -fd` and a **`git push`** on the clone. So preflight is
+  safe to run for a status read while the mode blocks, and stops being safe the moment
+  the mode is flipped. Flip it last, deliberately, as the item always said.
 
 ## C. Harness loop quality (valuable before Phase 9, not gating it)
 
