@@ -139,6 +139,41 @@ hazard is gone at the source and both gates are concurrent again. A gate in
 both rounds, so it cannot quietly come back — and perturbing two rules to share
 a name turns it red naming both.
 
+### A8. Test fixtures share module names on a scale that makes concurrent compilation unsafe — [MEASURED]
+
+Measured across `test/semantic` and `test/syntax` fixtures: **413 say
+`defmodule M`, 304 say `Example`, 167 say `Solution`**, plus a long tail.
+
+Any gate that COMPILES fixtures — `pipeline_witness`, `dispatch_contention`, the
+rule-card truth gates — races against any other test compiling the same name,
+because the Erlang code server is global and `compile_and_capture/1` deletes the
+modules it created. The symptom is the worst one available: a healthy rule
+reported as **dead**. Observed exactly that way on `NoMapUpdateMissingKey`, whose
+fixtures are `defmodule Example` — unwitnessed in a full run, green alone.
+
+Contained for now by making the compiling gates `async: false`, which is what
+`dispatch_contention_test.exs` already did. That is containment, not a cure:
+every future compiling test has to remember, and the underlying hazard is still
+there.
+
+**Three real fixes, in increasing order of ambition:**
+
+1. **Rename the fixtures.** Mechanical but not trivial — a handful of rules are
+   ABOUT module names (`FixPlugDependencyModuleOrder`,
+   `FixCyclicStructReference` were both broken by exactly this rename in their
+   doc examples and had to be reverted), so it needs the truth gates green after
+   every batch.
+2. **Serialise `compile_and_capture/1`** behind a lock. Fixes tests and
+   production in one move — two concurrent `Credence.analyze/1` calls on files
+   defining the same module race today, which is a real library-level defect and
+   not only a test one. Costs suite wall-clock, since the suite is compile-heavy.
+3. **Compile into a unique namespace.** Correct in principle, but it means
+   rewriting the user's module names before compiling and mapping diagnostics
+   back, which is a large surface for a subtle class of bug.
+
+(2) is the one worth pricing first: **the production race is the finding here**,
+and the test flake is only how it was noticed.
+
 ### A7. The Semantic backfill is done, and it REFUTED its own motivation — [DONE]
 
 The argument for backfilling Semantic was that it would give that round a

@@ -47,7 +47,22 @@ defmodule Credence.PipelineWitnessTest do
   that the rule belongs in the Pattern phase, where its `fix/2` transplants
   unchanged.
   """
-  use ExUnit.Case, async: true
+  # `async: false`. This gate COMPILES every candidate fixture of every Semantic
+  # and Syntax rule, and those fixtures share module names on a scale that makes
+  # concurrent compilation unsafe: 413 say `defmodule M`, 304 say `Example`, 167
+  # say `Solution`. The Erlang code server is global, so two async tests
+  # compiling `Example` race — one deletes the module the other is mid-check on —
+  # and the symptom is this gate reporting a healthy rule as DEAD.
+  #
+  # Observed exactly that way: `NoMapUpdateMissingKey`, whose fixtures are
+  # `defmodule Example`, reported as unwitnessed in a full run and green when the
+  # file was run alone. A false "this rule is dead" is the most expensive kind of
+  # flake here, because the whole point of this gate is to be believed.
+  #
+  # Serialising is the containment, not the cure. See
+  # `docs/24-improvement-research.md` §A8 for the real fix and why it was not
+  # done at the same time.
+  use ExUnit.Case, async: false
 
   # Builds an index over every rule test file and probes 290 rules; ~4 s total,
   # but it is I/O- and compile-bound in a way an ordinary unit test is not, and
