@@ -48,7 +48,7 @@ defmodule Credence.FixOrDropTest do
   third way.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 9 rules; 5 remain. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules; 2 remain. May only SHRINK.
   #
   # Paid down the same day:
   #   * `NoRedundantListTraversal` — 13 findings; see below.
@@ -84,6 +84,21 @@ defmodule Credence.FixOrDropTest do
   #     repeated-variable match constraint: executed, `f(:a, {:b, 2})` went from
   #     `:nomatch` to `2`, compiling and warning-free. `other_params_reference?/2`
   #     closes it.
+  #   * `NoManualStringReverse` — 1, NARROW. Same defect and same repair as its
+  #     sibling `NoCodepointStringReverse`: an arity-blind `reassemble_call?/1` on
+  #     the check side accepted `Enum.join("-")`, which is a different program, not
+  #     an unfixed finding.
+  #   * `NoMapKeysOrValuesForIteration` — 2, MIXED, and it turned up a SECOND
+  #     silent miscompilation. WIDEN: `rebuild_call/2` gained the Erlang-capture
+  #     clause (`&:queue.is_empty/1`), which had been declining since row 54.
+  #     NARROW/FIX: `wrap_arg/2`'s catch-all passed an unrecognised callback
+  #     THROUGH while the map argument was still rewritten, breaking the invariant
+  #     `wrap_fns/2` documents above itself. Executed, with `cb = fn v -> v > 0 end`
+  #     and `m = %{a: -1, b: 2}`, `Enum.all?(Map.values(m), cb)` returned `false`
+  #     and `Enum.all?(m, cb)` returned `true` — the callback receives `{:a, -1}`,
+  #     and a tuple outranks any integer in Erlang term order. `safe_callback?/1`
+  #     now asks `wrap_arg/2` directly instead of re-listing the accepted shapes,
+  #     which is what let the two drift apart.
   #
   # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
@@ -98,10 +113,7 @@ defmodule Credence.FixOrDropTest do
   #   {:crashed, _}   — `fix_patches/2` raised. Crash isolation makes it silent.
   @ledger [
     {Credence.Pattern.NoListAppendInRecursion, "1e554d1fbc60"},
-    {Credence.Pattern.NoListAppendInRecursion, "717abec90223"},
-    {Credence.Pattern.NoManualStringReverse, "dd3155e6b3a1"},
-    {Credence.Pattern.NoMapKeysOrValuesForIteration, "42bbd80a936a"},
-    {Credence.Pattern.NoMapKeysOrValuesForIteration, "e35671a7b522"}
+    {Credence.Pattern.NoListAppendInRecursion, "717abec90223"}
   ]
 
   defp hash(source),

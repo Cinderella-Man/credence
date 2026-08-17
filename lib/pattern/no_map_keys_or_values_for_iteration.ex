@@ -307,11 +307,35 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     # we can destructure its head uniformly.
     case capture_to_fn(cb) do
       {:fn, _, _} = converted -> wrap_cb(converted, map_fn)
-      _ -> cb
+      # A multi-arity capture (`&1` and `&2`) cannot be destructured against a
+      # single `{k, v}` pair. Refuse rather than pass it through, for the same
+      # reason as the catch-all below.
+      _ -> :no
     end
   end
 
-  defp wrap_arg(other, _map_fn), do: other
+  # Anything else — most importantly a BARE VARIABLE holding a function, as in
+  # `Enum.all?(Map.values(m), cb)`.
+  #
+  # This used to be `do: other`, passing the argument through untouched, and it
+  # broke the invariant `wrap_fns/2` documents directly above. Every one of
+  # `@fixable_funcs` (`all?`, `any?`, `count`, `empty?`, `frequencies`,
+  # `frequencies_by`) takes the enumerable plus an optional CALLBACK and nothing
+  # else, and `enum_args` excludes the enumerable — so there is no legitimate
+  # non-callback argument here to pass through. `safe_callback?/1`'s own catch-all
+  # returns `true`, so a bare variable cleared `fixable?/2`, the rule fired, and
+  # the map argument was rewritten while the callback was left expecting a value.
+  #
+  # Executed, with `cb = fn v -> v > 0 end` and `m = %{a: -1, b: 2}`:
+  #
+  #     Enum.all?(Map.values(m), cb)   # => false
+  #     Enum.all?(m, cb)               # => true
+  #
+  # because the callback now receives `{:a, -1}` and a tuple compares greater than
+  # any integer in Erlang term order. It compiles, warns about nothing, and
+  # returns a different answer — the exact silent behaviour change the invariant
+  # above says is worse than the row-54 crash it replaced.
+  defp wrap_arg(_other, _map_fn), do: :no
 
   # `fn p1, ...others -> body`  →  `fn <kv_pattern(p1)>, ...others -> body`
   # Multi-clause lambdas: each clause is rewritten independently.
@@ -404,12 +428,27 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     {{:., [], [{:__aliases__, [], mod}, func]}, [], [arg]}
   end
 
-  # Anything else — notably an ERLANG module capture, `&:queue.is_empty/1`,
-  # whose module segment Sourceror renders as `{:__block__, _, [:queue]}` rather
-  # than `{:__aliases__, _, [...]}`. The two clauses above cover a bare local and
-  # an Elixir alias; this one used to be a `FunctionClauseError` that took the
-  # whole fix script down with it (escalation ledger row 54), which meant the one
-  # rule that broke the run was the one rule that could never be named.
+  # `&:queue.is_empty/1`  →  `:queue.is_empty(arg)`
+  #
+  # Sourceror renders an Erlang module segment as `{:__block__, _, [:queue]}`, not
+  # `{:__aliases__, _, [...]}`, so this shape fell to the `:no` fallback below and
+  # the rule reported a finding it declined to repair. The dot's left side is
+  # rebuilt as the BARE atom rather than the `:__block__` wrapper —
+  # `prefer_erlang_float.ex:200` already emits `{{:., [], [:erlang, :float]}, [],
+  # [operand]}` and ships with green fix tests, so that shape is known to render
+  # correctly through this repo's patch pipeline.
+  defp rebuild_call({{:., _, [{:__block__, _, [mod]}, func]}, _, []}, arg)
+       when is_atom(mod) and is_atom(func) do
+    {{:., [], [mod, func]}, [], [arg]}
+  end
+
+  # Anything else. Kept as the crash-isolation net: this used to be a
+  # `FunctionClauseError` that took the whole fix script down with it (escalation
+  # ledger row 54), which meant the one rule that broke the run was the one rule
+  # that could never be named. Returning `:no` is what makes an unrecognised
+  # capture a decline instead of a crash — and now that `check/2` and the fix agree
+  # on the shapes above, a decline here is no longer a reported-but-unfixed
+  # finding either.
   defp rebuild_call(_ref, _arg), do: :no
 
   # ════════════════════════════════════════════════════════════════
@@ -501,9 +540,24 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   # arg (`&1`) — never a call.
   defp safe_callbacks?(args), do: Enum.all?(args, &safe_callback?/1)
 
-  defp safe_callback?({:&, _, [{:/, _, _}]}), do: true
-  defp safe_callback?({:&, _, [body]}), do: ends_in_literal_or_var?(body)
-  defp safe_callback?(_), do: true
+  # Two independent conditions, and the second is `wrap_arg/2` itself.
+  #
+  # Asking the fix directly is what keeps `check/2` and `fix_patches/2` in exact
+  # parity: any callback shape the fix refuses is a shape the check must not
+  # report. Re-stating the accepted shapes here as their own list is what let them
+  # drift — `safe_callback?/1`'s catch-all returned `true` while `wrap_arg/2`'s
+  # returned the argument untouched, so a bare variable cleared this predicate and
+  # the map argument was then rewritten out from under it.
+  #
+  # `map_fn` does not affect accept-vs-refuse (it only picks which slot of the
+  # `{k, v}` pair the pattern binds), so `:values` stands in for both.
+  defp safe_callback?(arg) do
+    range_safe_callback?(arg) and wrap_arg(arg, :values) != :no
+  end
+
+  defp range_safe_callback?({:&, _, [{:/, _, _}]}), do: true
+  defp range_safe_callback?({:&, _, [body]}), do: ends_in_literal_or_var?(body)
+  defp range_safe_callback?(_), do: true
 
   @recurse_ops [
     :==,
