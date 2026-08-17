@@ -184,8 +184,19 @@ rather than to this section.
     whitelist. **Yours to start** — one billed Claude session per 100-row batch, ~60
     of them, hours of wall-clock.
 
-- [ ] **D6. C12(b) — fire-rate telemetry. Blocked on the harness's H10/H11.**
-  C12(c) is done (`b3ffd62`, `d857b5d`); nothing here is waiting on a probe.
+- [ ] **D6. C12(b) — fire-rate telemetry. Genuinely blocked on the harness's H10/H11,
+  re-checked 2026-08-17.** C12(c) is done (`b3ffd62`, `d857b5d`).
+
+  The blocker is real, and worth stating so nobody re-tests it: C12(b) asks for fire rate
+  **over feedstock** — "a rule that has fired only on its *birth row* after N passes is
+  flagged for generalization-or-retirement". That needs per-rule fire records across
+  passes plus the link back to the row that created the rule, which is precisely H10
+  (per-rule provenance) and H11 (per-pass report).
+
+  In particular credence's own per-rule corpus counts (`accepted_findings_budget.txt`,
+  `mix credence.corpus --budget`) are **not** a substitute, and reaching for them is the
+  obvious wrong move: the corpus premise is "well-reviewed code, credence should find
+  nothing", so zero findings there is the desired state, not a retirement signal.
 
 - [ ] **D7. T5.7 — the C9 half is closed; C10/C16 are scope decisions, not defects.**
   Re-checked 2026-08-17 against the tree, because as written this item invited work
