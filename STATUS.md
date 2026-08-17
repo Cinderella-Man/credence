@@ -104,24 +104,6 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B4a. Decide how row indices survive the NEXT run.** The immediate
-  problem is solved: the `0*01` glob matched **230** dirs at run time and **282**
-  now, so index 225 named
-  `095_004_multi_currency_money_with_fx_conversion_01` then and
-  `077_001_interval_tree_…` today — but `var/run/rows.jsonl` records `task`
-  beside `index` for every row, so the mapping was never lost, only
-  unmaterialised. `harness/docs/REQUEUE_ROWS.md` now carries all **28**
-  re-queue rows resolved to names, and **all 28 task directories still exist**.
-  No dataset pin needed, and pinning would have discarded 52 tasks the next run
-  wants.
-
-  What remains is a choice for the next run, not this one: either make the
-  orchestrator resume by **task name** rather than bare index (`var/run/progress`
-  stores an index today), or pin `:task_glob`/the dataset SHA per run so indices
-  mean something for the run's lifetime. **Trade-off:** names are stable and
-  verbose; a pinned SHA keeps indices meaningful but freezes the corpus of tasks
-  a run can see.
-
 - [ ] **B5. Minimum in-loop gate residue: T4.2 (c)** [H]. **(d) is DONE**
   (harness `3f7e64a` + credence `6b64aba`): a BUGFIX report whose repro does not
   make the accused rule fire now fails classification, via the new
@@ -148,10 +130,6 @@ rather than to this section.
 - [ ] **B8. Quota headroom** for the 26-row transient tail (11 classifier
   timeouts, 7 `:closed`, 5 HTTP 429, 3 implementer kills): raise the Mimo
   quota or add backoff.
-- [ ] **B8a. Rotate `var/run/usage.jsonl` before the run.** It spans every run to
-  date (1.2 MB) and totals far above the ceiling, so `Cev.Budget` logs an error and
-  starts the count from $0.00 — the in-run ceiling still applies, but **resume no
-  longer accounts prior spend**. `budget.ex:128` says rotate or archive; one `mv`.
 - [ ] **B9. `mix cev.preflight` green, then flip this file to `PRODUCING`.**
   The flip is deliberate and last; preflight now genuinely enforces it.
 
