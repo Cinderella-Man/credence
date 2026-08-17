@@ -51,9 +51,16 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
    the tree.
 
 The rounds run one after another; if syntax problems are still there, the
-semantic and pattern rounds are skipped. The Pattern round is skipped entirely
-if the code doesn't compile — rewriting broken code risks wasting an AI's
-retry.
+semantic and pattern rounds are skipped.
+
+The Pattern round **used to** be skipped entirely when the code did not compile.
+It no longer is (`lib/pattern.ex:85-99`). The gate was measured and it cost too
+much: 625 of 1,724 Pattern test fixtures parse but do not compile, and 292 of
+those have a Pattern rule firing that never ran. What replaced it is a *relative*
+oracle — `RuleHelpers.compiles_no_worse?/2` records the file's pre-existing
+compile errors as a baseline and reverts any rule whose output adds to them. On
+source that compiles, the baseline is empty and this reduces exactly to the old
+`compiles?/1` check.
 
 ## The Pattern round — what a rule looks like
 

@@ -107,7 +107,7 @@ Ordered by value = (does anything catch it) × blast radius × member count.
 **Why.** The generator reasons about identifiers, not types: `payments` is "a map", `table` is "a name", `timers` is "a list of things with refs", so it applies whatever API reads well over that noun. Erlang BIFs badarg at runtime rather than failing to compile. Elixir 1.18+'s set-theoretic checker catches only the fraction where the type is locally inferable.
 
 **Failure modes (selected, all verified).**
-- `map |> Enum.sort_by(...) |> Map.values()` — **zero diagnostics**, `BadMapError` on every input. Every `Enum.*`/`Stream.*` returns a list; the whole class "`Map.*` applied to an `Enum.*` result" is one cheap AST check.
+- `map |> Enum.sort_by(...) |> Map.values()` — **zero diagnostics**, `BadMapError` on every input. ⚠️ **The generalisation this line used to carry was wrong; the failure mode is not.** It read "Every `Enum.*`/`Stream.*` returns a list; the whole class `Map.*` applied to an `Enum.*` result is one cheap AST check." Corrected 2026-08-17 when the rule was built (see §5.1 below and `STATUS.md` D11a). The narrow claim — `Enum.sort/1,2` and `Enum.sort_by/2,3` are spec'd `:: list`, so `Map.values/1` on the result raises for every input including `%{}` — is executed and holds.
 - `Map.get(opts, :key)` where `opts` is a keyword list — `BadMapError` **including for `[]`**, so even the default-args path crashes.
 - `:ets.new("#{name}_data", [...])` — first arg must be an atom; presents as a supervisor restart loop, not as an ETS error.
 - `:ets.new(:t, [:named_table, :set, :public, :keypos, 1])` — the `{:keypos, N}` tuple flattened into two bare elements. Parses, compiles, zero diagnostics, `ArgumentError` every call.
@@ -117,7 +117,55 @@ Ordered by value = (does anything catch it) × blast radius × member count.
 - `{inserted_at, _} = DateTime.to_unix(...)` — scalar destructured as a 2-tuple; compiles, `MatchError` on every call, function 100% dead.
 - `{:noreply, state} |> maybe_process()` — the reply tuple, not the state, reaches the helper. Corollary worth recording: if the helper is a pass-through the bug *disappears*, so the same shape is sometimes harmless.
 
-**Highest-value catch: `no_enum_sort_then_map_values`.** Zero diagnostics, unconditional crash, and it generalises to a whole precise AST class. Runner-up on blast radius: `fix_ets_new_string_name`.
+**Highest-value catch: `no_enum_sort_then_map_values`.** Zero diagnostics, unconditional crash. Runner-up on blast radius: `fix_ets_new_string_name`.
+
+#### 5.1 — the class does not exist; the rule does (built 2026-08-17)
+
+This entry said the failure mode "generalises to a whole precise AST class".
+Building it refuted that, on three independent counts. Recording it here because
+the *premise* is what was wrong, and the premise is what a future reader would
+otherwise reuse.
+
+**`Stream.*` never returns a list — it returns a struct, which is a map.**
+`%Stream{}` is `defstruct enum: nil, funs: [], accs: [], done: nil`, and every
+lazy combinator builds one. Executed:
+
+```
+Map.values(Stream.map([1,2,3], & &1))  # => [[1, 2, 3], nil, Stream, [#Function<…>], []]
+Map.keys(Stream.filter([1,2], & &1))   # => [:enum, :done, :__struct__, :funs, :accs]
+```
+
+No raise. The `Stream` half of "`Map.*` applied to an `Enum.*`/`Stream.*`
+result" describes the empty set, so it is not a narrowing question — it is a
+correction.
+
+**`Enum.*` is not uniformly list-returning.** `group_by/2,3`, `frequencies/1`
+and `frequencies_by/2` are spec'd `:: map`. `into/2,3` is `:: Collectable.t()`,
+so it is undecidable from the function name — `Enum.into(x, %{})` gives a map
+and `Enum.into(x, [])` gives a list (both executed; only the second raises).
+`reduce/2,3` returns the accumulator, a map whenever the seed is. And
+`at/2,3`, `find/2,3`, `fetch!/2`, `random/1`, `max_by`/`min_by` return an
+*element*, which is a map whenever the enumerable holds maps.
+
+**`Map.*` is not uniformly raising.** `Map.new/1,2` is the constructor and
+*wants* a list. `Map.take/2` and `Map.drop/2` take a list as their **second**
+argument, so an `Enum.*` call there is required rather than a defect.
+
+**Measured over the 1 GB corpus (500 packages):** 350 candidate sites of the
+ungated class, **zero** true positives. 207 of 319 pipe-spelling sites (65%) are
+`Map.new`. The rule's own headline shape — `Map.values`/`Map.keys` on an `Enum`
+result — occurs 8 times and is **correct all 8 times**, every one fed by
+`Enum.into`, `Enum.group_by` or `Enum.reduce`. Stepwise attrition of the firing
+set: 319 → 112 (drop `Map.new`) → 39 (drop map-returning sources) → **0** (drop
+element-returning sources). The exclusion set is not a refinement of the class;
+it *is* the class, and its complement over real Elixir is empty.
+
+What shipped is therefore one producer pair (`Enum.sort/1,2`,
+`Enum.sort_by/2,3`) feeding one consumer (`Map.values/1`) as an immediate
+neighbour — the scope `docs/18`'s disposition had already specified, now with
+the measurement behind it. `Map.keys/1` on the same result raises identically
+and has the same determinate repair; it is left unbuilt because no field
+observation produced it. That remains a banked observation, not a rule.
 
 ---
 
@@ -726,7 +774,7 @@ Three failure modes recur across dozens of rules and matter more than any indivi
 
 Ranked by consequence severity — how bad the failure is and how invisible — not by how many rules were written about it. Phase in brackets.
 
-1. **`Map.*` applied to an `Enum.*`/`Stream.*` result** *[pattern/AST]*. From `no_enum_sort_then_map_values`. Zero diagnostics (verified `[]`), unconditional `BadMapError` on every input. Cheap, precise AST check; generalises across `values/1`, `keys/1`, `get/2`, `fetch/2`, `put/3`. Extend to `Map.get/2,3` on a keyword-list parameter (`Map.get([], :k)` raises even on the empty default).
+1. ~~**`Map.*` applied to an `Enum.*`/`Stream.*` result**~~ **BUILT 2026-08-17, and the generalisation was refuted in the building** *[pattern/AST]*. From `no_enum_sort_then_map_values`. Zero diagnostics (verified `[]`), unconditional `BadMapError` on every input — that half holds and is now `lib/pattern/no_enum_sort_then_map_values.ex`. The rest of this line did not: "generalises across `values/1`, `keys/1`, `get/2`, `fetch/2`, `put/3`" is refuted by measurement (350 corpus sites, 0 true positives, 65% of them `Map.new` which wants a list), and the `Stream.*` half is refuted by execution (`%Stream{}` is a struct, so `Map.values/1` on it does not raise). See §5.1. The `Map.get/2,3`-on-a-keyword-list extension is a *different* failure mode with its own evidence and is still open.
 2. **`send(self(), …)` inside a `Task.*`/`spawn` closure** *[pattern/AST]*. From `no_send_self_in_task`. Completely silent, verified; one-line repair (`parent = self()` outside). Highest fix-safety-to-value ratio in the set.
 3. **Reply-protocol violations in `handle_call`/`handle_cast`** *[pattern/AST]*. Union of `no_raw_send_in_genserver_handle_call`, `no_send_to_from_in_handle_call`, `no_genserver_reply_in_handle_cast`, `no_genserver_reply_in_handle_call`. Detect: `from` destructured as `{pid, _}`; `send/2` to a pid derived from `from`; `GenServer.reply/2` with a non-`from` first argument. Consequences are hangs and cross-talk, nothing is logged, and no live rule mentions `GenServer.reply` at all. Report-only is sufficient; the repair (`GenServer.reply(from, r)`) is safe but the surrounding restructure sometimes is not.
 4. **OTP callback return shapes** *[pattern/AST]*. `Agent.update` callback returning `{:ok, state}` (verified: call returns `:ok`, state silently becomes `{:ok, %{count: 1}}`); `init/1` returning a bare map/struct/atom. Both verified to emit zero diagnostics. Structural, decidable, safely repairable.
