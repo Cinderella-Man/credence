@@ -25,9 +25,9 @@
 # The cap and the ledger are frozen in that test. Changing either is a
 # deliberate, reviewable edit — which is the whole mechanism.
 #
-# TOTAL 6357 accepted findings across 87 rules.
+# TOTAL 6360 accepted findings across 88 rules.
 #      15 over the cap of 100 (grandfathered; they hold 4734 = 74% of the debt)
-#      72 at or under the cap
+#      73 at or under the cap
 #
 # Paydown ranking is this file's own order. Top target (docs/16, C13(b)):
 # prefer_heredoc_for_multi_line_doc, 1298 = 20% of the whole budget.
@@ -100,6 +100,7 @@
     3  no_identity_function_in_enum
     3  no_list_foldl
     3  no_manual_min
+    3  no_negative_step_in_string_slice
     2  no_case_tuple_guard_dispatch
     2  no_length_based_indexing
     2  no_missing_require_logger

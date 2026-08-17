@@ -180,6 +180,8 @@ archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:13  pr
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:22  prefer_map_new
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:567  no_case_true_false
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:589  no_case_true_false
+archethic/lib/archethic/contracts/interpreter/library/common/evm.ex:27  no_negative_step_in_string_slice
+archethic/lib/archethic/contracts/interpreter/library/common/evm.ex:65  no_negative_step_in_string_slice
 archethic/lib/archethic/contracts/wasm/contract.ex:112  no_length_comparison_for_empty
 archethic/lib/archethic/contracts/wasm/module.ex:164  prefer_map_new
 archethic/lib/archethic/contracts/wasm/spec.ex:273  prefer_map_new
@@ -1188,6 +1190,7 @@ credo/lib/credo/cli/output/summary.ex:128  prefer_guard_over_if
 credo/lib/credo/cli/output/summary.ex:95  prefer_explicit_binary_arithmetic
 credo/lib/credo/cli/output/summary.ex:96  prefer_explicit_binary_arithmetic
 credo/lib/credo/cli/task/prepare_checks_to_run.ex:20  prefer_map_new
+credo/lib/credo/code/interpolation_helper.ex:274  no_negative_step_in_string_slice
 credo/lib/credo/config_file.ex:157  avoid_length_guard_less_than2
 credo/lib/credo/execution.ex:152  no_doc_false_on_private
 credo/lib/credo/execution.ex:659  no_doc_false_on_private
