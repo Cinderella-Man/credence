@@ -116,10 +116,10 @@ rather than to this section.
 
   Both are now decisions **for the 4th run**, not archive questions — the 2026-07-06
   archive is being dropped rather than preserved, so neither is settled by replay.
-  * **B4.** The `:solved` classifier lens had zero yield, but the proposed replacement
-    let 154 of 238 through against its own bar of 20. With a 4th run happening, the
-    live option is "keep the lens one more run and re-measure now that the outcome
-    atoms reach the classifier" — the delete-it option forecloses that measurement.
+  * ~~**B4**~~ **resolved** (harness `27873ef`): the lens's zero yield measured its own
+    "BIAS STRONGLY TO NO_ACTION" instruction, not the rows, so neither deleting it nor
+    re-measuring the skip-gate was the right move. The prior is gone, the bar stayed.
+    Next run's measurement: its non-NO_ACTION count against this run's zero.
   * **B5. Apply the fix, do not re-measure it.** `:rule_name_not_in_closed_set` was 83%
     of classifier errors and the names were real live rules; running the `fires?` probe
     when a resolvable rule sits outside the closed set recovers an estimated ~43 rows

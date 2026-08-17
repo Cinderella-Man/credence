@@ -309,7 +309,7 @@ contains transcript that classify never saw. It is the right corpus for the 713
 `no_action` rows (nothing ran after classify) and an overestimate for the rest.
 That does not change the conclusion — the proposed categories are small in both.
 
-### B4. The `:solved` lens yields exactly zero — and the proposed gate for it does not work — [EXPERIMENT RUN]
+### B4. The `:solved` lens yields exactly zero — and the proposed gate for it does not work — [EXPERIMENT RUN] · [RESOLVED 2026-08-17: neither option, see below]
 
 The yield is confirmed independently. Of the **238** rows where solve succeeded
 and rule-gen ran: 232 `no_action`, 3 `transient_abort`, 2 `raised`, 1 `gave_up`.
@@ -354,6 +354,31 @@ differently next time.
 
 Either is defensible. What is not defensible is shipping A, and what is
 seductive is shipping B.
+
+**Resolved 2026-08-17 — a third option, and neither of the two above.** Both options
+inherit an unexamined premise: that zero yield is a property of the ROWS. It is a property
+of the INSTRUCTION. `prompt.ex`'s `lens(:solved)` opened with *"BIAS STRONGLY TO NO_ACTION:
+most clean solves have no rule-worthy residual"*, which this entry notes ("the design and
+the data agree") without drawing the consequence — the run measured whether the model obeys
+an instruction, and it did. Deleting the lens on that evidence confuses "we told it to say
+nothing" with "there is nothing to say".
+
+Option 2 also has a circularity: predicate B exists to SKIP this lens, so paying 5.5 hours
+to run a zero-yield lens in order to validate the skip-gate buys, at best, the knowledge
+that you can skip something you could have deleted.
+
+**Done instead (harness `27873ef`): the prior was removed and the bar kept.** "Name the
+concrete correctness/idiom flaw and be confident it will not fire on ordinary real code"
+is what actually prevents over-firing; it now closes the lens as a condition on proposing,
+rather than opening it as a prediction about the answer. NO_ACTION is still named as a
+normal and correct outcome.
+
+The risk is budget, not correctness — a looser lens can spend implementer runs on proposals
+that get rejected, and it cannot ship a bad rule, since T4.2's five evidence gates, the
+Gate and the corpus over-firing scan all sit downstream of it. **The measurement next run
+is the `:solved` lens's non-NO_ACTION count against this run's zero.** If it is still zero
+with the thumb off the scale, that is the finding this entry wanted, and deleting the lens
+becomes well-founded rather than inferred.
 
 ### B5. `:rule_name_not_in_closed_set` is 83% of classifier errors and is recoverable
 
