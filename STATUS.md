@@ -273,19 +273,20 @@ rather than to this section.
   clauses need one fixture each, and the assertion has to be the decline. For many
   survivors no such input exists that anyone would write.
 
-- [ ] **D11a. Work the build list — 3 buildable items left.**
+- [ ] **D11a. Work the build list — 2 buildable items left.**
   `docs/23-build-list.md` is the list; every candidate was verified by running its
   target through the live pipeline, and each entry carries its own hazards. Of the
   25 rebuild/salvage candidates, 17 are repaired.
 
   What remains, after report-only was closed as an option (2026-08-17):
 
-  * **Buildable (3):** `fix_when_guard_in_with_clause` (**new** — the `when`-guard
+  * **Buildable (2):** `fix_when_guard_in_with_clause` (**new** — the `when`-guard
     build turned up a third shape docs/18 dispositioned wrongly; its repair is a
     move across the `<-`, not a deletion, and the locator already classifies it);
-    `fix_mixed_required_optional_map_keys`; `no_remote_function_in_guard` (**read
-    docs/17 entry 11 first** — three recorded corruption paths, one emitting output
-    that does not parse).
+    `no_remote_function_in_guard` (**read docs/17 entry 11 first** — three recorded
+    corruption paths, one emitting output that does not parse; and note its own
+    disposition specifies *report-only*, so it may belong with the blocked three
+    rather than here).
   * **Not a rule build:** `fix_undefined_struct_in_pattern` is a redirect — extend
     the live `Semantic.FixCyclicStructReference`.
   * **Dead as specified (2):** the GenServer reply-protocol pair and

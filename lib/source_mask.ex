@@ -162,6 +162,43 @@ defmodule Credence.SourceMask do
   def blank?(_byte), do: false
 
   @doc """
+  The nearest bracket **opener** enclosing `pos`, as `{:ok, index, byte}`, or `:none`.
+
+  Walks backwards from `pos`, skipping any bracket pair that closes before it, so
+  `%{a: f(1, 2), …}` reports the `{` and not the `(`. `byte` is the opener itself —
+  `?(`, `?[` or `?{` — which is what tells a caller whether it is inside a map, a list
+  or a call without a second scan.
+
+  Give it a **shadow**, not raw source. A bracket inside a string or a comment is
+  indistinguishable from a real one otherwise, and the only reason the index it
+  returns is usable against the raw source is `mask/1`'s byte-length invariant. Note
+  that `Credence.Syntax.FixKeywordBeforePositionalArgument.find_open_paren/3` is the
+  raw-source predecessor of this function; its own moduledoc records that it "runs
+  straight through a string literal" and compensates with a blunt decline list. It
+  should adopt this, which would let that list shrink — but that is a widen of a
+  shipped rule and needs its own verification, so it has not been done here.
+  """
+  @spec enclosing_opener(String.t(), non_neg_integer()) ::
+          {:ok, non_neg_integer(), byte()} | :none
+  def enclosing_opener(shadow, pos) do
+    (pos - 1)..0//-1
+    |> Enum.reduce_while(0, fn index, depth ->
+      byte = :binary.at(shadow, index)
+
+      cond do
+        byte in [?), ?], ?}] -> {:cont, depth + 1}
+        byte in [?(, ?[, ?{] and depth == 0 -> {:halt, {:ok, index, byte}}
+        byte in [?(, ?[, ?{] -> {:cont, depth - 1}
+        true -> {:cont, depth}
+      end
+    end)
+    |> case do
+      {:ok, index, byte} -> {:ok, index, byte}
+      _depth -> :none
+    end
+  end
+
+  @doc """
   Pairs every source line with its shadow, as `{line, shadow}`.
 
   `mask/1` preserves newlines byte-for-byte, so both splits always produce the

@@ -59,10 +59,10 @@ Two items have since been struck (`no_enum_sort_then_map_values`,
 `no_atom_as_function_name`) and a third closed by one rule rather than the two it
 listed (the `when`-guard pair). Building that pair added `fix_when_guard_in_with_clause`
 — a shape docs/18 dispositioned wrongly, whose repair is a move rather than a
-deletion. **Three buildable items remain:** `fix_when_guard_in_with_clause`,
-`fix_mixed_required_optional_map_keys`, `no_remote_function_in_guard`; plus the three
-blocked on the report-only policy question and `fix_undefined_struct_in_pattern`,
-which is an extension to a live Semantic rule rather than a new rule.
+deletion. **Two buildable items remain:** `fix_when_guard_in_with_clause` and
+`no_remote_function_in_guard`; plus the three blocked on the report-only policy
+question and `fix_undefined_struct_in_pattern`, which is an extension to a live
+Semantic rule rather than a new rule.
 
 * ~~`no_enum_sort_then_map_values`~~ **BUILT 2026-08-17** —
   `lib/pattern/no_enum_sort_then_map_values.ex`. Shipped much narrower than the
@@ -95,7 +95,9 @@ which is an extension to a live Semantic rule rather than a new rule.
   shared `lib/syntax/when_guard_position.ex`. See the note below.
 * `fix_when_guard_in_with_clause` — **NEW, discovered while building the pair.** Not a
   variant of them: the repair is a **move**, not a deletion. See the note below.
-* `fix_undefined_struct_in_pattern`, `fix_mixed_required_optional_map_keys`
+* `fix_undefined_struct_in_pattern`
+* ~~`fix_mixed_required_optional_map_keys`~~ **BUILT 2026-08-17** —
+  `lib/syntax/fix_mixed_required_optional_map_keys.ex`. See the note below.
 
   (`fix_undefined_type_t_in_spec` is **covered**, re-verified 2026-08-17 — but by
   a different reading than this list assumed. `NoBareNamesInSpec` rewrites
@@ -238,8 +240,45 @@ not 8 remaining — and one of the five is not a rule build at all. Workable:
   move across the `<-`, which is why `FixMisplacedWhenGuard` — which only deletes —
   declines it rather than guessing. `WhenGuardPosition` already classifies the shape
   and returns `:none` for it, so this item is a new repair on an existing locator.
-* `fix_mixed_required_optional_map_keys` — Syntax, built as a sibling of the live
-  `Credence.Syntax.FixKeywordBeforePositionalArgument`.
+* ~~`fix_mixed_required_optional_map_keys`~~ **BUILT 2026-08-17**, as the disposition
+  specified: a sibling of the live `Credence.Syntax.FixKeywordBeforePositionalArgument`,
+  gated on the parse error carrying "unexpected expression after keyword list", located
+  by the parser's own `{line, column}`, and REORDERING the keyword entry rather than
+  deleting it.
+
+  Two departures from the disposition, both measured.
+
+  **It arrow-ifies rather than moving the entry last.** The disposition offered either.
+  They are the same map — `%{a: 1, "k" => 2}` repaired either way evaluates to
+  `%{:a => 1, "k" => 2}`, and as a `@type` the two differ only in key order, which a
+  map type does not carry meaning for. Arrow-ify is the better edit: local, so comments
+  and line structure survive; order-preserving; and it never needs to know where the
+  container *ends*, which move-last does. Note that Elixir's own error message
+  recommends reordering — that recommendation is for a human editing one map, not for a
+  rewriter that must not disturb the rest of the file.
+
+  **The decline list is `SourceMask`, not a character blacklist.** The disposition said
+  to "decline outright when the container text contains any of `"` `'` `#` `~` `?` `\`
+  `->`". That is the blunt instrument the sibling rule uses, and it would have declined
+  the FIELD SAMPLE, whose container holds `"k" => 2`-style string keys and `optional(…)`
+  calls. Masking the source instead means a decoy in a string or comment is invisible
+  while a real defect beside a string key is still repaired.
+
+  Scope is narrower than the name suggests, and every boundary was executed. The
+  container must be `{` with `%` immediately before it — which is also what excludes
+  structs, since `%Foo{` has `o` there. A list and a tuple raise the byte-identical
+  error and arrow-ifying them is *invalid* (`[:a => 1, 2]` is `syntax error before:
+  '=>'`), so they decline; their repair is move-last, a different rule with a different
+  argument. `f(a: 1, 2)` is the sibling's. `%Foo{a: 1, "k" => 2}` would parse after the
+  rewrite but the module would stay broken, because a struct cannot take a `=>` key at
+  all — a different defect, so it declines rather than claiming a repair.
+
+  The parser reports the comma immediately AFTER the offending keyword entry, so one
+  entry per pass converges without the rule having to find the run boundary: on
+  `%{a: 1, b: 2, "k" => 3}`, column 17 then column 11 then parses. All of it inside one
+  `fix/1` call, which the single-pass round requires. Self-corruption measured
+  structurally: 0 of 330 `lib/**/*.ex` files altered, since a rule keyed on a parse
+  error cannot touch a file that parses.
 * `no_remote_function_in_guard` — keep only the pattern-move repair; docs/18
   names the exact functions to delete, and docs/17 entry 11 the three corruption
   paths.

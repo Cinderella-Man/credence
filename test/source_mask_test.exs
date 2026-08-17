@@ -344,4 +344,39 @@ defmodule Credence.SourceMaskTest do
       refute SourceMask.blank?(?\n)
     end
   end
+
+  describe "enclosing_opener/2" do
+    defp opener(code, pos), do: SourceMask.enclosing_opener(SourceMask.mask(code), pos)
+
+    test "reports the opener and which kind it is" do
+      assert {:ok, 5, ?{} = opener("x = %{a: 1}", 8)
+      assert {:ok, 4, ?[} = opener("x = [a, b]", 8)
+      assert {:ok, 5, ?(} = opener("x = f(a, b)", 8)
+    end
+
+    # The point of walking BACK rather than taking the nearest opener: a pair that
+    # closes before the position encloses nothing. Here the comma after `f(1, 2)` sits
+    # in the map, not in the call.
+    test "skips a bracket pair that closes before the position" do
+      code = ~S|x = %{a: f(1, 2), "k" => 3}|
+
+      assert :binary.at(code, 16) == ?,
+      assert {:ok, 5, ?{} = opener(code, 16)
+    end
+
+    test "the innermost enclosing opener wins" do
+      assert {:ok, 10, ?{} = opener(~S|x = %{a: %{b: 1}}|, 13)
+    end
+
+    test ":none at the top level and at position zero" do
+      assert opener("x = 1", 4) == :none
+      assert opener("x = 1", 0) == :none
+    end
+
+    # It must run on the shadow: a bracket inside a string is not a bracket. Given the
+    # raw source this would report the `(` inside the literal.
+    test "a bracket inside a string literal is not an opener" do
+      assert opener(~S|x = "f(" <> y|, 12) == :none
+    end
+  end
 end
