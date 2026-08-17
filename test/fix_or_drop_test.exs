@@ -48,7 +48,7 @@ defmodule Credence.FixOrDropTest do
   third way.
   """
 
-  # Frozen 2026-08-17 at 24 violations across 9 rules; 11 remain. May only SHRINK.
+  # Frozen 2026-08-17 at 24 violations across 9 rules; 5 remain. May only SHRINK.
   #
   # Paid down the same day:
   #   * `NoRedundantListTraversal` — 13 findings; see below.
@@ -71,6 +71,19 @@ defmodule Credence.FixOrDropTest do
   #     containing a literal backslash-then-n fired, and the two-character strip
   #     left a dangling backslash escaping the closing quote. Now requires an ODD
   #     backslash run, and peels trailing escapes one at a time.
+  #   * `PreferFunctionClausesForListPatterns` — 3, and a WIDEN. All three were one
+  #     shape: a bare top-level `def` with no `defmodule`. Sourceror returns the
+  #     `def` tuple itself for a one-expression source, so it matched none of the
+  #     fix's three prewalk clauses, while `check/2` ran `convertible/1` on every
+  #     node and reported it. The rule already owned `transform_single_stmt/1`; it
+  #     is now dispatched at the root.
+  #   * `NoGuardEqualityForPatternMatch` — 3, a WIDEN, and it turned up a SILENT
+  #     MISCOMPILATION in shipped code. The all-or-nothing bail is replaced by
+  #     per-variable rebinding (`literal = var`). Separately, `def f(x, {x, y})
+  #     when x == :a` was being rewritten to `def f(:a, {x, y})`, dropping the
+  #     repeated-variable match constraint: executed, `f(:a, {:b, 2})` went from
+  #     `:nomatch` to `2`, compiling and warning-free. `other_params_reference?/2`
+  #     closes it.
   #
   # `NoRedundantListTraversal` details: its 13 findings
   # (count+sum pairs it would never merge) are gone, `check/2` and
@@ -84,17 +97,11 @@ defmodule Credence.FixOrDropTest do
   #                     multiset changed. A bug in the fix, not a scope decision.
   #   {:crashed, _}   — `fix_patches/2` raised. Crash isolation makes it silent.
   @ledger [
-    {Credence.Pattern.NoGuardEqualityForPatternMatch, "043856d1c848"},
-    {Credence.Pattern.NoGuardEqualityForPatternMatch, "1b8090d9e5ff"},
-    {Credence.Pattern.NoGuardEqualityForPatternMatch, "ebdfbb4e3c49"},
     {Credence.Pattern.NoListAppendInRecursion, "1e554d1fbc60"},
     {Credence.Pattern.NoListAppendInRecursion, "717abec90223"},
     {Credence.Pattern.NoManualStringReverse, "dd3155e6b3a1"},
     {Credence.Pattern.NoMapKeysOrValuesForIteration, "42bbd80a936a"},
-    {Credence.Pattern.NoMapKeysOrValuesForIteration, "e35671a7b522"},
-    {Credence.Pattern.PreferFunctionClausesForListPatterns, "2e913809e50c"},
-    {Credence.Pattern.PreferFunctionClausesForListPatterns, "36f7bb2558bb"},
-    {Credence.Pattern.PreferFunctionClausesForListPatterns, "37cfea92ba71"}
+    {Credence.Pattern.NoMapKeysOrValuesForIteration, "e35671a7b522"}
   ]
 
   defp hash(source),
