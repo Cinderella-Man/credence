@@ -90,12 +90,17 @@ rather than to this section.
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
-- [ ] **B1a. The archive is local-only — put the evidence somewhere durable.**
-  `var/archive/run-2026-07-06/` now holds all 83 MB (verified byte-identical,
-  35 entries), so `cev.reset` can no longer destroy it. But `var/` is
-  gitignored, so this survives a reset and not a disk. Part E lifted the
-  reasoning that mattered into committed files; decide whether the raw logs
-  also warrant an off-machine copy before the next run.
+- [ ] **B1a. The 2026-07-06 archive is the only copy of an open experiment's input.**
+  `credence-evolution-harness/var/archive/run-2026-07-06/` (83 MB, 531 files) survives
+  `cev.reset` but not a disk — `var/` is gitignored. It is **not** merely historical:
+  **docs/24 B5 is open and its experiment reads these files** — "replay the 43 archived
+  specs through the reordered gate". `classifier_errors/` holds the 52 logs B5 counts, 44
+  of them carrying `rule_name_not_in_closed_set`. B4 was answered by replaying the same
+  rows. A rerun does not substitute: ~$6 and 5.5 h, and it generates *different* rows.
+
+  So the cheaper resolution is probably not "copy 83 MB somewhere" — it is **run B5's
+  replay while the data exists** (it needs a built clone, which is why it has not been),
+  after which the archive is only history and can be dropped. Either closes this.
 - [ ] **B2. After the merge: reset sister `evolution` onto the new `main`.**
   The sister (`/home/kamil/projects/credence_evolution`, `b83d623`) contains
   **none of the five new meta-gate files** (pipeline_witness,
