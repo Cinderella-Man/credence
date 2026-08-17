@@ -315,11 +315,33 @@ rather than to this section.
   * **Dead as specified (2):** the GenServer reply-protocol pair and
     `no_stream_data_constant_with_range`. Their dispositions require report-only,
     which this project deletes; the failure modes stay banked in docs/17.
-  * **Needs a mechanism decision (1):** `no_process_send_after_infinity` — a fix
-    gated behind an `assumptions/0` safety switch is neither report-only nor
-    unconditional, but `lib/assumptions.ex` carries two switches today and adding a
-    third needs its own justification plus the property test
-    `assumptions_meta_test` demands.
+  * **`no_process_send_after_infinity` — the blocker is the REPAIR, not the switch**
+    (re-analysed 2026-08-17; the item used to say it needed a mechanism decision on a
+    third `assumptions/0` switch).
+
+    The disposition covers two shapes and only one of them is conditional:
+
+    - **Literal** `Process.send_after(pid, msg, :infinity)` — **unconditionally
+      broken**, measured: it always raises `ArgumentError` ("1st argument: not an
+      integer"), on every input, with zero compile diagnostics. `:infinity` is a
+      legal timeout for `GenServer.call`, `Task.await`, `receive ... after` and
+      `:timer.sleep`, which is why it gets over-generalised. **No switch applies to
+      an always-raising call.**
+    - **Dataflow** `Keyword.get(opts, :interval, :infinity)` feeding the delay —
+      breaks only when the default is actually reached, so this is the half where a
+      promise about callers would live.
+
+    So the third switch is not what blocks the literal half. What blocks it is that
+    **no sound repair is known**: the disposition proposes inserting an
+    `if arg == :infinity` guard, which for a literal is statically decidable and
+    emits dead code; and deleting the call trades a loud crash for a timer that
+    silently never fires. That is a behaviour change of exactly the kind this project
+    rejects, and it is why the fossil was implementation-dead.
+
+    For the record, a switch's real cost if the dataflow half is ever built: one
+    `@registry` entry in `lib/assumptions.ex` (name, default, summary) plus a
+    property test at `test/pattern/<snake>_property_test.exs`, which
+    `assumptions_meta_test` enforces for any rule with a non-empty `assumptions/0`.
 
 ## F. Tracker & doc hygiene
 
