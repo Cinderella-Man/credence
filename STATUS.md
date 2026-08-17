@@ -228,21 +228,15 @@ rather than to this section.
     the two grandfathered rows must come off `findings_budget_test.exs` in the
     same commit or the gate fails on invariant 4.
 
-  **Not decisions, still open:** the `prefer_erlang_float` taste review (37 gold
-  findings), and running `corpus_whitelist_validator` on its cadence — its local
-  snapshot is the stale 2026-07-03 copy (7,113 rows) against a live 6,155-row
-  whitelist, so the current whitelist has never been validated.
+  **Not decisions, still open:**
+  * **`corpus_whitelist_validator` has never run — no batches staged, no reports**
+    (re-measured 2026-08-17; not merely "its snapshot is stale"). Re-stage with
+    `prepare_batches.sh` first: its copy is 2026-07-03 and ~1,000 rows over the live
+    whitelist. **Yours to start** — one billed Claude session per 100-row batch, ~60
+    of them, hours of wall-clock.
 
-- [ ] **D6. C12(c) — two of the three shape-over-fit matchers are generalised;
-  one is untouched.** The name half was already done (zero Pattern rules keyed to
-  a variable name). On shape, `prefer_lookup_for_digit_conversion` now matches
-  both hex alphabets and `prefer_string_slice_for_trim_last_char` accepts the
-  two-clause and `String.codepoints` spellings, each after executing the
-  equivalence rather than arguing it. **`prefer_map_intersect_over_mapset_intersection`
-  (356 lines, a hard-coded four-stage pipeline) is not probed yet** — do that
-  before deciding, since both of the others turned out narrower than docs/12
-  described and in a different way than it described. C12(b), fire-rate
-  telemetry, stays blocked on the harness's H10/H11.
+- [ ] **D6. C12(b) — fire-rate telemetry. Blocked on the harness's H10/H11.**
+  C12(c) is done (`b3ffd62`, `d857b5d`); nothing here is waiting on a probe.
 
 - [ ] **D7. T5.7** — C9 hot-path (the Pattern fix loop re-parses the source
   once **per rule**; discovery re-scans `Application.spec` every call), C10

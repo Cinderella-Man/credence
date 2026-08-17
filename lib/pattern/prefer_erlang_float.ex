@@ -32,6 +32,35 @@ defmodule Credence.Pattern.PreferErlangFloat do
   way and only the exception module differs. (A non-number operand at a
   float-coercion site is already-broken code.)
 
+  ## Taste review, on real corpus sites (2026-08-17)
+
+  D4 asked whether this rule's suggestions are *good taste* on hand-written code, not
+  just correct. Four accepted findings were pulled from the corpus and run through
+  `fix/2`. All four rewrote correctly; the one that decides the question is `archethic`:
+
+      # the `0.0 + x` is used to cast integers to floats
+      lhs = Decimal.from_float(0.0 + lhs)
+
+  The author wrote a **comment to explain the idiom**. That is the rule's whole thesis,
+  found in the wild rather than argued: `Decimal.from_float(:erlang.float(lhs))` needs no
+  comment. (The rewrite does leave that comment describing a spelling that is gone. It
+  still states the intent correctly, so this is staleness rather than a defect — but it is
+  the one cosmetic cost on record.)
+
+  The least comfortable site was `cldr_utils`, where the coercion is the tail of a
+  multiplication chain rather than applied to one operand:
+
+      Integer.undigits(digits) * power_of_10(place - length(digits)) * sign * 1.0
+      :erlang.float(Integer.undigits(digits) * power_of_10(place - length(digits)) * sign)
+
+  The whole chain has to be wrapped, which is a bigger visual change than the other
+  three. Executed on both a float-valued and an integer-valued chain, the results are
+  `===` identical — including the float-ness that the `* 1.0` was there to produce, which
+  is the thing a careless rewrite would drop.
+
+  Verdict: **keep as is.** The suggestion reads at least as well as the original at every
+  site sampled, and better at two of four.
+
   ## Bad
 
       defp to_float(n) when is_integer(n), do: n * 1.0
