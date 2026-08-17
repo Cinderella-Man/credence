@@ -1556,6 +1556,7 @@ compile warnings**:
 | **T3.10 — 6 more rules (10 of 11 paid down)** | `a9ad691` | 32 of 163 red with the six reverted; a live non-self-corruption defect fell out of one conversion |
 | T3.10a steps 1–3 — the sibling absorbs `else if` | `f23722f` | 2 separate controls (widen: 5 red; discriminator alone: exactly 1); `elsif`/`elif` output byte-identical across the widen |
 | **T3.10a step 4 — `no_else_if` retired; the ledger is EMPTY** | `4e9d16d` | the gate's vacuity check moved from the result to the machinery — 3 synthetic rules, valid at ledger size zero |
+| **B3 — clone repointed, in `secrets.exs` not env vars** | harness `0de69b6` | `Status.mode/1` now `{:ok, "CATCHING UP"}` where it was `{:error, :missing}`; found a silent worse case — both unset makes the REAL repo the scratch clone |
 | **D11a — `fix_undefined_struct_in_pattern`: the nested scope** | *this commit* | the redirect was really a report-without-fix case; a no-op test flipped to a positive one after checking it was a limitation, not a boundary |
 | **D11a — `no_remote_function_in_guard` closed; its sound half ships** | *this commit* | the pattern-move repair only, gated on a bare-variable parameter — the hole docs/18 said the proposed containment check leaves open, executed |
 | **D11a — `fix_mixed_required_optional_map_keys`** | *this commit* | arrow-ify beats move-last (same map, local edit); the disposition's own decline list would have rejected the field sample; 0 of 330 lib files altered |

@@ -104,13 +104,6 @@ rather than to this section.
     actually wants (~5,200 fixtures is a repo invariant, not a per-candidate question);
     needs the sweep to take a scope.
 
-- [ ] **B3. Repoint the clone — two env vars, not one.** The docs/22 runbook
-  line (`CEV_CREDENCE_CLONE=…/credence_evolution`) is **incomplete since T4.1
-  landed**: `Config.accepting_repo/0` falls back to the clone, which has no
-  STATUS.md, so preflight halts `{:error, :missing}` instead of reading the
-  mode. Set both: `CEV_CREDENCE_CLONE=/home/kamil/projects/credence_evolution
-  CEV_ACCEPTING_REPO=/home/kamil/projects/credence`. (`config.exs:168`'s
-  commented example is still another machine's path.)
 - [ ] **B4a. Decide how row indices survive the NEXT run.** The immediate
   problem is solved: the `0*01` glob matched **230** dirs at run time and **282**
   now, so index 225 named
@@ -155,6 +148,10 @@ rather than to this section.
 - [ ] **B8. Quota headroom** for the 26-row transient tail (11 classifier
   timeouts, 7 `:closed`, 5 HTTP 429, 3 implementer kills): raise the Mimo
   quota or add backoff.
+- [ ] **B8a. Rotate `var/run/usage.jsonl` before the run.** It spans every run to
+  date (1.2 MB) and totals far above the ceiling, so `Cev.Budget` logs an error and
+  starts the count from $0.00 — the in-run ceiling still applies, but **resume no
+  longer accounts prior spend**. `budget.ex:128` says rotate or archive; one `mv`.
 - [ ] **B9. `mix cev.preflight` green, then flip this file to `PRODUCING`.**
   The flip is deliberate and last; preflight now genuinely enforces it.
 
