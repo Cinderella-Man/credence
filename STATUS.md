@@ -215,7 +215,7 @@ rather than to this section.
   `IDENTICAL source`; `fix_or_drop_test` cannot see any of them, since it asks whether a
   rule fixes nothing *at all*.
 
-- [ ] **D11a. Work the build list — no new-rule items left; one extension remains.**
+- [ ] **D11a. Build list: one mechanism decision left, and it is yours.**
   `docs/23-build-list.md` is the list; every candidate was verified by running its
   target through the live pipeline, and each entry carries its own hazards. Of the
   25 rebuild/salvage candidates, 17 are repaired.
