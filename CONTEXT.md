@@ -137,6 +137,26 @@ move-over and was deleted once the last rule switched off it.
 Sourceror's tree mostly mirrors the built-in parser's tree, but with a few
 important differences. Rules that don't account for them quietly fail to match.
 
+⚠️ **One of them is not about the tree but about RANGES, and it corrupts output
+rather than failing to match.** `Sourceror.get_range/1` reports an end column one
+past the truth for a bare `true`, `false` or `nil`: `range.ex` adds `+1` for "just
+the colon" on an atom, and those three are the atoms Elixir writes *without* one.
+Measured:
+
+    @impl true                     10 chars, reported end column 12, true end 11
+    @x nil                          6 chars, reported end column  8, true end  7
+    @x :foo                         correct
+    @decorate telemetry([:demo])    correct — its argument is a call with :closing
+
+A patch whose range ends there therefore covers the trailing newline as well.
+`Sourceror.patch_string/2` splits with `String.split_at/2`, which returns an empty
+suffix rather than erroring, so the newline is silently eaten and the following
+line fuses onto the patched one. No shipped rule hits this today — their ranges end
+at `end` or at a whole expression — but a rule that patches a range ending in a bare
+boolean will, and the symptom looks like a formatting bug rather than a range bug.
+Found while widening `NonGroupedClauses`; that rule now moves whole source lines,
+which sidesteps it.
+
 - **Simple values are wrapped.** Sourceror wraps simple values (atoms, numbers,
   floats, strings, 2-tuples, lists) in `{:__block__, meta, [value]}` to carry
   position notes. The built-in tree has them bare. So a pattern like
