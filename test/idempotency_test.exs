@@ -8,14 +8,16 @@ defmodule Credence.IdempotencyTest do
   docs/22 T2.5 / docs/12 C7 — `fix/1` over its own output.
 
   Measured over all 5,188 unique fix-test fixtures: 2,158 change on pass 1 and
-  **29** are not stable after it. Most are cascades working as docs/14 E7
-  intends, so today's 29 are frozen and the DELTA is gated — the C13/C14 shape.
-  A flat "must be idempotent" assertion would be red for correct behaviour, and a
-  gate that is red for correct behaviour gets disabled.
+  **32** are not stable after it (29 when first measured 2026-07-28; three added
+  2026-08-17 when the Pattern round stopped skipping non-compiling files — see the
+  note above `@ledger`). Most are cascades working as docs/14 E7 intends, so
+  today's 32 are frozen and the DELTA is gated — the C13/C14 shape. A flat "must
+  be idempotent" assertion would be red for correct behaviour, and a gate that is
+  red for correct behaviour gets disabled.
 
   Two halves, deliberately:
 
-    * the **stale-entry** check runs by default and is fast (29 fixtures). It
+    * the **stale-entry** check runs by default and is fast (32 fixtures). It
       stops the ledger rotting: pay one down and this goes red until you delete
       the row.
     * the **no-new-entries** check is the full ~10-minute sweep and is tagged
@@ -28,12 +30,50 @@ defmodule Credence.IdempotencyTest do
   check and no compile check can see that.
   """
 
-  # Frozen 2026-07-28. May only SHRINK.
+  # Frozen 2026-07-28. May only SHRINK — with one recorded exception, below.
+  #
+  # ## Why this grew from 29 to 32 on 2026-08-17, and why that is not a breach
+  #
+  # "May only shrink" is the right rule for a ratchet over RULES: a new row means
+  # a rule regressed. It is the wrong rule when the ENGINE changes underneath the
+  # measurement, and that is what happened here.
+  #
+  # The Pattern round used to skip any file that did not compile. That gate came
+  # off (`lib/pattern.ex:85-99`, replaced by the relative
+  # `RuleHelpers.compiles_no_worse?/2` oracle), on measured grounds: 625 of 1,724
+  # Pattern fixtures parse but do not compile, and 275 now get a repair they never
+  # got. All three fixtures added below have `compiles?/1 == false`, so before that
+  # change the Pattern round did nothing to them and they were fixpoints by
+  # exclusion rather than by convergence. The rows are the price of that repair
+  # coverage, not evidence of a defect.
+  #
+  # Each was traced pass by pass, and all three converge after exactly two changes
+  # with no oscillation:
+  #
+  #   * `no_keyword_get_with_atom_first_arg` — Pattern repairs the call and leaves
+  #     `clock` unused, so `Semantic.UnusedVariable` renames it to `_clock` on
+  #     pass 2. Verbatim the docs/14 E7 class this ledger's moduledoc already
+  #     describes as "cascades working as intended".
+  #   * `no_literal_list_typespec` — the same shape (`numbers` -> `_numbers`) after
+  #     the `[a, b]` -> `{a, b}` typespec repair.
+  #   * `prefer_map_new_with_transform` — a genuine two-rule Pattern cascade:
+  #     `PreferMapNewWithTransform` collapses the `Enum.map |> Map.new`, then
+  #     `NoGroupByForFrequencies` collapses the result to
+  #     `Enum.frequencies_by(rows, fn r -> r.id end)`. The final form is correct
+  #     and is a fixpoint.
+  #
+  # This also exposed a gap worth keeping in view: the sweep is `:idempotency`,
+  # excluded from the default suite, so nothing catches a regression in it between
+  # deliberate runs. These three sat undetected since the compile gate came off.
+  # The last recorded green sweep is STATUS.md A4 at `00c1c1c`, when the suite was
+  # 10,023 tests; it is 10,245 now.
   @ledger [
-    # 29 entries
+    # 32 entries
+    {"test/pattern/no_keyword_get_with_atom_first_arg_fix_test.exs", "6c808844672f"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "0c39b6dd92a2"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "8873e59a9634"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "f6b660297f03"},
+    {"test/pattern/no_literal_list_typespec_fix_test.exs", "ba8980e4c64f"},
     {"test/pattern/no_manual_list_reduce_fix_test.exs", "2f7d8966cdc7"},
     {"test/pattern/no_manual_list_reduce_fix_test.exs", "b5289e82a4d1"},
     {"test/pattern/no_manual_list_reduce_fix_test.exs", "da56b6e54a5c"},
@@ -55,6 +95,7 @@ defmodule Credence.IdempotencyTest do
     {"test/pattern/no_take_while_length_check_fix_test.exs", "fe615c683c23"},
     {"test/pattern/prefer_guard_over_if_fix_test.exs", "39cba6c265a4"},
     {"test/pattern/prefer_guard_over_if_fix_test.exs", "e6a43b35c436"},
+    {"test/pattern/prefer_map_new_with_transform_fix_test.exs", "ab55cd841743"},
     {"test/semantic/fix_jason_decode_error_message_field_fix_test.exs", "a8853f8a62a6"},
     {"test/semantic/fix_task_id_field_access_fix_test.exs", "e110fad06ccc"},
     {"test/semantic/no_stream_data_tuple_with_list_fix_test.exs", "51533eecd562"},

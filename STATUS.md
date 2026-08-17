@@ -24,13 +24,29 @@ things that were not on any list. Nothing left on this map is done; when an item
 lands, strike it in `docs/22-remaining-work.md` (still the item-level tracker)
 and delete it here.
 
-**Verified green, so not on the map:** full suite **10,213 tests + 6 properties,
-0 failures** (corpus layer included); `mix format --check-formatted` clean; every
-rule witnesses its failure mode through the real pipeline AND repairs its own
-documented example (Pattern 153 direct + 3 ledgered cascades, Semantic 89/89);
-every `## Bad`/`## Good` example on all 289 rules verified TRUE by execution;
-self-corruption, dispatch-contention, idempotency-ratchet, duplicate, DSL and
-budget gates all green; maintainer_tools queues drained.
+**Verified green, so not on the map** (re-measured 2026-08-17): full suite
+**10,245 tests + 6 properties, 0 failures** (corpus layer included);
+`mix format --check-formatted` clean; `mix compile --force --warnings-as-errors`
+clean; every rule witnesses its failure mode through the real pipeline AND repairs
+its own documented example; every `## Bad`/`## Good` example verified TRUE by
+execution; self-corruption, dispatch-contention, duplicate, DSL and budget gates
+all green; maintainer_tools queues drained.
+
+Two cautions about that sentence, both learned today:
+
+* **"idempotency-ratchet green" used to appear in this list and has been removed
+  from it.** There are two halves and only the fast one runs by default. The
+  ratchet (stale-entry) half is green; the full `:idempotency` **sweep** was red,
+  for three fixtures, undetected since the Pattern compile gate came off — see
+  A4. A gate excluded from `mix test` does not belong in a list headed "verified
+  green" without saying which half was verified and when.
+* **The per-phase rule counts that used to be quoted here are deliberately
+  gone.** This line carried "Pattern 153 direct + 3 ledgered cascades, Semantic
+  89/89" and "all 289 rules"; those moved when the D11a rules landed and nobody
+  re-measured. The gates that own these numbers compute them from
+  `default_rules/0` at run time and are green, which is the claim worth making.
+  A hand-copied count is a claim with no gate behind it — exactly what F1-F5
+  corrected once already.
 
 **What this session changed that alters earlier assumptions** — read these before
 trusting an older note:
@@ -80,17 +96,57 @@ plain `git` works and the branch is pushed and level with its remote.
   installable and also makes every future rename a breaking change for
   downstreams; not publishing keeps the project git-only, which is what every
   doc currently assumes.
-- [ ] **A6. There is no CI in either repo** (no `.github/` at all), so the merge
-  triggers zero checks and the local matrix is the only verification this
-  release will ever get. Cheap insurance before the next evolution: a workflow
-  running the A4 matrix.
+- [ ] **A6. CI is written but has never run — treat it as a hypothesis until it
+  goes green once.** `.github/workflows/ci.yml` now exists (there was no
+  `.github/` at all), with three jobs matching A5's list: `check` (format,
+  `--force --warnings-as-errors`, `mix test --exclude corpus`, plus a
+  `git diff --exit-code` that catches a fixture the healer rewrites), `corpus`
+  (`mix credence.corpus.fetch` then `mix test --only corpus`, cached on
+  `lib/credence/corpus.ex` since every entry is an immutable version or SHA), and
+  `idempotency` (the ~11-minute sweep nothing else runs). The YAML parses and
+  every command in it is one this session ran locally and green — but **no job
+  has executed on a runner**, because that needs a push, which is yours. Expect
+  the first run to need adjustment; the corpus job in particular fetches ~1 GB
+  on a cold cache.
 
-**A1 and A4 are done.** A1 by the maintainer's confirmation above; A4 was run at
-`00c1c1c` — full suite **10,023 tests + 6 properties, 0 failures** (corpus
-included), the `:idempotency` sweep green in ~650 s, formatter clean,
-zero-warning compile, harness **332 passed**. The harness `:integration` tests
-remain the one layer never run; they shell into the live clone and need B3's two
-env vars, so they belong to the Phase-9 setup rather than to this section.
+  Deliberately **one** Elixir/OTP pair (1.20.2 / OTP 29), not a version matrix,
+  even though `mix.exs` allows `~> 1.17`: every behavioural claim in `docs/` was
+  executed on that pair, and docs/17 entry 11 records 1.19.5 and 1.20.2
+  disagreeing about whether a rule's output parsed. Widening it is worth doing
+  and owns whatever it turns red.
+
+**A1 is done; A4 was re-run 2026-08-17 and one of its four legs had gone red.**
+A1 by the maintainer's confirmation above.
+
+A4's original run was at `00c1c1c` — full suite **10,023 tests + 6 properties, 0
+failures** (corpus included), the `:idempotency` sweep green in ~650 s, formatter
+clean, zero-warning compile, harness **332 passed**. Re-run today at
+**10,245 tests + 6 properties, 0 failures**, formatter clean, zero-warning
+compile — **but the `:idempotency` sweep failed with three new offenders.**
+
+Diagnosed, and it is not a rule defect. All three fixtures have
+`compiles?/1 == false`, and the Pattern round **stopped skipping non-compiling
+files** after `00c1c1c` (`lib/pattern.ex:85-99`). Before that they were fixpoints
+by *exclusion*; now pass 1 repairs them and pass 2 finds a follow-on. Two are the
+documented docs/14 E7 class (a Pattern fix leaves a variable the Semantic round
+then renames `_x`), the third is a two-rule Pattern cascade
+(`PreferMapNewWithTransform` → `NoGroupByForFrequencies`). Each was traced pass
+by pass and converges after exactly two changes with no oscillation. Ledger
+29 → 32, with the engine-change reasoning written into
+`test/idempotency_test.exs` — because "the ratchet may only shrink" is the right
+rule for a rule regression and the wrong one when the engine moved under the
+measurement.
+
+**The gap worth keeping:** `:idempotency` is excluded from the default suite, so
+nothing catches a regression in it between deliberate runs. These three sat
+undetected from whenever the compile gate came off until today, and A4 read as
+"done" throughout. A4 is a *measurement with an expiry date*, not a standing
+fact — which is A5's own reason for re-running the matrix on `main` after the
+merge, and A6's reason for existing.
+
+The harness `:integration` tests remain the one layer never run; they shell into
+the live clone and need B3's two env vars, so they belong to the Phase-9 setup
+rather than to this section.
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
@@ -352,12 +408,21 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   new rule but a row in `UndefinedFunction`'s tables. One of the eight,
   `no_agent_update_tuple_wrapper`, is repaired by *not existing*.
 
-  **9 remain, each RE-verified uncovered on 2026-08-17** (worth redoing, since
+  **8 remain, each RE-verified uncovered on 2026-08-17** (worth redoing, since
   the Pattern round no longer skips non-compiling files: one item,
   `fix_undefined_type_t_in_spec`, turned out to be covered already by
-  `NoBareNamesInSpec`). Four are built:
+  `NoBareNamesInSpec`). Five are built:
   `no_deprecated_not_in`, `no_pipe_into_unary_arithmetic`,
-  `fix_ets_new_string_name` and `fix_ets_options_bare_keypos`. No table rows —
+  `fix_ets_new_string_name`, `fix_ets_options_bare_keypos` and
+  `no_enum_sort_then_map_values`. That last one **refuted the premise docs/17
+  ranked it #1 on**: "every `Enum.*`/`Stream.*` returns a list" is false —
+  `%Stream{}` is a struct, so `Map.values/1` on a `Stream.map` result does not
+  raise; `Enum.group_by`/`frequencies`/`into`/`reduce` return maps;
+  `Enum.at`/`find`/`max_by` return an element that is usually one; and
+  `Map.new/1` *wants* a list. Measured: 350 candidate sites of the ungated class
+  across the corpus, **zero** true positives, 65% of them `Map.new`. The rule
+  shipped as the one producer-pair/one-consumer whitelist docs/18's disposition
+  had already sanctioned; docs/17 §5.1 now carries the correction. No table rows —
   the three the list identified as cheapest (`Map.reduce/3`,
   `StreamData.string/0`, `:crypto.compare/2`) were added the same day, so
   everything remaining needs a rule and its own equivalence argument. Two of the Syntax ones
@@ -366,6 +431,24 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   opposite repairs, so a shared backward scanner is the only safe way to build
   either. And `no_remote_function_in_guard` has three recorded corruption paths
   in docs/17 entry 11, one of which emits output that does not parse.
+
+  **⚠️ "8 remain" overstates what is buildable — it is 5 workable + 3 blocked,
+  and one of the five is not a rule.** Re-reading docs/18's `action` field for
+  every remaining item (2026-08-17) found that four rule names across three items
+  are specified **report-only**, which this project deletes rather than ships:
+  both GenServer rules ("emit no fix"; "do not port this module's fix"),
+  `no_process_send_after_infinity` ("ONE new REPORT-ONLY pattern-phase rule") and
+  `no_stream_data_constant_with_range` (recorded as "REAL-but-not-catchable in
+  the current architecture"). **That is the same decision as D10 above**, which
+  reads as being about one rule and is not: if `NoRedundantListTraversal` may
+  keep reporting what it will not repair, these three items become ordinary work
+  under a named exception; if `check/2` is narrowed instead, they are dead as
+  specified and their failure modes stay banked in docs/17.
+  `no_process_send_after_infinity` alone has a third route — a fix gated behind
+  an `assumptions/0` safety switch is neither report-only nor unconditional —
+  and that is a mechanism change needing its own justification. The fifth
+  workable item, `fix_undefined_struct_in_pattern`, is a redirect rather than a
+  build: extend the live `Semantic.FixCyclicStructReference`. Table in docs/23.
 
 ## F. Tracker & doc hygiene
 
