@@ -185,10 +185,16 @@ rather than to this section.
   (gitignored — the only copy; its rows predate the `no_python_multi_return` fix, so a
   fresh sweep reads ~0.742 / 219).
 
-  A 14-row sample triaged in `0007208` put **~14% of survivors beyond any input** — one
-  proven, `arity in 1..255` widened to `1..256`, where `&f/256` is a CompileError. So a
-  fully triaged rate is **≈0.77 (0.75-0.80)**, and `--fail-under 0.740` would sit below
-  the honest ceiling — the failure C18 staged this work to avoid.
+  A 14-row sample triaged in `0007208` put **~14-21% of survivors beyond any input**. Two
+  are proven: `arity in 1..255` widened to `1..256`, where `&f/256` is a CompileError; and
+  `fix_extra_brace_in_ets_match`'s `at/2` negative-index guard, which needs the parser to
+  report column 1 and it reports an opening delimiter's column (≥ 5 across ten attempted
+  shapes). So a fully triaged rate is **≈0.77 and probably higher**, and `--fail-under
+  0.740` would sit below the honest ceiling — the failure C18 staged this work to avoid.
+
+  One of the sample's "real gaps" is now closed and was worth it independently: nothing
+  put a `plug` call on its module's LAST body line, so `find_plug_caller/2`'s containment
+  lookup was untested at its only boundary. Test added; verified to kill the mutant.
 
   * **(a)** triage the remaining survivors, ledger the equivalent ones, floor against the
     triaged rate. Correct, about a week. `comparison_swap` is the worst by rate (48%) and

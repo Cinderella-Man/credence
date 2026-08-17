@@ -268,4 +268,40 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrderFixTest do
 
     confirm_fix(fix(input, message), expected)
   end
+
+  # Mutation gap (D9 triage): `find_plug_caller/2`'s `Enum.with_index(lines, 1)` could be
+  # changed to `2` and every existing fixture still passed. The index is used to ask which
+  # module ENCLOSES the `plug` line, so a +1 only escapes the range when the `plug` call is
+  # the module's LAST body line — the next line being its `end`. No fixture had that shape,
+  # so the rule's containment lookup was untested at its only boundary.
+  #
+  # Verified by applying the mutant: original reorders, mutant leaves the source alone.
+  test "the plug call as the module's last body line still finds its enclosing module" do
+    input = ~S"""
+    defmodule Foo.Router do
+      use Plug.Router
+      plug(Foo.Plugs.Bar)
+    end
+
+    defmodule Foo.Plugs.Bar do
+      def init(opts), do: opts
+    end
+    """
+
+    expected = ~S"""
+    defmodule Foo.Plugs.Bar do
+      def init(opts), do: opts
+    end
+
+    defmodule Foo.Router do
+      use Plug.Router
+      plug(Foo.Plugs.Bar)
+    end
+    """
+
+    message = "function Foo.Plugs.Bar.init/1 is undefined (module Foo.Plugs.Bar is not available)"
+
+    confirm_fix(fix(input, message), expected)
+    assert valid_syntax?(fix(input, message))
+  end
 end
