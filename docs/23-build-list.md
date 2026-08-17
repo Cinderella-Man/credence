@@ -59,10 +59,10 @@ Two items have since been struck (`no_enum_sort_then_map_values`,
 `no_atom_as_function_name`) and a third closed by one rule rather than the two it
 listed (the `when`-guard pair). Building that pair added `fix_when_guard_in_with_clause`
 — a shape docs/18 dispositioned wrongly, whose repair is a move rather than a
-deletion. **Two buildable items remain:** `fix_when_guard_in_with_clause` and
-`no_remote_function_in_guard`; plus the three blocked on the report-only policy
-question and `fix_undefined_struct_in_pattern`, which is an extension to a live
-Semantic rule rather than a new rule.
+deletion. **No new-rule items remain.** What is left is one extension and a set of closures:
+`fix_undefined_struct_in_pattern` is work on a live Semantic rule rather than a new
+rule; `fix_when_guard_in_with_clause` is banked for want of a field sample; and the
+three report-only items are dead as specified, their failure modes banked in docs/17.
 
 * ~~`no_enum_sort_then_map_values`~~ **BUILT 2026-08-17** —
   `lib/pattern/no_enum_sort_then_map_values.ex`. Shipped much narrower than the
@@ -93,8 +93,8 @@ Semantic rule rather than a new rule.
 * ~~`fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension`~~
   **BUILT 2026-08-17 as ONE rule**, `lib/syntax/fix_misplaced_when_guard.ex`, on the
   shared `lib/syntax/when_guard_position.ex`. See the note below.
-* `fix_when_guard_in_with_clause` — **NEW, discovered while building the pair.** Not a
-  variant of them: the repair is a **move**, not a deletion. See the note below.
+* `fix_when_guard_in_with_clause` — **NEW, discovered while building the pair, and
+  BANKED rather than buildable:** it has no field sample. See the note below.
 * `fix_undefined_struct_in_pattern`
 * ~~`fix_mixed_required_optional_map_keys`~~ **BUILT 2026-08-17** —
   `lib/syntax/fix_mixed_required_optional_map_keys.ex`. See the note below.
@@ -105,8 +105,9 @@ Semantic rule rather than a new rule.
   parameter LABEL rather than as a reference to the type `t()`. Both are valid
   readings of what the author meant; the output compiles, so the item is closed
   rather than pending a second interpretation.)
-* `no_remote_function_in_guard` — **read docs/17 entry 11 first**: it has three
-  recorded corruption paths, including output that does not parse
+* ~~`no_remote_function_in_guard`~~ **CLOSED 2026-08-17** — it cannot exist as
+  specified; its one sound repair ships as `fix_struct_test_in_guard`. See the note
+  below.
 
 ## ⚠️ Three of the eight are blocked on one policy question, not on effort
 
@@ -230,7 +231,20 @@ not 8 remaining — and one of the five is not a rule build at all. Workable:
     delete-the-`when` is strictly more general: a filter may be any expression, so
     `for a <- l, String.length(inspect(a)) > 0` runs where the moved form is a
     `CompileError`.
-* `fix_when_guard_in_with_clause` — **the repair is a MOVE.** docs/18 groups
+* `fix_when_guard_in_with_clause` — **banked, not buildable: there is no field sample.**
+  Unlike the `def` and `for` shapes, which docs/18 records with concrete observed code,
+  this shape appears only inside `fix_when_guard_in_for_comprehension`'s *action* text,
+  in the sentence telling that rule which shapes to reject — and that sentence is the
+  one this build refuted. Nothing was ever observed emitting it. A rule for an
+  unobserved shape is surface area without evidence, and this list's own policy is that
+  failure modes without evidence stay banked.
+
+  Nothing is unsafe in the meantime: `WhenGuardPosition` classifies the shape and
+  returns `:none`, with the reason and a test, so the next author cannot widen the `for`
+  repair onto it by accident. That is the guard rail this item exists to hold. If a
+  field sample turns up, the repair is a MOVE and the rest of this note is the spec.
+
+  **The repair, for whoever picks it up.** docs/18 groups
   `with ... <- ..., when` with the `def` shape, "delete the comma". That does not
   compile. Deleting the `when` does compile and is worse: a bare `with` clause is
   evaluated for its value and the value discarded, so the guard silently stops
@@ -279,9 +293,40 @@ not 8 remaining — and one of the five is not a rule build at all. Workable:
   `fix/1` call, which the single-pass round requires. Self-corruption measured
   structurally: 0 of 330 `lib/**/*.ex` files altered, since a rule keyed on a parse
   error cannot touch a file that parses.
-* `no_remote_function_in_guard` — keep only the pattern-move repair; docs/18
-  names the exact functions to delete, and docs/17 entry 11 the three corruption
-  paths.
+* ~~`no_remote_function_in_guard`~~ **CLOSED — the rule as named cannot exist, and the
+  repair docs/17 certifies as the only sound one now ships** as
+  `lib/semantic/fix_struct_test_in_guard.ex`.
+
+  Two independent reasons the tracked rule is dead: its own disposition specifies
+  **report-only**, which this project deletes, and docs/17 §787 records three
+  corruption paths in the body-hoist repair it proposed — wrong semantics (a guard
+  swallows exceptions, a body does not, verified to turn a fall-through into a
+  `BadMapError`), clause deletion, and output that does not parse (`=>` outside a map;
+  three rows of the 2026-07-06 harness run hit it).
+
+  docs/17 also names the exception: "the repair must move the test into the *pattern*
+  … the only sound repair in the set". That is what was built, and only that. It is
+  named for the shape rather than for the diagnostic family, because a rule whose name
+  promises a general repair its matcher never attempts is how `FixLocalFunctionInGuard`
+  collected three escalation-ledger rows.
+
+  The safety condition is one check, and it is the hole docs/18 says the disposition's
+  proposed containment does not close: **the target parameter must be a bare variable.**
+  Moving `%Regex{}` onto `%{} = re` replaces the pattern instead of intersecting with
+  it and takes the guard's filtering with it. Executed on the naive output,
+  `go("x", %{a: 1})` returned `{:regex_matched, "x"}` where it must return
+  `{:plain, "x"}`. An `or` anywhere in the guard also declines — that is where §787's
+  clause deletion happened.
+
+  Equivalence is argued by execution rather than by structure, and it is unusually
+  clean here: the input is a hard `CompileError`, so there is no prior runtime
+  behaviour to preserve. What the tests pin is that the output compiles and dispatches
+  as the author evidently meant — `f(~r/x/)` takes the struct clause while a plain map,
+  a binary, an integer and a *different* struct all fall through.
+
+  Still banked, in docs/17 and not here: `String.length(name) > 0`,
+  `Map.has_key?(m, pid)`, `System.monotonic_time(:millisecond) - a >= b`. Each needs
+  the body, and the body is what the three paths make unsafe.
 * `fix_undefined_struct_in_pattern` — **not a new rule.** Its disposition
   redirects it to extending the live
   `Credence.Semantic.FixCyclicStructReference` to hoist struct-defining nested

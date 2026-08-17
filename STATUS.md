@@ -273,22 +273,25 @@ rather than to this section.
   clauses need one fixture each, and the assertion has to be the decline. For many
   survivors no such input exists that anyone would write.
 
-- [ ] **D11a. Work the build list — 2 buildable items left.**
+- [ ] **D11a. Work the build list — no new-rule items left; one extension remains.**
   `docs/23-build-list.md` is the list; every candidate was verified by running its
   target through the live pipeline, and each entry carries its own hazards. Of the
   25 rebuild/salvage candidates, 17 are repaired.
 
   What remains, after report-only was closed as an option (2026-08-17):
 
-  * **Buildable (2):** `fix_when_guard_in_with_clause` (**new** — the `when`-guard
-    build turned up a third shape docs/18 dispositioned wrongly; its repair is a
-    move across the `<-`, not a deletion, and the locator already classifies it);
-    `no_remote_function_in_guard` (**read docs/17 entry 11 first** — three recorded
-    corruption paths, one emitting output that does not parse; and note its own
-    disposition specifies *report-only*, so it may belong with the blocked three
-    rather than here).
-  * **Not a rule build:** `fix_undefined_struct_in_pattern` is a redirect — extend
-    the live `Semantic.FixCyclicStructReference`.
+  * **Remaining work (1), and it is not a new rule:** `fix_undefined_struct_in_pattern`
+    — extend the live `Semantic.FixCyclicStructReference` to hoist struct-defining
+    nested modules above their first reference, keeping that rule's compile-verifying
+    `confirm_reorder/2` gate.
+  * **Banked, not buildable (1):** `fix_when_guard_in_with_clause` — no field sample;
+    it exists only in a disposition sentence that this session refuted. The unsafe
+    widen it guards against is already blocked by a tested `:none` in
+    `Credence.Syntax.WhenGuardPosition`.
+  * **Closed by building only its sound half (1):** `no_remote_function_in_guard` —
+    dead as named (report-only, plus three corruption paths in docs/17 §787). The one
+    repair docs/17 certifies ships as `Semantic.FixStructTestInGuard`, gated on the
+    target parameter being a bare variable; the other shapes stay banked.
   * **Dead as specified (2):** the GenServer reply-protocol pair and
     `no_stream_data_constant_with_range`. Their dispositions require report-only,
     which this project deletes; the failure modes stay banked in docs/17.
