@@ -153,6 +153,12 @@ defmodule Credence.FixOrDrop do
   # interpolate, so its body is a single literal segment and needs no evaluation.
   defp literal({:sigil_S, _, [{:<<>>, _, [s]}, _modifiers]}) when is_binary(s), do: [s]
 
+  # Deliberately NOT extended to `~s`/`~c`. Measured across every rule test file:
+  # `~S` appears 852 times, `~s` 3 times in a fixture position (and one of those is a
+  # sigil written INSIDE a plain-string fixture, already collected) and `~c` twice.
+  # An interpolating sigil can also carry a `#{}` segment, so its body is not
+  # guaranteed to be one literal — collecting it would risk handing a template to a
+  # rule as if it were source. One fixture is not worth that.
   defp literal(_), do: []
 
   @doc "Every `{rule, source, reason}` violation across `rules`."
