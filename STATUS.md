@@ -66,10 +66,28 @@ remote.
   design, not a matrix: every behavioural claim in `docs/` was executed on it, and docs/17
   records 1.19.5 and 1.20.2 disagreeing about whether a rule's output parsed).
 
-  Pre-flighted as far as is possible off a runner (`c898948`): pinned pair matches, all
-  five mix tasks exist, no absolute local paths or env dependencies in `lib/` or `test/`.
-  What remains unknowable without running it: runner behaviour, action versions, cache
-  keys, and the cold ~1 GB corpus fetch. Treat the first run as a hypothesis.
+  **Reproduce any of this with `.github/run-ci-locally.sh` (`all` for every job).**
+
+  **All three jobs' steps now executed in a clean container** (2026-08-18, HEAD `d89aeae`)
+  — `hexpm/elixir:1.20.2-erlang-29.0.5-ubuntu-noble`, which is the Elixir/OTP pair
+  `setup-beam` resolves to for this pin, on a **fresh `git clone` with no local `_build`,
+  `deps` or config**:
+
+  | job | result |
+  |---|---|
+  | `check` | `deps.get` · `format --check-formatted` · `compile --force --warnings-as-errors` · `test` (9,022 tests, 0 failures, 240 s) · `git diff --exit-code` — **all pass** |
+  | `idempotency` | `mix test --only idempotency` — **passes**, 594 s (the item's ~11 min estimate holds) |
+  | `corpus` | `mix test --only corpus` — **passes**, 1,501 tests, 0 failures, 212 s |
+
+  That covers the failure modes a local run cannot: stale `_build` hiding a warning,
+  dependence on local state, and the fixture-healer leaving the tree dirty (`git
+  diff --exit-code`, the step most likely to pass locally and fail on a runner).
+
+  **Still genuinely unknowable off GitHub**, and the only reason this item stays open:
+  the action versions (`checkout@v4`, `setup-beam@v1`, `cache@v4`), the cache keys, and
+  the cold ~1 GB corpus fetch — the container run mounted the local corpus and skipped
+  `mix credence.corpus.fetch`. Treat those four as the hypothesis; everything else has
+  been executed.
 
 **A1 and A4 are done and deleted from this map** (A1 by the maintainer's
 confirmation above; A4's matrix was re-run 2026-08-17 — green, including the
