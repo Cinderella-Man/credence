@@ -105,10 +105,23 @@ triaged rate — which is the whole point of the cleanup, and leaves those triag
 unchanged, because every mutant removed was an equivalent one. The table is kept as the
 record of the sweep it triages.
 
-The exception to watch: `no_manual_list_reduce` is at the 40-mutant cap, so deleting one
-dead line freed a slot and a **newly sampled, untriaged** mutant took it — and survived.
-Its triaged rate is therefore 0.886 or 0.861 depending on that one verdict. Settle it
-before pinning that rule's floor.
+`no_manual_list_reduce` is the one worth reading. It is at the 40-mutant cap, so deleting
+a dead line freed a slot and a **never-sampled** mutant took it — and survived. Triaging
+that one mutant found a **real test gap, and a test that was passing for the wrong
+reason**:
+
+* The mutant flips `empty_list_pattern?/1`'s catch-all to `true`, so any base-clause
+  pattern counts as `[]`. Separating input: `defp sum(nil, acc), do: acc` beside the
+  canonical recursive clause — the rule reports nothing, the mutant reports an issue.
+* A test named *"does not flag when the base pattern is not an empty list"* already
+  existed. It used `defp sum([x], acc), do: acc + x`, whose body **also** fails the
+  "returns the accumulator unchanged" check — so it could never fail on the base-pattern
+  check alone, and stayed green with that check disabled entirely.
+* Four isolating cases were added (base pattern `nil` / a bare variable / an atom / a map,
+  everything else canonical). The mutant now dies: **0.775 → 0.800**.
+
+That is the argument for the cleanup that tidiness alone would not make. The cap had been
+hiding this mutant, and with it a test that named a condition it was not testing.
 
 ## Second finding: dead code — 28 sites, checked one at a time
 

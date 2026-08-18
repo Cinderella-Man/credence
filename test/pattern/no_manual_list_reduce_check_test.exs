@@ -113,6 +113,30 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       assert check(NoManualListReduce, code) == []
     end
 
+    # The test above cannot fail on the base-pattern check alone: its body is
+    # `acc + x`, so `returns_var?/2` rejects it too and it would still pass with
+    # the pattern check disabled entirely. The mutation sweep proved that —
+    # flipping `empty_list_pattern?/1`'s catch-all to `true` left the whole
+    # triplet green. These isolate the condition: everything else is the
+    # canonical fold, and ONLY the base pattern differs.
+    for {label, pattern} <- [
+          {"nil", "nil"},
+          {"a bare variable", "x"},
+          {"an atom", ":done"},
+          {"a map", "%{}"}
+        ] do
+      test "does not flag when the base pattern is #{label}, all else canonical" do
+        code = """
+        defmodule Good do
+          defp sum(#{unquote(pattern)}, acc), do: acc
+          defp sum([h | t], acc), do: sum(t, acc + h)
+        end
+        """
+
+        assert check(NoManualListReduce, code) == []
+      end
+    end
+
     test "does not flag a three-clause function" do
       code = """
       defmodule Good do

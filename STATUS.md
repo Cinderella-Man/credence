@@ -189,10 +189,13 @@ rather than to this section.
   came from a keyword match and was wrong. Raw rates moved toward triaged as intended
   (`no_sort_then_reverse` 0.417 → 0.625).
 
-  **One measurement is owed before you pin `no_manual_list_reduce`.** It sits at the
-  40-mutant cap, so deleting a dead line freed a slot, a never-sampled mutant took it and
-  also survived. Its triaged rate is **0.886 or 0.861** depending on that one untriaged
-  verdict. The other eight at-cap rules are untouched and their rows stand.
+  **That cleanup then paid for itself.** `no_manual_list_reduce` sits at the 40-mutant cap,
+  so deleting a dead line freed a slot and a never-sampled mutant took it — and survived.
+  Triaging that one found a real over-firing gap **and a test passing for the wrong
+  reason**: a test named "does not flag when the base pattern is not an empty list" used a
+  body that also failed a *different* check, so it stayed green with the pattern check
+  disabled entirely. Four isolating cases added; the rule is now **0.800** (was 0.775).
+  The other eight at-cap rules are untouched and their rows stand.
 
 - [ ] **NEW — `SourceMask.byte_offset/3` overshoots by one on a grapheme cluster that
   spans a token boundary.** Confirmed, **not fixed**. On
