@@ -225,24 +225,21 @@ rather than to this section.
   And nine rules sit at the 40-mutant cap, so their rates must be **re-measured** after
   any such cleanup, not projected.
 
-- [ ] **NEW — `SourceMask.mask/1` exposes string contents after a non-ASCII identifier.**
-  Found by the D9 triage, confirmed against the running system, **not fixed**:
+- [ ] **NEW — `SourceMask.byte_offset/3` overshoots by one on a grapheme cluster that
+  spans a token boundary.** Confirmed, **not fixed**. On
+  `x = %{a: "́b", c: marker(1)}` (the string's first codepoint is U+0301 COMBINING
+  ACUTE) the parser reports column 19 for `marker` and `byte_offset/3` answers **20**;
+  the true byte offset is 19.
 
-  ```
-  SourceMask.mask(~S|x = cafe?"hello world"|)  #=> "x = cafe?"            string masked
-  SourceMask.mask(~S|x = café?"hello world"|)  #=> "x = caféhello world"  string EXPOSED
-  ```
+  The docstring's model — "the parser counts columns in graphemes" — is right *within* a
+  token and wrong at the seam: the tokenizer segments graphemes per token, so a literal's
+  opening `"` and a following combining mark are two columns to it and one cluster to
+  `String.slice/3`. Fixing it properly needs token boundaries, which is why it is not a
+  one-liner and is not bundled with the mask repairs (`docs/25` §"a real bug").
+  Consequence is a repair landing one byte off, or a spurious `:error`.
 
-  `word_byte?/1` (`lib/source_mask.ex:86`) is ASCII-only, so after an identifier ending in
-  a non-ASCII letter the byte before `?` is a UTF-8 continuation byte, `?"` reads as a
-  character literal, and the string's opening quote is consumed. **20 rules depend on
-  `SourceMask`**, and this is the exact shape of the defect that once shipped as a rule
-  rewriting inside strings. Trigger is narrow (`über?"…"` is fine — the byte before `?` is
-  ASCII), which is why nothing has hit it.
-
-  Left for you because it is a **shared primitive**: changing its byte classification can
-  move every rule's corpus findings, so it needs its own gate run rather than riding along
-  with a triage.
+  (The five `mask/1` defects found alongside it are fixed — evidence in the commit and in
+  `test/source_mask_test.exs`, which fails 7 ways against the old scanner.)
 
   Method note, whichever floor you pick: a survivor is not an "add a test" item, it is a
   request to construct an input that *separates two programs*, and for many no such input

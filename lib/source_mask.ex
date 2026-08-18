@@ -55,9 +55,12 @@ defmodule Credence.SourceMask do
       bracket pairs `( [ { <` — plus their heredoc forms. Elixir does not nest
       paired sigil delimiters (`~s(a (b) c)` is a syntax error), so the first
       unescaped close terminates.
-    * `?x` character literals, including `?"`, `?'`, `?%`, `?#`, `?\\n` and the
-      numeric escapes `?\\xHH`, `?\\x{...}`, `?\\uHHHH`, `?\\u{...}` — masked
-      whole, so their digits cannot survive as a word token
+    * `?x` character literals, including `?"`, `?'`, `?%`, `?#`, `?\\n`, the hex
+      tail of `?\\xHH`, and multi-byte characters like `?é` — masked whole, so
+      no fragment of one survives as a token. Elixir 1.20 has no `?\\xHH`
+      escape and the hex tail is over-masked deliberately; the braced
+      `?\\u{...}` form is **not** consumed, because unlike hex digits it could
+      run past a string's opening quote (see `hex_tail_len/2`)
     * `#` comments to end of line, anywhere on the line
 
   Interpolation is the deliberate exception: the contents of `\#{...}` are real
@@ -83,6 +86,19 @@ defmodule Credence.SourceMask do
   # Such a rule wants `self_contained?/2` and the raw line, not the shadow.
   @blank 0x01
 
+  # Stand-in `prev` values for "the previous thing was not a single ASCII byte".
+  # `prev` exists only to answer `word_byte?/1`, so a multi-byte character can
+  # report what it MEANS instead of handing over a continuation byte that means
+  # nothing on its own. `@ident` is an ordinary word byte; `@blank` is not.
+  @ident ?_
+
+  # "Could this byte be the tail of an identifier?" — asked only of the byte
+  # BEFORE a `?`, to tell `even?` from the character literal `?x`.
+  #
+  # Deliberately still ASCII-only. `prev` is not always a source byte: a
+  # multi-byte character is decoded in `code_scan_byte/5` and reports itself
+  # here as `@ident` or `@blank`, so this guard never has to reason about a
+  # continuation byte it cannot interpret on its own.
   defguardp word_byte?(c)
             when c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_
 
@@ -350,21 +366,38 @@ defmodule Credence.SourceMask do
     scan(rest_after, stack, ?#, false, blanks(n + 1, acc))
   end
 
-  # ?\n ?\\ ?\s ?\xHH ?\u{...} — a `?` is a character literal unless it is the
-  # tail of an identifier (`even?`), which is exactly "the previous byte is a
-  # word byte". The numeric escapes carry a tail that must be masked too, or
-  # `?\xHH % 2` leaves `HH` in the shadow and gets rewritten mid-token.
+  # ?\n ?\\ ?\s — a `?` is a character literal unless it is the tail of an
+  # identifier (`even?`), which is exactly "the previous byte is a word byte".
+  #
+  # A hex tail is still consumed; a BRACED one is not. See `hex_tail_len/2` for
+  # why the two are treated differently — the short version is that hex digits
+  # cannot cross a delimiter and `?\u{...}` could, which let `FixPythonModulo`
+  # rewrite the inside of a string literal.
+  #
+  # Both clauses hand `@blank` forward as `prev`, not the literal's own byte.
+  # `prev` answers "what did the byte before this one look like *in the shadow*",
+  # and a masked literal's last shadow byte is a blank. Passing the source byte
+  # made a literal's own character decide the NEXT `?`: in `?a?"x" + 1` the
+  # trailing `a` read as an identifier tail, so `?"` was left unmasked, the real
+  # string was mistaken for a terminated one, and ` + 1` — which is inside the
+  # string — stood in the shadow as code. That is the under-masking direction,
+  # the one that corrupts source rather than costing a fix.
   defp code_scan(<<"?\\", c, rest::binary>>, stack, prev, _bol, acc)
        when not word_byte?(prev) and c != ?\n do
-    n = escape_tail_len(c, rest)
+    # Mutually exclusive: `hex_tail_len/2` fires only for `x`/`u`, which are
+    # ASCII, and `utf8_tail_len/2` only for a UTF-8 lead byte.
+    n = hex_tail_len(c, rest) + utf8_tail_len(c, rest)
     <<_::binary-size(^n), rest_after::binary>> = rest
-    scan(rest_after, stack, c, false, blanks(3 + n, acc))
+    scan(rest_after, stack, @blank, false, blanks(3 + n, acc))
   end
 
   # ?a ?" ?' ?% ?# — masking these keeps `?"` from opening a phantom string
   defp code_scan(<<"?", c, rest::binary>>, stack, prev, _bol, acc)
-       when not word_byte?(prev) and c != ?\n,
-       do: scan(rest, stack, c, false, blanks(2, acc))
+       when not word_byte?(prev) and c != ?\n do
+    n = utf8_tail_len(c, rest)
+    <<_::binary-size(^n), rest_after::binary>> = rest
+    scan(rest_after, stack, @blank, false, blanks(2 + n, acc))
+  end
 
   defp code_scan(<<"~", rest::binary>>, stack, prev, bol, acc) do
     case sigil_open(rest) do
@@ -409,33 +442,87 @@ defmodule Credence.SourceMask do
 
   defp code_scan(bin, stack, prev, bol, acc), do: code_scan_byte(bin, stack, prev, bol, acc)
 
+  # A whole multi-byte character, decoded so `prev` can say what it was.
+  #
+  # This is the only place that can tell `café?"x"` from `—?"x"`. Both put a byte
+  # >= 0x80 immediately before a `?`, but only the first is an identifier tail,
+  # and the two want opposite answers: `?"` is an identifier suffix after `café`
+  # and a character literal after an em dash. Judging that from `prev` alone is
+  # impossible — a continuation byte like 0xA9 belongs to any number of
+  # characters — so the character is decoded here and reports itself.
+  #
+  # Elixir takes identifiers from UAX-31, so letters, marks and digits continue
+  # an identifier and everything else does not. Non-ASCII punctuation never
+  # parses in code position, but this scanner runs on source that does NOT parse,
+  # which is exactly why the em-dash case has to be handled rather than assumed
+  # away. Invalid UTF-8 falls through to the byte clause below and is treated as
+  # a non-word byte — the over-masking direction.
+  defp code_scan_byte(<<c::utf8, rest::binary>>, stack, _prev, _bol, acc) when c >= 0x80 do
+    prev = if identifier_char?(c), do: @ident, else: @blank
+    scan(rest, stack, prev, false, [<<c::utf8>> | acc])
+  end
+
   defp code_scan_byte(<<c, rest::binary>>, stack, _prev, bol, acc),
     do: scan(rest, stack, c, bol and horizontal_space?(c), [c | acc])
+
+  defp identifier_char?(c), do: String.match?(<<c::utf8>>, ~r/[[:alpha:][:digit:]\p{M}]/u)
 
   # ── small helpers ─────────────────────────────────────────────────────
 
   # Length of the numeric tail of a `?\` escape, so it can be masked with the
   # rest of the literal. Over-consuming on malformed input is safe: it blanks
   # more, which can only cost a missed fix.
-  defp escape_tail_len(c, <<"{", _::binary>> = rest) when c in [?x, ?u], do: braced_len(rest, 0)
-  defp escape_tail_len(c, rest) when c in [?x, ?u], do: hex_len(rest, 0)
-  defp escape_tail_len(_c, _rest), do: 0
-
-  defp braced_len(<<"}", _::binary>>, n), do: n + 1
-  defp braced_len(<<>>, n), do: n
-  defp braced_len(<<"\n", _::binary>>, n), do: n
-  defp braced_len(<<_, rest::binary>>, n), do: braced_len(rest, n + 1)
+  # A character literal is one CHARACTER, and a character is up to four bytes.
+  # Masking `?` plus a single byte left the rest of a multi-byte one standing:
+  # `?é` produced a shadow ending in a bare 0xA9 and `?"` (U+201C) one ending in
+  # 0x80 0x9C — neither is valid UTF-8, and an invalid subject is something
+  # `Regex.scan/3` can reject outright, which would cost every rule on that file
+  # rather than one match.
+  #
+  # Only bytes that really are continuations are counted, so malformed UTF-8
+  # consumes LESS rather than eating the code byte that follows it — the same
+  # "a missed fix beats a corrupted source" bias the rest of the scanner takes.
+  # Elixir 1.20 has no `?\xHH` escape — its tokenizer reads `?\x41` as the
+  # character `x` followed by the INTEGER 41 — so blanking the digits hides real
+  # code. It is kept anyway, deliberately: hex digits cannot cross a delimiter,
+  # so the cost is bounded at a missed fix, and the alternative is worse. Leaving
+  # `41` visible in `?\x41 % 2` invites a rule to "repair" a modulo that is only
+  # there because the file already does not parse, which is how
+  # `FixPythonModulo` turned it into `?\xrem(41, 2)`.
+  #
+  # The braced form `?\u{...}` is NOT kept, and that asymmetry is the whole
+  # point. It ran to `}` or end of line, so it could swallow a string's OPENING
+  # quote — `?\u{"a}b % 2" <> y` released the scanner into code state INSIDE the
+  # string and `FixPythonModulo` rewrote its contents. Bounded over-masking is
+  # the documented bias; crossing a delimiter is the failure this module exists
+  # to prevent.
+  defp hex_tail_len(c, rest) when c in [?x, ?u], do: hex_len(rest, 0)
+  defp hex_tail_len(_c, _rest), do: 0
 
   defp hex_len(<<c, rest::binary>>, n) when c in ?0..?9 or c in ?a..?f or c in ?A..?F,
     do: hex_len(rest, n + 1)
 
   defp hex_len(_bin, n), do: n
 
+  defp utf8_tail_len(c, rest), do: continuations(rest, expected_continuations(c), 0)
+
+  defp expected_continuations(c) when c in 0xC2..0xDF, do: 1
+  defp expected_continuations(c) when c in 0xE0..0xEF, do: 2
+  defp expected_continuations(c) when c in 0xF0..0xF4, do: 3
+  defp expected_continuations(_c), do: 0
+
+  defp continuations(_bin, 0, n), do: n
+
+  defp continuations(<<c, rest::binary>>, want, n) when c in 0x80..0xBF,
+    do: continuations(rest, want - 1, n + 1)
+
+  defp continuations(_bin, _want, n), do: n
+
   # A sigil is `~`, a name, then a delimiter. Single-letter names may be lower
   # or upper case; multi-letter names must start with an upper case letter.
   # Lower case means interpolation and escapes are active.
   defp sigil_open(bin) do
-    {name, rest} = take_letters(bin, 0)
+    {name, rest} = take_name(bin, 0)
 
     cond do
       name == 0 -> :error
@@ -459,10 +546,23 @@ defmodule Credence.SourceMask do
   defp sigil_delimiter(<<?<, _::binary>>, name, interp?), do: {:ok, name + 1, ">", interp?, false}
   defp sigil_delimiter(_, _name, _interp?), do: :error
 
-  defp take_letters(<<c, rest::binary>>, n) when c in ?a..?z or c in ?A..?Z,
-    do: take_letters(rest, n + 1)
+  # A sigil name is one lowercase letter, or an uppercase letter followed by
+  # alphanumerics — `~B64(...)` and `~ABC123(...)` are both real sigils. Counting
+  # only letters stopped at the first digit, so `sigil_delimiter/3` was handed `6`
+  # instead of `(`, the sigil went unrecognised, and its body was never masked.
+  # `~B64(100% done)` came out of the shadow whole, which is `FixPythonModulo`'s
+  # shipped bug verbatim — the first entry in this module's own moduledoc.
+  #
+  # Only the first character may be a letter-only; the `name > 1` check in
+  # `sigil_open/1` is what still rejects a lowercase multi-character name.
+  defp take_name(<<c, rest::binary>>, 0) when c in ?a..?z or c in ?A..?Z,
+    do: take_name(rest, 1)
 
-  defp take_letters(bin, n), do: {n, bin}
+  defp take_name(<<c, rest::binary>>, n)
+       when n > 0 and (c in ?a..?z or c in ?A..?Z or c in ?0..?9),
+       do: take_name(rest, n + 1)
+
+  defp take_name(bin, n), do: {n, bin}
 
   defp lower?(c), do: c in ?a..?z
   defp upper?(c), do: c in ?A..?Z

@@ -92,10 +92,15 @@ defmodule Credence.SourceMaskTest do
       assert mask("  # whole line") == "  ············"
     end
 
-    test "character literals, including their numeric escapes" do
-      # `?\x41` masked whole, so `41` cannot survive as a word token and get
-      # rewritten mid-literal by a rule looking for digits.
+    test "character literals, including their hex tail" do
+      # `?\x41` is masked whole. Elixir 1.20 has no such escape — the tokenizer
+      # reads it as the character `x` then the integer 41 — so this over-masks on
+      # purpose: hex digits cannot cross a delimiter, and leaving `41` visible
+      # invites a rule to "repair" a modulo that only exists because the file
+      # already does not parse. The braced form is the opposite case and is NOT
+      # consumed; see the leak describe block.
       assert mask(~S|x = ?a + ?\x41|) == "x = ·· + ·····"
+      assert mask(~S|x = ?\n|) == "x = ···"
     end
 
     test "heredoc bodies, and the terminator line" do
@@ -106,6 +111,149 @@ defmodule Credence.SourceMaskTest do
       '''
 
       assert mask(source) == "@moduledoc ···\n·········\n···\n"
+    end
+  end
+
+  describe "mask/1 — UTF-8, where one byte is not one character" do
+    # Both of these were real defects, found 2026-08-18 by triaging the mutation
+    # sweep's survivors. They share a root cause: the scanner walks BYTES, and a
+    # `?` decision was being made from the previous byte and the next byte as if
+    # each were a whole character.
+
+    test "an identifier ending in a non-ASCII letter does not open a phantom literal" do
+      # `prev` is a raw byte, so before the `?` of `café?` it is 0xA9 — the tail
+      # of `é`. Read as "not an identifier byte", `?"` became a character
+      # literal, its two bytes were blanked, and the string's OPENING quote went
+      # with them. The contents then stood in the shadow as code.
+      # The `?` is a suffix on both spellings; only the identifier differs.
+      assert mask(~S|x = café?("a")|) == "x = café?(···)"
+      assert mask(~S|x = cafe?("a")|) == "x = cafe?(···)"
+
+      shadow = SourceMask.mask(~S|x = café?"a div b"|)
+
+      refute shadow =~ "div",
+             "string contents visible as code — this is FixDivRem's shipped bug: #{show(shadow)}"
+    end
+
+    test "the ASCII spelling is unchanged — the fix widened the guard, it did not move it" do
+      assert mask(~S|x = cafe?"a div b"|) == "x = cafe?·········"
+      assert mask(~S|even?("a")|) == "even?(···)"
+      assert mask(~S|x = ?"|) == "x = ··"
+    end
+
+    test "a non-ASCII byte before `?` only suppresses the literal reading, never a real one" do
+      # `über` ends in ASCII `r`, so this case never depended on the guard —
+      # it is the control that proves the change is not a blanket suppression.
+      assert mask(~S|IO.puts über?("s")|) == "IO.puts über?(···)"
+    end
+
+    test "a character literal masks the whole character, not its first byte" do
+      # `?é` is three bytes; blanking two left a bare 0xA9 standing, so the
+      # shadow was not valid UTF-8 — a subject `Regex.scan/3` can reject
+      # outright, which costs every rule on that file rather than one match.
+      for source <- [~S|x = ?é|, ~S|x = ?“|, ~S|x = ?😀|, ~S|x = ?\é|] do
+        shadow = SourceMask.mask(source)
+
+        assert String.valid?(shadow), "shadow is not valid UTF-8 for #{inspect(source)}"
+        assert shadow == "x = " <> String.duplicate(<<1>>, byte_size(source) - 4)
+      end
+    end
+
+    test "byte length and UTF-8 validity hold across the Unicode cases" do
+      sources = [
+        ~S|x = café?"a"|,
+        ~S|x = ?é|,
+        ~S|x = ?😀|,
+        ~S|x = "héllo" + 1|,
+        ~S|x = ~S(héllo)|,
+        "x = 1 # cömment",
+        ~S|x = "#{übr}"|,
+        ~S|:"héllo"|
+      ]
+
+      for source <- sources do
+        shadow = SourceMask.mask(source)
+
+        assert byte_size(shadow) == byte_size(source), "length changed for #{inspect(source)}"
+        assert String.valid?(shadow), "invalid UTF-8 for #{inspect(source)}"
+      end
+    end
+
+    test "a non-ASCII byte that is NOT an identifier tail still reads `?` as a literal" do
+      # The counterpart to the `café?` case, and the reason the guard decodes the
+      # character instead of accepting every byte >= 0x80. An em dash before a
+      # `?` is not an identifier tail, so `?"` there really is a character
+      # literal — and treating it as a suffix would leave the quote standing and
+      # flip string parity for the rest of the line.
+      em_dash = "x = " <> <<0x2014::utf8>> <> ~S|?"a div b"|
+
+      assert mask(em_dash) == "x = —··a div b·"
+    end
+
+    test "a character literal does not let its own character decide the next `?`" do
+      # `prev` reports what the previous byte looked like IN THE SHADOW, and a
+      # masked literal's last shadow byte is a blank. Handing the literal's own
+      # character forward instead made `?a` mark the following `?` as an
+      # identifier tail: `?"` stayed unmasked, the real string was read as
+      # terminated, and ` + 1` — string content — stood in the shadow as code.
+      assert mask(~S|x = ?a?"x" + 1|) == "x = ····x·····"
+      assert mask(~S|x = ?é?"SECRET"|) == "x = ·····SECRET·"
+    end
+
+    test "malformed UTF-8 consumes less rather than eating the byte after it" do
+      # Only bytes actually in 0x80..0xBF are taken as continuations, so a lead
+      # byte with no continuation cannot swallow the code that follows it. The
+      # module's stated bias: a missed fix beats a corrupted source.
+      truncated = <<"x = ?", 0xC3, "+ 1">>
+
+      shadow = SourceMask.mask(truncated)
+
+      assert byte_size(shadow) == byte_size(truncated)
+      assert :binary.part(shadow, byte_size(shadow) - 3, 3) == "+ 1"
+    end
+  end
+
+  describe "mask/1 — literal forms that used to leak into code" do
+    # Both found 2026-08-18 while fixing the UTF-8 defects above. Each reproduced
+    # this module's own first moduledoc example — FixPythonModulo rewriting
+    # `100% done` inside a literal — so each is pinned end to end, not just at
+    # the shadow.
+
+    test "a sigil name may carry digits after the first letter" do
+      # `~B64` and `~ABC123` are real sigils. Counting only letters stopped the
+      # name at `B`, the delimiter check was handed `6`, the sigil went
+      # unrecognised, and its whole body stood in the shadow as code.
+      assert mask(~S|IO.puts(~B64(100% done))|) == "IO.puts(···············)"
+      assert mask(~S|IO.puts(~ABC123(a div b))|) == "IO.puts(················)"
+    end
+
+    test "sigil-shaped things that are not sigils are still code" do
+      assert mask(~S|a ~ b|) == "a ~ b"
+      assert mask(~S|x = ~~~5|) == "x = ~~~5"
+      assert mask(~S|x = ~s(a) <> ~r/b/|) == "x = ····· <> ·····"
+    end
+
+    test "`?\\u{` does not run to `}` and swallow a string's opening quote" do
+      # The braced form is not an escape in Elixir 1.20 (`?\u` is the character
+      # `u`), but it was scanned as one, running to `}` or end of line. In
+      # `?\u{"a}b % 2" <> y` that ate the string's OPENING quote and released the
+      # scanner into code state INSIDE the string.
+      assert mask(~S|x = ?\u{"a}b % 2" <> y|) == "x = ···{········· <> y"
+    end
+
+    test "and a shipped rule no longer rewrites inside that string" do
+      source = ~S|x = ?\u{"a}b % 2" <> y| <> "\n"
+
+      assert Credence.Syntax.FixPythonModulo.fix(source) == source,
+             "FixPythonModulo rewrote inside a string literal"
+    end
+
+    test "the same rule still repairs the real thing" do
+      # The control. A mask that blanked everything would also pass the test
+      # above, and prove nothing.
+      source = "x = a % 2\n"
+
+      assert Credence.Syntax.FixPythonModulo.fix(source) == "x = rem(a, 2)\n"
     end
   end
 
