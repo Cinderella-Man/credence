@@ -265,6 +265,30 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   `FixPythonModulo` and `FixDivRem` as converted and states plainly that
   `FixPythonFloorDiv` and `FixScientificNotation` are not.
 
+- [ ] **T0.5 [C] The merge, and the method it was done with.** Moved here from
+  `STATUS.md` F6 on 2026-08-18 so the map holds only open decisions; this is a
+  record to complete, not a decision to take.
+
+  **The PR: [#22](https://github.com/Cinderella-Man/credence/pull/22),
+  `evolution_accepted` → `main`,** confirmed by the maintainer 2026-08-16. That
+  settles the identity question — the head is the branch carrying the acceptance
+  commits, not `evolution`.
+
+  **The constraint: fast-forward or merge commit, never squash or rebase.** Not a
+  preference. This file (Part III), docs/16, the escalation ledger and
+  `IMPROVEMENTS.md` all cite commit ids; squashing orphans every one of them, and
+  it would make the harness-side reset produce a tree unrelated to the documented
+  history.
+
+  **Not yet done as of 2026-08-18:** `main` is at `fb6473c` (PR #20) and
+  `evolution_accepted` is not an ancestor of it, so there is no method to record
+  yet. After the merge, fill in the two blanks below and strike this item:
+
+  | field | value |
+  |---|---|
+  | method used | _(fast-forward / merge commit)_ |
+  | resulting commit on `main` | _(sha)_ |
+
 ### Tier 1 — the reality gates (kills the 60% class at birth)
 
 - [x] ~~**T1 [C] The pipeline-witness gate — every rule must witness its own
