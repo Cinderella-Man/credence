@@ -57,9 +57,11 @@ the sister reset (B2) produce a tree unrelated to the documented history.
   stamp in (2) means nothing until it does. Confirmed: zero tags, one `[0.8.1]` section,
   `mix.exs` version agreeing.
 
-  **Blocker for (5):** `package()` declares `licenses: ["MIT"]` and there is no LICENSE
-  file. `mix hex.publish` objects, and a published package would assert MIT with no grant
-  text. Writing one names a copyright holder, so it is yours.
+  **(5) is unblocked — `LICENSE` written**, MIT, `Copyright (c) 2026 Kamil Skowron`
+  (sole author, first commit 2026-04-24). **Check the holder line is what you want** —
+  it is the one part of that file I inferred rather than read. Hex's default `files`
+  list covers `LICENSE*`, so no `mix.exs` change is needed. Unrelated and not a
+  blocker: `package()` carries no `maintainers` and the project no `source_url`.
 
 - [ ] **A6. CI has never executed on a runner — it needs this push.**
   `.github/workflows/ci.yml`, three jobs on a pinned Elixir 1.20.2 / OTP 29 (one pair by

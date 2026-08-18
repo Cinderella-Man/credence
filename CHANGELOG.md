@@ -150,6 +150,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worse. This is how the `FixDivRem` defect above was found — after that rule had
   been reviewed, converted, tested and released as fixed.
 
+- **A `LICENSE` file.** `mix.exs` has declared `licenses: ["MIT"]` since the package
+  metadata was written, with no grant text anywhere in the repo — so the assertion
+  had nothing behind it and `mix hex.publish` refuses the package. The file carries
+  the standard MIT text, `Copyright (c) 2026 Kamil Skowron` (the sole author; first
+  commit 2026-04-24). Hex's default `files` list already includes `LICENSE*`, so it
+  ships with the package without a `files:` key.
+
 ### Removed
 - **The `no_else_if` Syntax rule is retired; `fix_elsif_in_if_chain` now handles
   all three spellings.** Its failure mode — a model translating Python's `elif`
