@@ -7,35 +7,6 @@ when a batch is launched and when it lands. Delete rows once they are committed.
 
 ---
 
-## IN FLIGHT 2026-08-18 — D9(a) survivor triage (`wf_62eef48d-f05`)
-
-**Launched.** 32 triage agents (one per rule with survivors) + one adversarial
-refuter per rule that produced an EQUIVALENT/UNSURE claim. Input is the
-**re-swept** ledger `tmp/mutants-20260818/` (gitignored), not the stale
-`tmp/mutants/`.
-
-**Re-sweep result, and it corrects STATUS's prediction.** STATUS said the stale
-rows predate the `no_python_multi_return` fix so a fresh sweep would read
-"~0.742 / 219". Measured on the same sample (39 rules, seed 0, cap 40):
-**0.737, 631 killed / 225 survived / 3 invalid**. The rate went *down* and
-survivors went *up*; `no_python_multi_return` still has **19** survivors, so its
-fix removed two rather than the bucket.
-
-**Concurrency note — deliberate, not an oversight.** 16 concurrent agents
-exceeds the 3–4 preference recorded in the OOM incident below. The constraint's
-real cause is unbounded *compiles*, not agent count, so every agent in this
-batch is read-only and explicitly forbidden `mix compile` / `mix test` /
-`mix credence.mutants`; they may only run standalone `elixir -e` snippets.
-
-**If this session dies:** the sweep ledger is regenerable exactly
-(`MIX_ENV=test mix credence.mutants --sample 39 --seed 0 --cap 40 --out DIR` —
-the sample is a pure function of `{module, seed}`), and the agent transcripts
-are under
-`~/.claude/projects/-home-kamil-projects-credence/429240b7-b40e-4313-b070-c46cf330e199/subagents/workflows/wf_62eef48d-f05/`.
-Delete this row when the triage lands in `docs/25`.
-
----
-
 ## Incident 2026-07-28 10:36 — OOM, VSCode killed, 8 agents lost
 
 **What happened.** A batch of **eight** concurrent implementation agents was

@@ -475,6 +475,13 @@ its own tests run under real `mix test`.
   not been triaged yet and a floor set before that would be a number nobody can
   defend.
 
+  **Superseded 2026-08-18: the tail IS triaged — `docs/25`.** A fresh sweep of the
+  same sample reads **0.737 / 631 killed / 225 survived** (not the 0.740 / 629 / 221
+  above; those rows predate the `no_python_multi_return` fix, and re-running moved
+  the rate *down*). All 225 survivors are sorted: **94 equivalent, 131 real gaps,
+  triaged rate 0.828**. So the floor is now a number somebody can defend, and the
+  only thing report-only is still waiting on is the maintainer picking it per rule.
+
   Controls, all three docs/22 asked for: a **planted misaligned mutant** must
   raise rather than corrupt a different token (the whole measurement assumes the
   edit lands where the tokenizer said, and a silent miss would move every score

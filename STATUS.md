@@ -201,31 +201,29 @@ rather than to this section.
   separate question and means a new runtime dep for a library whose one consumer parses
   stdout.
 
-- [ ] **D9. Set the mutation floor. The ceiling is ~0.77, so 0.740 is below it.**
-  Sweep: 0.740, 629 killed / 221 survived, seed 0, from `tmp/mutants/mutants.tsv`
-  (gitignored — the only copy; its rows predate the `no_python_multi_return` fix, so a
-  fresh sweep reads ~0.742 / 219).
+- [ ] **D9. (a) is DONE — the triage is `docs/25`. One decision left: pick the floor.**
+  All 225 survivors of a fresh sweep are triaged and ledgered
+  (`docs/25-mutation-survivor-triage.md` + `docs/25-survivor-triage.json`).
 
-  A 14-row sample triaged in `0007208` put **~14-21% of survivors beyond any input**. Two
-  are proven: `arity in 1..255` widened to `1..256`, where `&f/256` is a CompileError; and
-  `fix_extra_brace_in_ets_match`'s `at/2` negative-index guard, which needs the parser to
-  report column 1 and it reports an opening delimiter's column (≥ 5 across ten attempted
-  shapes). So a fully triaged rate is **≈0.77 and probably higher**, and `--fail-under
-  0.740` would sit below the honest ceiling — the failure C18 staged this work to avoid.
+  **Raw 0.737. Triaged 0.828** — 94 of 225 survivors cannot be killed by any input. The
+  ≈0.77 ceiling this item carried was right in direction and low. `--fail-under 0.740`
+  would sit 0.09 *below* what the tests already earn and could not fail anything.
 
-  One of the sample's "real gaps" is now closed and was worth it independently: nothing
-  put a `plug` call on its module's LAST body line, so `find_plug_caller/2`'s containment
-  lookup was untested at its only boundary. Test added; verified to kill the mutant.
+  **The decision, and it is only this:** floor **per rule** (the triaged distribution runs
+  0.400–1.000; one global number is met by the strong rules and ratchets nothing) —
+  at the triaged rate (maximum ratchet, no slack for a mis-triaged equivalent) or a notch
+  under it (absorbs one bad call per rule). `docs/25` has the per-rule table to pin from.
 
-  * **(a)** triage the remaining survivors, ledger the equivalent ones, floor against the
-    triaged rate. Correct, about a week. `comparison_swap` is the worst by rate (48%) and
-    52 of 221 sit in catch-all clauses.
-  * **(b)** floor well below the rate as a pure regression ratchet. A day, buys much less.
+  **Two things worth doing first, both in `docs/25`:** 35 of the 94 equivalents are
+  **provably dead code** in 15 rules — the sweep found it for free, and deleting it pulls
+  the raw rate up to meet the triaged one, so the number the tool prints by default
+  becomes trustworthy without a triage behind it. And nine rules sit at the 40-mutant cap,
+  so their rates must be **re-measured** after any such cleanup, not projected.
 
-  Either way per-rule, not global: the distribution runs 0.475-0.875 and one number hides
-  both ends. Method note that survives whichever you pick — a survivor is not an "add a
-  test" item, it is a request to construct an input that *separates two programs*, and for
-  many no such input exists that anyone would write.
+  Method note, whichever floor you pick: a survivor is not an "add a test" item, it is a
+  request to construct an input that *separates two programs*, and for many no such input
+  exists. `prefer_no_question_mark_for_non_boolean` (0.400, **zero** equivalents) is the
+  one rule in the sample whose tests are simply thin.
 
 - [ ] **D11a. Build list worked out; one item left and it is not buildable as it stands.**
   `docs/23-build-list.md` is the list and carries every disposition — what was built, what
