@@ -197,6 +197,25 @@ defmodule Credence.Pattern.NoNegativeStepInStringSliceCheckTest do
   # Both are gone because both callbacks now route through `slice_range/1` and
   # `bare_neg_one_range?/1`. These tests pin that they cannot diverge again.
   describe "scope parity between check and fix" do
+    # Written as LITERAL fixtures, not built by interpolation, so
+    # `fixture_scope_parity_test.exs` can see them: its collector gathers string
+    # literals adjacent to a verb call, and an interpolated fixture leaves nothing
+    # to collect. The loop-built cases below cover the same ground for a human
+    # reader; these two are what the gate reads.
+    test "the piped form is a literal fixture the meta-gates can collect" do
+      assert flagged?(NoNegativeStepInStringSlice, """
+             defmodule M do
+               def f(s), do: s |> String.slice(2..-1)
+             end
+             """)
+
+      assert flagged?(NoNegativeStepInStringSlice, """
+             defmodule M do
+               def f(s, n), do: s |> String.slice(n..-1)
+             end
+             """)
+    end
+
     test "the piped form is reported, not silently rewritten" do
       for src <- ["s |> String.slice(2..-1)", "s |> String.slice(n..-1)"] do
         wrapped = "defmodule M do\n  def f(s, n), do: #{src}\nend\n"

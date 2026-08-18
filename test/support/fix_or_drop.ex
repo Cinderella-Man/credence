@@ -145,6 +145,14 @@ defmodule Credence.FixOrDrop do
 
   defp literal({:__block__, _, [s]}) when is_binary(s), do: [s]
   defp literal(s) when is_binary(s), do: [s]
+
+  # `~S'...'` — the form `Credence.FixtureHealer` rewrites any fixture containing a
+  # double quote into, so dropping it silently excluded every quote-carrying
+  # fixture in the suite (measured: 832 occurrences across 109 rule test files)
+  # from this gate AND from `fixture_scope_parity_test.exs`. `~S` does not
+  # interpolate, so its body is a single literal segment and needs no evaluation.
+  defp literal({:sigil_S, _, [{:<<>>, _, [s]}, _modifiers]}) when is_binary(s), do: [s]
+
   defp literal(_), do: []
 
   @doc "Every `{rule, source, reason}` violation across `rules`."
