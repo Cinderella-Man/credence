@@ -153,19 +153,38 @@ rather than to this section.
   findings in 62 batches (`95defc1`). Starting it is yours: one billed Claude session per
   batch, resumable in slices (`validate_loop.sh 3 2`).
 
-- [ ] **D6. C12(b) — fire-rate telemetry. Genuinely blocked on the harness's H10/H11,
-  re-checked 2026-08-17.** C12(c) is done (`b3ffd62`, `d857b5d`).
+- [ ] **D6. C12(b) is BUILT and has run — `mix cev.fire_rate` (harness `32946ef`).**
+  C12(c) was already done (`b3ffd62`, `d857b5d`).
 
-  The blocker is real, and worth stating so nobody re-tests it: C12(b) asks for fire rate
-  **over feedstock** — "a rule that has fired only on its *birth row* after N passes is
-  flagged for generalization-or-retirement". That needs per-rule fire records across
-  passes plus the link back to the row that created the rule, which is precisely H10
-  (per-rule provenance) and H11 (per-pass report).
+  **I had the blocker wrong, and it is worth saying why so it is not re-asserted.** This
+  item said C12(b) needs H10 (per-rule provenance) and H11 (per-pass report). Neither half
+  was actually missing. The birth link — the thing H10 was proposed to create — has been
+  in **credence's own git history all along**: `cred-gen: new(semantic): no_foo [row 134]`,
+  and **628 of 628** `cred-gen:` commits carry `[row N]`. That is a better carrier than
+  H10's `var/cache/` JSON, because it survives both `cev.reset` and acceptance. The fire
+  records ride the `APPLIED_RULES:` lines `Cev.AppliedRules.parse/1` already reads.
 
-  In particular credence's own per-rule corpus counts (`accepted_findings_budget.txt`,
-  `mix credence.corpus --budget`) are **not** a substitute, and reaching for them is the
-  obvious wrong move: the corpus premise is "well-reviewed code, credence should find
-  nothing", so zero findings there is the desired state, not a retirement signal.
+  (The one thing this item got right stands: credence's per-rule corpus counts are **not**
+  a substitute. The corpus premise is "well-reviewed code, credence should find nothing",
+  so zero findings there is the desired state, not a retirement signal.)
+
+  **Measured on the 3rd run:** 117 rules observed firing, 52 on exactly one row, **8
+  flagged as fired-only-on-their-birth-row** — three of which acceptance had already
+  retired. Every count is a **lower bound** and the flagged 8 an **upper** bound: row logs
+  do not survive their rows (`RowLog.close/1` deletes on ordinary completion; every other
+  outcome moves the log to a path with **no pass component**, so a later pass overwrites
+  an earlier one), which took 1,280 attempts down to 489 logs. The task computes that loss
+  and prints it above the numbers.
+
+  **Yours, and the only two things left here:**
+  * Look at the 8. `mix cev.fire_rate --repo ../credence` lists them; each is a question,
+    not a verdict, because its other fires may be in a deleted log.
+  * **Decide whether to make the 4th run's logs pass-scoped** before B9's flip. As it
+    stands the run discards ~62% of its own fire evidence as it goes, and this measurement
+    stays a lower bound forever. It is a small change to `Cev.RowLog`, but the blast radius
+    is real — `cev.reset`, `AppliedRules.for_row/1`, the classifier's log reads and the
+    Gate's `tail/1` all know the current layout — so it is a deliberate call, not a
+    drive-by, and it is the last moment it can be made for this run.
 
 - [ ] **D7. Only C10 is left, and it is a scope call rather than a gap.**
   C9 is closed three ways and C16 is built (`0007208` — `rule_status/1` now reports
