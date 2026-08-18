@@ -9,8 +9,10 @@ Reproduce the sweep exactly — the sample is a pure function of `{rule module, 
 ```
 MIX_ENV=test mix credence.mutants --sample 39 --seed 0 --cap 40 --out DIR
 ```
-Elixir 1.20.2 / OTP 29. The machine-readable ledger with every argument in full is
-`docs/25-survivor-triage.json`; this file is the summary and the reasoning.
+
+Elixir 1.20.2 / OTP 29. `docs/25-survivor-triage.json` is the machine-readable ledger
+with every argument in full; this file is the summary and the reasoning. Both are
+generated from the run, not transcribed.
 
 ## The number
 
@@ -18,28 +20,41 @@ Elixir 1.20.2 / OTP 29. The machine-readable ledger with every argument in full 
 | --- | ---: | ---: |
 | killed | 631 | |
 | survived | 225 | |
-| — of those, **equivalent** (no input separates them) | 94 | |
-| — of those, **real gaps** (an input exists) | 131 | |
+| — of those, **equivalent** (no input separates them) | 92 | |
+| — of those, **real gaps** (an input exists) | 133 | |
 | **raw** — what the sweep reports | | **0.7371** |
-| **triaged** — equivalents out of the denominator | | **0.8281** |
+| **triaged** — equivalents out of the denominator | | **0.8259** |
 
-**94 of 225 survivors (42%) cannot be killed by any test.** D9's earlier 14-row
-sample put that at 14–21% and called ≈0.77 a ceiling "and probably higher". It was
-right in direction and low: the ceiling is **0.8281**.
+**92 of 225 survivors (41%) cannot be killed by any test.** D9's earlier 14-row sample
+put that at 14–21% and called ≈0.77 a ceiling "and probably higher". It was right in
+direction and low: the ceiling is **0.8259**.
 
 So `--fail-under 0.740` would sit **0.09 below** what the tests already earn — it could
 not fail anything, which is the outcome C18 staged this work to avoid.
 
-## Why a global floor is still the wrong shape
+## How reproducible is this?
 
-The triaged distribution runs **0.400 to 1.000**. Six rules are already perfect and one
-sits at 0.400. A single global number is satisfied by the strong rules while the weak
-ones sit under it untouched — it would ratchet nothing. Floor **per rule**.
+The triage was run **twice, independently**. The two runs agree on **223 of 225 verdicts
+(99.1%)**. Both disagreements went the same way — run 2 found separating inputs run 1
+could not — so run 2's GAP set strictly contains run 1's, and **this file records run 2,
+the conservative read**. Run 1 would have reported 0.8281; the difference is 0.002.
+
+The aggregate is therefore stable to about ±0.002, but **an individual verdict is not a
+certainty** — roughly 1 in 100 moved between runs. That matters for how the floor is set:
+pinning exactly at the triaged rate assumes every one of these 92 equivalence calls is
+right, and about one in a hundred is not.
+
+## Why a global floor is the wrong shape
+
+The triaged distribution runs **0.400 to 1.000**. 9 rules are already perfect; one sits at
+0.400. A single global number is satisfied by the strong rules while the weak ones sit
+under it untouched — it would ratchet nothing. Floor **per rule**.
 
 ## Per-rule, worst first
 
-`triaged = killed / (killed + gaps)`. A rule at 1.000 has no reachable untested
-behaviour left in the four operator families; it does not mean its tests are complete.
+`triaged = killed / (killed + gaps)`. A rule at 1.000 has no reachable untested behaviour
+left *in the four operator families the sweep uses*; it does not mean its tests are
+complete.
 
 | rule | layer | killed | gaps | equiv | raw | **triaged** |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -51,7 +66,7 @@ behaviour left in the four operator families; it does not mean its tests are com
 | `no_enum_count_for_length` | pattern | 16 | 8 | 3 | 0.593 | **0.667** |
 | `prefer_desc_sort_over_negative_take` | pattern | 15 | 7 | 3 | 0.600 | **0.682** |
 | `fix_negated_capture_with_arity` | semantic | 13 | 6 | 1 | 0.650 | **0.684** |
-| `fix_mixed_required_optional_map_keys` | syntax | 25 | 9 | 5 | 0.641 | **0.735** |
+| `fix_mixed_required_optional_map_keys` | syntax | 25 | 11 | 3 | 0.641 | **0.694** |
 | `fix_with_else_bare_value` | semantic | 3 | 1 | 0 | 0.750 | **0.750** |
 | `no_naive_datetime_new_with_tuple` | semantic | 6 | 2 | 0 | 0.750 | **0.750** |
 | `no_redundant_case_nil_clause` | pattern | 6 | 2 | 4 | 0.500 | **0.750** |
@@ -83,95 +98,114 @@ behaviour left in the four operator families; it does not mean its tests are com
 | `no_literal_list_typespec` | pattern | 8 | 0 | 0 | 1.000 | **1.000** |
 | `no_string_concat_in_loop` | pattern | 16 | 0 | 8 | 0.667 | **1.000** |
 
-## The second finding: 35 of the 94 equivalents are DEAD CODE
+## Second finding: 34 of the 92 equivalents are DEAD CODE
 
-An equivalent mutant is not always "a value nothing can reach". Most of these are a
-mutation of a branch **no input can enter at all** — which makes the survivor list a
-map of this codebase's dead code, found for free.
+An equivalent mutant is not always "a value nothing can reach". Most of these mutate a
+branch **no input can enter at all** — so the survivor list doubles as a map of this
+codebase's dead code, found for free.
 
-The largest single instance, verified by hand: `no_sort_then_reverse` lines 197–203
-match a capture arity as a **bare** `2`, but `Sourceror.parse_string/1` wraps every
-literal as `{:__block__, _, [2]}`. Those two clauses can never match. The live copies
-are the two immediately below them (lines 205–211) — and the tests **do** kill the
-mutants on the live copies, which is exactly why only the dead twins survived. This is
-the `{:__block__, _, [literal]}` trap and the two-copies-of-one-predicate smell in one
-place.
+The largest instance, verified by hand: `no_sort_then_reverse` lines 197–203 match a
+capture arity as a **bare** `2`, but `Sourceror.parse_string/1` wraps every literal as
+`{:__block__, _, [2]}`. Those two clauses can never match. Their live twins sit
+immediately below (lines 205–211) — and the tests **do** kill the mutants on the live
+copies, which is exactly why only the dead ones survived. That is the
+`{:__block__, _, [literal]}` trap and the two-copies-of-one-predicate smell in one place.
 
-Rules carrying provably-dead code, by where the sweep pointed:
-
-| rule | lines |
+| rule | dead lines the sweep pointed at |
 | --- | --- |
-| `no_sort_then_reverse` | 197, 198, 201, 202 |
 | `no_python_multi_return` | 91, 200, 224, 684 |
+| `no_sort_then_reverse` | 197, 198, 201, 202 |
 | `no_manual_list_reduce` | 103, 257, 414 |
 | `fix_plug_dependency_module_order` | 126, 205 |
+| `fix_case_branch_assignment_scope` | 173, 230 |
 | `no_postfix_if_expression` | 161, 163 |
 | `no_redundant_case_nil_clause` | 160, 162 |
-| `fix_mixed_required_optional_map_keys` | 162, 188 |
 | `no_stream_data_tuple_with_list` | 202, 214 |
-| `fix_case_branch_assignment_scope` | 173, 230 |
+| `fix_mixed_required_optional_map_keys` | 162 |
 | `fix_python_floor_div` | 135 |
-| `no_length_comparison_for_empty` | 166 |
 | `no_grapheme_palindrome` | 61 |
 | `no_hallucinated_ets_keytype_option` | 141 |
+| `no_length_comparison_for_empty` | 166 |
 | `prefer_desc_sort_over_negative_take` | 157 |
 | `prefer_map_new_with_transform` | 152 |
 
 Deleting dead code leaves the **triaged** rate untouched — equivalents are already out of
-its denominator — and pulls the **raw** rate up toward it, because the survivors it
-counted disappear. Delete every dead branch found here and the raw rate rises 0.737 →
-0.828, converging on the triaged number. That is the case for cleaning up first: it makes
-the cheap number the sweep prints by default trustworthy on its own, without a triage
-pass standing behind it.
+its denominator — and pulls the **raw** rate up toward it, because the survivors it was
+counting disappear. That is the case for cleaning up first: it makes the number the tool
+prints by default trustworthy on its own, with no triage standing behind it.
 
-One caveat before treating that as a clean arithmetic prediction. **Nine of the 39 rules
-are at or one below the 40-mutant cap** (`fix_case_branch_assignment_scope`,
+Do not treat that as clean arithmetic, though. **9 of the 39 rules sit at or one below
+the 40-mutant cap** (`fix_case_branch_assignment_scope`,
 `fix_plug_dependency_module_order`, `no_length_comparison_for_empty`,
 `no_manual_list_reduce`, `no_python_multi_return`, `no_reduce_for_group_by`,
-`no_sort_for_top_k` at 40; `fix_mixed_required_optional_map_keys` and
-`prefer_string_slice_for_trim_last_char` at 39). For those, removing dead lines does not
-just delete mutants — it frees cap slots, and mutants that were never sampled take their
-place. Their rates have to be re-measured after any cleanup, not projected.
+`no_sort_for_top_k`, `fix_mixed_required_optional_map_keys`,
+`prefer_string_slice_for_trim_last_char`). For those, removing dead lines frees
+cap slots and mutants that were never sampled take their place, so their rates must be
+**re-measured** after any cleanup, not projected.
+
+## Third finding: a real bug, not a test gap
+
+Both of the two run-to-run disagreements are in `fix_mixed_required_optional_map_keys`,
+and run 2's separating inputs describe mechanisms that look like **latent defects rather
+than missing tests**. One was confirmed directly against the running system:
+
+```elixir
+SourceMask.mask(~S|x = cafe?"hello world"|)   #=> "x = cafe?"            # string masked
+SourceMask.mask(~S|x = café?"hello world"|)   #=> "x = caféhello world"  # string EXPOSED
+```
+
+`word_byte?/1` (`lib/source_mask.ex:86`) is ASCII-only, so for an identifier ending in a
+non-ASCII letter the byte before `?` is a UTF-8 continuation byte, `?"` is read as a
+character literal, and the string's opening quote is consumed — leaving its **contents
+exposed as code in the shadow**. **20 rules depend on `SourceMask`**, and this is the
+exact shape of the defect that once shipped as a rule rewriting inside strings.
+
+The trigger is narrow (`café?"…"`; `über?"…"` is fine, because the byte before `?` is
+ASCII), which is why nothing has hit it. **Not fixed here** — `SourceMask` is a shared
+primitive and changing its byte classification can move every rule's corpus findings, so
+it is a deliberate call with its own gate run, not a side effect of a triage.
+
+The second disagreement claims a **column-vs-grapheme overshoot**: Elixir counts columns
+in graphemes computed *within a token*, while `byte_offset/3` uses `String.length` over
+the whole line, so a value beginning with a combining mark makes the reported column one
+grapheme too large. Not independently confirmed here — recorded as a lead.
 
 ## Method — what a survivor actually is
 
 A survivor is not an "add a test" ticket. It is a request to construct an input that
-**separates two programs**, and for many no such input exists. An equivalence claim has
-to name the *mechanism* that makes the separating input impossible; "I could not think
-of a test" is a gap someone failed to describe, not an equivalence.
+**separates two programs**, and for many no such input exists. An equivalence claim must
+name the *mechanism* making the separating input impossible; "I could not think of a
+test" is a gap someone failed to describe, not an equivalence.
 
 Two calibration cases carried over from the earlier sample, both still valid:
 `arity in 1..255` widened to `1..256`, where `&f/256` is a CompileError; and
 `fix_extra_brace_in_ets_match`'s negative-index guard, which needs the parser to report
 column 1 when it reports an opening delimiter's column (≥ 5 across ten shapes).
 
-## How much to trust the 94
+The bias was set deliberately: where impossibility could not be *proven*, the instruction
+was to answer GAP. A wrong EQUIVALENT inflates the rate and sets a floor above what the
+tests earn — and that failure is silent until it arrives as false failures later.
 
-Every equivalence claim was re-examined by a second, independent pass whose only
-instruction was to **refute** it by constructing a separating input. It overturned
-**none**. A 0-of-94 refutation rate is itself suspicious, so two were checked by hand
-against the running system rather than by reading:
+Two equivalence claims were also checked by hand against the running system rather than
+by reading:
 
-* `no_sort_then_reverse` lines 197–203 — parsed `&>=/2` with the project's own Sourceror
-  and confirmed the arity arrives wrapped, so the bare-`2` clauses are unreachable.
+* `no_sort_then_reverse` 197–203 — parsed `&>=/2` with the project's own Sourceror and
+  confirmed the arity arrives wrapped, so the bare-`2` clauses are unreachable.
 * `no_python_multi_return` line 224 — replaced the `Map.get/3` default with a `raise`,
   then ran the rule over **1,575 real files** (400 random corpus files, all of `lib/`,
   all of `test/`). The default was taken **zero** times.
 
-The bias was set deliberately: when impossibility could not be proven, the instruction
-was to answer GAP. A wrong EQUIVALENT inflates the rate and would set a floor above what
-the tests earn — that failure is silent, and it arrives as false failures later.
-
 ## What is left, and it is a decision
 
-The measurement is done. What remains is picking the floor, per rule, and that is a
-maintainer call because it trades ratchet strength against false failures:
+The measurement is done. Picking the floor is a maintainer call, because it trades
+ratchet strength against false failures:
 
-* **At the triaged rate** — maximum ratchet, zero slack. Any equivalent mutant this
-  triage got wrong becomes a false failure the first time someone touches that rule.
-* **A notch below it** (say triaged − 0.05) — absorbs one bad call per rule, still
-  ratchets everywhere the raw floor could not.
+* **At the triaged rate** — maximum ratchet, zero slack. Given the ~1-in-100 verdict
+  instability measured above, expect roughly one false failure across the sample.
+* **A notch below** (say triaged − 0.05) — absorbs a bad call per rule and still
+  ratchets everywhere `--fail-under 0.740` could not.
 
-Whichever: the six rules already at 1.000 pin at 1.000 for free, and
-`prefer_no_question_mark_for_non_boolean` at 0.400 with **zero** equivalents is the one
-rule whose tests are simply thin — six reachable behaviours, none covered.
+The 9 rules already at 1.000 pin there for free.
+`prefer_no_question_mark_for_non_boolean` (0.400, **zero**
+equivalents) is the one rule in the sample whose tests are simply thin — 6 reachable
+behaviours, none covered.

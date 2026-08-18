@@ -205,20 +205,44 @@ rather than to this section.
   All 225 survivors of a fresh sweep are triaged and ledgered
   (`docs/25-mutation-survivor-triage.md` + `docs/25-survivor-triage.json`).
 
-  **Raw 0.737. Triaged 0.828** — 94 of 225 survivors cannot be killed by any input. The
+  **Raw 0.737. Triaged 0.826** — 92 of 225 survivors cannot be killed by any input. The
   ≈0.77 ceiling this item carried was right in direction and low. `--fail-under 0.740`
   would sit 0.09 *below* what the tests already earn and could not fail anything.
 
+  The triage was run **twice, independently**: 223/225 verdicts agree, both disagreements
+  went toward MORE gaps, and `docs/25` records the conservative run. So the rate is stable
+  to ±0.002 but **an individual verdict is ~99% reliable, not certain** — which is exactly
+  the input to the decision below.
+
   **The decision, and it is only this:** floor **per rule** (the triaged distribution runs
   0.400–1.000; one global number is met by the strong rules and ratchets nothing) —
-  at the triaged rate (maximum ratchet, no slack for a mis-triaged equivalent) or a notch
-  under it (absorbs one bad call per rule). `docs/25` has the per-rule table to pin from.
+  at the triaged rate (maximum ratchet, but the 1-in-100 verdict instability says expect
+  about one false failure) or a notch under it. `docs/25` has the per-rule table.
 
-  **Two things worth doing first, both in `docs/25`:** 35 of the 94 equivalents are
-  **provably dead code** in 15 rules — the sweep found it for free, and deleting it pulls
-  the raw rate up to meet the triaged one, so the number the tool prints by default
-  becomes trustworthy without a triage behind it. And nine rules sit at the 40-mutant cap,
-  so their rates must be **re-measured** after any such cleanup, not projected.
+  **Two things worth doing first, both in `docs/25`:** 34 of the 92 equivalents are
+  **provably dead code** in 15 rules — deleting it pulls the raw rate up to meet the
+  triaged one, so the number the tool prints by default becomes trustworthy on its own.
+  And nine rules sit at the 40-mutant cap, so their rates must be **re-measured** after
+  any such cleanup, not projected.
+
+- [ ] **NEW — `SourceMask.mask/1` exposes string contents after a non-ASCII identifier.**
+  Found by the D9 triage, confirmed against the running system, **not fixed**:
+
+  ```
+  SourceMask.mask(~S|x = cafe?"hello world"|)  #=> "x = cafe?"            string masked
+  SourceMask.mask(~S|x = café?"hello world"|)  #=> "x = caféhello world"  string EXPOSED
+  ```
+
+  `word_byte?/1` (`lib/source_mask.ex:86`) is ASCII-only, so after an identifier ending in
+  a non-ASCII letter the byte before `?` is a UTF-8 continuation byte, `?"` reads as a
+  character literal, and the string's opening quote is consumed. **20 rules depend on
+  `SourceMask`**, and this is the exact shape of the defect that once shipped as a rule
+  rewriting inside strings. Trigger is narrow (`über?"…"` is fine — the byte before `?` is
+  ASCII), which is why nothing has hit it.
+
+  Left for you because it is a **shared primitive**: changing its byte classification can
+  move every rule's corpus findings, so it needs its own gate run rather than riding along
+  with a triage.
 
   Method note, whichever floor you pick: a survivor is not an "add a test" item, it is a
   request to construct an input that *separates two programs*, and for many no such input
