@@ -159,7 +159,8 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
   defp nil_clause?({:->, _, [[pattern], _body]}), do: nil_pattern?(pattern)
   defp nil_clause?(_), do: false
 
-  defp nil_pattern?(nil), do: true
+  # Only the wrapped form: Sourceror's `literal_encoder` wraps `nil` like any
+  # other literal, so a bare-`nil` clause here was unreachable.
   defp nil_pattern?({:__block__, _, [nil]}), do: true
   defp nil_pattern?(_), do: false
 

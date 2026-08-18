@@ -98,77 +98,76 @@ complete.
 | `no_literal_list_typespec` | pattern | 8 | 0 | 0 | 1.000 | **1.000** |
 | `no_string_concat_in_loop` | pattern | 16 | 0 | 8 | 0.667 | **1.000** |
 
-## Second finding: 34 of the 92 equivalents are DEAD CODE
+**Four of these rows are now stale, deliberately.** The dead-code deletions below moved
+the RAW rate of `no_sort_then_reverse` (0.417 → 0.625), `no_redundant_case_nil_clause`
+(0.500 → 0.545) and `prefer_desc_sort_over_negative_take` (0.600 → 0.625) toward their
+triaged rate — which is the whole point of the cleanup, and leaves those triaged rates
+unchanged, because every mutant removed was an equivalent one. The table is kept as the
+record of the sweep it triages.
 
-An equivalent mutant is not always "a value nothing can reach". Most of these mutate a
-branch **no input can enter at all** — so the survivor list doubles as a map of this
-codebase's dead code, found for free.
+The exception to watch: `no_manual_list_reduce` is at the 40-mutant cap, so deleting one
+dead line freed a slot and a **newly sampled, untriaged** mutant took it — and survived.
+Its triaged rate is therefore 0.886 or 0.861 depending on that one verdict. Settle it
+before pinning that rule's floor.
 
-The largest instance, verified by hand: `no_sort_then_reverse` lines 197–203 match a
-capture arity as a **bare** `2`, but `Sourceror.parse_string/1` wraps every literal as
-`{:__block__, _, [2]}`. Those two clauses can never match. Their live twins sit
-immediately below (lines 205–211) — and the tests **do** kill the mutants on the live
-copies, which is exactly why only the dead ones survived. That is the
-`{:__block__, _, [literal]}` trap and the two-copies-of-one-predicate smell in one place.
+## Second finding: dead code — 28 sites, checked one at a time
 
-| rule | dead lines the sweep pointed at |
-| --- | --- |
-| `no_python_multi_return` | 91, 200, 224, 684 |
-| `no_sort_then_reverse` | 197, 198, 201, 202 |
-| `no_manual_list_reduce` | 103, 257, 414 |
-| `fix_plug_dependency_module_order` | 126, 205 |
-| `fix_case_branch_assignment_scope` | 173, 230 |
-| `no_postfix_if_expression` | 161, 163 |
-| `no_redundant_case_nil_clause` | 160, 162 |
-| `no_stream_data_tuple_with_list` | 202, 214 |
-| `fix_mixed_required_optional_map_keys` | 162 |
-| `fix_python_floor_div` | 135 |
-| `no_grapheme_palindrome` | 61 |
-| `no_hallucinated_ets_keytype_option` | 141 |
-| `no_length_comparison_for_empty` | 166 |
-| `prefer_desc_sort_over_negative_take` | 157 |
-| `prefer_map_new_with_transform` | 152 |
+An equivalent mutant is not always "a value nothing can reach". Some mutate a branch **no
+input can enter at all**, which makes the survivor list double as a map of dead code,
+found for free.
 
-Deleting dead code leaves the **triaged** rate untouched — equivalents are already out of
-its denominator — and pulls the **raw** rate up toward it, because the survivors it was
-counting disappear. That is the case for cleaning up first: it makes the number the tool
-prints by default trustworthy on its own, with no triage standing behind it.
+**A correction to this file's first draft.** It claimed "34 of the 92 equivalents are dead
+code", from a keyword match over the triage arguments. That over-counted. Every site was
+then examined individually (`docs/25-dead-code-verdicts.json`, one agent per rule, each
+tracing the real compiled module rather than reading):
 
-Do not treat that as clean arithmetic, though. **9 of the 39 rules sit at or one below
-the 40-mutant cap** (`fix_case_branch_assignment_scope`,
-`fix_plug_dependency_module_order`, `no_length_comparison_for_empty`,
-`no_manual_list_reduce`, `no_python_multi_return`, `no_reduce_for_group_by`,
-`no_sort_for_top_k`, `fix_mixed_required_optional_map_keys`,
-`prefer_string_slice_for_trim_last_char`). For those, removing dead lines frees
-cap slots and mutants that were never sampled take their place, so their rates must be
-**re-measured** after any cleanup, not projected.
+| verdict | sites | what it means |
+| --- | ---: | --- |
+| **DELETE** | 7 | genuinely unreachable, and removing it changes nothing observable |
+| **KEEP** | 16 | unreachable today, but a deliberate defensive default — removing it trades a safe fallback for a crash or a silent mis-splice |
+| **ALIVE** | 5 | not dead at all; the keyword match was wrong |
 
-## Third finding: a real bug, not a test gap
+The five ALIVE ones do **not** overturn their EQUIVALENT verdicts. The mutant is still
+unkillable — but because the mutated value is *masked* downstream, not because the line
+cannot run. `no_python_multi_return` line 200 is the clearest: it is one of the hottest
+lines in the module (41,567 executions over 532 files), and its `:error → :ok` mutant
+survives only because the value flows into a `match?({:ok, _}, …)` that rejects both.
 
-Both of the two run-to-run disagreements are in `fix_mixed_required_optional_map_keys`,
-and run 2's separating inputs describe mechanisms that look like **latent defects rather
-than missing tests**. One was confirmed directly against the running system:
+### The 7 that were deleted
 
-```elixir
-SourceMask.mask(~S|x = cafe?"hello world"|)   #=> "x = cafe?"            # string masked
-SourceMask.mask(~S|x = café?"hello world"|)   #=> "x = caféhello world"  # string EXPOSED
-```
+`no_sort_then_reverse` 197–203 was the largest and is the archetype: two clauses matching
+a capture arity as a **bare** `2`, where `Sourceror.parse_string/1` wraps every literal as
+`{:__block__, _, [2]}`. They could never match, and their live twins sat immediately
+below. The tests **do** kill the mutants on the live copies — which is exactly why only
+the dead ones survived.
 
-`word_byte?/1` (`lib/source_mask.ex:86`) is ASCII-only, so for an identifier ending in a
-non-ASCII letter the byte before `?` is a UTF-8 continuation byte, `?"` is read as a
-character literal, and the string's opening quote is consumed — leaving its **contents
-exposed as code in the shadow**. **20 rules depend on `SourceMask`**, and this is the
-exact shape of the defect that once shipped as a rule rewriting inside strings.
+The others: `no_manual_list_reduce` 414 and `no_redundant_case_nil_clause` 162 (the same
+bare-vs-wrapped literal shape), and `prefer_desc_sort_over_negative_take` 157 (a catch-all
+on a `chunk_every(…, :discard)` result, which is always a 2-list).
 
-The trigger is narrow (`café?"…"`; `über?"…"` is fine, because the byte before `?` is
-ASCII), which is why nothing has hit it. **Not fixed here** — `SourceMask` is a shared
-primitive and changing its byte classification can move every rule's corpus findings, so
-it is a deliberate call with its own gate run, not a side effect of a triage.
+Measured after deleting them, and it is not what a naive count predicts:
 
-The second disagreement claims a **column-vs-grapheme overshoot**: Elixir counts columns
-in graphemes computed *within a token*, while `byte_offset/3` uses `String.length` over
-the whole line, so a value beginning with a combining mark makes the reported column one
-grapheme too large. Not independently confirmed here — recorded as a lead.
+| rule | kill rate before | after |
+| --- | ---: | ---: |
+| `no_sort_then_reverse` | 0.417 | **0.625** |
+| `no_redundant_case_nil_clause` | 0.500 | **0.545** |
+| `prefer_desc_sort_over_negative_take` | 0.600 | **0.625** |
+| `no_manual_list_reduce` | 0.775 | **0.775** |
+
+`no_manual_list_reduce` did not move **because it sits at the 40-mutant cap**: deleting a
+dead line freed a slot, a mutant that had never been sampled took it, and that one also
+survived. This is the cap caveat below, observed rather than predicted — which is why the
+nine at-cap rules must be re-measured after any cleanup, never projected.
+
+### The 16 that were kept, and why that is not laziness
+
+The recurring shape is a fallback whose default is unreachable *today* because of an
+invariant owned by **another module** — `Sourceror` always attaching `:line`,
+`SourceMask.enclosing_opener/2` halting at depth 0. Removing them means `fetch!` and a
+raise where there is currently a safe value, and in one case
+(`fix_mixed_required_optional_map_keys` 162) a negative depth that would silently return
+the wrong byte offset into a `binary_part` splice — a wrong-place edit rather than a
+crash. Unreachable is not the same as unnecessary.
 
 ## Method — what a survivor actually is
 

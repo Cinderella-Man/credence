@@ -410,8 +410,10 @@ defmodule Credence.Pattern.NoManualListReduce do
 
   # ── pattern helpers ────────────────────────────────────────────────
 
+  # Only the wrapped form: Sourceror's `literal_encoder` means a `[]` pattern
+  # always arrives as `{:__block__, _, [[]]}`, never bare. A bare-`[]` clause sat
+  # here and could not be reached by any input.
   defp empty_list_pattern?({:__block__, _, [[]]}), do: true
-  defp empty_list_pattern?([]), do: true
   defp empty_list_pattern?(_), do: false
 
   defp destructure_cons({:|, _, [head, tail]}), do: {:ok, head, tail}

@@ -183,11 +183,16 @@ rather than to this section.
   at the triaged rate (maximum ratchet, but the 1-in-100 verdict instability says expect
   about one false failure) or a notch under it. `docs/25` has the per-rule table.
 
-  **Two things worth doing first, both in `docs/25`:** 34 of the 92 equivalents are
-  **provably dead code** in 15 rules — deleting it pulls the raw rate up to meet the
-  triaged one, so the number the tool prints by default becomes trustworthy on its own.
-  And nine rules sit at the 40-mutant cap, so their rates must be **re-measured** after
-  any such cleanup, not projected.
+  **The dead-code cleanup this item used to list first is DONE.** All 28 flagged sites
+  were checked one at a time (`docs/25-dead-code-verdicts.json`): **7 deleted, 16 kept**
+  as deliberate defensive defaults, **5 were not dead at all** — my earlier "34 sites"
+  came from a keyword match and was wrong. Raw rates moved toward triaged as intended
+  (`no_sort_then_reverse` 0.417 → 0.625).
+
+  **One measurement is owed before you pin `no_manual_list_reduce`.** It sits at the
+  40-mutant cap, so deleting a dead line freed a slot, a never-sampled mutant took it and
+  also survived. Its triaged rate is **0.886 or 0.861** depending on that one untriaged
+  verdict. The other eight at-cap rules are untouched and their rows stand.
 
 - [ ] **NEW — `SourceMask.byte_offset/3` overshoots by one on a grapheme cluster that
   spans a token boundary.** Confirmed, **not fixed**. On
