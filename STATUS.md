@@ -144,9 +144,17 @@ rather than to this section.
 
 - [ ] **D6. C12(b) is BUILT — `mix cev.fire_rate` (harness `32946ef`, why the old "blocked
   on H10/H11" was wrong is in credence `1ed12f1`).** Two things left, both yours:
-  * **Look at the 8** rules it flags as fired-only-on-their-birth-row
-    (`mix cev.fire_rate --repo ../credence`). Each is a question, not a verdict — its
-    other fires may be in a log that was deleted.
+  * ~~Look at the 8~~ **— done, and none of them should be retired on this evidence.**
+    Three (`no_ets_info_bare_size`, `no_hallucinated_struct_field_in_pattern`,
+    `no_plug_before_dependency_definition`) were already retired at acceptance. The five
+    that survive each key on a **general** failure mode, not on the shape of one row —
+    any bare Erlang bitwise BIF, any local function in a guard, any tuple to
+    `NaiveDateTime.new!/2`, any built-in type redefinition, the `:=<` atom — and each
+    carries 13–34 tests. So the single fire measures **feedstock scarcity, not
+    over-narrowness**: a model has to make that particular mistake for the rule to fire,
+    and 230 rows is a small sample to expect it in. Re-run `mix cev.fire_rate` after the
+    4th run; if one of the five is still at one fire with the log loss fixed, *then* it is
+    a question.
   * **Decide whether to make the 4th run's logs pass-scoped, before B9's flip.** The run
     discards ~62% of its own fire evidence as it goes, so this measurement stays a lower
     bound until it changes, and this is the last moment to change it for this run. Small
@@ -206,9 +214,21 @@ rather than to this section.
   The docstring's model — "the parser counts columns in graphemes" — is right *within* a
   token and wrong at the seam: the tokenizer segments graphemes per token, so a literal's
   opening `"` and a following combining mark are two columns to it and one cluster to
-  `String.slice/3`. Fixing it properly needs token boundaries, which is why it is not a
-  one-liner and is not bundled with the mask repairs (`docs/25` §"a real bug").
-  Consequence is a repair landing one byte off, or a spurious `:error`.
+  `String.slice/3`. Consequence is a repair landing one byte off, or a spurious `:error`.
+
+  **⚠️ Do not "fix" this by counting codepoints instead.** Measured on 1.20.2, neither
+  counting is right, so the obvious one-line change trades a rare bug for a commoner one:
+
+  | line content | graphemes | codepoints |
+  |---|---|---|
+  | plain ASCII | ✅ | ✅ |
+  | string starting with a combining mark | ❌ off by one | ✅ |
+  | string holding a ZWJ family emoji | ✅ | ❌ off by four |
+  | string holding a flag | ✅ | ❌ off by one |
+
+  Graphemes are correct *inside* a token and codepoints are correct *across* the
+  delimiter, so a correct conversion needs token boundaries — which is why this is not a
+  one-liner and was not bundled with the mask repairs (`docs/25`).
 
   (The five `mask/1` defects found alongside it are fixed — evidence in the commit and in
   `test/source_mask_test.exs`, which fails 7 ways against the old scanner.)
