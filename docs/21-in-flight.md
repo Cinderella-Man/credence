@@ -213,7 +213,16 @@ side effect of the last gate landing.
 
 ## Currently in flight
 
-*(nothing — update this section when work starts, clear it when the work lands)*
+**Whole-PR review campaign (started 2026-08-18).** Every file of the
+`main`...`evolution_accepted` diff plus every untouched rule — 772 files — is
+being reviewed one file per read-only session by
+`maintainer_tools/pr_review/review_loop.sh`. Progress and state live in
+`maintainer_tools/pr_review/manifest.json` (the tick-off list; committed) and
+`findings.md` beside it; `status.sh` prints the count. 1/772 done as of this
+entry — the first file reviewed (`close_unclosed_brace`) already produced one
+executed-and-confirmed finding (ambiguous `}` placement before an
+operator-continuation line commits a meaning silently). Clear this entry when
+the manifest is drained and the findings are dispositioned.
 
 *(T3.10a step 4 — retiring `no_else_if` — was on the maintainer's desk for one
 turn and has since been decided and landed. The self-corruption ledger is empty.)*
