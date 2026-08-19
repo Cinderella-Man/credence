@@ -31,19 +31,35 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
   parses afterwards. `Credence.Syntax` runs this round over source that is
   unparseable by definition and expects unparseable intermediate states (see its
   moduledoc), so a whole-file gate would make the rule decline on any file
-  carrying a second fault — including a second copy of this very bug. Each
-  occurrence is repaired on its own, and `analyze/1` reports every one the fix
-  rewrites, at the line it occupies in the **input**.
+  carrying a second fault — including a second copy of this very bug. So a
+  second fault elsewhere does not by itself veto a repair, and `analyze/1`
+  reports every occurrence the fix rewrites, at the line it occupies in the
+  **input**.
 
-  A fault the rule cannot see past is still declined: if the parser's *first*
-  complaint about the file is something other than an `fn` closed by `)`, there
-  is no repair to make and the source is returned untouched.
+  Local does not mean blind, though, and the parser is consulted one complaint
+  at a time, so plenty of second faults still stop the rule:
+
+    * if the parser's *first* complaint about the file is something other than
+      an `fn` closed by `)`, there is no repair to make and the source is
+      returned untouched;
+    * if that first complaint is an `fn` closed by `)` of the **other** shape —
+      a plain unclosed `fn`, which belongs to `NoUnclosedFnDelimiter` — then
+      inserting `end` there balances that spot and the parser's next complaint
+      is a genuine occurrence of *this* bug further down. That is not the
+      complaint this rule is looking for, so it declines the whole file, and
+      the sibling declines too because its own gate is blocked by the second
+      fault. Neither rule repairs anything until the file is re-run with one of
+      the two faults already gone;
+    * if an unclosed `(` sits above the repair, the complaint left after the
+      insertion belongs to that `(` rather than to the repair, and the rule
+      declines rather than act on evidence that says nothing about the line it
+      would delete (see the deletion guards below).
 
   This rule deliberately owns only the **stray-`end`** variant: when inserting
   `end` before `)` already yields parseable code (no stray `end`), that is
   `NoUnclosedFnDelimiter`'s case and this rule stays silent, so the two never
   both fire on the same input. Being local is not the same as being credulous,
-  so two things are pinned down before any line is deleted:
+  so three things are pinned down before a deletion is kept:
 
     * the extra-`end` complaint must name a `(` **at or above** the line just
       repaired. An unrelated `def f(, do: 1` lower down the file produces an
@@ -52,6 +68,14 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
       exist. It is also what tells the two shapes apart: for the plain
       unclosed-`fn` the insertion balances the code outright, and the only such
       complaint left is somebody else's, below.
+    * that `(` must turn out to be a real call — one that is closed. An
+      unclosed `def f(, do: 1` **above** the repair raises the same complaint
+      from the other side (the parser blames some later real `end` on it), and
+      the line test above cannot tell the two apart. What can is that deleting
+      a genuinely stray `end` never leaves anything unterminated, because a
+      stray `end` closes nothing: if the parser answers the deletion by
+      reporting an opener at or above the repair as missing its terminator, the
+      line deleted was that terminator and the deletion is refused.
     * the line deleted must hold the first `end` **token** below the repair —
       the stray one, by the shape of the bug. Walking past it to a later bare
       `end` line deletes a real terminator, and that can rebalance the file so
@@ -302,6 +326,17 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
   #     its own further down (`def f(, do: 1`) must not read as "the stray `end`
   #     is still there", and the same fault re-blamed on a different enclosing
   #     `(` above must not read as "it is gone".
+  #   * No opener at or above the repair is left *unterminated*. Deleting a
+  #     genuinely stray `end` cannot do that — a stray `end` closes nothing, so
+  #     removing it takes no block's terminator away. If the parser now says a
+  #     `(` or a `do` opened at or above the repair is missing its terminator,
+  #     the line just deleted was that terminator. This is what tells an
+  #     unclosed `(` *above* the repair apart from the enclosing call of a real
+  #     occurrence: both raise the identical "`(` closed by `end`" complaint
+  #     beforehand, and the only thing that distinguishes them is whether that
+  #     `(` is ever closed at all. `def broken(, do: 1` above the repair is not,
+  #     so it surfaces here as a missing terminator and the deletion is refused.
+  #     A real occurrence's enclosing call has its `)` and never does.
   #   * The front end did not stop above the deleted line. This is a cheap
   #     monotonicity check on `:end_line`, no more: it does *not* catch a
   #     deletion that left a block unterminated, because an unclosed delimiter
@@ -316,11 +351,22 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
 
       {:error, {meta, _message, _token}} when is_list(meta) ->
         not stray_end_above_meta?(meta, repair_line) and
+          not unterminated_above_meta?(meta, repair_line) and
           stopped_at_or_below?(meta, deleted_idx)
 
       _ ->
         false
     end
+  end
+
+  # The front end's "missing terminator" report: an opener named with no closing
+  # delimiter at all, which is how a delimiter left hanging at EOF is described.
+  # `(` closed by `end` — the shape `stray_end_meta?` matches — always carries a
+  # `closing_delimiter`, so the two never overlap.
+  defp unterminated_above_meta?(meta, repair_line) do
+    Keyword.has_key?(meta, :opening_delimiter) and
+      is_nil(Keyword.get(meta, :closing_delimiter)) and
+      opening_line(meta) <= repair_line
   end
 
   defp stopped_at_or_below?(meta, deleted_idx) do

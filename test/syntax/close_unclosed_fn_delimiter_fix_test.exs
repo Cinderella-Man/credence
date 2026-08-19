@@ -5,6 +5,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
 
   alias Credence.Issue
   alias Credence.Syntax.CloseUnclosedFnDelimiter
+  alias Credence.Syntax.NoUnclosedFnDelimiter
 
   defp analyze(code), do: CloseUnclosedFnDelimiter.analyze(code)
   defp fix(code), do: CloseUnclosedFnDelimiter.fix(code)
@@ -251,6 +252,73 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     assert analyze(input) == []
   end
 
+  # The same defect as the two tests above, but with the unrelated `(` *above*
+  # the repair instead of below. `def broken(` on line 2 is never closed, so the
+  # parser blames the module's own final `end` on it — an identically shaped
+  # "`(` closed by `end`" complaint that says nothing about line 5. Reading it as
+  # "there is a stray `end` of mine below" deletes `def go`'s own terminator on
+  # line 6. This is again the plain unclosed-`fn` shape that belongs to
+  # `NoUnclosedFnDelimiter`; there is no stray `end` in this file at all.
+  test "does not delete a real end on the strength of an unrelated ( closed by an end above" do
+    input = """
+    defmodule AboveReduced do
+      def broken(, do: 1
+
+      def go(list) do
+        Enum.max_by(list, fn {_, s} -> s)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # The same shape with a further function below, so that the terminator the
+  # rule would delete is unmistakably a real one: `def go`'s `end` on line 6,
+  # with `def other` still to come.
+  test "does not delete a real end above a later function on the strength of an unrelated ( above" do
+    input = """
+    defmodule AboveWithTail do
+      def broken(, do: 1
+
+      def go(list) do
+        Enum.max_by(list, fn {_, s} -> s)
+      end
+
+      def other do
+        :ok
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # A genuine occurrence of this rule's own shape (stray `end` on line 8) that
+  # sits below an unclosed `(`. The complaint the rule would have to reason from
+  # belongs to that broken `(` on line 2, not to the repair, so the rule declines
+  # rather than acting on evidence that says nothing about line 8.
+  test "declines a genuine occurrence whose only evidence is an unrelated ( above" do
+    input = """
+    defmodule GenuineBelowBroken do
+      def broken(, do: 1
+
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
   # The stray `end` this rule exists to delete is the first `end` *token* after
   # the `)` it repaired. Here that `end` carries a trailing comment, so deleting
   # its whole line would take the comment with it — the rule must decline. What
@@ -391,6 +459,37 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
 
     confirm_fix(fix(input), input)
     assert analyze(input) == []
+  end
+
+  # The limit on "local" that the moduledoc now spells out. Line 3 is a plain
+  # unclosed `fn` (`NoUnclosedFnDelimiter`'s shape) and lines 7-11 are a genuine
+  # occurrence of *this* rule's shape. The parser's first complaint is line 3's,
+  # so this rule inserts `end` there, and the complaint left over is the second
+  # occurrence's `fn`/`)` mismatch — not the extra-`end` complaint it needs. It
+  # declines the whole file, and the sibling declines too, so neither rule
+  # repairs anything on this input.
+  test "declines a file whose first fault is the sibling rule's plain unclosed fn" do
+    input = """
+    defmodule Both do
+      def a(list) do
+        Enum.max_by(list, fn {_, s} -> s)
+      end
+
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+
+    confirm_fix(NoUnclosedFnDelimiter.fix(input), input)
+    assert NoUnclosedFnDelimiter.analyze(input) == []
   end
 
   test "fixing twice changes nothing the second time" do
