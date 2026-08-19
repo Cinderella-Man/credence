@@ -29,7 +29,7 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   swallowed into the literal then stays inside it, in order, and the only
   characters added are the missing `}`s.
 
-  Three guards keep the repair honest, and `analyze/1` and `fix/1` share them
+  Four guards keep the repair honest, and `analyze/1` and `fix/1` share them
   (`repair/1`), so the rule never flags what it will not fix:
 
     * **The result must parse.** A repair is committed only when the *whole*
@@ -42,6 +42,20 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
       where the missing `}` could belong on either line — appending it before
       the `end` yields `{1, 2 IO.puts(x)}`, which does not parse, so the rule
       stays silent rather than picking a placement.
+
+    * **The placement must be beyond doubt.** Even a parsing repair is refused
+      when appending the `}` to an *earlier* line of the literal would make
+      the source parse too. In
+
+          x = {1, 2
+          |> IO.inspect()
+        end
+
+      the source reads either as the pipe `{1, 2} |> IO.inspect()` or as the
+      tuple `{1, 2 |> IO.inspect()}`; both parse, so committing either would
+      silently pick one of two meanings. A line ending in `,` is no competing
+      placement — closing after a trailing comma drops an element (see below),
+      so the comma pins the next line inside the literal.
 
     * **No dangling comma.** A literal whose last line ends in `,` is truncated
       mid-element; Elixir accepts a trailing comma, so closing
@@ -97,7 +111,8 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   defp repair(source) do
     with {:ok, open_line, end_line} <- detect(source),
          {:ok, lines, index} <- target_line(source, open_line, end_line),
-         {:ok, fixed} <- close_at(lines, index) do
+         {:ok, fixed} <- close_at(lines, index),
+         :ok <- sole_placement(lines, open_line, index) do
       {:fixed, fixed, open_line}
     else
       _ -> :no_fix
@@ -159,5 +174,25 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
 
       if match?({:ok, _}, Code.string_to_quoted(candidate)), do: {:ok, candidate}
     end)
+  end
+
+  # A `}` appended to an earlier line of the literal must not also produce a
+  # parsing source — when it would (e.g. the next line starts with `|>`), the
+  # `}` genuinely belongs on either line and committing a placement would
+  # silently pick one of two meanings. A line ending in `,` is no competing
+  # placement: closing after a trailing comma drops an element (the same
+  # reasoning as target_line/3), so the comma pins the next line inside the
+  # literal.
+  defp sole_placement(lines, open_line, index) do
+    ambiguous =
+      (open_line - 1)..(index - 1)//1
+      |> Enum.any?(fn earlier ->
+        line = String.trim_trailing(Enum.at(lines, earlier))
+
+        line != "" and not String.ends_with?(line, ",") and
+          close_at(lines, earlier) != :none
+      end)
+
+    if ambiguous, do: :ambiguous, else: :ok
   end
 end

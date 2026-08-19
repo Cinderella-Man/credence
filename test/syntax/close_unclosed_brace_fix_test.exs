@@ -239,6 +239,22 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "leaves an operator-continuation ambiguity untouched" do
+    # Both placements parse and mean different things: `x = {1, 2}` piped
+    # into IO.inspect, or the tuple `{1, 2 |> IO.inspect()}`. The rule must
+    # refuse rather than silently commit one of the two meanings.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, 2
+        |> IO.inspect()
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "leaves a dangling comma untouched" do
     code = """
     defmodule Example do

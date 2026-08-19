@@ -111,6 +111,22 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert analyze(code) == []
   end
 
+  test "no issue when the next line's leading operator makes both placements parse" do
+    # `x = {1, 2}` piped into IO.inspect and the tuple `{1, 2 |> IO.inspect()}`
+    # both parse, so there is no single faithful placement — the rule refuses
+    # rather than guessing.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, 2
+        |> IO.inspect()
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
   test "no issue when the literal's last line ends with a dangling comma" do
     # Elixir accepts a trailing comma, so closing here would parse as the
     # one-element `{:ok}` — silently dropping the missing element.
