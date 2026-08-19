@@ -225,6 +225,10 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
   end
 
   # --- the cases the check deliberately skips are left byte-for-byte alone ---
+  #
+  # Byte-for-byte in their internal layout: `confirm_fix/2` compares with
+  # trailing newlines trimmed off both sides, so the file's final newline is
+  # pinned by the last test in this file rather than by these.
 
   test "leaves an ambiguous placement untouched" do
     code = """
@@ -466,6 +470,22 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     # across runs on one machine, the spread coming from which of the two loops
     # is timed first). The every-count scan replayed over the same fixture
     # measures 20.
+    #
+    # Second, smaller reason, for anyone re-tuning the 6: the two sides do not
+    # use the same parser. The scan reparses with `Code.string_to_quoted`, while
+    # `control` goes through `valid_syntax?/1`, which is a Sourceror parse —
+    # rule tests may not reference `Code.*` themselves (see
+    # test/no_parser_calls_in_rule_tests_test.exs), so a control loop is
+    # "400 Sourceror parses", not "400 of the scan's reparses". On THIS fixture
+    # that gap is small: measured min-of-11 over 100 parses each, Sourceror
+    # costs 1.05-1.2x the plain parse, because the source fails at the `end` and
+    # Sourceror never reaches its comment merging or literal encoder. With the
+    # same file's map closed so it parses, Sourceror costs 5.0x. So the
+    # unparseable fixture is what keeps the two comparable, and the ~1.2x it
+    # still contributes sits inside the 0.9-1.7 run-to-run spread above. Both
+    # facts are why 6 is a coarse fence between 1 and 20 rather than a tight
+    # bound: pulled towards 2 it would start tracking Sourceror's overhead, and
+    # a dependency bump would move it with nothing in the rule changing.
     best = Enum.min(for _ <- 1..3, do: elem(:timer.tc(fn -> fix(code) end), 0))
 
     control =
@@ -561,7 +581,8 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     # five, so a literal needing six closers is a degenerate input the rule
     # refuses like the shapes above rather than stacking ever more `}` onto one
     # line. The analyze side pins the same boundary; this pins that `fix/1`
-    # hands the source back byte-for-byte.
+    # hands the source back unedited (final newline aside — see the last test
+    # in this file).
     code = """
     defmodule Example do
       def foo do
@@ -583,5 +604,64 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     """
 
     confirm_fix(fix(code), code)
+  end
+
+  test "keeps the source's final newline exactly as it found it" do
+    # Every other assertion in this file goes through `confirm_fix/2`, which
+    # compares with trailing newlines trimmed off both sides by design (see
+    # test/support/rule_case.ex) — so nothing above actually pins the
+    # "byte-for-byte" the comments claim. Measured, not assumed: with `fix/1`
+    # wrapped in `String.trim_trailing(_, "\n")`, all eleven "left untouched"
+    # cases and both brace-cap cases stay green; with a `"\n"` appended to
+    # every repair, the positive cases stay green too. The only test that goes
+    # red under either regression is the brace-split search, and it goes red
+    # for the wrong reason — it compares `byte_size(fixed) - byte_size(source)`
+    # to decide how many closers a repair added, so a stray newline makes it
+    # accuse the rule of committing an ambiguous placement.
+    #
+    # The comparisons below are raw `==` on the bytes, in both directions: a
+    # source that ends in a newline gets exactly one back, and a source that
+    # does not stays without one.
+    #
+    # They compare *tuples* of results rather than one string per `assert`
+    # because `Credence.FixtureHealer` (test/test_helper.exs runs it before the
+    # suite compiles) rewrites any `assert <fix call> == expected` in this
+    # directory into `confirm_fix(<fix call>, expected)` — on disk, silently.
+    # A plain `assert fix(input) == expected` here therefore un-pins itself on
+    # the next `mix test`; the healer only recognises a fix call sitting
+    # directly on one side of the `==`, so wrapping the two sides in a tuple
+    # keeps the byte comparison the healer would otherwise remove. (Verified:
+    # this file comes back byte-identical from `mix test` in this shape.)
+    input = """
+    defmodule Example do
+      def foo do
+        {:ok, 1
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def foo do
+        {:ok, 1}
+      end
+    end
+    """
+
+    refused = """
+    defmodule Example do
+      def foo do
+        {:ok,
+      end
+    end
+    """
+
+    assert {fix(input), fix(refused)} == {expected, refused}
+
+    bare_input = String.trim_trailing(input, "\n")
+    bare_expected = String.trim_trailing(expected, "\n")
+    bare_refused = String.trim_trailing(refused, "\n")
+
+    assert {fix(bare_input), fix(bare_refused)} == {bare_expected, bare_refused}
   end
 end
