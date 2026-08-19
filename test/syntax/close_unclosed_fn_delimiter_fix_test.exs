@@ -10,6 +10,40 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
   defp analyze(code), do: CloseUnclosedFnDelimiter.analyze(code)
   defp fix(code), do: CloseUnclosedFnDelimiter.fix(code)
 
+  # A genuine occurrence of this rule's shape plus an unrelated broken call
+  # below it. Two tests share it — the repair itself, and the re-fix-your-own-
+  # output check at the bottom of the file, which needs *this* source because
+  # its repair is the one that leaves an unparseable leftover behind. Written
+  # once here so the two cannot drift apart.
+  @local_source """
+  defmodule Local do
+    def go(m) do
+      Enum.map(m, fn r ->
+        Enum.map(r, fn e ->
+          if e == 0 do 1 else e end)
+        end
+      end)
+    end
+
+    def broken(, do: 1
+  end
+  """
+
+  # The smallest whole occurrence of the bug, and its repair. The two pass-bound
+  # tests below stack a hundred-odd copies of it, so it is kept short.
+  @one_occurrence """
+  Enum.map(m, fn r ->
+    Enum.map(r, fn e -> if e == 0 do 1 else e end)
+    end
+  end)
+  """
+
+  @one_occurrence_repaired """
+  Enum.map(m, fn r ->
+    Enum.map(r, fn e -> if e == 0 do 1 else e end end)
+  end)
+  """
+
   test "inserts missing end before ) and removes stray end on next line" do
     input = """
     defmodule Solution do
@@ -105,7 +139,16 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     confirm_fix(fix(code), code)
   end
 
-  test "leaves the bug shape inside a docstring untouched when the file is broken elsewhere" do
+  # Not a masking test, despite the docstring: the parser's first complaint
+  # about this file is the unrelated `def broken(` on line 7 being closed by the
+  # module's own `end` — opening delimiter `(`, not `fn` — so `detect/1` returns
+  # `:none` and the rule hands the source back without examining a single line.
+  # Replacing the docstring's contents, or deleting the `@moduledoc` outright,
+  # gives the identical no-op, so the docstring is not what is being tested
+  # here; the short-circuit is. The one test where the mask genuinely does the
+  # work is the `Heredoc` one below, whose downward `end`-token scan is the only
+  # place in this file that runs over a shadow.
+  test "declines outright when the parser's first complaint is not an fn closed by )" do
     input = """
     defmodule M do
       @moduledoc \"\"\"
@@ -118,6 +161,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     """
 
     confirm_fix(fix(input), input)
+    assert analyze(input) == []
   end
 
   # The repair is local: it must not wait for the whole file to parse. Two copies
@@ -180,20 +224,6 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
   # the enclosing `(` the parser names for it is the `Enum.map(` on line 3,
   # above the repair.
   test "repairs its own occurrence on a file that is also broken for an unrelated reason" do
-    input = """
-    defmodule Local do
-      def go(m) do
-        Enum.map(m, fn r ->
-          Enum.map(r, fn e ->
-            if e == 0 do 1 else e end)
-          end
-        end)
-      end
-
-      def broken(, do: 1
-    end
-    """
-
     expected = """
     defmodule Local do
       def go(m) do
@@ -207,7 +237,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     end
     """
 
-    confirm_fix(fix(input), expected)
+    confirm_fix(fix(@local_source), expected)
   end
 
   # The shape this rule promises never to touch (moduledoc: "when inserting `end`
@@ -369,8 +399,9 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     assert analyze(input) == []
   end
 
-  # The multi-pass loop is bounded now; the bound must not cut a real file
-  # short. Three copies of the bug are three passes.
+  # One pass per occurrence, so three copies of the bug are three passes. This
+  # says nothing about the bound on that loop — `@max_passes` is 100 — which the
+  # two tests after the `Heredoc` one below pin at the boundary itself.
   test "repairs every occurrence when the bug appears three times in one file" do
     one = """
     defmodule ThreeBugs do
@@ -400,9 +431,9 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     assert valid_syntax?(fix(input))
 
     assert [
-             %Issue{meta: %{line: 5}},
-             %Issue{meta: %{line: 14}},
-             %Issue{meta: %{line: 23}}
+             %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 5}},
+             %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 14}},
+             %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 23}}
            ] = analyze(input)
   end
 
@@ -442,6 +473,37 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
 
     confirm_fix(fix(input), expected)
     assert valid_syntax?(fix(input))
+  end
+
+  # The bound on the multi-pass loop, at the boundary itself. `@max_passes` is
+  # 100 (lib/syntax/close_unclosed_fn_delimiter.ex) and one occurrence costs one
+  # pass, so a file with exactly 100 occurrences is the largest the rule repairs
+  # in full: the bound does not cut a real file short.
+  test "repairs every occurrence of a file that sits exactly on the pass bound" do
+    fixed = fix(String.duplicate(@one_occurrence, 100))
+
+    confirm_fix(fixed, String.duplicate(@one_occurrence_repaired, 100))
+    assert valid_syntax?(fixed)
+    assert length(analyze(String.duplicate(@one_occurrence, 100))) == 100
+  end
+
+  # One occurrence past the bound, and the rule stops where the bound stops: the
+  # first 100 copies come back repaired, the 101st is handed back exactly as it
+  # arrived, and the result does not parse. `analyze/1` reports only the 100 it
+  # rewrote — the last at line 398, with nothing for the occurrence at line 402.
+  # So an over-long file comes back silently partial rather than declined, and a
+  # caller cannot tell that from a full repair by the return value alone. Pinned
+  # here so that changing it is a deliberate act rather than a surprise.
+  test "stops at the pass bound, returning a partial repair and reporting only what it rewrote" do
+    input = String.duplicate(@one_occurrence, 101)
+    fixed = fix(input)
+
+    confirm_fix(fixed, String.duplicate(@one_occurrence_repaired, 100) <> @one_occurrence)
+    refute valid_syntax?(fixed)
+
+    issues = analyze(input)
+    assert length(issues) == 100
+    assert %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 398}} = List.last(issues)
   end
 
   test "leaves a later function's own end alone when there is no stray end to delete" do
@@ -529,28 +591,15 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     confirm_fix(fix(once), once)
   end
 
-  # The same guarantee where the leftover fault is an unrelated broken call:
-  # this is the once-fixed `Local` source above, whose repair correctly leaves
-  # `def broken(, do: 1` behind. The second call is turned back one step
-  # earlier — the parser's first complaint about this source is that unclosed
-  # `(`, not an `fn` closed by `)` — but it is still a call the rule has to
+  # The same guarantee where the leftover fault is an unrelated broken call.
+  # This runs on the once-fixed `@local_source` — literally the same bytes the
+  # repair test above starts from, so the two cannot drift — whose repair
+  # correctly leaves `def broken(, do: 1` behind. The second call is turned back
+  # one step earlier: the parser's first complaint about this source is that
+  # unclosed `(`, not an `fn` closed by `)`. It is still a call the rule has to
   # decline on unparseable input rather than on "it already parses".
   test "fixing twice changes nothing when the leftover fault is an unrelated broken call" do
-    input = """
-    defmodule Local do
-      def go(m) do
-        Enum.map(m, fn r ->
-          Enum.map(r, fn e ->
-            if e == 0 do 1 else e end)
-          end
-        end)
-      end
-
-      def broken(, do: 1
-    end
-    """
-
-    once = fix(input)
+    once = fix(@local_source)
     refute valid_syntax?(once)
     confirm_fix(fix(once), once)
   end
