@@ -9,8 +9,9 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
   defp fix(code), do: CloseUnclosedDocHeredoc.fix(code)
 
   # The lines `analyze/1` reports an unclosed opener on. Every repair case below
-  # asserts this beside the string the fix emits, because the check and the fix
-  # only agree by *sharing* one boundary scan — nothing structural forces it. A
+  # asserts this beside what the fix does to the same input — with no exception,
+  # so a new repair test added without it is visibly out of step — because the
+  # check and the fix only agree by *sharing* one boundary scan. A
   # check that drifted back to "is the next non-blank line a `def`?" would keep
   # rewriting the @spec-bounded and prose-bounded docs while silently reporting
   # none of them, and a file that only ever asserts the rewrite stays green
@@ -39,6 +40,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     end
     """
 
+    assert reported_lines(input) == [2]
     confirm_fix(fix(input), expected)
   end
 
@@ -66,6 +68,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     end
     """
 
+    assert reported_lines(input) == [2]
     confirm_fix(fix(input), expected)
   end
 
@@ -549,16 +552,17 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
   end
 
   test "fixed output no longer flags" do
-    assert analyze(
-             fix("""
-             defmodule Solution do
-               @doc \"""
-               def find_min_max(list) do
-                 Enum.min_max(list)
-               end
-             end
-             """)
-           ) == []
+    input = """
+    defmodule Solution do
+      @doc \"""
+      def find_min_max(list) do
+        Enum.min_max(list)
+      end
+    end
+    """
+
+    assert reported_lines(input) == [2]
+    assert analyze(fix(input)) == []
   end
 
   test "closes every unclosed @doc heredoc in a module" do
@@ -592,20 +596,22 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     end
     """
 
+    assert reported_lines(input) == [2, 7]
     confirm_fix(fix(input), expected)
     assert valid_syntax?(fix(input))
   end
 
   test "fixed output is well-formed (parses)" do
-    assert valid_syntax?(
-             fix("""
-             defmodule Solution do
-               @doc \"""
-               def find_min_max(list) do
-                 Enum.min_max(list)
-               end
-             end
-             """)
-           )
+    input = """
+    defmodule Solution do
+      @doc \"""
+      def find_min_max(list) do
+        Enum.min_max(list)
+      end
+    end
+    """
+
+    assert reported_lines(input) == [2]
+    assert valid_syntax?(fix(input))
   end
 end
