@@ -533,6 +533,46 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "closes a nesting at the brace cap — five closing braces" do
+    # The positive half of the `@max_braces` boundary, and what keeps the
+    # refusal below from passing for the wrong reason: five closers is the
+    # deepest repair the rule makes, and it makes it.
+    input = """
+    defmodule Example do
+      def foo do
+        {:ok, %{a: %{b: %{c: %{d: 1
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def foo do
+        {:ok, %{a: %{b: %{c: %{d: 1}}}}}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "leaves a nesting past the brace cap untouched — six would be needed" do
+    # One opening deeper than the case above: `@max_braces` caps the repair at
+    # five, so a literal needing six closers is a degenerate input the rule
+    # refuses like the shapes above rather than stacking ever more `}` onto one
+    # line. The analyze side pins the same boundary; this pins that `fix/1`
+    # hands the source back byte-for-byte.
+    code = """
+    defmodule Example do
+      def foo do
+        {:ok, %{a: %{b: %{c: %{d: %{e: 1
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "leaves an unrelated syntax error untouched" do
     code = """
     defmodule Example do
