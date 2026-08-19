@@ -47,6 +47,49 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
       confirm_fix(fix("x =.Module.fun()"), "x = Module.fun()")
     end
 
+    # `\s*=` admits an assignment written without a space in front of the `=`.
+    # The callback appends exactly one space *after* the `=` and never touches
+    # the bytes in front of it, so the output keeps the author's spacing:
+    # `x= foo()`, not `x = foo()`. That is deliberate, not an oversight —
+    # docs/02 puts layout out of a rule's scope ("Spacing and layout don't
+    # matter — `mix format` runs after all the rules"), and normalising here
+    # would also rewrite the spacing of `x  =.foo()`, which has nothing to do
+    # with the spurious dot. The emitted bytes are pinned so they cannot drift.
+    test "no space before the `=`: the dot goes, the author's spacing stays" do
+      refute valid_syntax?("x=.foo()")
+
+      confirm_fix(fix("x=.foo()"), "x= foo()")
+      assert valid_syntax?(fix("x=.foo()"))
+
+      confirm_fix(fix("x  =.foo()"), "x  = foo()")
+      assert valid_syntax?(fix("x  =.foo()"))
+    end
+
+    # The string the rule ACTUALLY emitted, compiled, with the line it replaced
+    # through the same compile as the control: the spacing is unconventional,
+    # the meaning is not.
+    test "the emitted repair of a spaceless assignment compiles, and its input does not" do
+      emitted = fix("x=.foo()")
+
+      module = fn line ->
+        """
+        defmodule FixAssignmentDotSyntaxSpacelessExample do
+          def foo, do: 1
+
+          def go do
+            #{line}
+            x
+          end
+        end
+        """
+      end
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(module.(emitted))
+
+      assert {:error, [%{severity: :error}]} =
+               Credence.RuleHelpers.compile_and_capture(module.("x=.foo()"))
+    end
+
     test "fixes multiple occurrences" do
       source = """
       a =.foo()
