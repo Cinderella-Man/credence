@@ -85,6 +85,28 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
   end
 
+  test "flags a multi-line map whose opening line is no competing placement" do
+    # The positive control for the "is there a competing placement?" probe.
+    # Line 3 holds the `%{` and nothing else, so the rule really does try
+    # putting the `}` there — and `%{}` on line 3 strands `a: 1,` / `b: 2`,
+    # which does not parse, so the probe declines and the repair stands.
+    # Every other flagging test in this file either has no earlier line to
+    # scan or has one ending in `,` (skipped before the probe runs), so
+    # without this test a probe that cried "ambiguous" at every line would
+    # leave the whole battery green.
+    code = """
+    defmodule Example do
+      def foo do
+        %{
+          a: 1,
+          b: 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
+  end
+
   test "no issue when a nesting that opens on two lines has a competing placement" do
     # Two readings parse and mean different things: both braces at the end
     # (`{1 ++ %{a: 2}}`, a one-element tuple) or one brace on line 3 and one on
@@ -271,7 +293,12 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert analyze(code) == []
   end
 
-  test "no issue for a brace that only appears inside a string" do
+  test "leaves a source that parses alone, brace inside a string and all" do
+    # This pins "a parsing source is left alone", nothing more: `detect/1` asks
+    # the parser for a mismatched delimiter, gets none, and returns before any
+    # brace reasoning happens — the same reason "leaves code without braces
+    # alone" passes. The `{` inside the string is never examined, so this is
+    # not masking coverage; the four tests below the next comment are.
     code = """
     defmodule Example do
       def foo do
