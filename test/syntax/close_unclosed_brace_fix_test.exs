@@ -332,13 +332,28 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
       |> Enum.map(&{&1, fix(&1)})
       |> Enum.reject(fn {source, fixed} -> fixed == source end)
 
-    assert length(repaired) > 100,
-           "only #{length(repaired)} of #{length(sources)} sources made the rule commit — " <>
+    # Every completion this search puts to the parser. Counting *repairs* would
+    # be the wrong vacuity guard: a source the rule repaired with a single `}`
+    # has no rival at all — one brace cannot be spread over two lines — so
+    # `brace_splits/2` returns nothing for it and it is searched against
+    # nothing. If the fragments below ever drifted to shapes that never nest
+    # (or the rule started refusing every nested case), thousands of sources
+    # could still repair with one brace each while not one alternative reading
+    # was ever tried, and a guard on repairs would stay green over a search
+    # that compared the rule against nothing.
+    searched =
+      for {source, fixed} <- repaired,
+          rival <- rival_completions(source, byte_size(fixed) - byte_size(source)),
+          do: {source, fixed, rival}
+
+    assert length(searched) > 500,
+           "the rule committed on #{length(repaired)} of #{length(sources)} sources, but only " <>
+             "#{length(searched)} rival completions were parsed against those repairs — " <>
              "the search is too close to vacuous to prove anything"
 
     rivals =
-      for {source, fixed} <- repaired,
-          rival <- rival_readings(source, byte_size(fixed) - byte_size(source)),
+      for {source, fixed, rival} <- searched,
+          valid_syntax?(rival),
           do:
             "=== source ===\n#{source}=== rule emitted ===\n#{fixed}=== also parses ===\n#{rival}"
 
@@ -384,15 +399,14 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
   @body_lines 2..4//1
 
   # Every completion of `source` that appends `count` closing braces spread over
-  # at least two body lines and parses — i.e. every rival meaning the rule's
-  # single-line repair competes with.
-  defp rival_readings(source, count) do
+  # at least two body lines — the candidate rivals of the rule's single-line
+  # repair. The caller parses them: the ones that parse are rival *meanings*,
+  # and the ones that do not still count as search actually performed.
+  defp rival_completions(source, count) do
     lines = String.split(source, "\n")
 
     for split <- brace_splits(count, Enum.count(@body_lines)),
-        rival = append_braces(lines, split),
-        valid_syntax?(rival),
-        do: rival
+        do: append_braces(lines, split)
   end
 
   defp brace_splits(count, line_count) do
