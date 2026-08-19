@@ -162,15 +162,19 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
   end
 
   # Everything the pattern declines because it wants a bare identifier at the
-  # start of the line and at most one space before the dot. One list drives
-  # both the no-op tests and the check that the moduledoc names them, so the
-  # rule's documented coverage cannot drift away from its real coverage.
+  # start of the line, at most one space before the dot, and an identifier
+  # start after it. One list drives both the no-op tests and the check that the
+  # moduledoc names them, so the rule's documented coverage cannot drift away
+  # from its real coverage — which is why `f =.(1)` belongs in the list rather
+  # than in a test of its own: a decline pinned outside the list is a decline
+  # the moduledoc is never checked against.
   @declined [
     "{:ok, val} =.foo()",
     "@attr =.foo()",
     "x = y =.foo()",
     "x =  .foo()",
-    "a =.foo(b =.bar())"
+    "a =.foo(b =.bar())",
+    "f =.(1)"
   ]
 
   # The `x = y =.foo()` entry above is about an `=` that comes *before* the
@@ -180,11 +184,6 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
   @repaired_despite_later_equals "x =.foo(a = 1)"
 
   describe "fix/1 — shapes the rule does not handle" do
-    test "anonymous call syntax unchanged" do
-      code = "f =.(1)"
-      confirm_fix(fix(code), code)
-    end
-
     for code <- @declined do
       test "unchanged, and not reported: #{code}" do
         confirm_fix(fix(unquote(code)), unquote(code))

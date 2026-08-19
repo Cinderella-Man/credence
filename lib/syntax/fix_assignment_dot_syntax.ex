@@ -24,6 +24,10 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   - Comments (`# ref =.make_ref()`)
   - String literals (`msg = "=.not_a_dot"`)
   - A **digit** after the dot (`rate = .05`, `x =.5e3`) — see below
+  - Anonymous-call syntax (`f =.(1)`): `(` does not start an identifier either,
+    and the two readings disagree about the meaning the same way the digit case
+    does — dropping the dot gives `f = (1)`, dropping the `=` gives the call
+    `f.(1)`. Guessing between them is a human's job
   - Anything but a bare identifier on the left — a destructuring pattern
     (`{:ok, val} =.foo()`) or a module attribute (`@attr =.foo()`)
   - A second `=` on the line *before* the dot (`x = y =.foo()`). One after the
