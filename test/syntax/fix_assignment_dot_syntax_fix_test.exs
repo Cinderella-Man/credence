@@ -205,6 +205,39 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
                Credence.RuleHelpers.compile_and_capture(module.("café =.make_ref()"))
     end
 
+    # The callee is the same story as the variable name: `def über(x)` is
+    # valid Elixir, so `x =.über(y)` is the same syntax error as any other
+    # line here. Only a *digit* after the dot is ambiguous (see the moduledoc),
+    # and a non-ASCII byte is not a digit.
+    test "repairs a call to a Unicode function name" do
+      confirm_fix(fix("x =.über(y)"), "x = über(y)")
+      assert analyze("x =.über(y)") != []
+    end
+
+    # The string the rule ACTUALLY emitted, compiled, with the line it
+    # replaced through the same compile as the control.
+    test "the emitted repair of a Unicode callee compiles, and its input does not" do
+      emitted = fix("x =.über(y)")
+
+      module = fn line ->
+        """
+        defmodule FixAssignmentDotSyntaxUnicodeCalleeExample do
+          def über(y), do: y
+
+          def go(y) do
+            #{line}
+            x
+          end
+        end
+        """
+      end
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(module.(emitted))
+
+      assert {:error, [%{severity: :error}]} =
+               Credence.RuleHelpers.compile_and_capture(module.("x =.über(y)"))
+    end
+
     # A stray byte inside a *comment* never reaches the pattern: masking blanks
     # a comment byte-for-byte, so the subject the regex sees here is pure
     # ASCII. This test pins that the repair still lands and that the mask

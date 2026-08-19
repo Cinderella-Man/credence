@@ -42,9 +42,10 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   the dot turns `rate = .05` into `rate = 05`, which parses — as the integer
   `5`, a different value of a different type — and turns `x =.5e3` into
   `x = 5e3`, which doesn't parse at all. Neither is a same-answer rewrite, so
-  the rule requires the character after the dot to start an identifier
-  (`a-z`, `A-Z`, `_`). Python-style float literals are a separate problem for
-  a separate rule.
+  the rule requires the character after the dot to start an identifier —
+  `a-z`, `A-Z`, `_`, or a non-ASCII byte, since `x =.über(y)` names a function
+  as legitimately as `x =.foo(y)` does. Python-style float literals are a
+  separate problem for a separate rule.
 
   ## Only real code is rewritten
 
@@ -79,7 +80,10 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
 
   # Match: optional leading whitespace, a variable name, `=`, an optional space
   # before a dot, then the start of an identifier.  The dot after `=` is the
-  # fault.  The lookahead deliberately excludes digits (see the moduledoc).
+  # fault.  The lookahead admits anything that can start an identifier and
+  # deliberately excludes digits (see the moduledoc): a high byte after the dot
+  # is a Unicode callee (`x =.über(y)`), which carries none of the ambiguity a
+  # digit does.
   # The capture group holds the prefix up to and including `=` (no trailing space)
   # so the callback can append exactly one space.
   #
@@ -91,7 +95,7 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   # inside the fix pipeline costs the whole file. Every non-code byte is
   # blanked to `0x01` before matching, so a high byte reaching the pattern is
   # part of an identifier, never of a literal.
-  @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_])/
+  @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_\x80-\xff])/
 
   @impl true
   def analyze(source) do
