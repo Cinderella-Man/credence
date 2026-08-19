@@ -159,6 +159,65 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     end
   end
 
+  # ═══════════════════════════════════════════════════════════════════
+  # UNICODE — Elixir variable names are not ASCII-only
+  #
+  # `café = make_ref()` is perfectly good Elixir and `café =.make_ref()`
+  # is the same syntax error as any other line here, so declining it is a
+  # missed repair rather than a safe abstention.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — a non-ASCII variable name" do
+    test "repairs an assignment to a Unicode identifier" do
+      confirm_fix(fix("café =.make_ref()"), "café = make_ref()")
+    end
+
+    test "repairs one with a non-ASCII byte after the first character" do
+      confirm_fix(fix("  größe =.byte_size(x)"), "  größe = byte_size(x)")
+    end
+
+    test "the repaired line parses and no longer flags" do
+      fixed = fix("café =.make_ref()")
+
+      assert valid_syntax?(fixed)
+      assert analyze(fixed) == []
+    end
+
+    # The string the rule ACTUALLY emitted, compiled — with the unrepaired
+    # line through the same compile as the control, so this cannot pass by
+    # compiling anything at all.
+    test "the emitted repair compiles, and the line it replaced does not" do
+      emitted = fix("café =.make_ref()")
+
+      module = fn line ->
+        """
+        defmodule FixAssignmentDotSyntaxUnicodeExample do
+          def go do
+            #{line}
+            café
+          end
+        end
+        """
+      end
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(module.(emitted))
+
+      assert {:error, [%{severity: :error}]} =
+               Credence.RuleHelpers.compile_and_capture(module.("café =.make_ref()"))
+    end
+
+    # The class is widened byte-wise rather than with the `u` modifier on
+    # purpose: a `/u` regex raises ArgumentError on a subject that is not
+    # valid UTF-8, and model output truncated mid-character is exactly the
+    # input this phase exists to repair. A missed fix is the right failure
+    # there; a crash inside the fix pipeline is not.
+    test "a line that is not valid UTF-8 is repaired, not crashed on" do
+      code = <<"ref =.make_ref() # ", 0xFF>>
+
+      confirm_fix(fix(code), <<"ref = make_ref() # ", 0xFF>>)
+    end
+  end
+
   describe "round-trip" do
     test "fixed output no longer flags" do
       assert analyze(fix("ref =.make_ref()")) == []

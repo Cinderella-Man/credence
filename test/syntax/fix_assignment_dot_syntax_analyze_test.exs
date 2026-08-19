@@ -43,6 +43,19 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
     end
   end
 
+  describe "analyze/1 — a non-ASCII variable name" do
+    # `café = make_ref()` is valid Elixir, so `café =.make_ref()` is the same
+    # syntax error as `ref =.make_ref()` and gets the same issue.
+    test "flags `café =.make_ref()`" do
+      assert [%Issue{rule: :fix_assignment_dot_syntax, meta: %{line: 1}}] =
+               analyze("café =.make_ref()")
+    end
+
+    test "flags one with a non-ASCII byte after the first character" do
+      assert [%Issue{rule: :fix_assignment_dot_syntax}] = analyze("größe =.byte_size(x)")
+    end
+  end
+
   describe "analyze/1 — leaves good code alone" do
     test "valid assignment without extra dot" do
       assert analyze("ref = make_ref()") == []

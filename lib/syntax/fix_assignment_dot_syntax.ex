@@ -14,6 +14,10 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
       ref =.make_ref()        →  ref = make_ref()
       x =.some_function(a)    →  x = some_function(a)
 
+  The name on the left may hold non-ASCII characters — `café = make_ref()` is
+  valid Elixir, so `café =.make_ref()` is the same syntax error as any other
+  line here and gets the same repair.
+
   ## Not flagged
 
   - Valid assignments without the extra dot (`ref = make_ref()`)
@@ -78,7 +82,16 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   # fault.  The lookahead deliberately excludes digits (see the moduledoc).
   # The capture group holds the prefix up to and including `=` (no trailing space)
   # so the callback can append exactly one space.
-  @bad_pattern ~r/^(\s*[a-zA-Z_]\w*\s*=)\s?\.(?=[a-zA-Z_])/
+  #
+  # `\x80-\xff` widens the name to Unicode identifiers (`café = make_ref()` is
+  # valid Elixir) BYTE-WISE rather than with the `u` modifier, because a `/u`
+  # regex raises `ArgumentError` on a subject that is not valid UTF-8 — and
+  # output truncated mid-character is exactly the kind of broken input this
+  # phase exists to repair. Declining such a line costs a missed fix; raising
+  # inside the fix pipeline costs the whole file. Every non-code byte is
+  # blanked to `0x01` before matching, so a high byte reaching the pattern is
+  # part of an identifier, never of a literal.
+  @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_])/
 
   @impl true
   def analyze(source) do
