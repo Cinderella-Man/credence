@@ -1234,6 +1234,51 @@
       "error": null,
       "enqueued_at": "2026-08-19T22:30:50+02:00",
       "resolved_at": "2026-08-19T22:44:18+02:00"
+    },
+    {
+      "path": "test/syntax/fix_assignment_dot_syntax_fix_test.exs",
+      "reviewed_at": "2026-08-19T22:54:47+02:00",
+      "round": 1,
+      "severities": [
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The rule declines to touch `f =.(1)` (anonymous-call syntax), and the test file pinned that as a no-op in a test of its own. But the file also keeps a list, `@declined`, whose comment says it holds \"everything the pattern declines\", and one test walks that list to check the rule's moduledoc actually names each shape under \"## Not flagged\". Because `f =.(1)` sat outside the list, that check never looked at it — and the moduledoc indeed never mentioned anonymous-call syntax, so a reader of the rule saw a shorter list of exceptions than the rule really has. Confirmed by executing the rule: `analyze(\"f =.(1)\")` returns `[]` and `fix(\"f =.(1)\")` returns the line unchanged (a real decline), while printing the \"Not flagged\" section and testing whether it contains `f =.(1)` returned false. Pinned by moving `\"f =.(1)\"` into `@declined` and deleting the now-redundant standalone test; the consistency test then failed, naming exactly `f =.(1)` as undocumented. Fixed by adding one bullet to the rule's \"Not flagged\" list: anonymous-call syntax is declined because `(` cannot start an identifier and the two possible repairs mean different things (`f = (1)` versus the call `f.(1)`), so it is left for a human. The bullet is inserted next to the digit bullet — the closest reason — and before the four bullets that a later sentence counts as \"the last four\", so that sentence stays true. Moving the entry also strengthens the pin, since the `@declined` loop asserts `analyze/1 == []` in addition to the no-op, which the standalone test did not. Proven: the file's 44 tests pass, both batteries for this rule (66 tests) pass, `mix format`, `mix compile --warnings-as-errors`, and the full `mix test --exclude corpus --exclude idempotency` gate (9102 tests, 0 failures) are green, including the self-corruption test that runs this rule's fix over its own source. Committed as 8276ac8."
+        }
+      ],
+      "commits": [
+        "8276ac81c1cf96e166dce84154349daa4373ba17"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T22:54:47+02:00",
+      "resolved_at": "2026-08-19T23:04:30+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_assignment_dot_syntax.ex",
+      "reviewed_at": "2026-08-19T23:09:47+02:00",
+      "round": 5,
+      "severities": [
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T23:09:47+02:00",
+      "resolved_at": null
     }
   ]
 }
