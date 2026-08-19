@@ -40,6 +40,11 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   closed doc above `def b` is never repaired: the second doc's closing quotes
   veto the repair of the first. Such a file is left to the next round.
 
+  The search for that definition stops at the first non-blank line indented less
+  than the `@doc` — the enclosing module's own `end`. A file whose broken doc has
+  no definition left inside its own module is therefore declined rather than
+  closed in front of a `def` belonging to a later module.
+
   It declines for the same reason when the first definition below the opener is a
   form `@doc` cannot document (`defstruct`, `defmodule`, `defimpl`, …): such a
   line is as plausibly doc prose as it is code, and the rule has nothing to tell
@@ -166,6 +171,8 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   # ends at the first module attribute above that definition, if any: everything
   # between the opener and that line is doc text, however it is spelled.
   defp doc_end_offset(lines, indent) do
+    lines = Enum.take_while(lines, &inside_doc_block?(&1, indent))
+
     case Enum.find_index(lines, &at_indent?(&1, indent, @def_word)) do
       nil ->
         nil
@@ -187,6 +194,19 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
       |> Enum.find_index(&at_indent?(&1, indent, @attribute_word))
 
     attribute_offset || def_offset
+  end
+
+  # Is `line` still inside the block the `@doc` was written in? A non-blank line
+  # indented *less* than the `@doc` — the enclosing module's own `end` — proves
+  # that block has already closed, so the search for the definition this doc
+  # documents must stop there. Scanning on finds a `def` in the *next* module and
+  # puts the closer inside it: the `end`, the blank line and the second module's
+  # header are all absorbed into the doc string, that module ceases to exist and
+  # its function is silently re-homed into the first one. An outdented heredoc is
+  # only a warning, and the result parses, so nothing downstream reverts it.
+  # Blank lines carry no indentation and never end the block.
+  defp inside_doc_block?(line, indent) do
+    String.trim(line) == "" or String.starts_with?(line, indent)
   end
 
   # Does `line` match `word_regex` at exactly `indent`? Deeper-indented lines are

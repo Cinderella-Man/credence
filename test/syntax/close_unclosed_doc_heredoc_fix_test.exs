@@ -304,6 +304,74 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     confirm_fix(fix(code), code)
   end
 
+  # A non-blank line indented *less* than the `@doc` — the enclosing module's own
+  # `end` — proves the block the doc lives in has already closed, so the search
+  # for "the definition this doc documents" cannot legitimately continue past it.
+  # Scanning on lands the closer inside the *next* module: that module's header
+  # and the `end` above it are swallowed into the doc string, the module ceases to
+  # exist, and its function is silently re-homed into the first one. The result
+  # only warns (an outdented heredoc is not an error), and it parses, so nothing
+  # downstream reverts it. There is no second module to close the doc in front of,
+  # so the rule declines — the same answer it gives a `\"""` below it cannot place.
+  test "does not scan past a line indented less than the @doc into a later module" do
+    code = """
+    defmodule Helpers do
+      @doc \"""
+      Shared helpers.
+    end
+
+    defmodule Main do
+      def run, do: :ok
+    end
+    """
+
+    assert analyze(code) == []
+    confirm_fix(fix(code), code)
+  end
+
+  # The bound is the *outdent*, not "stop at the first `end`". An `end` indented
+  # deeper than the `@doc` is doc text — the last line of a code example — and
+  # must not stop the search for the definition being documented, or the doc is
+  # left unclosed and the file still does not parse.
+  test "still repairs across an end indented deeper than the @doc" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Example:
+
+          def add(a, b) do
+            a + b
+          end
+
+      def add(a, b), do: a + b
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Example:
+
+          def add(a, b) do
+            a + b
+          end
+
+    #{close}
+      def add(a, b), do: a + b
+    end
+    """
+
+    assert reported_lines(input) == [2]
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+
+    shape = module_shape(fix(input))
+    assert shape.docs == ["Example:\n\n    def add(a, b) do\n      a + b\n    end\n\n"]
+    assert shape.defs == [{:add, 2}]
+  end
+
   # A `def` example written *inside* the doc text is indented deeper than the
   # `@doc` line that opened the doc. Reading it as "the next definition" closes
   # the doc above it: the doc is truncated to the prose before the example and
