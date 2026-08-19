@@ -492,20 +492,66 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     assert NoUnclosedFnDelimiter.analyze(input) == []
   end
 
-  test "fixing twice changes nothing the second time" do
+  # Fixing twice can only say something about the repair when the once-fixed
+  # source *still does not parse*. On output that parses, the second `fix/1`
+  # call stops inside `detect/1` at the parser and hands the source straight
+  # back, never reaching the insertion or the deletion — the same short-circuit
+  # "does not modify already-valid code" already covers. So each of these two
+  # tests refutes `valid_syntax?` on the once-fixed source first; that assertion
+  # is what stops the fixture from silently degrading into that short-circuit
+  # again.
+  #
+  # Here the leftover fault is a plain unclosed `fn` (the sibling rule's shape),
+  # so the second call gets the furthest a second call can: the parser's first
+  # complaint is an `fn` closed by `)`, the rule inserts `end` before it, and
+  # only then does the "is the leftover `end` a stray one of mine?" guard turn
+  # it back. A rule that skipped that guard would delete `def plain`'s own `end`
+  # on the second call.
+  test "fixing twice changes nothing when the leftover fault is a plain unclosed fn" do
     input = """
-    defmodule TwoBugs do
-      def a(m) do
+    defmodule GenuineThenPlain do
+      def go(m) do
         Enum.map(m, fn r ->
           Enum.map(r, fn e ->
             if e == 0 do 1 else e end)
           end
         end)
       end
+
+      def plain(list) do
+        Enum.max_by(list, fn {_, s} -> s)
+      end
     end
     """
 
-    once = fix(input <> input)
+    once = fix(input)
+    refute valid_syntax?(once)
+    confirm_fix(fix(once), once)
+  end
+
+  # The same guarantee where the leftover fault is an unrelated broken call:
+  # this is the once-fixed `Local` source above, whose repair correctly leaves
+  # `def broken(, do: 1` behind. The second call is turned back one step
+  # earlier — the parser's first complaint about this source is that unclosed
+  # `(`, not an `fn` closed by `)` — but it is still a call the rule has to
+  # decline on unparseable input rather than on "it already parses".
+  test "fixing twice changes nothing when the leftover fault is an unrelated broken call" do
+    input = """
+    defmodule Local do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+
+      def broken(, do: 1
+    end
+    """
+
+    once = fix(input)
+    refute valid_syntax?(once)
     confirm_fix(fix(once), once)
   end
 end
