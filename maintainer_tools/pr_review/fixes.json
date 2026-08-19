@@ -59,6 +59,1181 @@
       "error": null,
       "enqueued_at": "2026-08-19T10:59:12+02:00",
       "resolved_at": "2026-08-19T11:25:39+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_brace.ex",
+      "reviewed_at": "2026-08-19T11:57:41+02:00",
+      "round": 2,
+      "severities": [
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "The rule's \"placement must be beyond doubt\" guard only ever asked one question: \"would putting *all* the missing braces at the end of one earlier line also make the source parse?\" It never asked whether the braces could be *split* — one on an earlier line, the rest on the last — so whenever a repair needed two or more braces, a second reading with a different meaning could slip through unseen. The reviewer's own example did not reproduce: I ran their experiment and the rule left the source untouched, because that candidate (`, 3}}`) does not parse at all, so the rule never got as far as the guard. Rather than refute on one bad fixture, I searched for the shape the finding describes: a script generated 1400 truncated sources, ran the real rule on each, and for every repair it committed with two or more braces checked whether any split placement also parsed. Four sources came back positive. The simplest is `x = {1, {2, {3` followed by `}, 5` — the rule committed `x = {1, {2, {3` / `}, 5}}`, i.e. `{1, {2, {3}, 5}}`, while `{1, {2, {3}` / `}, 5}` — the inner brace one line up — parses just as well and is a different value. Both compile, so nothing downstream could have caught the wrong pick. Pinned with two tests, one in each battery: a fix test asserting that source comes back byte-for-byte unchanged, and an analyze test asserting no issue is reported (the rule must never flag what it will not fix). Both failed on the old code showing exactly the wrong repair (`}, 5}}`) and the spurious issue on line 3. Fixed by widening the existing guard rather than adding a new one: `sole_placement/3` now also calls a new `split_placement?/3`, which for each earlier line tries every share of the braces between that line and the target line and treats any parsing result as a competing placement. The existing trailing-comma exclusion is applied unchanged (closing after a comma drops an element, so a comma still pins the next line inside the literal), which is what keeps every previously-admitted input repaired identically — the whole 37-test battery passes with no expectation touched. Re-running the 1400-source search after the fix finds 0 split-ambiguous repairs, down from 4. The moduledoc bullet, which the reviewer noted claimed more than the code checked, now says split placements are tried too — it is once again a description of what the code does. Committed as c93cb62 with both test files. Fast gate green: mix format on the three touched files, mix compile --warnings-as-errors, and mix test --exclude corpus --exclude idempotency (9028 tests, 6 properties, 0 failures)."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by executing the rule, not by reading: on a literal nested five deep, analyze reports an issue; on one nested six deep it reports nothing and fix returns the source unchanged. So the `@max_braces 5` ceiling really is a silent refusal, and the moduledoc's closing claim — \"the smallest number of `}` that makes the source parse is used\", with a note that that number is unique — read as if any depth would be repaired. The behaviour itself was already pinned by an existing test added earlier today (commit 2c40cc4, `test/syntax/close_unclosed_brace_analyze_test.exs:156`), so this finding needed no new test: it is a documentation gap, not a behaviour gap, and I confirmed the pin still guards the boundary by running that battery. Added one sentence to the same paragraph the reviewer flagged, saying the cap is five and that a literal needing six or more closers is refused like the other cases rather than repaired. Landed in the same commit, c93cb62, under the same green gate."
+        }
+      ],
+      "commits": [
+        "c93cb627f9cfe7f26c6179de16498a9df78cf2d3"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T11:57:41+02:00",
+      "resolved_at": "2026-08-19T12:09:53+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_brace.ex",
+      "reviewed_at": "2026-08-19T12:15:48+02:00",
+      "round": 3,
+      "severities": [
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed exactly as the reviewer guessed. Running their experiment, `Code.string_to_quoted` on a literal whose `{` sit on two different lines reports `line: 4` — the inner `%{` — not line 3, where the literal starts. The guard that checks \"could the `}` have belonged on an earlier line?\" started its scan at that reported line, so every line between the outer `{` and the inner one was never tried. I then executed the rule to see whether that hole actually lets a wrong repair through: on `x = {1` followed by `++ %{a: 2`, the rule committed `{1 ++ %{a: 2}}` (a one-element tuple), while `{1} ++ %{a: 2}` — one brace on each line — parses just as well and is a different value. I confirmed both readings parse and that their syntax trees differ, so nothing downstream could have caught the wrong pick. A sweep of 560 generated truncated sources found 6 such ambiguous-but-committed repairs. Pinned with three tests that failed on the old code for exactly this reason: a fix test asserting that source comes back byte-for-byte unchanged, an analyze test asserting no issue is reported, and an analyze test asserting the issue points at the line the literal opens on rather than the inner `{` (the reviewer's second-order point — it really did report line 4). Fixed by walking back out through the parser's delimiter stack: each `}` appended at the last line closes one more opening, so re-asking the parser with one, two, ... braces already in place names each opening in turn, and the earliest line any of them reports is where the literal really opens. Both the uniqueness scan and the issue's line now start there. Proven: the 560-source sweep drops from 6 ambiguous commits to 0, and a differential against the previous commit over 1960 generated sources shows 1924 byte-identical, 20 newly refused (all the finding's shape) and 16 with the same repair and only the reported line moved to the outer `{` — nothing newly repaired, no repair changed. Full battery 40 tests green, fast gate green (9031 tests, 0 failures). Committed as 4375ba5."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by measurement, not by reading: repairing a multi-line map takes 0.14s at 200 lines, 0.52s at 400 and 2.2s at 800 — quadratic, and it is the *committing* path that pays, because the scan only stops early when it decides to refuse. The cause is what the reviewer described: for each earlier line the scan tried every brace count on that line, then every count on the last line for each of four shares — up to 25 reparses of the whole file per line. The fix rests on an argument the code now states: a competing reading closes the same openings, so it appends exactly as many braces as the repair did, and only their *share* between the two lines can differ. Trying just those shares is a couple of reparses per line instead of 25. One case the argument misses, which a differential caught before it shipped: a line ending in a comment, string or heredoc swallows the braces appended to it, and the old code refused those sources — nine of them in the corpus started being repaired. That refusal is the safer answer (it stops `x = {1 # }` / `|> g()` from becoming `{1 |> g()}`), so I kept it exactly, with a one-brace probe on top of the full repair that only parses when the extra brace was swallowed. Proven: two differentials against the previous commit — 3220 and 144 generated sources, including heredoc, sigil, charlist and trailing-comment shapes — give identical fix output and identical issues in every single case, so nothing the rule used to repair or refuse changed. The 800-line input goes from 2.2s to 0.19s. Pinned with a timing test on an 800-line literal with a 1s limit (the old code takes 2.2s and fails it, the new code 0.19s and passes with room to spare), plus a regression test for the swallowed-brace refusal, which nothing in the battery covered. Note the change lowers the constant, not the order: the scan is still quadratic in the length of the literal, just ~12x cheaper. Fast gate green (9033 tests, 0 failures). Committed as 866df81."
+        }
+      ],
+      "commits": [
+        "4375ba58f5f2e1bf75efd65b08ef0fd9b769aa54",
+        "866df81622a359e8d9640e37cc887e736ec572e2"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T12:15:48+02:00",
+      "resolved_at": "2026-08-19T12:44:18+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_brace.ex",
+      "reviewed_at": "2026-08-19T12:50:00+02:00",
+      "round": 4,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T12:50:00+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_analyze_test.exs",
+      "reviewed_at": "2026-08-19T12:53:42+02:00",
+      "round": 2,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The existing test \"no issue for a brace that only appears inside a string\" hands the rule a source that parses perfectly well, so the rule returns \"no issues\" for the same trivial reason as \"leaves code without braces alone\": the parser never reports a mismatched delimiter, and the masking claim in the rule's documentation — that a `{` inside a string, heredoc or comment is never mistaken for the unclosed one — is never actually exercised. Confirmed by executing the rule on five sources that really are missing a `}` and also carry a `{` inside a string, heredoc or comment; nothing in either test file covered any of them. Added four tests to this battery: a `{` inside a string on the line above the broken literal (the issue must name the literal's line, 4, not the string's line 3); six `{` inside a string on the literal's own line (only one `}` is missing, so the issue must appear at all); a `{` inside a heredoc above the literal; and a `{` inside a comment above it. Because these are coverage tests they pass on the current code, so I proved they are a real net rather than decoration: I made the rule brace-blind on purpose — finding the opening line by scanning the text for a `{` and taking the number of missing braces from the textual `{`/`}` imbalance — and all four went red for exactly the right reasons (the string case reported line 3 instead of line 4; the six-brace case reported nothing at all, because a textual count wants seven closers, past the rule's cap of five). The pre-existing test stayed green under that same mutation, which is precisely the gap the reviewer described. The mutation was then reverted; only the tests were kept. Committed as 50fe277."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by running the reviewer's experiment: with `end_line > open_line` deleted from the rule's detection guard, both batteries stay green (42 tests, 0 failures), so the test named \"no issue when the mismatched end sits on the opening line\" is not the regression net for that guard. It cannot be, and the reason is worth stating: the range the rule scans for a line to put the `}` on runs from two lines above the `end` back to the opening line, which is non-empty exactly when the `end` really is on a later line. The guard and the scan were therefore one decision written down twice, and the second copy had no observable consequence. I backed that with a differential over 410 generated broken sources — including ten shapes where the `end` sits on the opening line — comparing both what the rule reports and what it rewrites, with and without the guard: 0 differences. I also checked how over-determined the behaviour is by removing the guard *and* widening the scan so the same-line case is reached: still 0 differences over the same 410 sources and still 42 green tests, because appending a `}` after `end` never parses anyway. So no black-box test can ever pin that guard. Landed the removal of the duplicate, moved the reasoning into a comment on the function that actually enforces it, and added a comment to the test saying it pins the behaviour rather than any one guard expression — the assertion itself is unchanged. Re-ran the 410-source differential against the pre-fix baseline after the change: 0 differences, so nothing the rule used to repair or refuse moved. Committed as 50fe277."
+        }
+      ],
+      "commits": [
+        "50fe277cbae551d74007c9f0d1b914ab41cc9382"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T12:53:42+02:00",
+      "resolved_at": "2026-08-19T13:08:28+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_brace.ex",
+      "reviewed_at": "2026-08-19T13:15:21+02:00",
+      "round": 5,
+      "severities": [
+        "blocker",
+        "blocker"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T13:15:21+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_analyze_test.exs",
+      "reviewed_at": "2026-08-19T13:20:01+02:00",
+      "round": 3,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The reviewer said no flagging test in this battery ever reaches the rule's \"is there a rival place for the `}`?\" probe, so the file could not tell a rule that refuses genuinely ambiguous placements from one that refuses everything. Confirmed by executing that mutation: I made `competing_placement?/4` return `true` unconditionally (so every earlier line of a literal counts as a rival placement) and the whole battery stayed green — 24 tests, 0 failures. Also ran the reviewer's experiment on the untouched rule: the multi-line map `%{` / `a: 1,` / `b: 2` / `end` does reach the probe and is flagged on line 3. Added that source as a new flagging test (\"flags a multi-line map whose opening line is no competing placement\"), with a comment explaining it is the positive control: line 3 holds the `%{` alone, so the rule really does try putting the `}` there, and `%{}` on line 3 strands the two entries and does not parse, which is why the probe declines and the repair stands. Watched it fail under the mutation for exactly that reason (it got `[]` where it wanted an issue on line 3), then reverted the mutation (`git diff lib/` empty) and watched it pass. Rule code unchanged; only the test file moved."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The test named \"no issue for a brace that only appears inside a string\" fed the rule `IO.puts(\"{\")` inside an otherwise valid module, which parses perfectly well, so the rule gives up in its first step and never looks at a brace at all — it returns nothing for the same trivial reason as \"leaves code without braces alone\" two tests above, and the name read as if it covered the rule's claim about braces hidden in strings. Confirmed twice by execution: `Code.string_to_quoted` on that exact source returns `{:ok, _}` and `analyze` returns `[]`, identical to the brace-free control; and when I deliberately made the rule blind to strings, heredocs and comments (finding the literal's opening line by scanning the text for a `{` instead of asking the parser), the three real masking tests added in the previous round went red while this test stayed green. Reverted that mutation and renamed the test to \"leaves a source that parses alone, brace inside a string and all\", with a comment saying it pins only that a parsing source is untouched and pointing at the four tests below it that do the masking work. The assertion and the source are unchanged, so nothing that was covered stopped being covered."
+        }
+      ],
+      "commits": [
+        "d403cfc2642c3f42ce36eba8ef8f6b436ad2dc09"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T13:20:01+02:00",
+      "resolved_at": "2026-08-19T13:30:09+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_analyze_test.exs",
+      "reviewed_at": "2026-08-19T13:35:48+02:00",
+      "round": 4,
+      "severities": [
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T13:35:48+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_fix_test.exs",
+      "reviewed_at": "2026-08-19T13:42:35+02:00",
+      "round": 1,
+      "severities": [
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "refuted",
+          "note": "The concern was that the rule only ever weighs the missing braces shared between ONE earlier line and the target line, so a rival reading that puts braces on two *different* earlier lines is never tried; if such a source exists the rule silently picks one of two meanings. I searched for one instead of reasoning about it. First the reviewer's own experiment (343 sources built from their 7 fragments): nothing. Then a much wider search — every three-line function body built from 26 fragments covering nested openings, map/keyword entries, leading commas, operator continuations, a closing brace mid-line, and trailing comments/strings that swallow an appended `}` = 17,576 sources, of which the rule repairs 351; plus a four-line variant, 38,416 sources with 181 repairs. For each repair I enumerated every way of spreading the same number of closing braces over the body's lines using at least two of them (a completion always appends exactly as many `}` as there are `{` still open, since a `}` closes exactly one, so rivals with a different total are not readings of the same source) and parsed each. Zero rivals, in every run — including zero *pair* rivals, which would have been a bug in the scan the rule does perform. The defect does not reproduce. What was real is the second half of the finding — nothing in the file would have noticed — so the search is now a standing test in the battery (\"commits nothing that a brace split over other lines could also mean\", commit 2cb9b0a). It is not inert: with the rule's scan narrowed to a single share (a scratch copy, not committed) the same search reports 22 rivals, e.g. `x = {1, {2, {3` / `|> g()` / `}, 5`, where the rule would have emitted `}, 5}}` while `|> g()}` … `}, 5}` also parses. The test also asserts the search made the rule commit at least 100 times, so it cannot pass by finding nothing to check."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The fixture comment said the 400 entries are spread over two lines \"so no line ends in `,` but the last\". Confirmed false by counting: 399 of the 800 generated lines end in `,` (the value lines). Confirmed what the shape is actually for by timing the alternative: with one line per entry the rule repairs the source in 1.5ms against 193ms for the two-line version, because `sole_placement` skips every comma-ended line, so a one-line-per-entry fixture would make the scan reparse nothing and the timing would measure an empty loop. The comment now says that, and the property is pinned by two assertions in the test rather than living only in prose: 400 key lines (which end in `:`, never `,`, and are the only lines the scan probes) and 399 of the 400 value lines ending in `,`. Reshaping the fixture to one line per entry now fails the first assertion instead of quietly hollowing out the measurement. Commit 7c575ac."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "`assert best < 1_000_000` is wall-clock against a ~190ms baseline. Confirmed the flake in both directions by executing. Slow-machine direction: with 48 busy loops on 24 cores the same measurement took 647ms and 781ms against the 1000ms limit, so a box only ~1.3x slower than that fails on healthy code. Missed-regression direction: a scratch copy of the rule with the old every-count scan restored (not committed; it emits byte-identical output, only slower) takes 2.6s, so a machine ~2.6x faster than this one would pass the regression the test exists to catch. The threshold is now measured in reparses of the same fixture rather than in milliseconds: the test times 400 whole-file reparses of the fixture the same way (min of 3) and allows the scan six of those, i.e. ~2400 reparses. Healthy scan measures 1.29-1.31x the control (~520 reparses), the restored every-count scan measures 17.5x (~7000), and the ratio held at 1.24-1.35 under the same load that pushed wall-clock to 781ms. So the assertion now means the same thing on a slow CI box as on a fast laptop, and no tag or machine footnote is needed. Commit 7c575ac."
+        }
+      ],
+      "commits": [
+        "2cb9b0add566ce35c12271c41b3bd1767dea8f2d",
+        "7c575ac8738d70c3f9292f346d091aa2e9322620"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T13:42:35+02:00",
+      "resolved_at": "2026-08-19T14:12:09+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_fix_test.exs",
+      "reviewed_at": "2026-08-19T14:18:43+02:00",
+      "round": 2,
+      "severities": [
+        "concern",
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "The big search test (\"commits nothing that a brace split over other lines could also mean\") guarded against becoming vacuous by asserting that the rule repaired more than 100 of the 17,576 generated sources. That is the wrong quantity: a source the rule repairs by adding a single `}` has no rival reading at all, because one brace cannot be spread over two lines, so `brace_splits/2` returns nothing for it and it is compared against nothing. Confirmed by execution, not by reading: I ran the same test with the fragment list drifted to shapes that never nest (a scratch copy, not committed) — 141 of 5832 sources were repaired, the `> 100` guard passed, the test went green, and ZERO alternative readings had been parsed. Counted the real numbers too: of the 351 repairs the committed fragment list produces, 152 need one brace (searched against nothing) and 199 need two or three. The guard now counts the alternative completions actually handed to the parser: 785 with the real fragments, and the assertion demands more than 500. Re-running the drifted list against the new guard fails with \"only 0 rival completions were parsed\", and the real file stays green. `rival_readings/2` became `rival_completions/2` (it no longer filters to the ones that parse — the caller does that), so a completion that was searched but did not parse still counts as search performed. Commit 8b97283."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "refuted",
+          "note": "The claim was that the two heavy tests run under ExUnit's 60-second default with no `timeout:` tag, so a slower CI box would fail with a timeout that reads like a hang. Measured them instead of estimating. Alone (`mix test test/syntax/close_unclosed_brace_fix_test.exs --trace --formatter ExUnit.CLIFormatter`): the search test 2.13 s, the reparse-budget test 1.22 s. Inside the whole default gate (`mix test --exclude corpus --exclude idempotency --trace`, 9045 tests, 294 s), where the reviewer's starvation worry would show: 2.11 s and 1.17 s — no slowdown at all, and the suite's genuinely slow tests (the ones that do carry `@moduletag timeout: :timer.minutes(10)`) run 21–24 s. Under deliberate CPU starvation — 48 busy loops on 24 cores, the same load that made an earlier round's wall-clock assertion fail — they take 8.2 s and 4.0 s. So the worst number I could produce is 8.2 s against a 60-second budget: a box would have to be another ~7× slower *while* 3× oversubscribed to time out. The defect does not reproduce, so I did not add the tag. Worth a maintainer's eye if CI ever gets much slower: the search test's cost is cubic in the fragment list (26³ sources today), so adding fragments is what would move this number, not a slower box."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The comment said the scan does \"~520 reparses (two per probed line), since the scan stops at the first share that parses\", and the failure message repeated the 520. I traced `Code.string_to_quoted` through one `fix/1` call on the fixture: 804 parses — one for detection, one for the repair, and 802 for the scan, which is two each over 401 probed lines (the 400 key lines plus `    x = %{`). So \"two per probed line\" is 802, not 520, and nothing stops the scan early: a probe that parses IS a competing placement and would make the rule refuse, which the test's own `assert fix(code) != code` rules out. The reviewer's suspected cause — the control loop times `Sourceror.parse_string` while the scan uses `Code.string_to_quoted` — is not it: measured on this fixture the two cost the same (ratios 0.99 and 1.07), because the fixture fails to parse and Sourceror never reaches its comment-merging. The real reason 802 probes cost only about one control loop is that a probe's `}` sits on an earlier line, so the parser fails there and never reads the rest of the file: timed per position, a probe on the first key line costs 0.17 of a whole-file parse and one on the last costs 1.4. The comment and the failure message now state the probe count (802), the measured cost (about one control loop; 0.9–1.7 across runs, depending on which loop is timed first), and a re-measured regression figure — I replayed the pre-866df81 every-count scan (25 parses per probed line) over the same fixture and it costs 20 control loops, so the 6× budget still sits between healthy and broken. The assertion and the budget are unchanged; only the numbers a maintainer is handed changed. Commit 4b0066a."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The fix battery mirrored every refusal the analyze battery pins except the `@max_braces` backstop, so nothing checked that `fix/1` hands a six-brace nesting back byte-for-byte. Confirmed by executing the rule on the six-opening shape: it does return the source unchanged, and no test in the file looked. Added both halves of the boundary, with the expected string taken from what the rule actually emitted rather than typed by hand: five closers are appended (`{:ok, %{a: %{b: %{c: %{d: 1}}}}}`) and six are refused. Proved neither case is inert by raising `@max_braces` from 5 to 6 in the rule (a scratch edit, reverted immediately — the file diffs byte-identical against a backup taken first): the refusal case then fails, showing the rule emitting six closers, while the five-brace case stays green. Commit 499ccff."
+        }
+      ],
+      "commits": [
+        "8b972837d8757fad2393608b593fdf9677a378c7",
+        "4b0066a78bb2445c5c8112af903f82502ce9ae3e",
+        "499ccfff5a1086d2a22c2def120fe67ee7d91e1d"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T14:18:43+02:00",
+      "resolved_at": "2026-08-19T14:45:15+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_fix_test.exs",
+      "reviewed_at": "2026-08-19T14:51:55+02:00",
+      "round": 3,
+      "severities": [
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "refuted",
+          "note": "The claim: the module's two heavy tests run under ExUnit's 60-second default with no `timeout:` tag, and on \"a CI box a few times slower\" they would blow it and read as a hang rather than a regression. Measured instead of estimated. `mix test test/syntax/close_unclosed_brace_fix_test.exs --trace --seed 0 --formatter ExUnit.CLIFormatter`: the brace-split search takes 2001 ms and the reparse-budget test 1191 ms (whole file 3.2 s, 25 tests green — which also settles the reviewer's \"reading alone cannot establish that they pass\"). Then the slow-box condition, made real rather than imagined: 48 busy loops on 24 cores, i.e. 3x oversubscription, gives 7267 ms and 4375 ms — the worst numbers I could produce, against a 60-second budget. The reviewer's own arithmetic points the same way: ~3200 whole-file parses of that fixture, and 400 Sourceror parses of it measure ~140 ms, so the parsing accounts for ~1.1 s — \"a few times slower\" is ~5 s, not 60. A box would have to be another ~8x slower *while* 3x oversubscribed. The defect does not reproduce, so no tag was added. (This is the third round the timeout concern has been raised and the second time it has been measured; round 2 got 8.2 s / 4.0 s under the same load, so the two independent measurements agree.) Worth a maintainer's eye only if the fragment list grows: the search test's cost is cubic in it (26^3 = 17,576 sources today), so that, not a slower box, is what would move this number."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The budget's two sides do not use the same parser: `best` times `fix/1`, which reparses with `Code.string_to_quoted`, while `control` times `valid_syntax?/1`, which is a Sourceror parse (rule tests may not reference `Code.*` themselves — test/no_parser_calls_in_rule_tests_test.exs). The comment never said so, so \"a control loop is 400 whole-file reparses of this fixture\" quietly meant 400 parses by a *different* parser. Confirmed by timing both on the exact fixture, min-of-11 over 100 parses each: Sourceror costs 1.05-1.2x the plain parse. The reviewer's \"materially more expensive\" overstates it, and the reason is worth recording — the fixture fails at the `end`, so Sourceror never reaches its comment merging or literal encoder; with the same file's map closed so it parses, Sourceror costs 5.0x. So the second contributor is real but small, and sits inside the 0.9-1.7 run-to-run spread the comment already documents. The comment now states all of it: which parser each side uses and why, the measured 1.05-1.2x, the 5.0x on a parseable file, and the consequence — 6 is a coarse fence between a healthy 1 and a broken 20 precisely because pulling it towards 2 would start tracking Sourceror's overhead, which a dependency bump could move with nothing in the rule changing. Comment only; the assertion, the control and the 6x budget are byte-for-byte unchanged. Commit 793a353."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The comments claim the source comes back \"byte-for-byte\", but every assertion in the file routes through `confirm_fix/2`, which trims trailing newlines off both sides by design (test/support/rule_case.ex:96). Confirmed by executing two scratch regressions on the rule (applied, measured, reverted; the rule diffs byte-identical against a backup taken first). Dropping the final newline — `fix/1` wrapped in `String.trim_trailing(_, \"\\n\")` — leaves all eleven \"left untouched\" cases and both brace-cap cases green. Adding one to every repair leaves the positive cases green. The one test that does go red under either is the brace-split search, and it goes red for the wrong reason: it infers how many closers a repair added from `byte_size(fixed) - byte_size(source)`, so a stray newline makes it report the rule committing an ambiguous placement — a maintainer handed that message would look for a brace bug. New test \"keeps the source's final newline exactly as it found it\" compares raw bytes on a repair and on a refusal, and again on the same two sources with the final newline stripped, so it catches a lost newline and an added one; it fails under both regressions with the newline visible in the diff, and passes on the real rule. The two overclaiming comments (the \"byte-for-byte alone\" section header and the brace-cap refusal) now say where the newline is actually pinned. Commit 793a353."
+        }
+      ],
+      "commits": [
+        "793a353a1a602dec02779169b453549e3cc54a27"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T14:51:55+02:00",
+      "resolved_at": "2026-08-19T15:09:48+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_brace_fix_test.exs",
+      "reviewed_at": "2026-08-19T15:15:53+02:00",
+      "round": 4,
+      "severities": [
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T15:15:53+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T15:20:23+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "refuted",
+          "note": "Ran the reviewer's own experiment (a module whose `@doc \"\"\"` is correctly closed and whose first content line is a `def` example). The rule does not touch it: `fix/1` returned the input byte-for-byte, `analyze/1` returned `[]`, and the output still contains `def a`. The finding's premise is that the rule admits a line when \"the first non-blank line after `@doc \\\"\\\"\\\"` starts with `def`\", but that is not what the code tests. `Enum.find_value/3` skips `false` as readily as `nil`, so neither of the rule's two scans stops at the first non-blank line — both run to the end of the file. The second one therefore asks \"is there a `\\\"\\\"\\\"` line anywhere below?\", and for a correctly closed heredoc the answer is always yes (its own terminator), so the rule declines. Measured directly on that input: first scan `true`, second scan `true`, guard admits `false`. To be sure the guard is what saves it, I re-ran the same fixture through a copy of the rule with the guard deleted: that copy produces exactly the corruption the finding describes (doc emptied, `def example` promoted to real code, the doc's own `\"\"\"` left opening a heredoc). So the damage is real but the shipped rule is protected against it — and finding [4] now pins that protection with tests."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule over source where the only \"def\"-looking line below an unclosed `@doc \"\"\"` is not a definition. `defaults to 0 when the key is absent.` (ordinary doc prose) and `defaults = %{a: 1}` (a plain binding) both matched the bare `^\\s*def`, so the rule reported an issue and inserted a closing `\"\"\"` immediately after the opener — emptying the doc and spilling its body into the module. In the `defaults = %{a: 1}` case the mangled output *parses*, so nothing downstream can catch it (a source that parses is never reverted). The reviewer's own two examples do not reproduce, because they keep a closing `\"\"\"` below and so hit the guard from [1]; the defect needs a file with no real definition below the opener. Pinned with two tests in `test/syntax/close_unclosed_doc_heredoc_fix_test.exs` (watched both go red on the old rule, on the `analyze` assertion, which is the defect itself). Fix: replaced `~r/^\\s*def/` with a `\\b`-terminated alternation over every `def…` form Elixir defines, hoisted into one `@def_line` attribute used by both scans rather than kept as two copies. Committed 1a68448."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "refuted",
+          "note": "The claim is that `closed_before_def?/1` can never return `true` where it is called, making `not closed_before_def?(...)` a constant. Measured on the exact input finding [1] is about, it returns `true` and is the sole reason the rule declines to rewrite that file (first scan `true`, second scan `true`, guard `false`; the real rule leaves the source unchanged). The premise — \"both stop at the same first non-blank line\" — is also wrong, for the `find_value` reason given in [1]: fed `[\"  Prose first.\", \"  def later, do: 1\"]`, the def scan returns `true`, so it clearly did not stop at the prose line. The one true part of the finding is that the name promises something the function does not check; it tests \"is there a triple-quote line anywhere below?\". Since that misreading is what produced a false blocker against this rule, I renamed the two scans to `def_below?` / `closing_quotes_below?` and wrote the `find_value` semantics down next to them. No behaviour change — full suite (9047 tests) green before and after. Committed 3ebc97b."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Added the two missing \"leave it alone\" cases to `test/syntax/close_unclosed_doc_heredoc_fix_test.exs`: a correctly closed `@doc \"\"\"` whose first content line is a `def` example (the reviewer's blocker input), and one whose first content line begins with the letters \"def\". Each asserts both `analyze == []` and that the fix returns the source unchanged. They pass on the shipped rule, which is finding [1]'s answer; to show they are not vacuous I ran the same fixture through a copy of the rule with the `closing_quotes_below?` guard removed, and it mangles it exactly as the blocker predicted — so if that guard is ever dropped, these tests go red. Committed with [2] in 1a68448."
+        },
+        {
+          "n": 5,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the gap by pointing the rule's opener regex at a name that cannot match: the existing round-safety case stayed green (it only exercises the `String.replace` stunt double), so nothing at all pinned that the real rule still fires on `@runaway_heredoc`. Added a test in `test/syntax_round_safety_test.exs` that runs the real `CloseUnclosedDocHeredoc` through `fix_with_trace` and asserts it was applied once, that its output equals the expected bytes as a whole string, that those bytes are the same ones the stunt double produces, and that the result still does not parse (the repair moves the report off EOF to the fault the heredoc hid — which is the interaction the guard's docs credit to this rule). The new test goes red under the same regex sabotage. Also hoisted the expected source into `@runaway_heredoc_closed` and turned the existing `=~` assertion into a whole-string `==`. Committed 1d70ebc."
+        }
+      ],
+      "commits": [
+        "1a684489441e61b47887e01b451649860e4ccdc9",
+        "1d70ebc5ffd187bf7ab3d286332400d43203d5be",
+        "3ebc97b7fa0bd80ec814407d4db0d6a841221a05"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T15:20:23+02:00",
+      "resolved_at": "2026-08-19T15:40:25+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T15:43:49+02:00",
+      "round": 2,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule over the reviewer's input (`defmodule Sample do` / `@doc \"\"\"` / `1 + 1` / blank / `def get(m, k), do: Map.get(m, k)` / `end`). The emitted source put the closing `\"\"\"` on the line directly under the opener: the doc came out empty, `1 + 1` became live module-body code, and `Code.string_to_quoted` on that output returned `:ok`, so nothing downstream would ever revert it. The cause was two different lines doing two jobs — the admission test asked \"is there a definition anywhere below?\", while the insertion point was \"the first non-blank line below\", and those coincide only when the doc has no text in it. Pinned with two firing tests in `test/syntax/close_unclosed_doc_heredoc_fix_test.exs`: one with prose before the `def`, one with the reviewer's parseable `1 + 1`; both compare the whole emitted string and both were watched failing on the old rule with the terminator exactly one line too high. Fix: a single `def_offset/1` now answers both questions — it returns the index of the first line that matches `@def_line`, `nil` when there is none — so the terminator lands immediately above the definition and the admission test cannot drift from the edit again. `def_below?/1` and `find_next_nonblank_offset/1` are gone. Verified on the string the rule actually emitted: it parses, the `@doc` attribute still holds `\"1 + 1\\n\\n\"`, `def get/2` is still a real function, re-running the fix on that output changes nothing, and running the rule's own fix over its own source file still returns it byte-identical (the self-corruption check). Committed 4f8d003."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "This is the missing-coverage half of [1]: every firing fixture had `def` as the literal first non-blank line, so the bug could not show. The two new firing tests are exactly the case the reviewer asked for — an unclosed `@doc \"\"\"` with text before the `def`, asserting the closer lands *under* the text — plus a check that the repaired source parses and no longer flags. Committed with [1] in 4f8d003."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed dead by execution, not by reading: I ran two copies of `closing_quotes_below?`, one with the `@def_line -> false` clause and one without, over all 1464 line-lists of length 0–3 built from a pool of representative lines (blank, `def`, `defp`, `defmacrop`, `\"\"\"`, `@doc \"\"\"`, prose, `end`, an assignment). Zero disagreements — `false` and the `true -> false` catch-all are the same thing to `Enum.find_value/3`, so the clause never changed an answer. Deleted it. The behaviour it *looked* like it implemented (stop scanning at the next definition) is now pinned by a test showing the scan does not stop there: a broken doc above `def a` followed by a correctly closed doc above `def b` is declined. Committed with [1] in 4f8d003."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the comment's claim is false by running the regex: with the alternation as written (shortest alternative `p` first) `defmacrop a` matches and the matched text is the whole `  defmacrop`, not `defmacro`; and a longest-first rewrite of the same alternation agrees with the shipped one on all 17 probe lines, including all 13 real `def…` forms and the four \"def\"-prefixed English/assignment lines it must reject. So ordering is irrelevant and the stated rationale would mislead an editor. The comment now says what actually keeps `defmacrop` whole: `\\b` rejects any alternative that stops mid-word, and the engine backtracks to the spelling that ends on a word boundary. Committed with [1] in 4f8d003."
+        },
+        {
+          "n": 5,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Stated in the moduledoc under \"Known limitation\": because the `\"\"\"` scan runs to the end of the file, a file with a broken doc above `def a` and a correctly closed doc above `def b` is never repaired — the second doc's closing quotes veto the first doc's fix — and such a file is left to the next round. Also pinned with a test asserting that exact file is declined (`analyze == []`, `fix` returns it unchanged), so the trade-off is visible in the battery and not only in prose. Committed with [1] in 4f8d003."
+        }
+      ],
+      "commits": [
+        "4f8d00335195bcde5a798a0a7220b90cf742c82e"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T15:43:49+02:00",
+      "resolved_at": "2026-08-19T15:55:53+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T16:01:29+02:00",
+      "round": 3,
+      "severities": [
+        "blocker",
+        "blocker",
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule over the reviewer's input and printing the string it emitted: on `defmodule S do` / `  @doc \"\"\"` / `  Example:` / blank / `      def add(a, b), do: a + b` / `  def add(a, b), do: a + b` / `end` the closing `\"\"\"` landed above the indented example. Parsing that emitted string back showed the damage exactly: the `@doc` held only `\"Example:\\n\\n\"` and the module had two `add/2` clauses instead of one — and it parses, so nothing downstream would revert it. Pinned with \"does not close the doc above a def example indented inside the doc text\" in the rule's fix battery, watched failing on the old code with the closer one line too high. Fix: the scan for the next definition is now anchored to the indentation already captured from the `@doc` line, so a `def` indented deeper than the `@doc` is doc text (an example), not the definition being documented. The emitted output now keeps the example inside the doc (`\"Example:\\n\\n    def add(a, b), do: a + b\\n\"`) and leaves one `add/2` clause. Committed e626a92."
+        },
+        {
+          "n": 2,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed the same way: on `@doc \"\"\"` / `  Adds.` / blank / `  @spec add(integer, integer) :: integer` / `  def add(a, b), do: a + b` the closer landed *below* the `@spec`, and reading the emitted string back showed the doc string ending with the spec's text and no `@spec` attribute left in the module. That output parses and compiles without a warning, so the deleted contract is invisible to both the per-rule guard and the round's gate. Pinned with \"closes the doc above an @spec that sits between the doc and its def\", watched failing on the old code. Fix (same commit, same function): the doc now ends at the first module attribute at the `@doc`'s own indentation above the definition, if there is one. The emitted output now has the doc as `\"Adds the two numbers.\\n\\n\"`, the `@spec` intact and outside it, and the `def` untouched. Committed e626a92."
+        },
+        {
+          "n": 3,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed: two unclosed `@doc \"\"\"` openers sharing one `def` both resolved to the same insertion index, and the emitted source had two `\"\"\"` lines stacked; `Code.string_to_quoted` on it returned `:error`, so the whole round — including any other rule's repairs to that file — would have been thrown away. Pinned with \"gives each unclosed doc its own closer when both share the next def\", watched failing on the old code with the two stacked closers. The fix for [1]/[2] resolves this without extra machinery: the second `@doc \"\"\"` is itself a module attribute at that indentation, so it ends the first doc, and the two openers now get two different insertion points. The emitted output parses, each doc holds its own text (`\"Docs for a.\\n\\n\"` and `\"More docs.\\n\"`), and `def a/0` survives. Committed e626a92."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the clause is inert by executing both versions side by side rather than by reading: the shipped three-branch `closing_quotes_below?/1` and the plain `Enum.any?(lines, &Regex.match?(~r/^\\s*\"\"\"/, &1))` were run over 7,381 generated line lists built from blanks, whitespace-only lines, `\"\"\"` lines, `def` lines, prose and attribute lines — 0 disagreements, i.e. the blank-line `-> nil` branch cannot change any answer. The function is now that one line, and the comment above it no longer explains a `find_value` mechanism it no longer uses. Behaviour-preserving by construction, so no test can go red on it; the answer it must keep giving is pinned by a new test, \"declines the repair when a blank line precedes the closing quotes below\" (a doc whose first line is blank and whose closing quotes appear further down must still be declined), which passes before and after. Committed e626a92."
+        }
+      ],
+      "commits": [
+        "e626a9239001fffa373e90fb89fb365ac72e0e0c"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T16:01:29+02:00",
+      "resolved_at": "2026-08-19T16:25:03+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T16:30:43+02:00",
+      "round": 4,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T16:30:43+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_doc_heredoc_fix_test.exs",
+      "reviewed_at": "2026-08-19T16:36:56+02:00",
+      "round": 1,
+      "severities": [
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed by executing the reviewer's experiment: on a module whose doc reads `defstruct fields`, then a blank line, then `def add(a, b)`, the rule emitted the closing quotes directly under the `@doc \"\"\"` opener — the doc came out empty and `defstruct fields` became live module-body code. That output parses, so nothing downstream can revert it. Pinned it with a new test (\"declines when the doc's first line is a definition form @doc cannot document\") in the file's own battery; it failed on the old code for exactly that reason (the rule reported an issue on line 2 where it should report none). The fix: `@doc` only ever attaches to a function-like definition — never to `defmodule`, `defstruct`, `defimpl`, `defprotocol`, `defexception` or `defoverridable` — so a line spelling one of those at the doc's own indentation is as plausibly doc prose (\"defstruct fields are validated on build\") as it is code, and nothing in the line tells them apart. Rather than guess, the rule now declines, which is the same answer it already gives a stray `\"\"\"` below it cannot place. Concretely: a new `@documented_def_word` regex (the documentable subset) and one guard in `doc_end_offset/2`; the broad `@def_word` still locates the definition, so the guard only fires on the *first* definition-form line below the opener. Re-ran the emission afterwards: the ambiguous module is now returned unchanged and the canonical broken doc (`@doc \"\"\"` straight into `def find_min_max`) is still repaired exactly as before. Added a second test proving the narrowing did not over-reach — a `defstruct` sitting *below* the documented `def` still does not veto the repair. Also added a sentence to the rule's \"Known limitation\" section recording the new decline. Committed with the fix."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Wrote the missing test. Confirmed the cost by executing the rule on a doc containing the prose line `  @timeout - how long to wait` at the doc's own indentation: the rule closes the doc *above* that line, so the doc is truncated to \"Adds the two numbers.\" and the prose becomes module-body code — and the emitted source parses, so nothing downstream reverts it. The new test (\"truncates the doc at a prose line that starts with a bare @word\") asserts the exact string the rule emits and reads the doc and def list back off that string, so the cost is now visible and any widening of the attribute scan trips it. This is pinned rather than repaired: that same attribute scan is what buys the `@doc` → `@spec` → `def` repair, which is the ordering the rule exists for. Committed with finding [1]."
+        }
+      ],
+      "commits": [
+        "4d9ebd11f46ece21e1b86dc6a4b23971dbb205a9"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T16:36:56+02:00",
+      "resolved_at": "2026-08-19T16:50:12+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T16:56:36+02:00",
+      "round": 5,
+      "severities": [
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T16:56:36+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_doc_heredoc_fix_test.exs",
+      "reviewed_at": "2026-08-19T17:03:54+02:00",
+      "round": 2,
+      "severities": [
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The repair tests only checked the string the fix emits, never that the check reports the same input, so the two halves of the rule could drift apart unnoticed. Confirmed by executing the drift: I edited the rule so its check went back to the old \"is the next non-blank line a def?\" probe (the fix untouched), and ran both rule test files — 26 tests, 0 failures, nothing noticed. On the @spec fixture that same build printed `analyze: []` while still rewriting the file, i.e. it repairs docs it no longer reports. Pinned it with a `reported_lines/1` helper (the opener lines analyze flags) and an exact `==` assertion on those lines beside `confirm_fix` in all seven new repair cases: the @spec boundary, the two doc-text-boundary cases, the indented `def` example, the bare-`@word` prose truncation, the defstruct-below repair, and the two stacked openers (which must report both openers, lines 2 and 5). Watched all seven fail against that same drifted check, each with `left: []` — the defect itself, not a setup error. No change to the rule: the shipped code already agrees, and this only makes the agreement testable. Gate green (format, compile --warnings-as-errors, mix test --exclude corpus --exclude idempotency: 9057 tests, 0 failures) with the rule restored byte-for-byte. Committed 8b38786."
+        }
+      ],
+      "commits": [
+        "8b38786fc260713923520663a5ff93027d890317"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T17:03:54+02:00",
+      "resolved_at": "2026-08-19T17:14:32+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_doc_heredoc_fix_test.exs",
+      "reviewed_at": "2026-08-19T17:19:42+02:00",
+      "round": 3,
+      "severities": [
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "The file had no fixture where the rule's search for \"the next definition\" crosses a line indented *less* than the `@doc` (the module's own `end`). Confirmed the damage by running the rule on the two-module file the reviewer named (`defmodule Helpers do` / `  @doc \"\"\"` / `  Shared helpers.` / `end` / blank / `defmodule Main do` / `  def run, do: :ok` / `end`) and parsing the string it emitted back: the closing quotes landed inside `Main`, and the result had exactly one module left — `Helpers`, whose doc string was `\"Shared helpers.\\nend\\n\\ndefmodule Main do\\n\"`. Module `Main` was gone and `run/0` had been re-homed. That output parses (an outdented heredoc is only a warning here), so nothing downstream would revert it. Per the reviewer's instruction I did not pin the current output as expected; I pinned the correct answer instead — a decline test asserting the rule reports nothing and returns the file unchanged — and watched it fail on the old code with `analyze` reporting line 2. Fix, in the rule: the definition scan now runs only while each line is blank or starts with the `@doc`'s own indentation, so the first non-blank outdent bounds it and the rule declines rather than reaching into a later module (the same answer it already gives a `\"\"\"` it cannot place). Recorded the new decline in the moduledoc's \"Known limitation\" section. A second test pins that the bound is the outdent and not \"stop at the first `end`\": an `end` indented deeper than the `@doc` is the last line of a doc example, and the repair still lands below it, with the doc read back off the emitted bytes to show the example stayed inside it. Re-ran the reproduction afterwards (rule now returns the file unchanged), confirmed the canonical broken doc is still repaired and still parses, and confirmed running the rule's own `fix/1` over its source and over this test file is still a no-op. Committed aec6c9c."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The `reported_lines/1` header comment claims every repair case asserts the lines the check reports beside what the fix does; five did not. Confirmed by scanning the file programmatically for test blocks that run `fix/1` on an input the rule rewrites and checking each for the assertion: five printed UNPINNED, exactly the ones named (\"fixes unclosed @doc heredoc by inserting closing quotes\", \"… with blank lines before def\", \"fixed output no longer flags\", \"closes every unclosed @doc heredoc in a module\", \"fixed output is well-formed (parses)\"). Showed the gap was load-bearing by executing the drift the helper exists to catch: I changed the check so it stops reporting a doc that has no text in it, leaving the fix alone. This file stayed entirely green — 22 tests, 0 failures — while the rule went on rewriting all five of those docs without reporting any of them. Added the missing assertion to each (the two-openers case must report both openers, lines 2 and 7), watched all five go red under that same drift with `left: []` — the divergence itself, not a setup error — and restored the rule byte-for-byte before the gate. The last two tests now bind their input instead of inlining it so the assertion has something to name; their existing assertions are untouched. Reworded the header comment to state the convention with no exception. Committed 63bee48."
+        }
+      ],
+      "commits": [
+        "aec6c9c502c22aca4fdd56cbabac70fefb732d2f",
+        "63bee48a641f9d78f9ff408fb21dc13b802b625c"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T17:19:42+02:00",
+      "resolved_at": "2026-08-19T17:37:29+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_doc_heredoc.ex",
+      "reviewed_at": "2026-08-19T17:43:39+02:00",
+      "round": 6,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T17:43:39+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_doc_heredoc_fix_test.exs",
+      "reviewed_at": "2026-08-19T17:49:32+02:00",
+      "round": 4,
+      "severities": [
+        "concern",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T17:49:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/close_unclosed_fn_delimiter.ex",
+      "reviewed_at": "2026-08-19T17:57:36+02:00",
+      "round": 1,
+      "severities": [
+        "concern",
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed by running the reviewer's experiment: one copy of the bug in a file is flagged and repaired, but two copies in one file are repaired not at all (`analyze` returned `[]`, `fix` returned the source byte-identical). The cause is that the rule deleted the stray `end` only if that deletion made the *whole file* parse, so any second syntax error anywhere vetoed the repair — including a second copy of this same bug. That contradicts `lib/syntax.ex`, which says the round is built to walk through source that still does not parse. Pinned with three failing tests in the file's own battery: two copies of the bug are both repaired to an exact expected string; both occurrences are reported at their line numbers in the *input* (5 and 14); and the bug is repaired on a file that is also broken for an unrelated reason. All three failed first, showing exactly the byte-identical no-op and the empty issue list. The fix replaces the whole-file gate with a local one: a candidate line deletion is committed when the extra-`end` error *at that same `(`* is gone **and** the parser now gets at least as far as the line that was deleted. Identifying the error by the position of its `(` rather than by its shape turned out to be load-bearing: an unrelated `def f(, do: 1` in the same file produces an identically-shaped \"`(` closed by `end`\" error, and a first version of the change deleted the module's own final `end` because of it — the pinning test caught that, not reading. The repair then runs to exhaustion so every occurrence is repaired, and `analyze` reports each one; since each pass deletes one line, later passes' line numbers are translated back into the input's numbering. Proof: all 17 tests in the two test files for this rule pass; `mix format`, `mix compile --warnings-as-errors`, and `mix test --exclude corpus --exclude idempotency` (9065 tests, 0 failures) are green. The output was verified by executing the string the rule *actually emitted* — it compiles (`:ok` via `RuleHelpers.compile_and_capture/1`), equals a hand-written control byte-for-byte, and both repaired modules compute the right answer. Committed as 3396ee9."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed by parsing the fixture at `close_unclosed_fn_delimiter_fix_test.exs:106`: its first parse error is at line 7, `def broken(, do: 1` (an `(` closed by `end`), not an `fn`/`)` mismatch — so `detect/1` returns `:none` and the rule declines before any line is examined. Deleting the `@moduledoc` block from that fixture gave the same no-op, exactly as the reviewer predicted, so the docstring was never doing any work. Wrote the test that was missing: a source whose *only* fault is this bug and whose first bare `end` line at or below the insertion point is heredoc content (`IO.puts(\"\"\"` / `end` / `\"\"\"`)`). The line-delete really does reach that heredoc line, and the assertion is an exact whole-string comparison showing the heredoc preserved byte-for-byte and the real stray `end` deleted; the emitted string was also compiled to `:ok`. Added alongside it: a source with a later function whose own `end` must not be touched when there is no stray `end` to delete, and a re-fix-your-own-output check. The original docstring test is kept unchanged. Committed as 3396ee9."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the comment at the old line 154 credits the wrong mechanism. On the new heredoc fixture the downward scan *does* reach the bare `end` line that is heredoc content (it sits below the insertion line), so the scan direction excludes nothing there; deleting that line leaves the identical mismatched-delimiter error, because no `end` *token* was removed — printed both errors side by side and they name the same `(` at 3:13. So the parse check, not the scan direction, is what rules heredoc content out. The comment is reworded to say so, and the moduledoc says it too, which matters now that the parse gate has been relaxed for finding [1] — the replacement check preserves precisely that property and the comment now states which check is carrying it. Committed as 3396ee9."
+        }
+      ],
+      "commits": [
+        "3396ee93a04eac73b607cb76ebf19421093fb8b8"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T17:57:36+02:00",
+      "resolved_at": "2026-08-19T18:15:24+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_fn_delimiter.ex",
+      "reviewed_at": "2026-08-19T18:22:35+02:00",
+      "round": 2,
+      "severities": [
+        "blocker",
+        "blocker",
+        "concern",
+        "concern",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed by running the reviewer's input through the rule: `defmodule Mixed do / def a(list) do / Enum.max_by(list, fn {_, s} -> s) / end / / def broken(, do: 1 / end` came back with `def a`'s own `  end` line deleted, and `analyze` reported an issue on line 3. The cause: after inserting `end` before the `)`, the rule asked the parser \"is there now an extra `end` where a call's `)` should close?\" and accepted that answer from anywhere in the file. On this input the insertion balances lines 1-4 outright — there is no stray `end` at all, this is the sibling rule's shape — and the complaint the parser actually returns belongs to the unrelated `def broken(` three lines below the repair. Measured it directly: the reported `(` is at line 6, the repair at line 3. On every fixture where the rule is genuinely right, the reported `(` is *above* the repair (line 3 vs repair at line 10, 5, 5). So the rule now requires the complaint to name a `(` at or above the line it just repaired; below it, that is somebody else's fault and says nothing about this repair. Pinned by two new tests that both failed first showing the exact corrupted output — the reviewer's input, and the same defect wrapped in an enclosing call. Both now assert the source comes back byte-identical with no issues reported."
+        },
+        {
+          "n": 2,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Same reproduction as [1]; this is the second half of why that corruption was accepted. The rule remembered the `(`'s position before deleting a line and compared it against the position reported afterwards, on the unchecked assumption that the `(` always sits above the deleted line. With the `(` actually below (finding [1]), deleting a line shifted it up by one, the two positions differed, and the rule read \"different position\" as \"the stray `end` is gone\" — measured: reported `(` moves from line 6 to line 5 across the deletion, and the file is unchanged in every other respect. Two changes. First, [1]'s guard makes the assumption true by construction: the deleted line is always strictly below the repaired line, which is at or below the `(`, so the `(` can no longer move. Second, the before/after position comparison is gone entirely — the check after the deletion is now literally the negation of the check before it (\"no extra-`end` complaint at or above the repair\"), one predicate used twice instead of two positions compared. That also closes the reviewer's second case: the same fault merely re-blamed on a *different* enclosing `(` above the repair used to read as success and now does not. Verified against every fixture in the battery that the new predicate reproduces the old accept/reject decision on all of them except the corrupting ones."
+        },
+        {
+          "n": 3,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed the guard does not do what its comment claims. The comment said it rejects a deletion that removed a real enclosing `end`, because the resulting unterminated block drags the error back above the repair. Executed: deleting `def a`'s `end` from a repaired fixture leaves the module unterminated and the parser reports its stop at line 9 of a 9-line file — EOF — which trivially satisfies `line > deleted_line`, so the guard passes. (This repo's own `ProgressGuard` moduledoc records the same thing and refuses to compare EOF stops at all.) Measured across every fixture in the battery: the guard never once changed an outcome the extra-`end` check had not already decided. Then found the case it was supposed to catch, live on this tree: a file whose stray `end` carries a trailing comment, so the old search walked past it to the next bare `end` line and deleted the enclosing `case`'s own terminator. That deletion *rebalances* the file — the stray `end` closes the `case` instead — so the result parses and no gate could object; the rule silently emitted a differently-meaning module. The real fix is to stop searching: the stray `end` is, by the shape of the bug, the first `end` **token** below the repaired `)`, so the rule now goes straight to it. The search runs over `SourceMask`'s shadow, where a bare `end` inside a heredoc, string or comment is not a token — so literal content neither stops the search nor gets deleted, which is a stronger version of the masking the old parse-check was doing by accident. If that first `end` is not alone on its line, the rule declines rather than editing around it. Pinned by two tests (the comment-carrying stray inside a `case`, which failed first showing the deleted `case` terminator; and a nested `if` block below a comment-carrying stray, which the old code declined only by accident and must still decline). The old guard is kept — removing it could only widen what is accepted — but its comment now states only what it actually checks and says explicitly that it does not catch this case."
+        },
+        {
+          "n": 4,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed the reviewer's reading by measuring the fixture: inserting `end` before the `)` on line 4 leaves lines 1-6 perfectly balanced, and the only \"`(` closed by `end`\" complaint in the file is the unrelated `def broken(` on line 8, whose `(` shifted from line 8 to 7 across the deletion. So the test's expected output was reached from a signal that says nothing about line 5, and once [1]'s guard is in place the rule correctly declines that input. Re-derived rather than preserved: that fixture is now a test asserting the rule leaves it untouched and reports nothing, with a comment explaining it is the plain unclosed-`fn` shape the moduledoc promises to leave to `NoUnclosedFnDelimiter`. What the old test was *meant* to pin — that a second, unrelated fault elsewhere must not veto a real repair — is pinned by a new fixture that really is this rule's shape: a genuine stray `end` on line 6 whose enclosing `(` is on line 3, above the repair, in a file that also carries `def broken(, do: 1` below. That one is repaired to an exact expected string, and its `def broken(` line is left alone."
+        },
+        {
+          "n": 5,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Added `@max_passes 100`, matching `NoUnclosedFnDelimiter`. Termination was already guaranteed, so the bound is on work, not correctness; the larger win came with [3], since each pass now does one shadow scan to find the stray `end` instead of one full tokenization per bare `end` line at or below the repair. Pinned that the bound does not cut a real file short with a new test: three copies of the bug in one file are all repaired to an exact expected string and all three reported at their input line numbers (5, 14, 23)."
+        }
+      ],
+      "commits": [
+        "8cfa78e54bf3905ffaad801567d15a865298ac38"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T18:22:35+02:00",
+      "resolved_at": "2026-08-19T18:47:50+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_fn_delimiter.ex",
+      "reviewed_at": "2026-08-19T18:53:34+02:00",
+      "round": 3,
+      "severities": [
+        "blocker",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed by running the reviewer's exact input through `fix/1`: `defmodule M do` / `  def broken(, do: 1` / `` / `  def go(list) do` / `    Enum.max_by(list, fn {_, s} -> s)` / `  end` / `end` came back with `def go`'s own `  end` line deleted, plus an issue reported at line 5. What goes wrong: after inserting `end` before the `)`, the rule asks the parser \"is a call's `)` now closed by an extra `end`?\" and accepts the answer if the `(` named sits at or above the repaired line. An unclosed `(` *above* the repair produces exactly that complaint — the parser blames some later real `end` on it — and the guard added in the previous round only ruled out the same complaint coming from *below*. Measured the two side by side and they are structurally identical from the parser's view: same error type, same delimiters, `(` above the repair in both, and in both the offending `end` is the second `end` token below the repair. The only thing that separates them is whether that `(` is ever closed at all: a real occurrence's enclosing call has its `)`, `def broken(` never does. So the discriminator used is what the deletion does rather than what the complaint looks like — deleting a genuinely stray `end` cannot leave anything unterminated, because a stray `end` closes nothing. The post-deletion check now also refuses the candidate when the parser reports an opener at or above the repair as *missing its terminator* (an opener named with no closing delimiter, which is how a delimiter left hanging at end-of-file is described). Measured that signature on every fixture in the battery: it appears only on the corrupting inputs; genuine repairs either parse outright or leave a mismatched-delimiter complaint elsewhere, never a missing terminator above the repair. Pinned with three new tests: the reviewer's input, and the same shape with a further function below it so the terminator at risk is unmistakably real — both failed first, printing the file with `def go`'s `end` gone — and a third for a genuine occurrence of this rule's own shape sitting below an unclosed `(`, which must be declined (its only available evidence belongs to the broken `(`, not to the repair; that one already declined and is now pinned so it stays that way). The moduledoc's list of what is checked before a line is deleted goes from two items to three and says which one carries this. Proof: the reviewer's input now comes back byte-identical with no issues; the emitted string for a genuine repair was executed through `RuleHelpers.compile_and_capture/1` and returned `{:ok, []}`; all 26 tests across the rule's two test files pass; `mix format`, `mix compile --warnings-as-errors` and `mix test --exclude corpus --exclude idempotency` (9074 tests, 0 failures) are green."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by executing the shape the reviewer describes: a file whose line 3 is a plain unclosed `fn` (the sibling rule's shape) and whose lines 7-11 are a genuine occurrence of this rule's shape. Printed the parser's first complaint — it is line 3's `fn`/`)` mismatch — and ran both rules over the file: `CloseUnclosedFnDelimiter` returned the source byte-identical with `analyze` empty, and so did `NoUnclosedFnDelimiter`. Neither rule repairs anything, exactly as the finding says, so the moduledoc's \"each occurrence is repaired on its own\" was promising more than the code delivers. Reworded: the moduledoc now says only that a second fault elsewhere does not *by itself* veto a repair, and lists the three second faults that do stop the rule — a first complaint of some other kind, a first complaint that is the sibling's shape (naming the sibling, and saying that neither rule repairs anything until one of the two faults is gone), and an unclosed `(` above the repair. Added a test that pins the behaviour the reworded text describes: both rules leave that input untouched and report nothing. That test passes on the pre-fix code as well — a documentation claim cannot be made to fail a test — so it is a characterisation test, not the pinning test for a defect; the executed evidence above is what confirms the finding."
+        }
+      ],
+      "commits": [
+        "1ea542d175ee836677510938b53a22a0a7bc3af9"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T18:53:34+02:00",
+      "resolved_at": "2026-08-19T19:08:20+02:00"
+    },
+    {
+      "path": "lib/syntax/close_unclosed_fn_delimiter.ex",
+      "reviewed_at": "2026-08-19T19:15:42+02:00",
+      "round": 4,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T19:15:42+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/close_unclosed_fn_delimiter_fix_test.exs",
+      "reviewed_at": "2026-08-19T19:22:35+02:00",
+      "round": 1,
+      "severities": [
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by execution. I copied the rule into a scratch file with counters added at two points (the moment the parser confirms the \"`fn` closed by `)`\" shape, and the moment the rule commits to deleting a line) and then ran `fix` twice on each candidate source. On the fixture the old idempotency test used (two copies of `TwoBugs`), the *second* `fix` call matched the shape check 0 times and reached the deletion 0 times: its once-repaired output parses, so the rule handed the source straight back at the parser — the very same short-circuit the test on line 96, \"does not modify already-valid code\", already covers. So the test could not have caught an idempotency defect. I pinned that by adding `refute valid_syntax?(once)` to the existing test with its existing fixture and running it: it failed with \"Expected false or nil, got true\", i.e. the once-fixed source parses. The fix changes the fixtures, not the rule. The test is now two tests, both keeping that `refute` so the fixture can never silently drift back to a parseable one: (a) a source whose leftover fault after repair is a plain unclosed `fn` — the same instrumentation shows the second `fix` call here does match the shape check, does insert `end`, and is only then turned back by the rule's \"is that leftover `end` really a stray one of mine?\" guard, which is as deep as a second call can reach; and (b) the reviewer's suggested `Local` source, whose leftover fault is the unrelated `def broken(, do: 1` and where the second call is declined one step earlier, on the shape of the parser's complaint rather than on \"it already parses\". Both pass; `mix format`, `mix compile --warnings-as-errors` and `mix test --exclude corpus --exclude idempotency` (9075 tests) are green. Committed as c317724."
+        }
+      ],
+      "commits": [
+        "c3177243a986375fa743f63bcca043e18f3df510"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T19:22:36+02:00",
+      "resolved_at": "2026-08-19T19:34:34+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_fn_delimiter_fix_test.exs",
+      "reviewed_at": "2026-08-19T19:39:29+02:00",
+      "round": 2,
+      "severities": [
+        "nit",
+        "nit",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the reviewer's reading by running their experiment: parsing the fixture reports `opening_delimiter: :\"(\"` (the unrelated `def broken(` on line 7 closed by the module's `end`), not `:fn`, so `detect/1` returns `:none` and the rule hands the source back without looking at a line. Went further and ran the rule over three variants of the fixture — the original, one with the docstring's contents replaced by a harmless sentence, and one with the `@moduledoc` deleted outright: all three came back byte-identical with `analyze/1` empty, so the docstring was doing no work at all. The test still pins a real guarantee, just not the one its name claimed, so I renamed it to \"declines outright when the parser's first complaint is not an fn closed by )\", replaced the comment with an explanation of why the docstring is inert here, pointed it at the `Heredoc` test as the file's one genuine masking test, and added an `analyze(input) == []` assertion alongside the existing exact-output check. No fixture bytes changed."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed both halves. The bound is never approached by the three-copy fixture, and nothing covered it being hit: running the rule over 101 copies of the bug returned the first 100 repaired and the 101st handed back exactly as it arrived, output that does not parse, and `analyze/1` reporting only 100 issues (last at line 398, nothing for the occurrence at line 402) — silently partial, indistinguishable from a full repair by the return value. Rather than just dropping the claim I corrected the comment (the three-copy test says nothing about the bound) and wrote the two tests that were missing, at the boundary itself: exactly 100 occurrences repaired in full with an exact whole-string comparison, and 101 pinned to `100 repaired copies <> 1 untouched copy` with `refute valid_syntax?` and the 100-issue count. Watched them fail for the right reason by temporarily moving `@max_passes` from 100 to 50 in the rule: exactly those two tests failed and no others, so they really do exercise the bound; the rule was restored byte-identical (`git diff` over `lib/` empty). To keep the cost down the two tests stack a four-line occurrence rather than the nine-line module fixture — the file's runtime goes from 0.05s to 0.8s. Also bound that occurrence and its repair as `@one_occurrence`/`@one_occurrence_repaired` so the two tests share one fixture."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the drift is real and silent: I renamed the module in the first `Local` fixture only (`defmodule Local` → `defmodule LocalDrifted`, in both its input and its expected output) and ran the file — 22 tests, 0 failures, with the second test's comment \"this is the once-fixed `Local` source above\" now plainly false and nothing complaining. Bound the fixture once as a module attribute `@local_source` and pointed both tests at it, so the source cannot differ between them by construction; reworded the second test's comment to say they are literally the same bytes. Re-ran the drift experiment against the fixed file: editing the shared attribute is now noticed immediately (the repair test fails on its expected output), which is the whole point — there is only one copy left to edit."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the assertion does not prove provenance: `match?([%Issue{meta: %{line: 5}}, %Issue{meta: %{line: 14}}, %Issue{meta: %{line: 23}}], issues)` returns `true` against a hand-built list of issues carrying `rule: :some_other_rule`, while the two-copy test's pattern (with `rule:`) returns `false` on the same list. Added `rule: :close_unclosed_fn_delimiter` to all three elements of the three-copy pattern, matching the assertion at the two-copy test."
+        }
+      ],
+      "commits": [
+        "ff7d8c0f3c5da281c8ab554bf63d1ea90adb4f1e"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T19:39:29+02:00",
+      "resolved_at": "2026-08-19T19:53:34+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_fn_delimiter_fix_test.exs",
+      "reviewed_at": "2026-08-19T19:59:55+02:00",
+      "round": 3,
+      "severities": [
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by execution, twice. First I checked the copies really are the same bytes: the three `Solution` heredocs (the repair test's input, and the inputs of \"fixed output no longer flags\" and \"fixed output is well-formed\") differ only in the variable name on the assignment line, and the two `TwoBugs` heredocs are byte-identical. Then I made each drift happen. (a) I renamed the module and the function in the *first* test's `Solution` fixture only — the edit the finding describes — and ran the file: 24 tests, 0 failures. Nothing noticed that the other two tests were now checking the repaired output of a program no test feeds them any more. (b) I added one blank line to the *first* `TwoBugs` copy, which shifts every occurrence in that fixture down a line, and ran the file: again 24 tests, 0 failures — while the line-number test kept asserting lines 5 and 14 against its own untouched second copy, arithmetic that no longer describes the fixture the repair test uses. The fix binds each fixture once as a module attribute, exactly as this PR already did for `@local_source` and `@one_occurrence`: `@solution_source` / `@solution_repaired` for the three tests, `@two_bugs` / `@two_bugs_repaired` for the two. No fixture byte changed — the attributes hold the same programs the tests were running, and all 24 tests pass unchanged. The pinning is the drift experiment re-run against the bound file, since \"these two tests use the same input\" is a property of the file, not something a test can assert about itself: (a) renaming the module in `@solution_source` alone now fails the repair test instead of passing silently; (b) editing `@solution_source` and `@solution_repaired` together so the repair leaves an unparseable leftover behind now fails \"fixed output is well-formed (parses)\" — proof that test really does follow the shared input rather than a stale copy of its own; (c) the blank-line edit to `@two_bugs` now fails the line-number test, which is the drift that was silent before. Gate: `mix format` on the touched file, `mix compile --warnings-as-errors` clean, `mix test --exclude corpus --exclude idempotency` — 6 properties, 9077 tests, 0 failures — and `git status` clean apart from the wrapper's own ledgers. Committed as 5a38bf2."
+        }
+      ],
+      "commits": [
+        "5a38bf235673c78d01c68e5f49ec147be1491d24"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T19:59:55+02:00",
+      "resolved_at": "2026-08-19T20:15:10+02:00"
+    },
+    {
+      "path": "test/syntax/close_unclosed_fn_delimiter_fix_test.exs",
+      "reviewed_at": "2026-08-19T20:22:10+02:00",
+      "round": 4,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T20:22:10+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_assignment_dot_syntax.ex",
+      "reviewed_at": "2026-08-19T20:27:21+02:00",
+      "round": 1,
+      "severities": [
+        "nit",
+        "nit",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule over the four shapes the moduledoc's \"Not flagged\" list did not mention: `{:ok, val} =.foo()`, `@attr =.foo()`, `x = y =.foo()` and `x =  .foo()` all come back byte-identical from `fix/1` and unreported by `analyze/1`, so the rule really is narrower than its documentation reads. Pinned with one list in the fix battery (`@declined`) that drives both a no-op-and-not-reported test per shape — two of the four had no test at all — and a new test asserting the moduledoc's \"Not flagged\" section names each of them; that test failed listing all four before the doc was edited. Then extended the list with the three structural declines plus a sentence saying they are deliberate declines (the pattern wants a bare identifier at the start of the line and at most one space before the dot). No behaviour change. Follow-up landed in the next commit: the new test originally read `Code.fetch_docs/1` directly, which `no_parser_calls_in_rule_tests_test.exs` forbids in `test/syntax` and which went red on the full suite; the read now goes through a new `Credence.RuleDuplication.moduledoc_section/2` in `test/support`, alongside the existing `example/2`. Commits c4e75ef, 99f053d."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed: `analyze(\"café =.make_ref()\")` returned `[]` and `fix/1` returned the line unchanged, while the repaired form `café = make_ref()` parses fine and the dotted form is rejected with \"syntax error before: '.'\" — a repair the rule should have made and didn't. Pinned with five tests that all failed first: analyze flags `café =.make_ref()` and `größe =.byte_size(x)`, fix repairs both to the exact expected string, the repaired line parses and no longer flags, and the string the rule *actually* emits compiles (`{:ok, []}`) while the line it replaced, through the same compile, does not (`{:error, [severity: :error]}`) — the control that stops the compile check passing on anything. The fix widens the name to `[a-zA-Z_\\x80-\\xff][\\w\\x80-\\xff]*`, i.e. byte-wise, rather than adding the `u` modifier the reviewer's experiment suggested. `/u` does return usable byte offsets (I ran that experiment: `{0,8},{0,7}` against `binary_part`-compatible byte positions), but `Regex.run` with `/u` raises `ArgumentError` on a subject that is not valid UTF-8 — I reproduced that with a stray `0xFF` byte — and output truncated mid-character is exactly the broken input this phase exists to repair, so `/u` would turn a decline into a crash inside the fix pipeline. A test with such a byte pins that the line is still repaired rather than raising. One correction to the finding: its other example, `Größe`, is not repairable — Elixir rejects a non-ASCII alias outright (\"invalid character \\\"ö\\\" … in alias\"), so that line fails to parse before and after. Commit a6402d1."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by executing the rule on that fixture and then corrupting its output: replacing the function body's return value so `go/0` returns `:corrupted` still satisfied both `=~` checks *and* the `valid_syntax?` check (`{true, true, true}`), while differing from what the rule emitted. So the test accepted output that is wrong everywhere except the two spots it inspected. The fixture is now bound once as `@mixed_source`, the test compares the whole emitted file against the expected file with `confirm_fix`, and a CONTROL test keeps the corrupted variant in the battery to show the substring checks accept it and whole-string equality rejects it. Commit 99f053d."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by deleting this rule's entry from `@bad_good_ledger` in `test/rule_card_test.exs` and running the gate: \"the ledger only grows by argument\" went red naming exactly `Credence.Syntax.FixAssignmentDotSyntax`. Added the missing `## Bad` / `## Good` block — the two admitted shapes (`ref =.make_ref()`, `x = .some_function(a)`) and their repairs — and left the ledger entry deleted, which the sibling \"ledger only shrinks\" test now requires. Checked the block is load-bearing rather than decorative: matched against the raw source the pattern fires on both new Bad lines, and the real masked `fix/1` still returns its own file byte-for-byte (4404 bytes in, 4404 out, a single-`eq` Myers diff), so the self-corruption oracle now has something to find and does not find it. Commit de4df77."
+        }
+      ],
+      "commits": [
+        "de4df777292126a02b3703727ffb7133fb799e63",
+        "c4e75ef65dc31ab8ac7c214981d60cac20cfd24c",
+        "a6402d1cf06fb83cbbbecd88e98b8c217ef83888",
+        "99f053dea4f998803f361bc48eb4f6c4065375c6"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T20:27:21+02:00",
+      "resolved_at": "2026-08-19T21:01:27+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_assignment_dot_syntax.ex",
+      "reviewed_at": "2026-08-19T21:07:29+02:00",
+      "round": 2,
+      "severities": [
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed the test was vacuous by running both regexes over what the pattern actually sees. For the old fixture (`ref =.make_ref() # <0xFF>`) masking blanks the whole comment, so the shadow is `ref =.make_ref() ` followed by three 0x01 bytes: `String.valid?(shadow)` is true and a `/u` version of the pattern matched it happily (`[{0,6},{0,5}]`). For a truncated character in *code* position (`caf<0xC3> =.make_ref()`) the shadow is still invalid and the same `/u` pattern raised \"argument error\", while the shipped byte-wise pattern matched and `fix/1` returned the repaired binary. So the existing test defended nothing, exactly as the finding said. Pinned it: added a test that feeds the truncated character in code position and asserts the whole repaired string, guarded by `refute String.valid?(shadow)` so it cannot silently go vacuous the same way. Proof it is load-bearing: I temporarily switched `@bad_pattern` to `/u`, ran the battery, and got exactly one failure — the new test, with `** (ArgumentError)` out of `fix_line/2` — while the old comment-byte test passed; then restored the rule. Also retitled the comment-byte test to claim only what it pins (the mask survives the stray byte). Test-only change, no rule behaviour touched. Commit 728ad65."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed a missed repair: `x =.über(y)` came back byte-identical from `fix/1` with `analyze/1` returning `[]`, while `def über(x)` is valid Elixir (a module defining and calling it compiled `{:ok, []}`). So the rule declined a line with the same syntax error it exists to repair. One correction to the finding: its own example, `x =.größe_von(y)`, was already being repaired — only the first character after the dot is inspected and that one is ASCII `g`, so the decline needs a callee whose *leading* byte is non-ASCII. Pinned with two tests that both failed first: the whole-string repair (`x =.über(y)` → `x = über(y)`), and a compile of the string the rule actually emits inside a module that defines `über/1`, with the unrepaired line through the same compile as the control (it failed with \"syntax error before: '.'\" before the fix, which is what made the emitted-string test red). Fix: widened the lookahead after the dot from `[a-zA-Z_]` to `[a-zA-Z_\\x80-\\xff]`, matching the byte-wise widening the left-hand name class already had. A high byte is not a digit, so none of the `rate = .05` / `x =.5e3` value ambiguity that the lookahead exists to avoid applies. Updated the moduledoc's digit section, which had listed the admitted characters as `a-z`, `A-Z`, `_` only. Commit 837ca0f."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the doc overstates: `x =.foo(a = 1)` has a second `=` on the line and `fix/1` returned `x = foo(a = 1)` with `analyze/1` reporting the issue, while `x = y =.foo()` (the `=` before the dot) came back unchanged. Pinned with two tests — the whole-string repair of `x =.foo(a = 1)`, and a check that the moduledoc's \"Not flagged\" list names that counterexample; the doc test failed first, quoting the missing example. Changed the list entry to say a second `=` declines only when it comes *before* the dot, and to name `x =.foo(a = 1)` as repaired. Documentation only, no behaviour change; the rule's \"does not rewrite its own source file\" test still passes, so the moduledoc edit did not disturb the self-corruption oracle. Commit 6bb2306."
+        }
+      ],
+      "commits": [
+        "728ad65d8d0d41464036f80dbd61620061daf5f7",
+        "837ca0ff025fadbb2470b8a04c5428f87ecc5d10",
+        "6bb2306c512b5a7d6cc60f846acedec83240b54e"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T21:07:29+02:00",
+      "resolved_at": "2026-08-19T21:27:51+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_assignment_dot_syntax.ex",
+      "reviewed_at": "2026-08-19T21:34:07+02:00",
+      "round": 3,
+      "severities": [
+        "nit",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule: `fix(\"a =.foo(b =.bar())\")` emitted `\"a = foo(b =.bar())\"`, and `analyze/1` on that emitted line returned `[]`. So the rule handed back a line that still does not parse and then called it clean — the leftover `=.` sits past the start of the line, where the `^`-anchored pattern cannot see it, so no later pass can find it and the phase's \"still does not parse\" rollback throws the half-repair away. Pinned it two ways, both red before the change: the shape went into the file's `@declined` list (which drives a no-op test, a not-reported test, and a check that the moduledoc names it — all three failed), plus a test that spells out the dead end by asserting that neither the input nor the half-repaired line parses and that nothing reports the half-repaired line afterwards. Fix: `analyze/1` and `fix/1` now share one `repair/2` predicate, so a line is reported exactly when it is repaired, and a line whose remainder still carries the same shape is declined whole rather than half-rewritten — a repair that cannot finish the line is worth less than none. The remainder is inspected in the mask's shadow, like the match itself, so a `=.` inside a string or a trailing comment cannot decline a line the rule can repair (`x =.foo(\"b =.bar()\") # c =.d()` is still repaired; pinned). Every other admitted input is byte-identical: the whole battery, including the rule's own-source self-corruption test, passed unchanged. Moduledoc's \"Not flagged\" list gained the new decline and the reason for it. Commit 9ee0d76."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the comment's justification is false, by execution: `analyze(\"x =.—dash()\")` returns one issue and `fix/1` emits `\"x = —dash()\"`, which the parser still rejects (`unexpected token: \"—\" (column 5, code point U+2014)`). An em dash is a high byte in code position, so masking — which only blanks literals and comments — does not make it \"part of an identifier\". Corrected the comment to claim only what masking gives (the byte did not come from a literal), to name the counterexample and where it comes from (`Credence.SourceMask`'s own moduledoc exists because an em dash can sit in code position), and to state the trade: broken in, broken out, and telling a letter from an em dash would need `\\p{L}`, which needs the `/u` modifier the byte-wise class deliberately avoids. No behaviour change — as the finding asked, a claim softened rather than a behaviour altered — and the behaviour is now pinned by a test that asserts the whole emitted string and that neither the input nor the output parses, so it cannot drift silently in either direction. Commit 808e33a."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "refuted",
+          "note": "(as a defect) — The behaviour reproduces exactly as described: `fix(\"x=.foo()\")` returns `\"x= foo()\"`, and for the same reason `fix(\"x  =.foo()\")` returns `\"x  = foo()\"` — the callback appends one space after the `=` and never touches the bytes in front of it. What I refute is that this is a fault in the rule. This repo's own rule-review process puts layout out of a rule's scope in as many words (docs/02:216, \"Spacing and layout don't matter — `mix format` runs after all the rules\"), the emitted line parses, and the string the rule *actually* emits compiles inside a module (`{:ok, []}`) while the line it replaced fails the same compile with a syntax error — so the output is right in meaning, only unconventional in spacing. Normalising it would also rewrite the spacing of `x  =.foo()`, which has nothing to do with the spurious dot. The part of the finding that was real is the missing coverage, and that is not policy, so I wrote it: two tests now pin the emitted bytes for both spacings and the compiled meaning of what the rule emits, with the unrepaired line as the control. Commit 81cc0b6."
+        }
+      ],
+      "commits": [
+        "9ee0d7667791456a4503bd87f15e431a479731d4",
+        "808e33a5853160cb2978d91d5530b8d70715be3d",
+        "81cc0b69ebae63f1c079ff38028de09c913974f0"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T21:34:07+02:00",
+      "resolved_at": "2026-08-19T21:55:20+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_assignment_dot_syntax.ex",
+      "reviewed_at": "2026-08-19T22:00:37+02:00",
+      "round": 4,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "error",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
+      "enqueued_at": "2026-08-19T22:00:37+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_assignment_dot_syntax_analyze_test.exs",
+      "reviewed_at": "2026-08-19T22:03:34+02:00",
+      "round": 1,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule, not by reading it: `analyze(\"x = y =.foo()\")` returns `[]` (declined) but `analyze(\"x =.foo(a = 1)\")` returns an issue, so the test named \"second `=` on the line is not flagged\" asserted only the declining half while its name claimed the rule abstains from any line with a second `=`. That is the wider claim the rule's moduledoc was already amended to retract. Renamed the test to \"a second `=` before the dot is not flagged\" and added the mirrored flagging case — \"flags `x =.foo(a = 1)` — a second `=` after the dot is ordinary code\" — so this file pins both directions of the boundary instead of one. To prove the new test is load-bearing I temporarily made the rule decline on ANY `=` later in the line (the behaviour the old name described): exactly the new test went red, and the renamed one stayed green. Reverted the mutation; the file is green again (21 tests, 0 failures)."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed with the reviewer's experiment: run against the RAW (unmasked) lines, the rule's anchored pattern returns `nil` for both `# ref =.make_ref()` and `x = 1 # ref =.make_ref()` — the first because the leading `#` cannot start an identifier, the second because a `1` follows `= `, not a dot. Both comment tests therefore pass by the `^` anchor alone and would not notice if `Credence.SourceMask` were dropped from `analyze/1`. Added an analyze case for an assignment that only appears inside a `@moduledoc` heredoc, where the broken line starts its own line and the anchor no longer saves the rule. Watched it fail for the right reason: with masking removed from `analyze/1` (replaced by a plain line split), the new test reported an issue on line 2 while both comment tests stayed green — one failure, exactly the new one. Reverted the mutation. The analyze half is now guarded by masking in its own file rather than only in the sibling fix battery."
+        }
+      ],
+      "commits": [
+        "ad1efc074ea4a82a93dcdb87035c3134ed656d33"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T22:03:35+02:00",
+      "resolved_at": "2026-08-19T22:13:38+02:00"
+    },
+    {
+      "path": "test/syntax/fix_assignment_dot_syntax_analyze_test.exs",
+      "reviewed_at": "2026-08-19T22:17:04+02:00",
+      "round": 2,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule, not by reading it: `analyze(\"a =.foo(b =.bar())\")` returns `[]` (the line is declined whole) while `analyze(\"x =.foo(a = 1)\")` returns an issue and `analyze(\"x = y =.foo()\")` returns `[]`. So the two comments in this file, which said an `=` after the dot is always ordinary code and the line is \"flagged like any other\", described a rule that does not exist — there are three shapes, not two. I also confirmed the second half of the finding, that this battery never reaches that decline: I temporarily disabled the second-occurrence check in `repair/2`, making the rule behave exactly as the comments claimed, and the whole file stayed green (21 tests, 0 failures). Pinned it by adding the missing no-issue case `analyze(\"a =.foo(b =.bar())\") == []`; under the same mutation it was the only failure, quoting the issue the rule should not have reported. Reverted the mutation (the rule file is byte-identical to HEAD). Then corrected both comments to state the boundary the rule actually holds: an `=` before the dot declines, an `=` after the dot declines only when it forms a second `=.`, and a plain `=` after the dot is flagged. The new test's comment also says why the rule declines rather than half-repairs — the pattern is anchored at the start of the line, so a repair could only reach the first `=.` and nothing would report the leftover. Test-only change; full gate green. Commit 3ee4fdf."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "Confirmed the locator is wrong by looking at where the tests actually are: the comment says \"the two comment lines above\", but only `# ref =.make_ref()` (line 87) precedes it; the other case it names, `x = 1 # ref =.make_ref()`, is at line 138 in a different `describe`. The claim the comment makes is right, and I checked it by running the rule's own pattern against the raw, unmasked lines: both commented lines return `nil` (so both tests pass by the `^` anchor alone and would not notice if masking were dropped), while the heredoc body line `x =.some_function(a)` does match raw — which is what makes the heredoc test the load-bearing one. Fixed by rewording the comment to name where each case lives (\"the one just above and `x = 1 # ref =.make_ref()`, in the last `describe`\") instead of depending on relative position, so it cannot go stale again when tests move. Comment-only; no assertion changed. Same commit 3ee4fdf."
+        }
+      ],
+      "commits": [
+        "3ee4fdf02cd4b37a2db72344f6f4d15c9cb5ae21"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T22:17:04+02:00",
+      "resolved_at": "2026-08-19T22:27:07+02:00"
+    },
+    {
+      "path": "test/syntax/fix_assignment_dot_syntax_analyze_test.exs",
+      "reviewed_at": "2026-08-19T22:30:50+02:00",
+      "round": 3,
+      "severities": [
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The finding said this rule's user-facing message text is asserted nowhere, so it could be emptied or made wrong with the whole suite green. Confirmed by execution, not by reading: `grep` found the string \"Extra dot after `=` in assignment — …\" in exactly one place in the repo, its own rule source (lib/syntax/fix_assignment_dot_syntax.ex:180), and nowhere in any test; I then replaced that message with an empty string and ran the fast gate — `mix test --exclude corpus --exclude idempotency` finished 9102 tests, 0 failures. Nothing in the suite, including any meta-gate, noticed the rule had lost its message. Pinned it the way the sibling analyze batteries do (fix_capture_operator_syntax_analyze_test.exs:13): the first flagging test now binds `message` out of the `Issue` struct and compares it with an exact whole-string `==` against the text the rule actually emits. Watched it fail for the right reason while the mutation was still in place — running this file together with the sibling fix battery gave 66 tests, 1 failure, and the failure was the new assertion (`left: \"\"`, right: the real message). Then restored the rule file from a byte-copy taken before the mutation and confirmed `git diff lib/` is empty, so the shipped change is test-only: one added assertion plus a short comment saying why it is there. Full gate green afterwards (9102 tests, 0 failures). Commit 61afe81."
+        },
+        {
+          "n": 2,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The comment above the `x =.foo(a = 1)` test opened \"The flagging one of the three shapes the second-`=` boundary distinguishes;\" — a noun phrase with no verb, so the sentence never actually said anything about that shape. Confirmed by reading the committed bytes at that line (this is a grammar defect in a comment; there is nothing to execute). Fixed with the smallest possible change: the clause now reads \"This is the flagging one of the three shapes the second-`=` boundary distinguishes;\". The rest of the comment, which the reviewer confirmed accurate, is untouched, as is every assertion. Same commit 61afe81, and the same green gate covers it."
+        }
+      ],
+      "commits": [
+        "61afe812eb12c112793e0f82ace8d2a9f8741dea"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T22:30:50+02:00",
+      "resolved_at": "2026-08-19T22:44:18+02:00"
     }
   ]
 }
