@@ -152,6 +152,62 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     confirm_fix(fix(code), code)
   end
 
+  # A doc line that *is* a real definition keyword — `defstruct`, `defmodule`,
+  # `defimpl` — clears the word boundary that keeps English prose out. But `@doc`
+  # documents none of those forms; it attaches to the next function-like
+  # definition. So such a line at the doc's own indentation is as plausibly doc
+  # prose ("defstruct fields are validated on build") as it is code, and the rule
+  # has nothing to tell them apart with. Guessing "code" empties the doc and
+  # promotes the line to live module-body code in output that *parses*, so
+  # nothing downstream reverts it. The rule declines instead — the same answer it
+  # gives to a `\"""` below that it cannot place.
+  test "declines when the doc's first line is a definition form @doc cannot document" do
+    code = """
+    defmodule Sample do
+      @doc \"""
+      defstruct fields
+
+      def add(a, b), do: a + b
+    end
+    """
+
+    assert analyze(code) == []
+    confirm_fix(fix(code), code)
+  end
+
+  # Declining is scoped to the *first* definition-form line below the opener. A
+  # `defstruct` further down — past the `def` the doc documents — is not
+  # ambiguous at all and must not veto the repair.
+  test "still repairs when the documented def comes above a defstruct" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      def add(a, b), do: a + b
+
+      defstruct [:total]
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+    #{close}
+      def add(a, b), do: a + b
+
+      defstruct [:total]
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
   # The rule's whole purpose is to close a doc *before the next definition*. When
   # the doc actually has text in it — the LLM wrote the doc and forgot the closer,
   # which is the shape the moduledoc describes — the first non-blank line below
@@ -305,6 +361,46 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     shape = module_shape(fix(input))
     assert shape.docs == ["Adds the two numbers.\n\n"]
     assert shape.specs == ["add(integer, integer) :: integer"]
+    assert shape.defs == [{:add, 2}]
+  end
+
+  # The price of ending the doc at a module attribute: a line of doc *prose* that
+  # begins with a bare `@word` at exactly the doc's own indentation is read as the
+  # end of the doc. The doc is truncated above it and the prose becomes
+  # module-body code — and the result parses, so nothing downstream reverts it.
+  # That cost is what buys the `@doc` → `@spec` → `def` repair above, so it is
+  # pinned rather than fixed: this test is the alarm if the attribute scan is ever
+  # widened, and the record of what "widened" would cost.
+  test "truncates the doc at a prose line that starts with a bare @word" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      @timeout - how long to wait
+      def add(a, b), do: a + b
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+    #{close}
+      @timeout - how long to wait
+      def add(a, b), do: a + b
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+
+    # The prose line is gone from the doc and is now live module-body code.
+    shape = module_shape(fix(input))
+    assert shape.docs == ["Adds the two numbers.\n\n"]
     assert shape.defs == [{:add, 2}]
   end
 

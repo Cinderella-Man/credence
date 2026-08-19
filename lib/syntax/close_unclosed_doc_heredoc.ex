@@ -39,6 +39,11 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   apart. The cost is that a file with a broken doc above `def a` and a correctly
   closed doc above `def b` is never repaired: the second doc's closing quotes
   veto the repair of the first. Such a file is left to the next round.
+
+  It declines for the same reason when the first definition below the opener is a
+  form `@doc` cannot document (`defstruct`, `defmodule`, `defimpl`, …): such a
+  line is as plausibly doc prose as it is code, and the rule has nothing to tell
+  them apart with.
   """
   use Credence.Syntax.Rule
 
@@ -56,6 +61,17 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   # stops mid-word, so `defmacrop` cannot be read as `defmacro` plus a stray `p` —
   # the engine backtracks to the spelling that ends on a word boundary.
   @def_word ~r/^def(?:p|macrop|macro|guardp|guard|delegate|module|protocol|impl|struct|exception|overridable)?\b/
+
+  # The subset of `@def_word` that `@doc` actually documents: it attaches to the
+  # next function-like definition, never to a `defmodule`/`defstruct`/`defimpl`/
+  # `defprotocol`/`defexception`/`defoverridable`. Those forms are still real
+  # definitions, so `@def_word` still finds them — but a line spelling one at the
+  # doc's own indentation is as plausibly doc prose (`defstruct fields are
+  # validated on build`) as it is code, and nothing in the line tells the two
+  # apart. Guessing "code" empties the doc and promotes the prose to module-body
+  # code in output that parses, so nothing downstream reverts it. The rule
+  # declines instead, the same answer it gives a `"""` below it cannot place.
+  @documented_def_word ~r/^def(?:p|macrop|macro|guardp|guard|delegate)?\b/
 
   # A module attribute, likewise matched with the indentation stripped. An
   # attribute at the module's own indentation ends the doc above it: `@doc` →
@@ -155,13 +171,22 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
         nil
 
       def_offset ->
-        attribute_offset =
-          lines
-          |> Enum.take(def_offset)
-          |> Enum.find_index(&at_indent?(&1, indent, @attribute_word))
-
-        attribute_offset || def_offset
+        if at_indent?(Enum.at(lines, def_offset), indent, @documented_def_word) do
+          attribute_end_offset(lines, indent, def_offset)
+        end
     end
+  end
+
+  # Where the doc ends given the definition it documents at `def_offset`: the
+  # first module attribute above that definition, if any, else the definition
+  # itself.
+  defp attribute_end_offset(lines, indent, def_offset) do
+    attribute_offset =
+      lines
+      |> Enum.take(def_offset)
+      |> Enum.find_index(&at_indent?(&1, indent, @attribute_word))
+
+    attribute_offset || def_offset
   end
 
   # Does `line` match `word_regex` at exactly `indent`? Deeper-indented lines are
