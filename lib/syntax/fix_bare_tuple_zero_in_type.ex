@@ -23,7 +23,8 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
     * has a `::` outside any brackets whose right-hand side is a bare
       `() -> <something>`, and
     * whose right-hand side is a self-contained type: brackets balanced, no
-      second `::`, no `when` guard, and a plausible closing character.
+      second `::`, no `when` guard, a plausible closing character, and nothing
+      on the next line continuing it.
 
   ## What is deliberately left alone
 
@@ -44,10 +45,31 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
   analyze test) rather than being "fixed" into something that still does not
   parse.
 
-  Lines *inside* a heredoc carry no quotes of their own, so the rule also
-  tracks `\"\"\"`/`'''` delimiters and skips the body: a typespec example in
-  a `@moduledoc` is prose, and rewriting it would change the documentation
-  the module produces.
+  A type that runs onto the next line is skipped for the same reason: the
+  whole wrap is a `)` appended at end of line, so it would close *before* the
+  continuation. Wrapping only the first line of
+
+      @type t :: () -> {:ok, term()}
+        | {:error, term()}
+
+  yields `(() -> {:ok, term()}) | {:error, term()}` — a union of a function
+  type and a tuple, not a function returning a union. That parses and
+  compiles, so nothing downstream would ever notice.
+
+  ## Only real code is rewritten
+
+  Lines *inside* a heredoc carry no quotes of their own, so the rule asks
+  `Credence.SourceMask` whether each line stands outside every multi-line
+  literal and skips the ones that do not: a typespec example in a `@moduledoc`
+  is prose, and rewriting it would change the documentation the module
+  produces.
+
+  Counting `\"\"\"`/`'''` delimiters per line — which this rule used to do —
+  inverts on the first line whose delimiter count is odd for any other reason.
+  A sentence mentioning `'''` inside a `@moduledoc` turned the tracking *off*
+  and the rule rewrote the prose below it; a line of code holding a lone
+  `\"\"\"` turned it *on* and the rule went silent for the rest of the file,
+  with every gate green.
   """
 
   use Credence.Syntax.Rule
@@ -64,13 +86,18 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
   # lands after a complete type (never after `,`, `|` or `->`).
   @type_end ~r/[\w)\]}?!]$/
 
+  # A line that opens with a binary operator, a `when` guard or a closing
+  # bracket cannot start a statement, so it is the tail of the typespec above
+  # it — and the wrap this rule appends would close before it.
+  @continuation ~r/^\s*(?:\||,|->|::|\)|\]|\}|when\b)/
+
   @impl true
   def analyze(source) do
     source
     |> code_lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      case target(line) do
+    |> Enum.flat_map(fn {{line, next}, line_no} ->
+      case target(line, next) do
         {:ok, _prefix, _tail, _trailing} -> [build_issue(line_no)]
         :none -> []
       end
@@ -82,51 +109,72 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
     source
     |> code_lines()
     |> Enum.map_join("\n", fn
-      {:heredoc, line} ->
+      {{:heredoc, line}, _next} ->
         line
 
-      line ->
-        case target(line) do
+      {line, next} ->
+        case target(line, next) do
           {:ok, prefix, tail, trailing} -> "#{prefix}:: (#{tail})#{trailing}"
           :none -> line
         end
     end)
   end
 
-  # The lines of `source`, with the ones sitting inside a heredoc tagged
-  # `{:heredoc, line}` so neither callback touches them. A `@moduledoc`
-  # example carries no quotes of its own, so tracking the heredoc delimiters
-  # is what keeps the rule out of documentation prose.
+  # Each line of `source` paired with the line that could continue it, with the
+  # ones sitting inside a multi-line literal tagged `{:heredoc, line}` so
+  # neither callback touches them. A `@moduledoc` example carries no quotes of
+  # its own, so `Credence.SourceMask.self_contained?/2` — "would masking this
+  # line alone have produced the shadow the whole file gave it?" — is what
+  # keeps the rule out of documentation prose. Its failure direction is a
+  # missed fix inside a literal, never a corrupted one.
   defp code_lines(source) do
-    source
-    |> String.split("\n")
-    |> Enum.map_reduce(false, fn line, in_heredoc? ->
-      {if(in_heredoc?, do: {:heredoc, line}, else: line), toggle_heredoc(in_heredoc?, line)}
+    lines =
+      source
+      |> Credence.SourceMask.lines()
+      |> Enum.map(fn {line, shadow} ->
+        if Credence.SourceMask.self_contained?(line, shadow), do: line, else: {:heredoc, line}
+      end)
+
+    Enum.zip(lines, next_lines(lines))
+  end
+
+  # For each line, the next line with anything on it — a blank line does not
+  # end a typespec, so the continuation check has to look past one.
+  defp next_lines(lines) do
+    lines
+    |> Enum.reverse()
+    |> Enum.map_reduce(nil, fn line, next ->
+      {next, if(blank?(line), do: next, else: line)}
     end)
     |> elem(0)
+    |> Enum.reverse()
   end
 
-  defp toggle_heredoc(in_heredoc?, line) do
-    delimiters = count(line, ~s(""")) + count(line, ~s('''))
+  defp blank?({:heredoc, line}), do: blank?(line)
+  defp blank?(line), do: String.trim(line) == ""
 
-    if rem(delimiters, 2) == 1, do: not in_heredoc?, else: in_heredoc?
-  end
-
-  defp count(line, delimiter), do: length(String.split(line, delimiter)) - 1
+  # A line inside a multi-line literal is only ever the continuation of the
+  # line that opened that literal, and such a line carries a quote, so it is
+  # already declined below.
+  defp continues?(nil), do: false
+  defp continues?({:heredoc, _line}), do: false
+  defp continues?(line), do: Regex.match?(@continuation, line)
 
   # `{:ok, prefix, tail, trailing}` when the line is a typespec attribute
-  # whose top-level `::` is followed by a wrappable bare `() -> ...`.
-  # `prefix` is everything before that `::` (its original spacing kept),
-  # `tail` the function type, `trailing` whatever whitespace ended the line
-  # (a `\r` from a CRLF file, say) so the rewrite gives it back. A heredoc
-  # line is prose, never a typespec, so it is never a target.
-  defp target({:heredoc, _line}), do: :none
+  # whose top-level `::` is followed by a wrappable bare `() -> ...` that
+  # `next` does not continue. `prefix` is everything before that `::` (its
+  # original spacing kept), `tail` the function type, `trailing` whatever
+  # whitespace ended the line (a `\r` from a CRLF file, say) so the rewrite
+  # gives it back. A heredoc line is prose, never a typespec, so it is never a
+  # target.
+  defp target({:heredoc, _line}, _next), do: :none
 
-  defp target(line) do
+  defp target(line, next) do
     with true <- Regex.match?(@typespec_attr, line),
          false <- String.contains?(line, "#"),
          false <- String.contains?(line, "\""),
          false <- String.contains?(line, "'"),
+         false <- continues?(next),
          {:ok, prefix, rest} <- split_at_separator(String.to_charlist(line)),
          [_, tail, trailing] <- Regex.run(~r/^\s*(.*?)(\s*)$/s, rest),
          true <- wrappable?(tail) do

@@ -6,6 +6,38 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeAnalyzeTest do
   alias Credence.Issue
   alias Credence.Syntax.FixBareTupleZeroInType
 
+  # A `'''` cannot be written literally inside a `"""` heredoc, so this fixture
+  # is joined from its lines. The `'''` in the prose is the whole point: it is
+  # an ordinary sentence about charlist heredocs, and the rule used to treat it
+  # as a delimiter and decide the rest of the file was code.
+  @charlist_prose Enum.join(
+                    [
+                      "defmodule M do",
+                      "  @moduledoc \"\"\"",
+                      "  Charlist heredocs open with " <> String.duplicate("'", 3) <> ".",
+                      "",
+                      "  @type t :: () -> any()",
+                      "  \"\"\"",
+                      "end",
+                      ""
+                    ],
+                    "\n"
+                  )
+
+  # The mirror image: a line of real code carrying a lone `"""` inside a sigil.
+  # The old delimiter count read it as opening a heredoc, so everything after
+  # it was treated as prose and the rule went silent for the rest of the file.
+  @triple_quote_in_code Enum.join(
+                          [
+                            "defmodule M do",
+                            "  def q(x), do: String.replace(x, ~s(\"\"\"), \"\")",
+                            "  @type t :: () -> any()",
+                            "end",
+                            ""
+                          ],
+                          "\n"
+                        )
+
   defp analyze(code), do: FixBareTupleZeroInType.analyze(code)
 
   describe "analyze/1 — flags a wrappable bare `() ->`" do
@@ -60,7 +92,15 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeAnalyzeTest do
 
     test "carries a message naming the fix" do
       [issue] = analyze("@type t :: () -> any()")
-      assert issue.message =~ "Wrap the function type in parens"
+
+      assert issue.message ==
+               "Bare `()` before `->` in a typespec is ambiguous and fails to parse. " <>
+                 "Wrap the function type in parens: `(() -> ...)`."
+    end
+
+    test "keeps flagging after a code line that carries a lone triple quote" do
+      assert [%Issue{rule: :fix_bare_tuple_zero_in_type, meta: %{line: 3}}] =
+               analyze(@triple_quote_in_code)
     end
   end
 
@@ -152,6 +192,38 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeAnalyzeTest do
         """
       end
       '''
+
+      assert analyze(code) == []
+    end
+
+    test "a typespec example inside a doc heredoc whose prose mentions a charlist heredoc" do
+      assert analyze(@charlist_prose) == []
+    end
+
+    test "a type that continues onto the next line" do
+      code = """
+      @type t :: () -> {:ok, term()}
+        | {:error, term()}
+      """
+
+      assert analyze(code) == []
+    end
+
+    test "a type that continues after a blank line" do
+      code = """
+      @type t :: () -> {:ok, term()}
+
+        | {:error, term()}
+      """
+
+      assert analyze(code) == []
+    end
+
+    test "a `when` guard on the line below" do
+      code = """
+      @spec f(a) :: () -> any()
+            when a: var
+      """
 
       assert analyze(code) == []
     end

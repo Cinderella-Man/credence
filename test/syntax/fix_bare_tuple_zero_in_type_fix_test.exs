@@ -5,6 +5,25 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
 
   alias Credence.Syntax.FixBareTupleZeroInType
 
+  # A `'''` cannot be written literally inside a `"""` heredoc, so this fixture
+  # is joined from its lines. The `'''` in the prose is the whole point: it is
+  # an ordinary sentence about charlist heredocs, and the rule used to treat it
+  # as a delimiter and decide the rest of the file was code — rewriting the
+  # documentation this module would produce.
+  @charlist_prose Enum.join(
+                    [
+                      "defmodule M do",
+                      "  @moduledoc \"\"\"",
+                      "  Charlist heredocs open with " <> String.duplicate("'", 3) <> ".",
+                      "",
+                      "  @type t :: () -> any()",
+                      "  \"\"\"",
+                      "end",
+                      ""
+                    ],
+                    "\n"
+                  )
+
   defp analyze(code), do: FixBareTupleZeroInType.analyze(code)
   defp fix(code), do: FixBareTupleZeroInType.fix(code)
 
@@ -86,6 +105,21 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
     test "keeps the line's trailing whitespace, including a CRLF carriage return" do
       confirm_fix(fix("@type t :: () -> any()\r"), "@type t :: (() -> any())\r")
       confirm_fix(fix("@type t :: () -> any()  "), "@type t :: (() -> any())  ")
+    end
+
+    test "keeps wrapping after a code line that carries a lone triple quote" do
+      lines = [
+        "defmodule M do",
+        "  def q(x), do: String.replace(x, ~s(\"\"\"), \"\")",
+        "  @type t :: () -> any()",
+        "end",
+        ""
+      ]
+
+      input = Enum.join(lines, "\n")
+      expected = Enum.join(List.replace_at(lines, 2, "  @type t :: (() -> any())"), "\n")
+
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -201,6 +235,42 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
       confirm_fix(fix(code), code)
     end
 
+    test "a typespec example inside a doc heredoc whose prose mentions a charlist heredoc" do
+      confirm_fix(fix(@charlist_prose), @charlist_prose)
+    end
+
+    # Wrapping the first line alone would close the parens before the `|`, and
+    # the result parses AND compiles — as `(() -> {:ok, term()}) | {:error,
+    # term()}`, a union of a function type and a tuple rather than a function
+    # returning a union. Nothing downstream can catch that, so the rule declines.
+    test "a type that continues onto the next line" do
+      code = """
+      @type t :: () -> {:ok, term()}
+        | {:error, term()}
+      """
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "a type that continues after a blank line" do
+      code = """
+      @type t :: () -> {:ok, term()}
+
+        | {:error, term()}
+      """
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "a `when` guard on the line below" do
+      code = """
+      @spec f(a) :: () -> any()
+            when a: var
+      """
+
+      confirm_fix(fix(code), code)
+    end
+
     test "code after a heredoc closes is still fixed" do
       input = ~S'''
       defmodule M do
@@ -281,24 +351,35 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
 
       suffixes = ["", " ", "\r", " # note"]
 
-      for attr <- attrs, sep <- separators, rhs <- right_hand_sides, suffix <- suffixes do
-        line = attr <> sep <> rhs <> suffix
-        fixed = fix(line)
-        rewritten? = fixed != line
+      rewrites =
+        for attr <- attrs, sep <- separators, rhs <- right_hand_sides, suffix <- suffixes do
+          line = attr <> sep <> rhs <> suffix
+          fixed = fix(line)
+          rewritten? = fixed != line
 
-        assert length(analyze(line)) == if(rewritten?, do: 1, else: 0),
-               "check and fix disagree on #{inspect(line)}"
+          assert length(analyze(line)) == if(rewritten?, do: 1, else: 0),
+                 "check and fix disagree on #{inspect(line)}"
 
-        if rewritten? do
-          in_module = """
-          defmodule M do
-            #{String.trim_trailing(fixed)}
+          if rewritten? do
+            in_module = """
+            defmodule M do
+              #{String.trim_trailing(fixed)}
+            end
+            """
+
+            assert valid_syntax?(in_module), "did not parse after fix: #{inspect(fixed)}"
           end
-          """
 
-          assert valid_syntax?(in_module), "did not parse after fix: #{inspect(fixed)}"
+          rewritten?
         end
-      end
+
+      # Without this the whole loop passes against a rule that rewrites nothing
+      # at all: every `rewritten?` would be false, every `analyze` would return
+      # `[]`, and the parse branch would never run. The figure is the five
+      # attributes the rule accepts (`@typedoc` and `def f` are not typespec
+      # attributes) times all three separators, times the five wrappable
+      # right-hand sides, times the three suffixes that are not a comment.
+      assert Enum.count(rewrites, & &1) == 5 * 3 * 5 * 3
     end
 
     test "every wrappable shape parses after the fix" do
