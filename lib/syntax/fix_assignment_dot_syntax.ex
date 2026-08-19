@@ -26,7 +26,8 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   - A **digit** after the dot (`rate = .05`, `x =.5e3`) — see below
   - Anything but a bare identifier on the left — a destructuring pattern
     (`{:ok, val} =.foo()`) or a module attribute (`@attr =.foo()`)
-  - A second `=` on the line (`x = y =.foo()`)
+  - A second `=` on the line *before* the dot (`x = y =.foo()`). One after the
+    dot is ordinary code and does not decline: `x =.foo(a = 1)` is repaired
   - More than one space before the dot (`x =  .foo()`)
 
   The last three are declines, not oversights the pattern happens to cover:

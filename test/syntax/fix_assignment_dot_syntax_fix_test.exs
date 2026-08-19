@@ -129,6 +129,12 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     "x =  .foo()"
   ]
 
+  # The `x = y =.foo()` entry above is about an `=` that comes *before* the
+  # dot. One after the dot is ordinary code and the line is repaired, so a
+  # "Not flagged" list that says only "a second `=` on the line" claims a
+  # wider abstention than the rule takes.
+  @repaired_despite_later_equals "x =.foo(a = 1)"
+
   describe "fix/1 — shapes the rule does not handle" do
     test "anonymous call syntax unchanged" do
       code = "f =.(1)"
@@ -154,6 +160,24 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
              reads as having broader coverage than it has:
 
                #{Enum.join(unlisted, "\n  ")}
+             """
+    end
+
+    test "a second `=` after the dot does not stop the repair" do
+      confirm_fix(fix(@repaired_despite_later_equals), "x = foo(a = 1)")
+      assert analyze(@repaired_despite_later_equals) != []
+    end
+
+    test "the moduledoc's `## Not flagged` list qualifies its second-`=` entry" do
+      section = Credence.RuleDuplication.moduledoc_section(FixAssignmentDotSyntax, "Not flagged")
+
+      assert String.contains?(section, @repaired_despite_later_equals),
+             """
+             The list names `x = y =.foo()` as declined without saying that
+             only an `=` *before* the dot declines. `#{@repaired_despite_later_equals}`
+             also has a second `=` on the line and is repaired, so the entry
+             has to name it or a maintainer reads a wider abstention than the
+             rule takes.
              """
     end
   end
