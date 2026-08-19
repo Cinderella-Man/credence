@@ -205,15 +205,38 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
                Credence.RuleHelpers.compile_and_capture(module.("café =.make_ref()"))
     end
 
+    # A stray byte inside a *comment* never reaches the pattern: masking blanks
+    # a comment byte-for-byte, so the subject the regex sees here is pure
+    # ASCII. This test pins that the repair still lands and that the mask
+    # itself survives the byte — it says nothing about the pattern's own
+    # tolerance of invalid UTF-8. The test below is the one that does.
+    test "a stray byte in a comment does not disturb the repair" do
+      code = <<"ref =.make_ref() # ", 0xFF>>
+
+      confirm_fix(fix(code), <<"ref = make_ref() # ", 0xFF>>)
+
+      [{_line, shadow}] = Credence.SourceMask.lines(code)
+      assert String.valid?(shadow), "the comment byte should have been blanked"
+    end
+
     # The class is widened byte-wise rather than with the `u` modifier on
     # purpose: a `/u` regex raises ArgumentError on a subject that is not
     # valid UTF-8, and model output truncated mid-character is exactly the
     # input this phase exists to repair. A missed fix is the right failure
-    # there; a crash inside the fix pipeline is not.
-    test "a line that is not valid UTF-8 is repaired, not crashed on" do
-      code = <<"ref =.make_ref() # ", 0xFF>>
+    # there; a crash inside the fix pipeline is not — `Credence.Syntax` calls
+    # `fix/1` with no rescue, so one raise takes down the whole file's repair.
+    #
+    # A truncated character in *code* position is the only input that reaches
+    # the pattern still invalid, so this is the test that would go red if the
+    # pattern were ever "tidied" to `/u`. The `refute String.valid?` guard is
+    # what stops it quietly becoming vacuous.
+    test "a truncated multi-byte character in code is repaired, not crashed on" do
+      code = <<"caf", 0xC3, " =.make_ref()">>
 
-      confirm_fix(fix(code), <<"ref = make_ref() # ", 0xFF>>)
+      [{_line, shadow}] = Credence.SourceMask.lines(code)
+      refute String.valid?(shadow), "the fixture must reach the pattern still invalid"
+
+      confirm_fix(fix(code), <<"caf", 0xC3, " = make_ref()">>)
     end
   end
 
