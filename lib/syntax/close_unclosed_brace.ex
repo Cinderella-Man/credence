@@ -55,7 +55,9 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
       tuple `{1, 2 |> IO.inspect()}`; both parse, so committing either would
       silently pick one of two meanings. A line ending in `,` is no competing
       placement — closing after a trailing comma drops an element (see below),
-      so the comma pins the next line inside the literal.
+      so the comma pins the next line inside the literal. When the repair needs
+      more than one `}`, a competing reading can also *split* them — some on an
+      earlier line, the rest on the last — and those placements are tried too.
 
     * **No dangling comma.** A literal whose last line ends in `,` is truncated
       mid-element; Elixir accepts a trailing comma, so closing
@@ -71,7 +73,9 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
 
   The smallest number of `}` that makes the source parse is used, which repairs
   nested openings (`{:ok, %{a: 1` needs two) in one pass. Adding any more would
-  leave an unmatched `}`, so that number is unique.
+  leave an unmatched `}`, so that number is unique. `@max_braces` caps that
+  number at five: a literal that would need six or more closers is a degenerate
+  input, and is refused like the cases above rather than repaired.
   """
   use Credence.Syntax.Rule
 
@@ -190,9 +194,20 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
         line = String.trim_trailing(Enum.at(lines, earlier))
 
         line != "" and not String.ends_with?(line, ",") and
-          close_at(lines, earlier) != :none
+          (close_at(lines, earlier) != :none or split_placement?(lines, earlier, index))
       end)
 
     if ambiguous, do: :ambiguous, else: :ok
+  end
+
+  # When the repair needs more than one `}`, the competing reading may put only
+  # *some* of them on the earlier line and the rest on the target line. Moving
+  # all of them (above) cannot see that split, so try each share explicitly.
+  defp split_placement?(lines, earlier, index) do
+    Enum.any?(1..(@max_braces - 1), fn taken ->
+      lines
+      |> List.replace_at(earlier, Enum.at(lines, earlier) <> String.duplicate("}", taken))
+      |> close_at(index) != :none
+    end)
   end
 end

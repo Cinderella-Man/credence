@@ -139,6 +139,23 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert analyze(code) == []
   end
 
+  test "no issue when the braces could be split across two lines" do
+    # Closing both on the last line gives `{1, {2, {3}, 5}}`; closing the
+    # inner one a line up and the outer at the end gives `{1, {2, {3}}, 5}`.
+    # Both parse and mean different things, so the rule refuses rather than
+    # guessing.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, {2, {3
+        }, 5
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
   test "no issue when the literal's last line ends with a dangling comma" do
     # Elixir accepts a trailing comma, so closing here would parse as the
     # one-element `{:ok}` — silently dropping the missing element.

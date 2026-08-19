@@ -255,6 +255,23 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "leaves a placement split across two lines untouched" do
+    # Two readings of the truncated source parse and mean different things:
+    # both missing braces at the end (`{1, {2, {3}, 5}}`), or the inner one a
+    # line up and only the outer at the end (`{1, {2, {3}}, 5}`). The rule
+    # must refuse rather than silently commit one of the two meanings.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, {2, {3
+        }, 5
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "leaves a dangling comma untouched" do
     code = """
     defmodule Example do
