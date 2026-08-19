@@ -28,6 +28,14 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
           Enum.min_max(list)
         end
       end
+
+  ## Known limitation
+
+  The rule declines whenever *any* triple-quote line appears below the opener,
+  which is what keeps it off a correctly closed doc it cannot otherwise tell
+  apart. The cost is that a file with a broken doc above `def a` and a correctly
+  closed doc above `def b` is never repaired: the second doc's closing quotes
+  veto the repair of the first. Such a file is left to the next round.
   """
   use Credence.Syntax.Rule
 
@@ -40,8 +48,10 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   # text — counts as "the next def", and the rule then closes the heredoc above
   # it, emptying the doc and spilling its prose into the module body. Every
   # `def…` form Elixir defines is listed so that no real definition stops being
-  # recognised; longer spellings come first so `defmacrop` is not read as
-  # `defmacro` followed by a stray `p`.
+  # recognised. Order within the alternation does not matter: `\b` rejects any
+  # alternative that stops mid-word, so `defmacrop` cannot be read as `defmacro`
+  # plus a stray `p` — the engine backtracks to the spelling that ends on a word
+  # boundary.
   @def_line ~r/^\s*def(?:p|macrop|macro|guardp|guard|delegate|module|protocol|impl|struct|exception|overridable)?\b/
 
   @impl true
@@ -79,8 +89,9 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
           [_, indent] ->
             remaining = Enum.drop(lines, idx + 1)
 
-            if def_below?(remaining) and not closing_quotes_below?(remaining) do
-              offset = find_next_nonblank_offset(remaining)
+            offset = def_offset(remaining)
+
+            if offset && not closing_quotes_below?(remaining) do
               [{idx + 1 + offset, indent}]
             else
               []
@@ -105,48 +116,40 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
     case Regex.run(@doc_heredoc_open, line) do
       [_, _indent] ->
         remaining = Enum.drop(lines, line_no)
-        def_below?(remaining) and not closing_quotes_below?(remaining)
+        def_offset(remaining) != nil and not closing_quotes_below?(remaining)
 
       _ ->
         false
     end
   end
 
-  # Both scans below run to the end of the file, not to the first non-blank line:
-  # `Enum.find_value/3` skips *every* falsy result, so the `-> false` branches
-  # mean "keep looking", exactly like the `-> nil` one. Only a `-> true` stops
-  # them. Read as "stops at the first non-blank line" they look like a pair of
-  # mutually exclusive tests, which they are not.
-
-  # Is there a definition anywhere below this `@doc` heredoc opener? If not,
-  # there is nothing to close the heredoc in front of.
-  defp def_below?(lines) do
-    Enum.find_value(lines, false, fn next_line ->
-      cond do
-        String.trim(next_line) == "" -> nil
-        Regex.match?(@def_line, next_line) -> true
-        true -> false
-      end
-    end)
+  # How far below this `@doc` heredoc opener the next definition sits, or `nil`
+  # when there is none — in which case there is nothing to close the heredoc in
+  # front of and the rule declines. This is both the admission test and the
+  # insertion point: the closing `"""` goes immediately above *this* line. Taking
+  # the first non-blank line instead would put the terminator above the doc's own
+  # text, emptying the doc and promoting its content to module-body code.
+  # The scan runs to the end of the file; everything between the opener and the
+  # definition is doc text, however it is spelled.
+  defp def_offset(lines) do
+    Enum.find_index(lines, &Regex.match?(@def_line, &1))
   end
 
   # Is there a triple-quote line anywhere below? This is what keeps the rule off a
   # *correctly closed* `@doc` heredoc — including one whose first content line is a
   # `def` example, where inserting a terminator would empty the doc, promote the
   # example to real code, and leave the doc's own closing quotes opening a
-  # heredoc that swallows the rest of the file.
+  # heredoc that swallows the rest of the file. Like `def_offset/1` it scans to
+  # the end of the file: `Enum.find_value/3` skips every falsy result, so the
+  # `-> nil` branch means "keep looking" and only `-> true` stops the scan. A
+  # definition below does not bound it — see the moduledoc's known limitation.
   defp closing_quotes_below?(lines) do
     Enum.find_value(lines, false, fn next_line ->
       cond do
         String.trim(next_line) == "" -> nil
         Regex.match?(~r/^\s*"""/, next_line) -> true
-        Regex.match?(@def_line, next_line) -> false
         true -> false
       end
     end)
-  end
-
-  defp find_next_nonblank_offset(lines) do
-    Enum.find_index(lines, fn line -> String.trim(line) != "" end) || length(lines)
   end
 end

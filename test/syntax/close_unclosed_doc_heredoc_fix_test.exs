@@ -152,6 +152,90 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     confirm_fix(fix(code), code)
   end
 
+  # The rule's whole purpose is to close a doc *before the next definition*. When
+  # the doc actually has text in it — the LLM wrote the doc and forgot the closer,
+  # which is the shape the moduledoc describes — the first non-blank line below
+  # the opener is that text, not the `def`. Closing above the text empties the doc
+  # and turns its content into live module-body code.
+  test "closes the doc under its own text, not above it" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      def add(a, b), do: a + b
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+    #{close}
+      def add(a, b), do: a + b
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+    assert analyze(fix(input)) == []
+  end
+
+  # The same defect with doc text that happens to be valid Elixir: closing above
+  # it produces a source that *parses*, so no downstream progress guard can see
+  # that the doc was emptied and `1 + 1` promoted to real code.
+  test "does not promote doc text to module-body code" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      1 + 1
+
+      def get(m, k), do: Map.get(m, k)
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      1 + 1
+
+    #{close}
+      def get(m, k), do: Map.get(m, k)
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  # `closing_quotes_below?` scans to the end of the file, so a *later* correctly
+  # closed doc vetoes the repair of an earlier broken one. That is a real
+  # limitation (documented in the moduledoc), not a bound the `"""` scan stops at:
+  # pinned here so that "the scan stops at the next definition" is never read into
+  # the code again.
+  test "declines the repair when a later doc's closing quotes appear below" do
+    code = """
+    defmodule Sample do
+      @doc \"""
+      Docs for a.
+      def a, do: 1
+
+      @doc \"""
+      Docs for b.
+      \"""
+      def b, do: 2
+    end
+    """
+
+    assert analyze(code) == []
+    confirm_fix(fix(code), code)
+  end
+
   test "fixed output no longer flags" do
     assert analyze(
              fix("""
