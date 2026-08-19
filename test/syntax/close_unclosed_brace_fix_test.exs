@@ -429,11 +429,13 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
   test "scans a long literal without a blow-up in reparses" do
     # The uniqueness scan tries the missing braces on every earlier line of the
     # literal, and each try reparses the whole file. Trying every *count* on
-    # every line made that 25 whole-file reparses per line: an 800-line literal
-    # took ~7000 of them. Only the shares of the braces the repair actually
-    # needed can compete, so the real bound is at most two reparses per probed
-    # line — ~520 for the same input, since the scan stops at the first share
-    # that parses. The budget below sits between the two.
+    # every line made that 25 whole-file reparses per line. Only the shares of
+    # the braces the repair actually needed can compete, so the bound is two
+    # reparses per probed line: 401 lines for this fixture — the 400 key lines
+    # plus `    x = %{` — i.e. 802 reparses, which is what tracing the parser
+    # through one `fix/1` call on it counts. Nothing stops the scan earlier:
+    # a probe that parses IS a competing placement and would make the rule
+    # refuse, and the refusal is ruled out by `assert fix(code) != code` below.
     #
     # 400 entries, each spread over two lines. That is what gives the scan
     # anything to do: `sole_placement` skips every line ending in `,`, so the
@@ -454,10 +456,16 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     assert Enum.count(values, &String.ends_with?(&1, ",")) == 399,
            "every value line but the last must end in `,`, so the scan skips it"
 
-    # The budget is counted in reparses of this same fixture, not in
-    # milliseconds, so it means the same thing on a slow CI box as on a fast
-    # laptop: `control` times 400 whole-file reparses, and the scan is allowed
-    # six of those (~2400 reparses).
+    # The budget is counted in control loops, not in milliseconds, so it means
+    # the same thing on a slow CI box as on a fast laptop: `control` times 400
+    # whole-file reparses of this fixture, and the scan is allowed six of those.
+    # One probe is *cheaper* than one control reparse — the probe's `}` sits on
+    # an earlier line, so the parser fails there and never reads the rest of the
+    # file (0.17 of a whole-file parse on the first key line, 1.4 on the last) —
+    # so the 802 probes measure about one control loop rather than two (0.9-1.7
+    # across runs on one machine, the spread coming from which of the two loops
+    # is timed first). The every-count scan replayed over the same fixture
+    # measures 20.
     best = Enum.min(for _ <- 1..3, do: elem(:timer.tc(fn -> fix(code) end), 0))
 
     control =
@@ -470,8 +478,9 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     assert fix(code) != code
 
     assert best < 6 * control,
-           "scan cost about #{round(best / control * 400)} reparses of the fixture, " <>
-             "expected about 520 (two per probed line); the every-count scan cost about 7000"
+           "the scan's 802 reparses cost #{Float.round(best / control, 2)} control loops " <>
+             "(a loop is 400 whole-file reparses of this fixture); a healthy scan measures " <>
+             "about 1, the every-count scan measures 20"
   end
 
   test "leaves a dangling comma untouched" do
