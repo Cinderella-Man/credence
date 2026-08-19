@@ -231,6 +231,23 @@ defmodule Credence.SyntaxRoundSafetyTest do
   ]
   """
 
+  # `@runaway_heredoc` with the doc closed — the exact bytes both the stunt
+  # double and the real `CloseUnclosedDocHeredoc` are required to produce.
+  @runaway_heredoc_closed """
+  defmodule Sample do
+    @doc \"\"\"
+    \"\"\"
+    def find_min_max(list) do
+      Enum.min_max(list)
+    end
+  end
+
+  [
+    :key1: val1,
+    :key2: val2
+  ]
+  """
+
   defp parses?(source), do: match?({:ok, _}, Sourceror.parse_string(source))
 
   describe "per-rule progress guard — what it must NOT do" do
@@ -275,7 +292,30 @@ defmodule Credence.SyntaxRoundSafetyTest do
         )
 
       assert applied == [{ClosesTheRunawayHeredoc, 1}]
-      assert code =~ ~s(  @doc """\n  """\n)
+      assert code == @runaway_heredoc_closed
+    end
+
+    # The case above is what the guard must do; this one is what the *shipped*
+    # rule actually does with the same source. The stunt double above only
+    # models `CloseUnclosedDocHeredoc` — nothing there would notice if the real
+    # rule stopped firing on this fixture, and the guard's own docs
+    # (`lib/syntax/progress_guard.ex`) name this rule as where the EOF-stop
+    # exclusion was learned. So pin the real rule's bytes, and pin that they are
+    # the bytes the stunt double stands in for.
+    test "the real CloseUnclosedDocHeredoc is the rule that repair models" do
+      {code, applied} =
+        Credence.Syntax.fix_with_trace(@runaway_heredoc,
+          syntax_rules: [Credence.Syntax.CloseUnclosedDocHeredoc],
+          syntax_partial_repairs: true
+        )
+
+      assert applied == [{Credence.Syntax.CloseUnclosedDocHeredoc, 1}]
+      assert code == @runaway_heredoc_closed
+      assert code == ClosesTheRunawayHeredoc.fix(@runaway_heredoc)
+
+      # The repair is real even though the source still does not parse: the
+      # front end no longer runs to EOF, it stops at the fault the heredoc hid.
+      refute parses?(code)
     end
 
     test "keeps a rewrite of the erroring line that leaves it broken differently" do
