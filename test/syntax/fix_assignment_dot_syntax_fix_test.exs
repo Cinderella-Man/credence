@@ -118,20 +118,44 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     end
   end
 
+  # Everything the pattern declines because it wants a bare identifier at the
+  # start of the line and at most one space before the dot. One list drives
+  # both the no-op tests and the check that the moduledoc names them, so the
+  # rule's documented coverage cannot drift away from its real coverage.
+  @declined [
+    "{:ok, val} =.foo()",
+    "@attr =.foo()",
+    "x = y =.foo()",
+    "x =  .foo()"
+  ]
+
   describe "fix/1 — shapes the rule does not handle" do
     test "anonymous call syntax unchanged" do
       code = "f =.(1)"
       confirm_fix(fix(code), code)
     end
 
-    test "second `=` on the line unchanged" do
-      code = "x = y =.foo()"
-      confirm_fix(fix(code), code)
+    for code <- @declined do
+      test "unchanged, and not reported: #{code}" do
+        confirm_fix(fix(unquote(code)), unquote(code))
+        assert analyze(unquote(code)) == []
+      end
     end
 
-    test "non-identifier left-hand side unchanged" do
-      code = "@attr =.foo()"
-      confirm_fix(fix(code), code)
+    test "the moduledoc's `## Not flagged` list names every one of them" do
+      {:docs_v1, _, _, _, %{"en" => doc}, _, _} = Code.fetch_docs(FixAssignmentDotSyntax)
+      [_, section] = Regex.run(~r/##\s+Not flagged\n(.*?)(?=\n##\s)/s, doc)
+
+      unlisted = Enum.reject(@declined, &String.contains?(section, &1))
+
+      assert unlisted == [],
+             """
+             These shapes are declined and pinned as no-ops above, but the
+             moduledoc's "Not flagged" list does not name them, so the rule
+             reads as having broader coverage than it has:
+
+               #{Enum.join(unlisted, "\n  ")}
+             """
     end
   end
 

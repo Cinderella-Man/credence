@@ -20,6 +20,15 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   - Comments (`# ref =.make_ref()`)
   - String literals (`msg = "=.not_a_dot"`)
   - A **digit** after the dot (`rate = .05`, `x =.5e3`) — see below
+  - Anything but a bare identifier on the left — a destructuring pattern
+    (`{:ok, val} =.foo()`) or a module attribute (`@attr =.foo()`)
+  - A second `=` on the line (`x = y =.foo()`)
+  - More than one space before the dot (`x =  .foo()`)
+
+  The last three are declines, not oversights the pattern happens to cover:
+  the pattern wants a bare identifier at the start of the line and at most one
+  space before the dot, and anything else is left for a human rather than
+  guessed at. Each is pinned as a no-op in the fix battery.
 
   ## Why a digit after the dot is left alone
 
