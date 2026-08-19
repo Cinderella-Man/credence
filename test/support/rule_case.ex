@@ -104,6 +104,37 @@ defmodule Credence.RuleCase do
   def valid_syntax?(code), do: match?({:ok, _}, Sourceror.parse_string(code))
 
   @doc """
+  The `@doc` strings, `@spec`s and `def` clauses `code` actually carries, in
+  source order, as `%{docs: [...], specs: [...], defs: [{name, arity}, ...]}`.
+
+  Use it to assert what emitted source *means* where "it parses" is not enough:
+  a repair that truncates a doc, folds an `@spec` into the doc string, or turns a
+  documented example into a live extra clause still parses and still compiles
+  without a warning. Reads the shape back off the source itself so the test never
+  reaches for the parser.
+  """
+  def module_shape(code) do
+    {:ok, ast} = Code.string_to_quoted(code)
+
+    {_ast, shape} =
+      Macro.prewalk(ast, %{docs: [], specs: [], defs: []}, fn
+        {:@, _, [{:doc, _, [text]}]} = node, acc when is_binary(text) ->
+          {node, %{acc | docs: acc.docs ++ [text]}}
+
+        {:@, _, [{:spec, _, [spec]}]} = node, acc ->
+          {node, %{acc | specs: acc.specs ++ [Macro.to_string(spec)]}}
+
+        {:def, _, [{name, _, args} | _]} = node, acc when is_atom(name) ->
+          {node, %{acc | defs: acc.defs ++ [{name, length(args || [])}]}}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    shape
+  end
+
+  @doc """
   True when `code` compiles. Use to assert a fix turned non-compiling input
   (e.g. an attribute outside a module) into a compiling module — hiding the
   `Code.compile_string` reach from the test.

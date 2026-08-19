@@ -8,7 +8,10 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   without a closing set of triple-quotes in between. This causes a
   `TokenMissingError` (missing terminator). The fix inserts a closing
   triple-quote line — indented to match the `@doc` line — immediately
-  before the `def` line.
+  before the line where the doc text ends: the `def` being documented, or
+  a module attribute (`@spec`, `@impl`, a second `@doc`) sitting between
+  the doc and that `def`. Only lines at the `@doc`'s own indentation
+  count, so a `def` example written *inside* the doc stays inside it.
 
   ## Bad (won't parse — TokenMissingError)
 
@@ -43,16 +46,27 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
   @doc_heredoc_open ~r/^(\s*)@doc\s+"""\s*$/
 
-  # A line that opens a definition. The trailing `\b` is what keeps English prose
-  # out: without it `defaults to 0 when absent.` — an ordinary first line of doc
-  # text — counts as "the next def", and the rule then closes the heredoc above
-  # it, emptying the doc and spilling its prose into the module body. Every
-  # `def…` form Elixir defines is listed so that no real definition stops being
-  # recognised. Order within the alternation does not matter: `\b` rejects any
-  # alternative that stops mid-word, so `defmacrop` cannot be read as `defmacro`
-  # plus a stray `p` — the engine backtracks to the spelling that ends on a word
-  # boundary.
-  @def_line ~r/^\s*def(?:p|macrop|macro|guardp|guard|delegate|module|protocol|impl|struct|exception|overridable)?\b/
+  # A line that opens a definition, matched against the line with its indentation
+  # already stripped. The trailing `\b` is what keeps English prose out: without
+  # it `defaults to 0 when absent.` — an ordinary first line of doc text — counts
+  # as "the next def", and the rule then closes the heredoc above it, emptying the
+  # doc and spilling its prose into the module body. Every `def…` form Elixir
+  # defines is listed so that no real definition stops being recognised. Order
+  # within the alternation does not matter: `\b` rejects any alternative that
+  # stops mid-word, so `defmacrop` cannot be read as `defmacro` plus a stray `p` —
+  # the engine backtracks to the spelling that ends on a word boundary.
+  @def_word ~r/^def(?:p|macrop|macro|guardp|guard|delegate|module|protocol|impl|struct|exception|overridable)?\b/
+
+  # A module attribute, likewise matched with the indentation stripped. An
+  # attribute at the module's own indentation ends the doc above it: `@doc` →
+  # `@spec`/`@impl` → `def` is the ordering LLMs emit most often, and scanning
+  # past the attribute to the `def` would fold the attribute's text into the doc
+  # string and delete the attribute itself. A second `@doc """` counts too, which
+  # is what stops two unclosed openers from claiming the same insertion point.
+  # The cost is doc *prose* whose line begins with a bare `@word` at exactly the
+  # module's indentation, which is read as the end of the doc; prose normally
+  # writes such a mention inline or in backticks.
+  @attribute_word ~r/^@\w+\b/
 
   @impl true
   def analyze(source) do
@@ -89,7 +103,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
           [_, indent] ->
             remaining = Enum.drop(lines, idx + 1)
 
-            offset = def_offset(remaining)
+            offset = doc_end_offset(remaining, indent)
 
             if offset && not closing_quotes_below?(remaining) do
               [{idx + 1 + offset, indent}]
@@ -114,42 +128,59 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
   defp unclosed_doc_heredoc?(line, line_no, lines) do
     case Regex.run(@doc_heredoc_open, line) do
-      [_, _indent] ->
+      [_, indent] ->
         remaining = Enum.drop(lines, line_no)
-        def_offset(remaining) != nil and not closing_quotes_below?(remaining)
+        doc_end_offset(remaining, indent) != nil and not closing_quotes_below?(remaining)
 
       _ ->
         false
     end
   end
 
-  # How far below this `@doc` heredoc opener the next definition sits, or `nil`
-  # when there is none — in which case there is nothing to close the heredoc in
-  # front of and the rule declines. This is both the admission test and the
-  # insertion point: the closing `"""` goes immediately above *this* line. Taking
-  # the first non-blank line instead would put the terminator above the doc's own
-  # text, emptying the doc and promoting its content to module-body code.
-  # The scan runs to the end of the file; everything between the opener and the
-  # definition is doc text, however it is spelled.
-  defp def_offset(lines) do
-    Enum.find_index(lines, &Regex.match?(@def_line, &1))
+  # How far below this `@doc` heredoc opener the doc text ends, or `nil` when the
+  # rule declines. This is both the admission test and the insertion point: the
+  # closing `"""` goes immediately above *this* line. Taking the first non-blank
+  # line instead would put the terminator above the doc's own text, emptying the
+  # doc and promoting its content to module-body code.
+  #
+  # There must be a definition below at the `@doc`'s own indentation, otherwise
+  # there is nothing to close the heredoc in front of. Anchoring to that indent is
+  # what keeps a `def` example *inside* the doc text — indented deeper, as an
+  # example is — from being read as the definition being documented. The doc then
+  # ends at the first module attribute above that definition, if any: everything
+  # between the opener and that line is doc text, however it is spelled.
+  defp doc_end_offset(lines, indent) do
+    case Enum.find_index(lines, &at_indent?(&1, indent, @def_word)) do
+      nil ->
+        nil
+
+      def_offset ->
+        attribute_offset =
+          lines
+          |> Enum.take(def_offset)
+          |> Enum.find_index(&at_indent?(&1, indent, @attribute_word))
+
+        attribute_offset || def_offset
+    end
+  end
+
+  # Does `line` match `word_regex` at exactly `indent`? Deeper-indented lines are
+  # doc text (examples), not module-body code.
+  defp at_indent?(line, indent, word_regex) do
+    case Regex.run(~r/^(\s*)(.*)$/, line) do
+      [_, ^indent, rest] -> Regex.match?(word_regex, rest)
+      _ -> false
+    end
   end
 
   # Is there a triple-quote line anywhere below? This is what keeps the rule off a
   # *correctly closed* `@doc` heredoc — including one whose first content line is a
   # `def` example, where inserting a terminator would empty the doc, promote the
   # example to real code, and leave the doc's own closing quotes opening a
-  # heredoc that swallows the rest of the file. Like `def_offset/1` it scans to
-  # the end of the file: `Enum.find_value/3` skips every falsy result, so the
-  # `-> nil` branch means "keep looking" and only `-> true` stops the scan. A
-  # definition below does not bound it — see the moduledoc's known limitation.
+  # heredoc that swallows the rest of the file. Like `doc_end_offset/2` it scans
+  # to the end of the file: nothing below bounds it, neither a blank line nor a
+  # definition — see the moduledoc's known limitation.
   defp closing_quotes_below?(lines) do
-    Enum.find_value(lines, false, fn next_line ->
-      cond do
-        String.trim(next_line) == "" -> nil
-        Regex.match?(~r/^\s*"""/, next_line) -> true
-        true -> false
-      end
-    end)
+    Enum.any?(lines, &Regex.match?(~r/^\s*"""/, &1))
   end
 end

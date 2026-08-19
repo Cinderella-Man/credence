@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, module_shape: 1, valid_syntax?: 1]
 
   alias Credence.Syntax.CloseUnclosedDocHeredoc
 
@@ -222,6 +222,138 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     code = """
     defmodule Sample do
       @doc \"""
+      Docs for a.
+      def a, do: 1
+
+      @doc \"""
+      Docs for b.
+      \"""
+      def b, do: 2
+    end
+    """
+
+    assert analyze(code) == []
+    confirm_fix(fix(code), code)
+  end
+
+  # A `def` example written *inside* the doc text is indented deeper than the
+  # `@doc` line that opened the doc. Reading it as "the next definition" closes
+  # the doc above it: the doc is truncated to the prose before the example and
+  # the example itself becomes a second, live clause of the function. The output
+  # parses, so nothing downstream can revert it — hence the assertions below read
+  # the doc and the clause list back off the string the rule actually emitted.
+  test "does not close the doc above a def example indented inside the doc text" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Example:
+
+          def add(a, b), do: a + b
+      def add(a, b), do: a + b
+    end
+    """
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Example:
+
+          def add(a, b), do: a + b
+      \"""
+      def add(a, b), do: a + b
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+
+    shape = module_shape(fix(input))
+    assert shape.docs == ["Example:\n\n    def add(a, b), do: a + b\n"]
+    assert shape.defs == [{:add, 2}]
+  end
+
+  # `@doc` → `@spec` → `def` is the ordering this rule exists to repair. Scanning
+  # past the `@spec` to the `def` puts the closer below the attribute, so the
+  # spec's text ends up inside the doc string and the `@spec` itself is gone. The
+  # result parses and compiles without a warning, so the deleted contract is
+  # invisible to every downstream guard.
+  test "closes the doc above an @spec that sits between the doc and its def" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      @spec add(integer, integer) :: integer
+      def add(a, b), do: a + b
+    end
+    """
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      \"""
+      @spec add(integer, integer) :: integer
+      def add(a, b), do: a + b
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+
+    shape = module_shape(fix(input))
+    assert shape.docs == ["Adds the two numbers.\n\n"]
+    assert shape.specs == ["add(integer, integer) :: integer"]
+    assert shape.defs == [{:add, 2}]
+  end
+
+  # Two unclosed openers with no `\"""` anywhere below them must not resolve to
+  # the same insertion point: two closers stacked on one line terminate the first
+  # doc and re-open a heredoc that runs to the end of the file, so the output can
+  # never parse and the whole round — including other rules' repairs to the same
+  # file — is discarded. The second opener is where the first doc ends.
+  test "gives each unclosed doc its own closer when both share the next def" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Docs for a.
+
+      @doc \"""
+      More docs.
+      def a, do: 1
+    end
+    """
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Docs for a.
+
+      \"""
+      @doc \"""
+      More docs.
+      \"""
+      def a, do: 1
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+
+    shape = module_shape(fix(input))
+    assert shape.docs == ["Docs for a.\n\n", "More docs.\n"]
+    assert shape.defs == [{:a, 0}]
+  end
+
+  # Nothing below the opener bounds the "is there a `\"""` further down?" veto —
+  # in particular a blank line does not stop the scan. Pinned so the veto's answer
+  # stays the same now that the scan says so in one line.
+  test "declines the repair when a blank line precedes the closing quotes below" do
+    code = """
+    defmodule Sample do
+      @doc \"""
+
       Docs for a.
       def a, do: 1
 
