@@ -48,3 +48,9 @@ maintainer_tools/pr_review/_briefing/
 maintainer_tools/pr_review/.review_logs/
 maintainer_tools/pr_review/.lock
 maintainer_tools/pr_review/.manifest.*.json
+maintainer_tools/pr_review/_fix_report
+maintainer_tools/pr_review/.fix_logs/
+maintainer_tools/pr_review/.fix_scratch/
+maintainer_tools/pr_review/.fixes.*.json
+maintainer_tools/pr_review/.campaign.lock
+maintainer_tools/pr_review/.needs_refresh

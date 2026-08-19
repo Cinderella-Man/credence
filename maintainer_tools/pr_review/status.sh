@@ -33,3 +33,8 @@ jq -r '
       "    \(.reviewed_at)  \(.path) — \(.verdict)\(if .findings > 0 then "(\(.findings))" else "" end)")
    else empty end)
 ' "$MANIFEST"
+
+if [[ -f "$SCRIPT_DIR/fixes.json" ]]; then
+  echo
+  "$SCRIPT_DIR/fix_queue.sh" status
+fi

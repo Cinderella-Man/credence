@@ -8,3 +8,8 @@
     placements parse; the rule silently commits the tokenizer-faithful one,
     and no test pins this shape.
 
+## test/syntax/close_unclosed_brace_analyze_test.exs — 2026-08-19 (added, test_syntax)
+- concern: test/syntax/close_unclosed_brace_analyze_test.exs:98 — the negative battery only covers ambiguous placements where appending `}` fails to parse, so it presents the rule's guard as stronger than it is; the untested case is a continuation line that starts with an operator, e.g. `x = {:ok, v` / `|> to_string()` / `end`, where appending the brace to the last content line yields `{:ok, v |> to_string()}` — that parses, so analyze flags it and the fix commits it, silently turning the author's likely `{:ok, v} |> to_string()` into a different program. No test in this file (or the fix file) pins that behaviour either way.
+- nit: test/syntax/close_unclosed_brace_analyze_test.exs:35 — nothing pins the `@max_braces 5` backstop from the analyze side: a literal needing six closing braces produces no issue at all, and the deepest input tested anywhere in the pair needs three, so the boundary could move without a test noticing.
+- experiment: settles the concern above — mix run -e 'IO.puts Credence.Syntax.CloseUnclosedBrace.fix("defmodule E do\n  def foo(v) do\n    x = {:ok, v\n    |> to_string()\n  end\nend\n")'
+

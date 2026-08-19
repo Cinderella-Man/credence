@@ -126,6 +126,13 @@ rows() {
       C*) origin=added;    path="$p2" ;;
       *)  die "unhandled name-status '$st' for '$p1'" ;;
     esac
+    case "$path" in
+      # The campaign's own ledgers churn with every session; as rows they
+      # would be perpetual worktree-mismatch errors after any --refresh.
+      maintainer_tools/pr_review/manifest.json | \
+      maintainer_tools/pr_review/findings.md | \
+      maintainer_tools/pr_review/fixes.json) continue ;;
+    esac
     changed["$path"]=1
     cat="$(category "$path")"
     nd="$(numstat_for "$origin" "$path" "$old")"

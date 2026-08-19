@@ -107,7 +107,7 @@ mark_error() { # path reason
 #     and manifest.json/findings.md are dirty for the whole campaign.
 #  2. Porcelain snapshots for the rest of the repo; new dirt is reverted, and
 #     if the revert does not restore the pre-session state the loop aborts.
-owned_hash() { cat "$MANIFEST" "$FINDINGS" | md5sum; }
+owned_hash() { cat "$MANIFEST" "$FINDINGS" "$SCRIPT_DIR/fixes.json" 2>/dev/null | md5sum; }
 tree_state() { git -C "$REPO" status --porcelain=v1 | LC_ALL=C sort; }
 revert_new_dirt() { # $1 = before-state, $2 = after-state; echoes reverted paths
   local line xy path
@@ -202,10 +202,14 @@ record_findings() { # path origin category — appends _verdict body to findings
 }
 
 commit_progress() { # $1 = done count
-  git -C "$REPO" add -- "$MANIFEST" || log "warning: could not stage manifest.json"
-  git -C "$REPO" add -- "$FINDINGS" || log "warning: could not stage findings.md"
+  local -a ledgers=("$MANIFEST" "$FINDINGS")
+  [[ -f "$SCRIPT_DIR/fixes.json" ]] && ledgers+=("$SCRIPT_DIR/fixes.json")
+  local f
+  for f in "${ledgers[@]}"; do
+    git -C "$REPO" add -- "$f" || log "warning: could not stage ${f##*/}"
+  done
   # pathspec commit: never sweeps up anything the user staged for their own work
-  if git -C "$REPO" commit -q -m "pr_review: $1/$TOTAL files reviewed" -- "$MANIFEST" "$FINDINGS"; then
+  if git -C "$REPO" commit -q -m "pr_review: $1/$TOTAL files reviewed" -- "${ledgers[@]}"; then
     rlog COMMIT "committed progress ($1/$TOTAL)"
   else
     rlog COMMIT "nothing to commit"
@@ -261,6 +265,7 @@ main() {
 
     cp "$MANIFEST" "$BAKDIR/manifest.json"
     cp "$FINDINGS" "$BAKDIR/findings.md"
+    [[ -f "$SCRIPT_DIR/fixes.json" ]] && cp "$SCRIPT_DIR/fixes.json" "$BAKDIR/fixes.json"
     owned_before="$(owned_hash)"
     before="$(tree_state)"
 
@@ -270,7 +275,12 @@ main() {
     if [[ "$(owned_hash)" != "$owned_before" ]]; then
       cp "$BAKDIR/manifest.json" "$MANIFEST"
       cp "$BAKDIR/findings.md" "$FINDINGS"
-      rlog GUARD "session touched manifest.json/findings.md — restored from backup"
+      if [[ -f "$BAKDIR/fixes.json" ]]; then
+        cp "$BAKDIR/fixes.json" "$SCRIPT_DIR/fixes.json"
+      elif [[ -f "$SCRIPT_DIR/fixes.json" ]]; then
+        rm -f "$SCRIPT_DIR/fixes.json"   # the session invented it
+      fi
+      rlog GUARD "session touched the campaign ledgers — restored from backup"
       log "⚠ session touched the loop's own data files (restored) — retrying"
       rm -f "$VERDICT"
     fi
@@ -338,7 +348,7 @@ main() {
     fi
   done
 
-  "$SCRIPT_DIR/status.sh" || true
+  [[ "${QUIET_STATUS:-0}" == 1 ]] || "$SCRIPT_DIR/status.sh" || true
 }
 
 # Run main unless sourced (sourcing exposes the functions for testing).
