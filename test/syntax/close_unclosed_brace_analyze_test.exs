@@ -69,6 +69,39 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
   end
 
+  test "reports the line the literal starts on, not the innermost opening" do
+    # The parser names the *innermost* `{` it was still holding — line 4 here.
+    # The literal the author has to close starts on line 3, and that is the
+    # line the issue must point at.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1,
+            %{a: 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
+  end
+
+  test "no issue when a nesting that opens on two lines has a competing placement" do
+    # Two readings parse and mean different things: both braces at the end
+    # (`{1 ++ %{a: 2}}`, a one-element tuple) or one brace on line 3 and one on
+    # line 4 (`{1} ++ %{a: 2}`). Line 3 is before the `{` the parser names, so
+    # the rule must still consider it before committing.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1
+        ++ %{a: 2
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
   test "flags an unclosed struct literal" do
     code = """
     defmodule Example do

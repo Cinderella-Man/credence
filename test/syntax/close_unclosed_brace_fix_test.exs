@@ -272,6 +272,24 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "leaves a nesting that opens on two lines untouched" do
+    # The parser names only the innermost `{` still open — line 4 here — so
+    # line 3, where the outer `{` sits, is the first line a competing `}` could
+    # belong to. Both readings parse and differ: `{1 ++ %{a: 2}}` is a
+    # one-element tuple, `{1} ++ %{a: 2}` concatenates a tuple and a map. The
+    # rule must refuse rather than silently commit one of them.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1
+        ++ %{a: 2
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "leaves a dangling comma untouched" do
     code = """
     defmodule Example do

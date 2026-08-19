@@ -58,6 +58,10 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
       so the comma pins the next line inside the literal. When the repair needs
       more than one `}`, a competing reading can also *split* them — some on an
       earlier line, the rest on the last — and those placements are tried too.
+      The parser names only the *innermost* `{` it was still holding, so when a
+      literal's openings sit on different lines the scan walks back out to the
+      line the literal really opens on before it starts; otherwise the lines
+      between the two openings would never be tried.
 
     * **No dangling comma.** A literal whose last line ends in `,` is truncated
       mid-element; Elixir accepts a trailing comma, so closing
@@ -115,9 +119,10 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   defp repair(source) do
     with {:ok, open_line, end_line} <- detect(source),
          {:ok, lines, index} <- target_line(source, open_line, end_line),
-         {:ok, fixed} <- close_at(lines, index),
-         :ok <- sole_placement(lines, open_line, index) do
-      {:fixed, fixed, open_line}
+         {:ok, fixed, count} <- close_at(lines, index),
+         start_line = outermost_open_line(lines, index, open_line, count),
+         :ok <- sole_placement(lines, start_line, index) do
+      {:fixed, fixed, start_line}
     else
       _ -> :no_fix
     end
@@ -176,7 +181,40 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
         |> List.replace_at(index, line <> String.duplicate("}", count))
         |> Enum.join("\n")
 
-      if match?({:ok, _}, Code.string_to_quoted(candidate)), do: {:ok, candidate}
+      if match?({:ok, _}, Code.string_to_quoted(candidate)), do: {:ok, candidate, count}
+    end)
+  end
+
+  # `detect/1` learns the *innermost* `{` left open, because the parser raises
+  # against the top of its delimiter stack. When a literal's openings sit on
+  # different lines that is not where the literal starts, and every line above
+  # it would go untested as a competing `}` placement. Each `}` appended at the
+  # target line closes one more opening, so re-asking the parser with one, two,
+  # ... `}` already in place walks back out through the stack; the earliest line
+  # any of those answers names is the line the literal really opens on.
+  defp outermost_open_line(lines, index, open_line, count) do
+    line = Enum.at(lines, index)
+
+    Enum.reduce(1..(count - 1)//1, open_line, fn taken, earliest ->
+      candidate =
+        lines
+        |> List.replace_at(index, line <> String.duplicate("}", taken))
+        |> Enum.join("\n")
+
+      case Code.string_to_quoted(candidate, columns: true) do
+        {:error, {meta, _message, _token}} when is_list(meta) ->
+          reported = Keyword.get(meta, :line)
+
+          if Keyword.get(meta, :error_type) == :mismatched_delimiter and
+               Keyword.get(meta, :opening_delimiter) == :"{" and is_integer(reported) do
+            min(earliest, reported)
+          else
+            earliest
+          end
+
+        _ ->
+          earliest
+      end
     end)
   end
 
@@ -187,14 +225,15 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # placement: closing after a trailing comma drops an element (the same
   # reasoning as target_line/3), so the comma pins the next line inside the
   # literal.
-  defp sole_placement(lines, open_line, index) do
+  defp sole_placement(lines, start_line, index) do
     ambiguous =
-      (open_line - 1)..(index - 1)//1
+      (start_line - 1)..(index - 1)//1
       |> Enum.any?(fn earlier ->
         line = String.trim_trailing(Enum.at(lines, earlier))
 
         line != "" and not String.ends_with?(line, ",") and
-          (close_at(lines, earlier) != :none or split_placement?(lines, earlier, index))
+          (match?({:ok, _, _}, close_at(lines, earlier)) or
+             split_placement?(lines, earlier, index))
       end)
 
     if ambiguous, do: :ambiguous, else: :ok
@@ -205,9 +244,10 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # all of them (above) cannot see that split, so try each share explicitly.
   defp split_placement?(lines, earlier, index) do
     Enum.any?(1..(@max_braces - 1), fn taken ->
-      lines
-      |> List.replace_at(earlier, Enum.at(lines, earlier) <> String.duplicate("}", taken))
-      |> close_at(index) != :none
+      moved =
+        List.replace_at(lines, earlier, Enum.at(lines, earlier) <> String.duplicate("}", taken))
+
+      match?({:ok, _, _}, close_at(moved, index))
     end)
   end
 end
