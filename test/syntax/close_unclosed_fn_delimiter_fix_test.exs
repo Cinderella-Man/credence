@@ -29,6 +29,72 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
   end
   """
 
+  # The realistic occurrence of this rule's shape and its repair. Three tests
+  # share it — the repair itself, and the two that check what the repaired
+  # output is (it no longer flags, and it parses). Written once so an edit to
+  # the input cannot leave the other two asserting about a different program.
+  @solution_source """
+  defmodule Solution do
+    def replace_zero(matrix) do
+      Enum.map(matrix, fn row ->
+        non_zeros = Enum.filter(row, fn element -> element != 0 end)
+        case non_zeros do
+          [] -> row
+          _ ->
+            min_value = Enum.min(non_zeros)
+            Enum.map(row, fn element ->
+              if element == 0 do min_value else element end)
+            end
+        end
+      end)
+    end
+  end
+  """
+
+  @solution_repaired """
+  defmodule Solution do
+    def replace_zero(matrix) do
+      Enum.map(matrix, fn row ->
+        non_zeros = Enum.filter(row, fn element -> element != 0 end)
+        case non_zeros do
+          [] -> row
+          _ ->
+            min_value = Enum.min(non_zeros)
+            Enum.map(row, fn element ->
+              if element == 0 do min_value else element end end)
+        end
+      end)
+    end
+  end
+  """
+
+  # One copy of the same bug in a whole module, and its repair. Two tests stack
+  # two copies of it — the repair of both, and the line numbers reported for
+  # them — and the second's expected lines (5 and 14) are arithmetic on this
+  # exact source, so the two must be the same bytes by construction.
+  @two_bugs """
+  defmodule TwoBugs do
+    def a(m) do
+      Enum.map(m, fn r ->
+        Enum.map(r, fn e ->
+          if e == 0 do 1 else e end)
+        end
+      end)
+    end
+  end
+  """
+
+  @two_bugs_repaired """
+  defmodule TwoBugs do
+    def a(m) do
+      Enum.map(m, fn r ->
+        Enum.map(r, fn e ->
+          if e == 0 do 1 else e end end)
+      end)
+    end
+  end
+  """
+
   # The smallest whole occurrence of the bug, and its repair. The two pass-bound
   # tests below stack a hundred-odd copies of it, so it is kept short.
   @one_occurrence """
@@ -45,86 +111,15 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
   """
 
   test "inserts missing end before ) and removes stray end on next line" do
-    input = """
-    defmodule Solution do
-      def replace_zero(matrix) do
-        Enum.map(matrix, fn row ->
-          non_zeros = Enum.filter(row, fn element -> element != 0 end)
-          case non_zeros do
-            [] -> row
-            _ ->
-              min_value = Enum.min(non_zeros)
-              Enum.map(row, fn element ->
-                if element == 0 do min_value else element end)
-              end
-          end
-        end)
-      end
-    end
-    """
-
-    expected = """
-    defmodule Solution do
-      def replace_zero(matrix) do
-        Enum.map(matrix, fn row ->
-          non_zeros = Enum.filter(row, fn element -> element != 0 end)
-          case non_zeros do
-            [] -> row
-            _ ->
-              min_value = Enum.min(non_zeros)
-              Enum.map(row, fn element ->
-                if element == 0 do min_value else element end end)
-          end
-        end)
-      end
-    end
-    """
-
-    confirm_fix(fix(input), expected)
+    confirm_fix(fix(@solution_source), @solution_repaired)
   end
 
   test "fixed output no longer flags" do
-    code = """
-    defmodule Solution do
-      def replace_zero(matrix) do
-        Enum.map(matrix, fn row ->
-          non_zeros = Enum.filter(row, fn element -> element != 0 end)
-          case non_zeros do
-            [] -> row
-            _ ->
-              min_value = Enum.min(non_zeros)
-              Enum.map(row, fn element ->
-                if element == 0 do min_value else element end)
-              end
-          end
-        end)
-      end
-    end
-    """
-
-    assert analyze(fix(code)) == []
+    assert analyze(fix(@solution_source)) == []
   end
 
   test "fixed output is well-formed (parses)" do
-    code = """
-    defmodule Solution do
-      def replace_zero(matrix) do
-        Enum.map(matrix, fn row ->
-          non_zeros = Enum.filter(row, fn element -> element != 0 end)
-          case non_zeros do
-            [] -> row
-            _ ->
-              min_value = Enum.min(non_zeros)
-              Enum.map(row, fn element ->
-                if element == 0 do min_value else element end)
-              end
-          end
-        end)
-      end
-    end
-    """
-
-    assert valid_syntax?(fix(code))
+    assert valid_syntax?(fix(@solution_source))
   end
 
   test "does not modify already-valid code" do
@@ -169,53 +164,20 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
   # deletion for copy 1 still failed to parse because of copy 2, so the rule
   # returned the source byte-identical and reported nothing.
   test "repairs both occurrences when the same bug appears twice in one file" do
-    one = """
-    defmodule TwoBugs do
-      def a(m) do
-        Enum.map(m, fn r ->
-          Enum.map(r, fn e ->
-            if e == 0 do 1 else e end)
-          end
-        end)
-      end
-    end
-    """
+    two = @two_bugs <> @two_bugs
 
-    expected_one = """
-    defmodule TwoBugs do
-      def a(m) do
-        Enum.map(m, fn r ->
-          Enum.map(r, fn e ->
-            if e == 0 do 1 else e end end)
-        end)
-      end
-    end
-    """
-
-    confirm_fix(fix(one <> one), expected_one <> expected_one)
-    assert valid_syntax?(fix(one <> one))
+    confirm_fix(fix(two), @two_bugs_repaired <> @two_bugs_repaired)
+    assert valid_syntax?(fix(two))
   end
 
   # Line numbers are reported against the *input*, not against the intermediate
   # source the second pass sees: copy 2's `)` sits on input line 14, and the
   # first pass has already deleted a line above it.
   test "reports every occurrence it rewrites, at its line in the input" do
-    one = """
-    defmodule TwoBugs do
-      def a(m) do
-        Enum.map(m, fn r ->
-          Enum.map(r, fn e ->
-            if e == 0 do 1 else e end)
-          end
-        end)
-      end
-    end
-    """
-
     assert [
              %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 5}},
              %Issue{rule: :close_unclosed_fn_delimiter, meta: %{line: 14}}
-           ] = analyze(one <> one)
+           ] = analyze(@two_bugs <> @two_bugs)
   end
 
   # Locality: a second, unrelated fault elsewhere in the file must not veto the
