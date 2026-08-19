@@ -290,6 +290,46 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "leaves an earlier line that swallows the brace in a comment untouched" do
+    # Appending a `}` to line 3 puts it inside the comment, so we cannot tell
+    # whether the brace belonged there — the same doubt as a competing
+    # placement, and refused for the same reason. (Committing would turn the
+    # author's likely `{1} |> g()` into `{1 |> g()}`.)
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1 # }
+        |> g()
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "scans a long literal without a blow-up in reparses" do
+    # The uniqueness scan tries the missing braces on every earlier line of the
+    # literal, and each try reparses the whole file. Trying every *count* on
+    # every line made that 25 whole-file reparses per line: an 800-line literal
+    # took ~2.2s. Only the shares of the braces the repair actually needed can
+    # compete, so the real bound is a couple of reparses per line — ~0.19s for
+    # the same input. The limit below sits between the two, with room for a
+    # loaded machine on either side.
+    # 400 entries, each spread over two lines so no line ends in `,` but the
+    # last — which would be a dangling comma and refused before the scan runs.
+    entries =
+      Enum.map_join(1..400, "\n", fn i ->
+        "      k#{i}:\n        #{i}#{if i < 400, do: ",", else: ""}"
+      end)
+
+    code = "defmodule Example do\n  def foo do\n    x = %{\n" <> entries <> "\n  end\nend\n"
+
+    best = Enum.min(for _ <- 1..3, do: elem(:timer.tc(fn -> fix(code) end), 0))
+
+    assert fix(code) != code
+    assert best < 1_000_000, "scan took #{div(best, 1000)}ms, expected well under 1000ms"
+  end
+
   test "leaves a dangling comma untouched" do
     code = """
     defmodule Example do

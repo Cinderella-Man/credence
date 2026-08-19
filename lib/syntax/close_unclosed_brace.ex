@@ -121,7 +121,7 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
          {:ok, lines, index} <- target_line(source, open_line, end_line),
          {:ok, fixed, count} <- close_at(lines, index),
          start_line = outermost_open_line(lines, index, open_line, count),
-         :ok <- sole_placement(lines, start_line, index) do
+         :ok <- sole_placement(lines, start_line, index, count) do
       {:fixed, fixed, start_line}
     else
       _ -> :no_fix
@@ -173,16 +173,18 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # Append the fewest `}` that make the whole source parse. Committing only a
   # parsing result is what keeps ambiguous placements out.
   defp close_at(lines, index) do
-    line = Enum.at(lines, index)
-
     Enum.find_value(1..@max_braces, :none, fn count ->
-      candidate =
-        lines
-        |> List.replace_at(index, line <> String.duplicate("}", count))
-        |> Enum.join("\n")
+      candidate = candidate(lines, index, count)
 
       if match?({:ok, _}, Code.string_to_quoted(candidate)), do: {:ok, candidate, count}
     end)
+  end
+
+  # The source with `count` `}` appended to the line at `index`.
+  defp candidate(lines, index, count) do
+    lines
+    |> List.replace_at(index, Enum.at(lines, index) <> String.duplicate("}", count))
+    |> Enum.join("\n")
   end
 
   # `detect/1` learns the *innermost* `{` left open, because the parser raises
@@ -193,15 +195,8 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # ... `}` already in place walks back out through the stack; the earliest line
   # any of those answers names is the line the literal really opens on.
   defp outermost_open_line(lines, index, open_line, count) do
-    line = Enum.at(lines, index)
-
     Enum.reduce(1..(count - 1)//1, open_line, fn taken, earliest ->
-      candidate =
-        lines
-        |> List.replace_at(index, line <> String.duplicate("}", taken))
-        |> Enum.join("\n")
-
-      case Code.string_to_quoted(candidate, columns: true) do
+      case Code.string_to_quoted(candidate(lines, index, taken), columns: true) do
         {:error, {meta, _message, _token}} when is_list(meta) ->
           reported = Keyword.get(meta, :line)
 
@@ -225,29 +220,44 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # placement: closing after a trailing comma drops an element (the same
   # reasoning as target_line/3), so the comma pins the next line inside the
   # literal.
-  defp sole_placement(lines, start_line, index) do
+  defp sole_placement(lines, start_line, index, count) do
     ambiguous =
       (start_line - 1)..(index - 1)//1
       |> Enum.any?(fn earlier ->
         line = String.trim_trailing(Enum.at(lines, earlier))
 
         line != "" and not String.ends_with?(line, ",") and
-          (match?({:ok, _, _}, close_at(lines, earlier)) or
-             split_placement?(lines, earlier, index))
+          competing_placement?(lines, earlier, index, count)
       end)
 
     if ambiguous, do: :ambiguous, else: :ok
   end
 
-  # When the repair needs more than one `}`, the competing reading may put only
-  # *some* of them on the earlier line and the rest on the target line. Moving
-  # all of them (above) cannot see that split, so try each share explicitly.
-  defp split_placement?(lines, earlier, index) do
-    Enum.any?(1..(@max_braces - 1), fn taken ->
-      moved =
-        List.replace_at(lines, earlier, Enum.at(lines, earlier) <> String.duplicate("}", taken))
+  # A competing reading closes the same openings, so it appends exactly as many
+  # `}` as the repair did — only their *share* between the earlier line and the
+  # target line differs. Those `count` shares are the whole alternative set, so
+  # there is no need to try every count on every line; that is what keeps the
+  # scan off 25 whole-source reparses for each line of the literal.
+  #
+  # Unless the braces never reach the code at all. A line ending in a comment,
+  # string or heredoc swallows whatever is appended to it, and then there is no
+  # telling whether the `}` belonged there — doubt of the same kind, so such a
+  # line is refused too. Appending one brace to it *on top of* the full repair
+  # is the probe: that only parses when the extra one was swallowed.
+  defp competing_placement?(lines, earlier, index, count) do
+    Enum.any?(count..1//-1, fn taken ->
+      parses_with?(lines, earlier, taken, index, count - taken)
+    end) or parses_with?(lines, earlier, 1, index, count)
+  end
 
-      match?({:ok, _, _}, close_at(moved, index))
-    end)
+  # Does the source parse with `taken` `}` appended to the earlier line and
+  # `rest` of them appended to the target line?
+  defp parses_with?(lines, earlier, taken, index, rest) do
+    source =
+      lines
+      |> List.replace_at(earlier, Enum.at(lines, earlier) <> String.duplicate("}", taken))
+      |> candidate(index, rest)
+
+    match?({:ok, _}, Code.string_to_quoted(source))
   end
 end
