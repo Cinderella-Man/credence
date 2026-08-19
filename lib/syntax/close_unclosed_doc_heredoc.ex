@@ -79,7 +79,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
           [_, indent] ->
             remaining = Enum.drop(lines, idx + 1)
 
-            if next_nonblank_is_def?(remaining) and not closed_before_def?(remaining) do
+            if def_below?(remaining) and not closing_quotes_below?(remaining) do
               offset = find_next_nonblank_offset(remaining)
               [{idx + 1 + offset, indent}]
             else
@@ -105,14 +105,22 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
     case Regex.run(@doc_heredoc_open, line) do
       [_, _indent] ->
         remaining = Enum.drop(lines, line_no)
-        next_nonblank_is_def?(remaining) and not closed_before_def?(remaining)
+        def_below?(remaining) and not closing_quotes_below?(remaining)
 
       _ ->
         false
     end
   end
 
-  defp next_nonblank_is_def?(lines) do
+  # Both scans below run to the end of the file, not to the first non-blank line:
+  # `Enum.find_value/3` skips *every* falsy result, so the `-> false` branches
+  # mean "keep looking", exactly like the `-> nil` one. Only a `-> true` stops
+  # them. Read as "stops at the first non-blank line" they look like a pair of
+  # mutually exclusive tests, which they are not.
+
+  # Is there a definition anywhere below this `@doc` heredoc opener? If not,
+  # there is nothing to close the heredoc in front of.
+  defp def_below?(lines) do
     Enum.find_value(lines, false, fn next_line ->
       cond do
         String.trim(next_line) == "" -> nil
@@ -122,7 +130,12 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
     end)
   end
 
-  defp closed_before_def?(lines) do
+  # Is there a triple-quote line anywhere below? This is what keeps the rule off a
+  # *correctly closed* `@doc` heredoc — including one whose first content line is a
+  # `def` example, where inserting a terminator would empty the doc, promote the
+  # example to real code, and leave the doc's own closing quotes opening a
+  # heredoc that swallows the rest of the file.
+  defp closing_quotes_below?(lines) do
     Enum.find_value(lines, false, fn next_line ->
       cond do
         String.trim(next_line) == "" -> nil
