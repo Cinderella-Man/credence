@@ -7,9 +7,15 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
   defp analyze(code), do: FixAssignmentDotSyntax.analyze(code)
 
   describe "analyze/1 — flags the extra dot after =" do
+    # The message is the only part of an issue a user reads, and nothing else in
+    # the suite pins it: with it emptied, every other test here and in the fix
+    # battery still passes. Pinned exactly, once, on the simplest flagging input.
     test "flags `ref =.make_ref()`" do
-      assert [%Issue{rule: :fix_assignment_dot_syntax, meta: %{line: 1}}] =
+      assert [%Issue{rule: :fix_assignment_dot_syntax, message: message, meta: %{line: 1}}] =
                analyze("ref =.make_ref()")
+
+      assert message ==
+               "Extra dot after `=` in assignment — use `var = fun()` instead of `var =.fun()`."
     end
 
     test "flags with space before dot: `ref = .make_ref()`" do
@@ -42,7 +48,7 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
       assert [%Issue{meta: %{line: 1}}, %Issue{meta: %{line: 2}}] = analyze(source)
     end
 
-    # The flagging one of the three shapes the second-`=` boundary
+    # This is the flagging one of the three shapes the second-`=` boundary
     # distinguishes; the two declining ones sit in "other shapes the fix does
     # not handle" below. An `=` *before* the dot declines, and so does an `=`
     # after it when it forms a second `=.`; a plain `=` after the dot is an
