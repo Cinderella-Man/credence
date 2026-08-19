@@ -44,6 +44,18 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
   end
 
+  test "flags a nesting at the @max_braces backstop — five closing braces" do
+    code = """
+    defmodule Example do
+      def foo do
+        {:ok, %{a: %{b: %{c: %{d: 1
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
+  end
+
   test "flags a literal spread over several lines" do
     code = """
     defmodule Example do
@@ -134,6 +146,20 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     defmodule Example do
       def foo do
         {:ok,
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "no issue beyond the @max_braces backstop — six closing braces needed" do
+    # Deeper than the backstop is a degenerate input, not a target: the rule
+    # stays silent rather than stacking ever more braces onto one line.
+    code = """
+    defmodule Example do
+      def foo do
+        {:ok, %{a: %{b: %{c: %{d: %{e: 1
       end
     end
     """
