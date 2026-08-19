@@ -324,6 +324,23 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
 
       confirm_fix(fix(code), <<"caf", 0xC3, " = make_ref()">>)
     end
+
+    # What masking guarantees about a high byte reaching the pattern is only
+    # that it did not come from a literal — not that it is part of an
+    # identifier. Punctuation sits in code position too, which is the very
+    # thing `Credence.SourceMask`'s moduledoc is about, so an em dash after
+    # the dot is admitted by the byte-wise class: the line is flagged and the
+    # dot is removed, and the result still does not parse. Broken in, broken
+    # out — the rewrite neither helps nor harms. Telling a letter from an em
+    # dash would need `\p{L}`, i.e. the `/u` modifier the test above rules
+    # out, so this pins the trade the byte-wise class makes, not a defect.
+    test "a non-identifier character in code position: broken in, broken out" do
+      refute valid_syntax?("x =.—dash()")
+      assert analyze("x =.—dash()") != []
+
+      confirm_fix(fix("x =.—dash()"), "x = —dash()")
+      refute valid_syntax?("x = —dash()"), "the repair cannot rescue this line"
+    end
   end
 
   describe "round-trip" do

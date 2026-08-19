@@ -101,9 +101,16 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   # regex raises `ArgumentError` on a subject that is not valid UTF-8 — and
   # output truncated mid-character is exactly the kind of broken input this
   # phase exists to repair. Declining such a line costs a missed fix; raising
-  # inside the fix pipeline costs the whole file. Every non-code byte is
-  # blanked to `0x01` before matching, so a high byte reaching the pattern is
-  # part of an identifier, never of a literal.
+  # inside the fix pipeline costs the whole file.
+  #
+  # Masking blanks every non-code byte to `0x01`, so a high byte reaching the
+  # pattern never came from a literal — but it is not therefore part of an
+  # identifier. Punctuation sits in code position too: `Credence.SourceMask`'s
+  # own moduledoc exists because an em dash can, in source that does not parse.
+  # So `x =.—dash()` is flagged and the dot removed, and the result still does
+  # not parse. Broken in, broken out — the rewrite neither helps nor harms, and
+  # telling a letter from an em dash would need `\p{L}`, which needs the `/u`
+  # modifier this class exists to avoid. Pinned in the fix battery.
   @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_\x80-\xff])/
 
   # The same shape again, un-anchored, used only to look at what is left of the
