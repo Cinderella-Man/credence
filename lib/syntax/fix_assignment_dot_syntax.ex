@@ -29,11 +29,19 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   - A second `=` on the line *before* the dot (`x = y =.foo()`). One after the
     dot is ordinary code and does not decline: `x =.foo(a = 1)` is repaired
   - More than one space before the dot (`x =  .foo()`)
+  - A second `=.` later on the same line (`a =.foo(b =.bar())`)
 
-  The last three are declines, not oversights the pattern happens to cover:
+  The last four are declines, not oversights the pattern happens to cover:
   the pattern wants a bare identifier at the start of the line and at most one
   space before the dot, and anything else is left for a human rather than
   guessed at. Each is pinned as a no-op in the fix battery.
+
+  The last one is a decline for a different reason. The pattern is anchored at
+  the start of the line, so a repair could only ever reach the first `=.`; the
+  half-repaired line still does not parse, and it no longer matches the
+  anchored pattern, so nothing would report the leftover afterwards. A repair
+  that cannot finish the line is worth less than none, so the whole line is
+  left alone.
 
   ## Why a digit after the dot is left alone
 
@@ -98,13 +106,23 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   # part of an identifier, never of a literal.
   @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_\x80-\xff])/
 
+  # The same shape again, un-anchored, used only to look at what is left of the
+  # line *after* the match above. The anchor means a repair can never reach a
+  # second occurrence, and a line repaired only at its start is a dead end: it
+  # still does not parse, and it no longer matches `@bad_pattern`, so nothing
+  # reports the leftover afterwards. Such a line is declined whole.
+  @second_occurrence ~r/[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=\s?\.[a-zA-Z_\x80-\xff]/
+
   @impl true
   def analyze(source) do
     source
     |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
-      if Regex.match?(@bad_pattern, shadow), do: [build_issue(line_no)], else: []
+    |> Enum.flat_map(fn {{line, shadow}, line_no} ->
+      case repair(line, shadow) do
+        {:ok, _repaired} -> [build_issue(line_no)]
+        :decline -> []
+      end
     end)
   end
 
@@ -112,22 +130,40 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   def fix(source) do
     source
     |> Credence.SourceMask.lines()
-    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
+    |> Enum.map_join("\n", fn {line, shadow} ->
+      case repair(line, shadow) do
+        {:ok, repaired} -> repaired
+        :decline -> line
+      end
+    end)
   end
 
+  # One decision, used by both `analyze/1` and `fix/1`: a line is reported
+  # exactly when it is repaired, so the rule cannot report what it will not fix
+  # or fix what it did not report.
+  #
   # The match is found in the shadow and the bytes are taken from the real line.
   # Both are the same byte length and every code byte is identical, so the
   # offsets are valid in either — and the emitted text is always the author's,
   # never a blanked literal. The pattern is `^`-anchored, so there is at most one
-  # match per line and the replacement is a prefix rewrite.
-  defp fix_line(line, shadow) do
+  # match per line and the replacement is a prefix rewrite; the tail is checked
+  # in the shadow too, so a `=.` inside a string or a comment cannot decline a
+  # line the rule could repair.
+  defp repair(line, shadow) do
     case Regex.run(@bad_pattern, shadow, return: :index) do
       [{_match_start, match_len}, {prefix_start, prefix_len}] ->
-        binary_part(line, prefix_start, prefix_len) <>
-          " " <> binary_part(line, match_len, byte_size(line) - match_len)
+        tail = binary_part(shadow, match_len, byte_size(shadow) - match_len)
+
+        if Regex.match?(@second_occurrence, tail) do
+          :decline
+        else
+          {:ok,
+           binary_part(line, prefix_start, prefix_len) <>
+             " " <> binary_part(line, match_len, byte_size(line) - match_len)}
+        end
 
       nil ->
-        line
+        :decline
     end
   end
 

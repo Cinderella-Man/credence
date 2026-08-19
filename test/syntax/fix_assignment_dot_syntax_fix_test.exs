@@ -126,7 +126,8 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     "{:ok, val} =.foo()",
     "@attr =.foo()",
     "x = y =.foo()",
-    "x =  .foo()"
+    "x =  .foo()",
+    "a =.foo(b =.bar())"
   ]
 
   # The `x = y =.foo()` entry above is about an `=` that comes *before* the
@@ -161,6 +162,34 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
 
                #{Enum.join(unlisted, "\n  ")}
              """
+    end
+
+    # The `a =.foo(b =.bar())` entry is the one decline that is not about the
+    # shape of the line's *start*. The pattern is anchored at `^`, so a repair
+    # can only ever reach the first `=.` on the line — and the half-repaired
+    # line is a dead end: it still does not parse, and it no longer matches the
+    # anchored pattern, so `analyze/1` would call it clean and no later pass
+    # could find the leftover. Emitting nothing is what keeps the rule honest.
+    test "a half-repaired line would be a dead end, so the whole line is declined" do
+      source = "a =.foo(b =.bar())"
+      half_repaired = "a = foo(b =.bar())"
+
+      refute valid_syntax?(source)
+      refute valid_syntax?(half_repaired), "the prefix repair alone does not rescue the line"
+      assert analyze(half_repaired) == [], "and nothing would report the leftover afterwards"
+
+      confirm_fix(fix(source), source)
+      assert analyze(source) == []
+    end
+
+    # The tail is inspected in the mask's shadow, exactly like the match
+    # itself, so a `=.` that is only text — inside a string literal or a
+    # trailing comment — cannot decline a line the rule can repair.
+    test "a `=.` in a literal or a comment does not decline the line" do
+      confirm_fix(
+        fix(~S'x =.foo("b =.bar()") # c =.d()'),
+        ~S'x = foo("b =.bar()") # c =.d()'
+      )
     end
 
     test "a second `=` after the dot does not stop the repair" do
