@@ -234,6 +234,10 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
   end
 
   test "no issue when the mismatched end sits on the opening line" do
+    # There is no line between the `{` and the `end` to append the `}` to, so
+    # `target_line/3` finds no target and the rule refuses. That empty scan
+    # range is what enforces "the `end` must be on a later line" — this test
+    # pins the behaviour, not any one guard expression.
     code = """
     defmodule Example do
       def foo do x = {1, 2 end
@@ -277,5 +281,72 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     """
 
     assert analyze(code) == []
+  end
+
+  # --- a `{` inside a string, heredoc or comment is never the unclosed one ---
+  #
+  # The test above only shows that a source which parses is left alone. These
+  # feed the rule a source that really is missing a `}` *and* carries a `{`
+  # inside a string, heredoc or comment, so the reported literal has to be the
+  # one in code.
+
+  test "reports the literal in code, not a brace inside a string on an earlier line" do
+    # Line 3 holds a `{` inside a string; line 4 opens the literal that is
+    # actually unclosed. The issue must name line 4.
+    code = """
+    defmodule Example do
+      def foo do
+        s = "{"
+        x = {1, 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 4}}] = analyze(code)
+  end
+
+  test "counts only the braces the parser sees, not six more inside a string" do
+    # One `}` is missing. A rule that counted `{` textually would want seven —
+    # past the @max_braces backstop — and report nothing at all.
+    code = """
+    defmodule Example do
+      def foo do
+        x = %{a: "{{{{{{"
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 3}}] = analyze(code)
+  end
+
+  test "reports the literal in code, not a brace inside a heredoc above it" do
+    # The heredoc on lines 3-5 contains a `{`; the literal that is unclosed
+    # opens on line 7.
+    code = """
+    defmodule Example do
+      def foo do
+        s = \"""
+        {
+        \"""
+
+        x = {1, 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 7}}] = analyze(code)
+  end
+
+  test "reports the literal in code, not a brace inside a comment above it" do
+    code = """
+    defmodule Example do
+      def foo do
+        # {
+        x = {1, 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :close_unclosed_brace, meta: %{line: 4}}] = analyze(code)
   end
 end

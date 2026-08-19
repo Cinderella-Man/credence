@@ -140,7 +140,7 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
              Keyword.get(meta, :opening_delimiter) == :"{" and
              Keyword.get(meta, :expected_delimiter) == :"}" and
              Keyword.get(meta, :closing_delimiter) == :end and
-             is_integer(open_line) and is_integer(end_line) and end_line > open_line do
+             is_integer(open_line) and is_integer(end_line) do
           {:ok, open_line, end_line}
         else
           :none
@@ -154,6 +154,12 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   # The last non-blank line between the `{` and the `end`, which is where the
   # missing `}` belongs. A line ending in `,` means a truncated element, not a
   # missing `}` — refuse it.
+  #
+  # This is also the sole enforcer of "the `end` must be on a later line": the
+  # scan range is non-empty exactly when `end_line > open_line`, so a same-line
+  # `x = {1, 2 end` finds no target line and is refused here. `detect/1` used to
+  # repeat that comparison as a guard; it never once changed an answer, so the
+  # decision now lives in one place rather than two.
   defp target_line(source, open_line, end_line) do
     lines = String.split(source, "\n")
 
