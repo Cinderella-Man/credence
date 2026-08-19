@@ -56,7 +56,6 @@ defmodule Credence.RuleCardTest do
 
   @bad_good_ledger [
     Credence.Syntax.CloseUnclosedFnDelimiter,
-    Credence.Syntax.FixAssignmentDotSyntax,
     Credence.Syntax.FixStaleAccessModifier
   ]
 

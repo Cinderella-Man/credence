@@ -49,6 +49,16 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   The shadow also subsumes the whole-line comment guard this rule used to carry
   by hand: masking blanks a `#` comment to its last byte, so a commented-out
   assignment cannot match in the first place.
+
+  ## Bad
+
+      ref =.make_ref()
+      x = .some_function(a)
+
+  ## Good
+
+      ref = make_ref()
+      x = some_function(a)
   """
 
   use Credence.Syntax.Rule
