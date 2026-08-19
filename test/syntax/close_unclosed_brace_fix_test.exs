@@ -416,12 +416,16 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     # The uniqueness scan tries the missing braces on every earlier line of the
     # literal, and each try reparses the whole file. Trying every *count* on
     # every line made that 25 whole-file reparses per line: an 800-line literal
-    # took ~2.2s. Only the shares of the braces the repair actually needed can
-    # compete, so the real bound is a couple of reparses per line — ~0.19s for
-    # the same input. The limit below sits between the two, with room for a
-    # loaded machine on either side.
-    # 400 entries, each spread over two lines so no line ends in `,` but the
-    # last — which would be a dangling comma and refused before the scan runs.
+    # took ~7000 of them. Only the shares of the braces the repair actually
+    # needed can compete, so the real bound is at most two reparses per probed
+    # line — ~520 for the same input, since the scan stops at the first share
+    # that parses. The budget below sits between the two.
+    #
+    # 400 entries, each spread over two lines. That is what gives the scan
+    # anything to do: `sole_placement` skips every line ending in `,`, so the
+    # 400 *key* lines (`      k1:`) are the only ones it probes. One line per
+    # entry would end every earlier line in `,`, the scan would reparse nothing,
+    # and the measurement below would time an empty loop.
     entries =
       Enum.map_join(1..400, "\n", fn i ->
         "      k#{i}:\n        #{i}#{if i < 400, do: ",", else: ""}"
@@ -429,10 +433,31 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
 
     code = "defmodule Example do\n  def foo do\n    x = %{\n" <> entries <> "\n  end\nend\n"
 
+    {keys, values} = entries |> String.split("\n") |> Enum.split_with(&String.ends_with?(&1, ":"))
+
+    assert length(keys) == 400, "the scan probes the key lines — there must be 400 of them"
+
+    assert Enum.count(values, &String.ends_with?(&1, ",")) == 399,
+           "every value line but the last must end in `,`, so the scan skips it"
+
+    # The budget is counted in reparses of this same fixture, not in
+    # milliseconds, so it means the same thing on a slow CI box as on a fast
+    # laptop: `control` times 400 whole-file reparses, and the scan is allowed
+    # six of those (~2400 reparses).
     best = Enum.min(for _ <- 1..3, do: elem(:timer.tc(fn -> fix(code) end), 0))
 
+    control =
+      Enum.min(
+        for _ <- 1..3 do
+          elem(:timer.tc(fn -> Enum.each(1..400, fn _ -> valid_syntax?(code) end) end), 0)
+        end
+      )
+
     assert fix(code) != code
-    assert best < 1_000_000, "scan took #{div(best, 1000)}ms, expected well under 1000ms"
+
+    assert best < 6 * control,
+           "scan cost about #{round(best / control * 400)} reparses of the fixture, " <>
+             "expected about 520 (two per probed line); the every-count scan cost about 7000"
   end
 
   test "leaves a dangling comma untouched" do
