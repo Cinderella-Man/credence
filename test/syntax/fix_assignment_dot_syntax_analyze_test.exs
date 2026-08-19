@@ -42,10 +42,11 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
       assert [%Issue{meta: %{line: 1}}, %Issue{meta: %{line: 2}}] = analyze(source)
     end
 
-    # The other half of the second-`=` boundary, whose declining half sits in
-    # "other shapes the fix does not handle" below. Only an `=` *before* the
-    # dot declines; an `=` after it is an ordinary keyword-less argument and
-    # the line is flagged like any other.
+    # The flagging one of the three shapes the second-`=` boundary
+    # distinguishes; the two declining ones sit in "other shapes the fix does
+    # not handle" below. An `=` *before* the dot declines, and so does an `=`
+    # after it when it forms a second `=.`; a plain `=` after the dot is an
+    # ordinary keyword-less argument and the line is flagged like any other.
     test "flags `x =.foo(a = 1)` — a second `=` after the dot is ordinary code" do
       assert [%Issue{rule: :fix_assignment_dot_syntax, meta: %{line: 1}}] =
                analyze("x =.foo(a = 1)")
@@ -88,9 +89,10 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
       assert analyze("# ref =.make_ref()") == []
     end
 
-    # The two comment lines above both pass by the `^` anchor alone: on a raw
-    # `# ref =.make_ref()` the pattern trips over the leading `#`, and on
-    # `x = 1 # ref =.make_ref()` it trips over the `1` after `= `. Neither
+    # Both of this file's commented-out assignments — the one just above and
+    # `x = 1 # ref =.make_ref()`, in the last `describe` — pass by the `^`
+    # anchor alone: on a raw `# ref =.make_ref()` the pattern trips over the
+    # leading `#`, and on `x = 1 # ref =.make_ref()` over the `1` after `= `. Neither
     # would go red if masking were dropped from `analyze/1`. Inside a heredoc
     # the accident runs out — the broken line starts its own line, so only
     # `Credence.SourceMask` keeps it out of the report.
@@ -128,10 +130,20 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxAnalyzeTest do
       assert analyze("f =.(1)") == []
     end
 
-    # Only an `=` that comes *before* the dot declines. `x =.foo(a = 1)` also
-    # carries a second `=` and is flagged — pinned above.
+    # An `=` before the dot declines. So does one after the dot, but only when
+    # it forms a second `=.` — pinned just below. A plain `=` after the dot,
+    # `x =.foo(a = 1)`, is ordinary code and is flagged; pinned above.
     test "a second `=` before the dot is not flagged" do
       assert analyze("x = y =.foo()") == []
+    end
+
+    # The pattern is anchored at the start of the line, so a repair could only
+    # ever reach the first `=.`; the half-repaired line still would not parse
+    # and would no longer match, so nothing could report the leftover. The
+    # whole line is declined instead. This is the only branch of the rule's
+    # repair decision that nothing else in this file reaches.
+    test "a second `=.` after the dot is not flagged" do
+      assert analyze("a =.foo(b =.bar())") == []
     end
 
     test "trailing comment containing the bad shape is not flagged" do
