@@ -35,6 +35,15 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
   @doc_heredoc_open ~r/^(\s*)@doc\s+"""\s*$/
 
+  # A line that opens a definition. The trailing `\b` is what keeps English prose
+  # out: without it `defaults to 0 when absent.` — an ordinary first line of doc
+  # text — counts as "the next def", and the rule then closes the heredoc above
+  # it, emptying the doc and spilling its prose into the module body. Every
+  # `def…` form Elixir defines is listed so that no real definition stops being
+  # recognised; longer spellings come first so `defmacrop` is not read as
+  # `defmacro` followed by a stray `p`.
+  @def_line ~r/^\s*def(?:p|macrop|macro|guardp|guard|delegate|module|protocol|impl|struct|exception|overridable)?\b/
+
   @impl true
   def analyze(source) do
     lines = String.split(source, "\n")
@@ -107,7 +116,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
     Enum.find_value(lines, false, fn next_line ->
       cond do
         String.trim(next_line) == "" -> nil
-        Regex.match?(~r/^\s*def/, next_line) -> true
+        Regex.match?(@def_line, next_line) -> true
         true -> false
       end
     end)
@@ -118,7 +127,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
       cond do
         String.trim(next_line) == "" -> nil
         Regex.match?(~r/^\s*"""/, next_line) -> true
-        Regex.match?(~r/^\s*def/, next_line) -> false
+        Regex.match?(@def_line, next_line) -> false
         true -> false
       end
     end)
