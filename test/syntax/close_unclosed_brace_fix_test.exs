@@ -307,6 +307,111 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "commits nothing that a brace split over other lines could also mean" do
+    # The rule only ever weighs the missing braces shared between ONE earlier
+    # line and the target line, and its source says those shares "are the whole
+    # alternative set". A reading that spreads the braces over two *different*
+    # earlier lines is therefore never tried, and the hand-written cases above
+    # would not notice one. This searches for such a source: every three-line
+    # function body built from the fragments below, and for each body the rule
+    # does repair, every way of spreading the same braces over the body's lines
+    # using at least two of them. Any such rival that parses is a second meaning
+    # the rule discarded silently — the one failure it promises never to make.
+    #
+    # Every completion appends exactly as many `}` as there are `{` still open,
+    # because a `}` only ever closes one, so rivals with a different total are
+    # not readings of the same source and are not searched.
+    sources =
+      for a <- brace_fragments(), b <- brace_fragments(), c <- brace_fragments() do
+        "defmodule Example do\n  def foo do\n    x = " <>
+          Enum.join([a, b, c], "\n    ") <> "\n  end\nend\n"
+      end
+
+    repaired =
+      sources
+      |> Enum.map(&{&1, fix(&1)})
+      |> Enum.reject(fn {source, fixed} -> fixed == source end)
+
+    assert length(repaired) > 100,
+           "only #{length(repaired)} of #{length(sources)} sources made the rule commit — " <>
+             "the search is too close to vacuous to prove anything"
+
+    rivals =
+      for {source, fixed} <- repaired,
+          rival <- rival_readings(source, byte_size(fixed) - byte_size(source)),
+          do:
+            "=== source ===\n#{source}=== rule emitted ===\n#{fixed}=== also parses ===\n#{rival}"
+
+    assert rivals == [], Enum.join(rivals, "\n")
+  end
+
+  # Lines that open, continue or close a literal, in the shapes the rule's
+  # guards talk about: nested openings, keyword and map entries, a leading
+  # comma, an operator continuation, a closing brace mid-line, and a trailing
+  # comment or string that would swallow an appended `}`.
+  defp brace_fragments do
+    [
+      "{1",
+      "{1, {2",
+      "{1, {2, {3",
+      "%{a: {2",
+      "%{a: 1",
+      "%U{a: 1",
+      "%{a: %{b: 2",
+      ", {3",
+      ", 4",
+      ", %{b: 5",
+      ", b: 5",
+      ", [1",
+      ", fn -> 1 end",
+      "|> g()",
+      "}, 5",
+      "}, {6",
+      "} ++ [1]",
+      "} = y",
+      "+ 1",
+      "5",
+      "b: 6",
+      "{}",
+      "# c",
+      "\"s\" <> t",
+      "x",
+      "3 => 4"
+    ]
+  end
+
+  # The three body lines of a source built by `brace_fragments/0`, as indices.
+  @body_lines 2..4//1
+
+  # Every completion of `source` that appends `count` closing braces spread over
+  # at least two body lines and parses — i.e. every rival meaning the rule's
+  # single-line repair competes with.
+  defp rival_readings(source, count) do
+    lines = String.split(source, "\n")
+
+    for split <- brace_splits(count, Enum.count(@body_lines)),
+        rival = append_braces(lines, split),
+        valid_syntax?(rival),
+        do: rival
+  end
+
+  defp brace_splits(count, line_count) do
+    for(_ <- 1..line_count, do: 0..count)
+    |> Enum.reduce([[]], fn range, splits ->
+      for split <- splits, taken <- range, do: split ++ [taken]
+    end)
+    |> Enum.filter(&(Enum.sum(&1) == count and Enum.count(&1, fn taken -> taken > 0 end) >= 2))
+  end
+
+  defp append_braces(lines, split) do
+    split
+    |> Enum.zip(@body_lines)
+    |> Enum.reduce(lines, fn {taken, index}, acc ->
+      List.update_at(acc, index, &(&1 <> String.duplicate("}", taken)))
+    end)
+    |> Enum.join("\n")
+  end
+
   test "scans a long literal without a blow-up in reparses" do
     # The uniqueness scan tries the missing braces on every earlier line of the
     # literal, and each try reparses the whole file. Trying every *count* on
