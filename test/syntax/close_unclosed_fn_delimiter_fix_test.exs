@@ -173,9 +173,51 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
            ] = analyze(one <> one)
   end
 
+  # Locality: a second, unrelated fault elsewhere in the file must not veto the
+  # repair of a genuine occurrence. The occurrence here really is this rule's
+  # shape — inserting `end` before the `)` leaves a stray `end` on line 6, and
+  # the enclosing `(` the parser names for it is the `Enum.map(` on line 3,
+  # above the repair.
   test "repairs its own occurrence on a file that is also broken for an unrelated reason" do
     input = """
-    defmodule Mixed do
+    defmodule Local do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+
+      def broken(, do: 1
+    end
+    """
+
+    expected = """
+    defmodule Local do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end end)
+        end)
+      end
+
+      def broken(, do: 1
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  # The shape this rule promises never to touch (moduledoc: "when inserting `end`
+  # before `)` already yields parseable code, that is NoUnclosedFnDelimiter's
+  # case"). Inserting `end` on line 4 leaves lines 1-6 perfectly balanced: there
+  # is no stray `end` anywhere. The only "`(` closed by `end`" complaint in the
+  # file belongs to the unrelated `def broken(` on line 8, *below* the repair —
+  # a signal that says nothing about whether line 5 is stray.
+  test "declines the plain-unclosed-fn shape even when an unrelated ( is closed by an end below" do
+    input = """
+    defmodule PlainShape do
       def a(m) do
         Enum.map(m, fn r ->
           if r == 0 do 1 else r end)
@@ -186,18 +228,114 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     end
     """
 
-    expected = """
-    defmodule Mixed do
-      def a(m) do
-        Enum.map(m, fn r ->
-          if r == 0 do 1 else r end end)
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # The reviewer's reduction of the same defect, with no enclosing call at all
+  # around the `fn`: after inserting `end` on line 3 the module is balanced, so
+  # the rule must stay silent. Deleting `def a`'s own `end` (line 4) on the
+  # strength of the unrelated `def broken(` on line 6 destroys the file.
+  test "does not delete a real end on the strength of an unrelated ( closed by an end below" do
+    input = """
+    defmodule Reduced do
+      def a(list) do
+        Enum.max_by(list, fn {_, s} -> s)
       end
 
       def broken(, do: 1
     end
     """
 
-    confirm_fix(fix(input), expected)
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # The stray `end` this rule exists to delete is the first `end` *token* after
+  # the `)` it repaired. Here that `end` carries a trailing comment, so deleting
+  # its whole line would take the comment with it — the rule must decline. What
+  # it must not do is walk past it to the next bare `end` line and delete the
+  # `case`'s own terminator, which happens to rebalance the file (the stray
+  # `end` then closes the `case`) and so passes every "does it parse" check.
+  test "declines rather than deleting a real end when the stray end is not alone on its line" do
+    input = """
+    defmodule NotAlone do
+      def go(m) do
+        Enum.map(m, fn r ->
+          case r do
+            0 ->
+              Enum.map(r, fn e ->
+                if e == 0 do 1 else e end)
+              end # the stray end, with a comment
+            _ -> r
+          end
+        end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # The same bound, where the wrong deletion does *not* rebalance the file: the
+  # first `end` token below the repair is the comment-carrying stray on line 6,
+  # not the `if` block's own `end` on line 9.
+  test "declines rather than deleting a nested block's own end below the stray" do
+    input = """
+    defmodule NotAloneBlock do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end # the stray end, with a comment
+          if r > 0 do
+            :big
+          end
+        end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+  end
+
+  # The multi-pass loop is bounded now; the bound must not cut a real file
+  # short. Three copies of the bug are three passes.
+  test "repairs every occurrence when the bug appears three times in one file" do
+    one = """
+    defmodule ThreeBugs do
+      def a(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+    end
+    """
+
+    expected_one = """
+    defmodule ThreeBugs do
+      def a(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end end)
+        end)
+      end
+    end
+    """
+
+    input = one <> one <> one
+    confirm_fix(fix(input), expected_one <> expected_one <> expected_one)
+    assert valid_syntax?(fix(input))
+
+    assert [
+             %Issue{meta: %{line: 5}},
+             %Issue{meta: %{line: 14}},
+             %Issue{meta: %{line: 23}}
+           ] = analyze(input)
   end
 
   # The one test that actually reaches the line-delete on a source whose ONLY
