@@ -165,6 +165,25 @@ defmodule Credence.RuleDuplication do
   def good_example(rule), do: example(rule, "Good")
 
   @doc """
+  Everything under `## <heading>` in `rule`'s moduledoc, up to the next `##`
+  heading or the end of the doc, or `nil` when there is no such heading.
+
+  The prose counterpart of `example/2`: that one stops at the first line in
+  column 0 because it wants the code block alone, so it cannot answer "does
+  this section mention X". Tests that assert a rule *documents* something want
+  the whole section, and neither may reach for `Code.fetch_docs/1` itself —
+  `no_parser_calls_in_rule_tests_test.exs` keeps that in `test/support`.
+  """
+  def moduledoc_section(rule, heading) do
+    with {:docs_v1, _, _, _, %{"en" => doc}, _, _} <- Code.fetch_docs(rule),
+         [_, section] <- Regex.run(~r/##\s*#{heading}\b[^\n]*\n(.*?)(?=\n##\s|\z)/s, doc) do
+      section
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
   The first indented code block under `## <heading>` in `rule`'s moduledoc.
 
   Takes only the leading run of indented (or blank) lines, and stops at the

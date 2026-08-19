@@ -143,8 +143,7 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     end
 
     test "the moduledoc's `## Not flagged` list names every one of them" do
-      {:docs_v1, _, _, _, %{"en" => doc}, _, _} = Code.fetch_docs(FixAssignmentDotSyntax)
-      [_, section] = Regex.run(~r/##\s+Not flagged\n(.*?)(?=\n##\s)/s, doc)
+      section = Credence.RuleDuplication.moduledoc_section(FixAssignmentDotSyntax, "Not flagged")
 
       unlisted = Enum.reject(@declined, &String.contains?(section, &1))
 
@@ -254,6 +253,21 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
   # `Credence.SourceMask` shadow.
   # ═══════════════════════════════════════════════════════════════════
 
+  # A file that both documents the broken form and contains it: the heredoc
+  # line must survive untouched while the one in `go/0` is repaired.
+  @mixed_source ~S'''
+  defmodule Both do
+    @moduledoc """
+  doc =.example()
+    """
+
+    def go do
+      ref =.make_ref()
+      ref
+    end
+  end
+  '''
+
   describe "fix/1 — only real code is rewritten" do
     test "leaves an assignment inside a moduledoc heredoc alone" do
       code = ~S'''
@@ -284,24 +298,36 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
     end
 
     test "still fixes real code in a file that also documents the broken form" do
-      code = ~S'''
+      expected = ~S'''
       defmodule Both do
         @moduledoc """
       doc =.example()
         """
 
         def go do
-          ref =.make_ref()
+          ref = make_ref()
           ref
         end
       end
       '''
 
-      fixed = fix(code)
+      fixed = fix(@mixed_source)
 
-      assert fixed =~ "    ref = make_ref()"
-      assert fixed =~ "doc =.example()"
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
+    end
+
+    # CONTROL for the test above. It used to assert with two `=~` substring
+    # checks, which say nothing about the rest of the file: this output has had
+    # the function's whole return value replaced and still satisfies both of
+    # them, plus the parse check. Whole-string equality is what rejects it.
+    test "CONTROL: substring checks admit output that is wrong elsewhere" do
+      corrupt = String.replace(fix(@mixed_source), "    ref\n", "    :corrupted\n")
+
+      assert corrupt =~ "    ref = make_ref()"
+      assert corrupt =~ "doc =.example()"
+      assert valid_syntax?(corrupt)
+      refute corrupt == fix(@mixed_source)
     end
 
     test "the rule does not rewrite its own source file" do
