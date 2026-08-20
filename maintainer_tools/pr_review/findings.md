@@ -512,3 +512,31 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - commits: 29d199c15e6d22722961cfba322e9808d3b91e53
 - gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
 
+## lib/syntax/close_unclosed_doc_heredoc.ex — fix round 6 [2], resolved out of band (2026-08-20)
+- [2 concern] fixed — Round 6 deferred this as a policy call and it was made: take the
+  conservative default. Rather than naming the macros, `@module_code_word` now recognises
+  module-level code by SHAPE — a parenthesised call closing on the same line
+  (`timestamps()`, `plug(:fetch_session)`), or a bare word whose first argument is an atom,
+  a quoted string, a capitalised module path or a capture and terminates at a comma or end
+  of line (`plug :fetch_session`, `field :name, :string`,
+  `action_fallback MyAppWeb.FallbackController`). Both branches are gated on the line
+  carrying no backtick. The name list was rejected on measurement, not taste: it would run
+  to ~75 entries across Phoenix/Ecto/Absinthe/Ash/Oban, any library can mint another, and
+  `deps/bunt` already writes `defsequence(:reset, 0)` directly under an `@doc` — the
+  `defn|defnp` already in the pattern were that list's second version. Around 97% of
+  module-level macro idioms omit the parentheses, so the no-paren branch is the load-bearing
+  one. Cost measured over the 5,632 doc-text lines at a `@doc`'s own indentation in `lib/`:
+  4 false declines, the same price the `\bdo$` branch alone already carried, for 36 of 47
+  catalogued idioms instead of none. Proved it is a free narrowing by running the previous
+  and current rule over every real `@doc` in `lib/` with its closing quotes deleted: 52/333
+  repaired both ways, 0 repairs lost, 0 gained, 0 emitted bytes different. Every clause was
+  watched failing — the six decline fixtures go red on the previous predicate, the
+  stray-paren fixture goes red without the same-line `)`, the backtick fixture goes red
+  without the backtick gate (an earlier version of that fixture opened with a backtick and
+  proved nothing, since both branches are anchored on `^[a-z_]`). The 11 idioms still
+  swallowed and the separate `@def_word` hole (`deftransform foo(x), do: x`) are recorded in
+  the moduledoc rather than guessed at — widening further costs declines and this repo has
+  no DSL code to measure against. Committed 6705f0d.
+- commits: 6705f0dd
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency — 9132 tests, 0 failures)
+

@@ -720,8 +720,8 @@
         {
           "n": 2,
           "severity": "concern",
-          "outcome": "deferred",
-          "note": "The mechanical half is landed under [1]: the constructs the reviewer named by hand (`use`, `import`, `alias`, `require`, `defn`, and `do`-block openers such as Ecto's `schema`) now make the rule decline instead of swallowing them. What is left is the policy the reviewer asked a maintainer to settle, and it is still reachable: I ran the rule on `defmodule Router do` / `  @doc \"\"\"` / `  The browser pipeline.` / blank / `  plug(:fetch_session)` / blank / `  def call(conn, opts), do: super(conn, opts)` / `end` and it repaired the file, folding `plug(:fetch_session)` into the doc string and deleting the plug; the output parses. Any macro call at the module's own indentation that is not one of the recognised words is still read as doc prose. The one question: should the rule flip its default and **decline on any line at the `@doc`'s own indentation that it cannot positively recognise as prose** — rather than declining only on the forms it can name? That buys safety against every unnamed library macro, but it needs a definition of \"prose-shaped\" that will not veto ordinary doc text (the rule's commonest input is a sentence, and `Adds the two numbers.` must keep repairing), and it will decline a class of files this rule currently fixes. I did not make that call: it is a user-visible trade of repairs for safety, and two reasonable maintainers could land on different sides of it."
+          "outcome": "fixed",
+          "note": "The mechanical half is landed under [1]: the constructs the reviewer named by hand (`use`, `import`, `alias`, `require`, `defn`, and `do`-block openers such as Ecto's `schema`) now make the rule decline instead of swallowing them. What is left is the policy the reviewer asked a maintainer to settle, and it is still reachable: I ran the rule on `defmodule Router do` / `  @doc \"\"\"` / `  The browser pipeline.` / blank / `  plug(:fetch_session)` / blank / `  def call(conn, opts), do: super(conn, opts)` / `end` and it repaired the file, folding `plug(:fetch_session)` into the doc string and deleting the plug; the output parses. Any macro call at the module's own indentation that is not one of the recognised words is still read as doc prose. The one question: should the rule flip its default and **decline on any line at the `@doc`'s own indentation that it cannot positively recognise as prose** — rather than declining only on the forms it can name? That buys safety against every unnamed library macro, but it needs a definition of \"prose-shaped\" that will not veto ordinary doc text (the rule's commonest input is a sentence, and `Adds the two numbers.` must keep repairing), and it will decline a class of files this rule currently fixes. I did not make that call: it is a user-visible trade of repairs for safety, and two reasonable maintainers could land on different sides of it. — RESOLVED out of band: the maintainer chose the conservative default. Widened @module_code_word to a shape test (parenthesised call closing on the same line, or a bare word whose first argument is an atom/string/module-path/capture ending at a comma or EOL), gated on the line carrying no backtick. 4 false declines over 5,632 real doc-text lines (the same cost the \\bdo$ branch already carried), 36 of 47 catalogued idioms covered instead of 0, repair rate over real broken docs unchanged at 52/333. Commit 6705f0d."
         },
         {
           "n": 3,
@@ -737,10 +737,11 @@
         }
       ],
       "commits": [
-        "4d3e8abf2aa2f34f3d168e35af15fa47f53ecd83"
+        "4d3e8abf2aa2f34f3d168e35af15fa47f53ecd83",
+        "6705f0d"
       ],
       "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
-      "needs_human": true,
+      "needs_human": false,
       "error": null,
       "enqueued_at": "2026-08-19T17:43:39+02:00",
       "resolved_at": "2026-08-20T13:50:18+02:00"
