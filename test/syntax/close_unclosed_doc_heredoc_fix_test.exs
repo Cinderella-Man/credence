@@ -551,6 +551,96 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     confirm_fix(fix(code), code)
   end
 
+  # Everything between the opener and the line the closer goes above becomes doc
+  # text. A module-level directive sitting there is therefore *deleted* by the
+  # repair: `use GenServer` folded into the doc string costs the module its
+  # behaviour, its default callbacks and `child_spec/1`. The result parses and
+  # compiles (a stale `@impl` only warns), so nothing downstream reverts it —
+  # which is why the rule has to decline before emitting it rather than rely on a
+  # guard to catch it.
+  test "declines when a directive sits between the doc and its def" do
+    code = """
+    defmodule Server do
+      @doc \"""
+      Starts the server.
+      use GenServer
+
+      def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
+    end
+    """
+
+    assert reported_lines(code) == []
+    confirm_fix(fix(code), code)
+  end
+
+  # The same absorption eats a block: an Ecto `schema "users" do … end` between
+  # the doc and its `def` is swallowed whole, and with it every field the module
+  # declares. The block's body is indented deeper than the `@doc`, so only its
+  # opening line is visible at the doc's own indentation — a line ending in `do`.
+  test "declines when a do-block opener sits between the doc and its def" do
+    code = """
+    defmodule User do
+      @doc \"""
+      A user of the system.
+
+      schema "users" do
+        field(:name, :string)
+      end
+
+      def changeset(user, attrs), do: cast(user, attrs, [:name])
+    end
+    """
+
+    assert reported_lines(code) == []
+    confirm_fix(fix(code), code)
+  end
+
+  # The closer does not always land above a `def`: an `@spec`/`@impl`/second
+  # `@doc` between the doc and its definition ends the doc instead. The reported
+  # message has to describe where the repair actually goes, or a reader who acts
+  # on it looks for the wrong line.
+  test "the reported message describes an attribute boundary too" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Adds the two numbers.
+
+      @spec add(integer, integer) :: integer
+      def add(a, b), do: a + b
+    end
+    """
+
+    assert [issue] = analyze(input)
+
+    assert issue.message ==
+             "Unclosed `@doc \"\"\"` heredoc — the closing `\"\"\"` is missing before the " <>
+               "definition or module attribute that follows the doc text."
+  end
+
+  # A later doc's closing quotes veto the repair of an earlier broken one. The
+  # veto reads the *same unchanged source* every time, so this is not a repair
+  # deferred to a later round — no round of this rule will ever repair such a
+  # file. Pinned so the moduledoc's known-limitation text stays true: if a second
+  # pass ever did repair it, this goes red.
+  test "the closing-quotes veto gives the same answer on every round" do
+    code = """
+    defmodule Sample do
+      @doc \"""
+      Docs for a.
+      def a, do: 1
+
+      @doc \"""
+      Docs for b.
+      \"""
+      def b, do: 2
+    end
+    """
+
+    confirm_fix(fix(code), code)
+    confirm_fix(fix(fix(code)), code)
+    assert analyze(fix(code)) == []
+  end
+
   test "fixed output no longer flags" do
     input = """
     defmodule Solution do

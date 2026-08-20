@@ -38,7 +38,9 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   which is what keeps it off a correctly closed doc it cannot otherwise tell
   apart. The cost is that a file with a broken doc above `def a` and a correctly
   closed doc above `def b` is never repaired: the second doc's closing quotes
-  veto the repair of the first. Such a file is left to the next round.
+  veto the repair of the first. Nothing in this rule will ever repair such a
+  file — the veto reads the same unchanged source every time, so a later round
+  returns the same decline.
 
   The search for that definition stops at the first non-blank line indented less
   than the `@doc` — the enclosing module's own `end`. A file whose broken doc has
@@ -49,6 +51,12 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   form `@doc` cannot document (`defstruct`, `defmodule`, `defimpl`, …): such a
   line is as plausibly doc prose as it is code, and the rule has nothing to tell
   them apart with.
+
+  It declines, too, when the lines that would become doc text include module-level
+  code the doc must not swallow — a `use`/`import`/`alias`/`require` directive, a
+  `defn`, or a line opening a `do` block such as an Ecto `schema`. Closing the doc
+  below such a line deletes it, and the result still parses and compiles, so
+  nothing downstream would notice the loss.
   """
   use Credence.Syntax.Rule
 
@@ -89,6 +97,23 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   # writes such a mention inline or in backticks.
   @attribute_word ~r/^@\w+\b/
 
+  # Module-level code that is neither a definition nor an attribute: Elixir's four
+  # directives, Nx's `defn`/`defnp`, and any line that opens a `do` block (Ecto's
+  # `schema "users" do`, a `test "…" do`, any library macro). Matched with the
+  # indentation stripped, like the two above.
+  #
+  # Everything between the opener and the line the closer goes above becomes doc
+  # text, so a line like this one at the `@doc`'s own indentation is *deleted* by
+  # the repair. `use GenServer` folded into a doc string costs the module its
+  # behaviour, its default callbacks and `child_spec/1`; a swallowed `schema` block
+  # takes every field with it. The output parses and compiles (a stale `@impl`
+  # only warns), so nothing downstream reverts it. The rule declines instead — the
+  # same answer it gives an undocumentable definition form.
+  #
+  # The `do`-suffix branch also declines on doc prose whose line happens to end in
+  # the word "do". Declining costs a repair; swallowing costs the block.
+  @module_code_word ~r/^(?:use|import|alias|require|defn|defnp)\b|\bdo$/
+
   @impl true
   def analyze(source) do
     lines = String.split(source, "\n")
@@ -100,8 +125,12 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
         [
           %Issue{
             rule: :close_unclosed_doc_heredoc,
+            # Not "before the next `def`": the closer lands above whichever line
+            # ends the doc text, which is the `def` being documented *or* an
+            # `@spec`/`@impl`/second `@doc` sitting above it.
             message:
-              "Unclosed `@doc \"\"\"` heredoc — the closing `\"\"\"` is missing before the next `def`.",
+              "Unclosed `@doc \"\"\"` heredoc — the closing `\"\"\"` is missing before the " <>
+                "definition or module attribute that follows the doc text.",
             meta: %{line: line_no}
           }
         ]
@@ -179,9 +208,22 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
       def_offset ->
         if at_indent?(Enum.at(lines, def_offset), indent, @documented_def_word) do
-          attribute_end_offset(lines, indent, def_offset)
+          end_offset = attribute_end_offset(lines, indent, def_offset)
+
+          if not swallows_module_code?(lines, indent, end_offset), do: end_offset
         end
     end
+  end
+
+  # Would closing the doc at `end_offset` fold module-level code into the doc
+  # string? Those first `end_offset` lines are the doc's body once the closer goes
+  # in, and anything among them that is really code is deleted by the repair — see
+  # `@module_code_word`. Only lines at the `@doc`'s own indentation count, so a
+  # code example written *inside* the doc, indented deeper, is still doc text.
+  defp swallows_module_code?(lines, indent, end_offset) do
+    lines
+    |> Enum.take(end_offset)
+    |> Enum.any?(&at_indent?(&1, indent, @module_code_word))
   end
 
   # Where the doc ends given the definition it documents at `def_offset`: the
