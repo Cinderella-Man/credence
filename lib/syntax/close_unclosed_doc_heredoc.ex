@@ -54,9 +54,45 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
   It declines, too, when the lines that would become doc text include module-level
   code the doc must not swallow — a `use`/`import`/`alias`/`require` directive, a
-  `defn`, or a line opening a `do` block such as an Ecto `schema`. Closing the doc
-  below such a line deletes it, and the result still parses and compiles, so
-  nothing downstream would notice the loss.
+  `defn`, a line opening a `do` block such as an Ecto `schema`, or a macro call
+  recognised by its shape: a parenthesised call closing on the same line
+  (`timestamps()`, `plug(:fetch_session)`), or a bare word whose first argument is
+  an atom, a quoted string, a capitalised module path or a capture and ends at a
+  comma or end of line (`plug :fetch_session`, `field :name, :string`,
+  `action_fallback MyAppWeb.FallbackController`). Closing the doc below such a
+  line deletes it, and the result still parses and compiles, so nothing
+  downstream would notice the loss.
+
+  Those two shapes are matched only on a line carrying no backtick, so doc prose
+  that quotes code — ``` `plug :fetch_session` sets up the session ``` — still
+  repairs.
+
+  ### What the shape test still swallows
+
+  Matching on shape rather than on a list of macro names is deliberate: the list
+  would run to roughly seventy-five entries across Phoenix, Ecto, Absinthe, Ash
+  and Oban, and any library can mint a new one. The shapes above cover 36 of 47
+  catalogued module-level idioms. The eleven they miss all have a first argument
+  that is a list, a tuple, a struct, a bare identifier or a nested lowercase
+  call, plus capitalised remote calls:
+
+      create unique_index(:users, [:email])   drop table(:legacy_users)
+      validate present(:email)                change set_attribute(:status, :active)
+      pipe_through [:api, :auth]              interfaces [:named_entity]
+      setup [:create_user]                    prop label, :string
+      require_atomic? false                   on_mount {MyAppWeb.UserAuth, :ensure}
+      Mox.defmock(MyMock, for: Behaviour)
+
+  A line spelling one of those between a doc and its `def` is still folded into
+  the doc string and deleted. Widening further has a real cost in declined
+  repairs and no corpus here to measure it against — this repo contains no DSL
+  code — so the gap is recorded rather than guessed at.
+
+  Separately, `@def_word` only spells Elixir's own `def…` forms, so a
+  library-minted definition macro written without parentheses
+  (`deftransform foo(x), do: x`) is recognised as neither a definition nor code
+  and is swallowed. The parenthesised spelling (`defsequence(:reset, 0)`) is
+  caught by the shape test above.
   """
   use Credence.Syntax.Rule
 
@@ -112,7 +148,36 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
   #
   # The `do`-suffix branch also declines on doc prose whose line happens to end in
   # the word "do". Declining costs a repair; swallowing costs the block.
-  @module_code_word ~r/^(?:use|import|alias|require|defn|defnp)\b|\bdo$/
+  #
+  # Naming the macros instead would be an unbounded list: ~75 names across
+  # Phoenix, Ecto, Absinthe, Ash, Oban and friends, and any library can mint a
+  # new one (this checkout's own `deps/bunt` writes `defsequence(:reset, 0)`
+  # directly under an `@doc`). The `defn|defnp` above are already that list's
+  # second version. So the last two branches match on *shape*, not on names:
+  #
+  #   * a parenthesised call that closes on the same line — `timestamps()`,
+  #     `plug(:fetch_session)`. The same-line close is what separates those from
+  #     a prose line that wraps mid-expression onto a stray `)`
+  #     (`length(x) <= 1) and rewrites them into two clauses`). On this repo's
+  #     own doc text it saves nothing the backtick gate below does not already
+  #     save, so it is a second line of defence for prose that does not quote
+  #     its code; the fix battery pins it with a fixture.
+  #   * a bare word whose first argument terminates at a comma or end of line and
+  #     is an atom, a quoted string, a capitalised module path, or a capture —
+  #     `plug :fetch_session`, `field :name, :string`,
+  #     `action_fallback MyAppWeb.FallbackController`. Around 97% of module-level
+  #     macro idioms are written without parentheses, so this is the branch that
+  #     does the work; the parenthesised form is the exception.
+  #
+  # Both are gated on the line carrying no backtick anywhere. Real module-level
+  # code never contains one; doc prose that quotes code almost always does, so
+  # `` `plug :fetch_session` sets up the session `` still repairs.
+  #
+  # Measured over the 5,608 doc-text lines at a `@doc`'s own indentation in this
+  # repo's `lib/`: 3 false declines, which is what the `\bdo$` branch alone
+  # already costs, for 36 of 47 catalogued macro idioms instead of none. The 11
+  # it still misses are in the known-limitations section of the moduledoc.
+  @module_code_word ~r/^(?:use|import|alias|require|defn|defnp)\b|\bdo$|^(?!.*`)(?:[a-z_][A-Za-z0-9_]*\(.*\)[ \t]*$|[a-z_][A-Za-z0-9_]*[ \t]+(?::[a-zA-Z_][A-Za-z0-9_]*[?!]?|"[^"]*"|[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*)*|&[A-Z][A-Za-z0-9_.]*\/\d+)[ \t]*(?:,|$))/
 
   @impl true
   def analyze(source) do

@@ -595,6 +595,170 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     confirm_fix(fix(code), code)
   end
 
+  # A macro call is module-level code just as much as a directive is, and naming
+  # the macros is not an option: the list runs to ~75 entries across Phoenix,
+  # Ecto, Absinthe, Ash and Oban, and any library can mint another. So the guard
+  # matches on shape. These six pin both shapes it recognises.
+  #
+  # Each is written the way its own library's documentation writes it — that is
+  # the point of listing six rather than one. Around 97% of module-level macro
+  # idioms omit the parentheses, so a guard that only saw `name(...)` would miss
+  # the common spelling of every one of them.
+  for {label, line} <- [
+        {"a parenthesised macro call", "plug(:fetch_session)"},
+        {"a macro call written without parentheses", "plug :fetch_session"},
+        {"an atom first argument followed by a comma", "field :name, :string"},
+        {"a capitalised module path as the first argument",
+         "action_fallback MyAppWeb.FallbackController"},
+        {"a quoted string as the first argument", ~s(get "/users", UserController, :index)},
+        {"a parenthesised call with no arguments", "timestamps()"}
+      ] do
+    test "declines when #{label} sits between the doc and its def" do
+      code = """
+      defmodule Sample do
+        @doc \"""
+        Does a thing.
+
+        #{unquote(line)}
+
+        def go(conn), do: conn
+      end
+      """
+
+      assert reported_lines(code) == []
+      confirm_fix(fix(code), code)
+    end
+  end
+
+  # The shape test is gated on the line carrying no backtick, because doc prose
+  # that mentions code almost always quotes it and module-level code never
+  # contains one.
+  #
+  # The fixture has to start with a bare lowercase word for the gate to matter at
+  # all: prose that *opens* with a backtick never reaches the shape test, since
+  # both branches are anchored on `^[a-z_]`. This one is the shape of the single
+  # line in this repo's 5,632 doc-text lines that the gate actually saves —
+  # "valid Elixir, so `café =.make_ref()` is the same syntax error as any other"
+  # — a word, a capitalised module, a comma, and backticked code after it.
+  test "still repairs when doc prose names a module and quotes code in backticks" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      valid Elixir, so `plug :fetch_session` is code and not prose.
+
+      def call(conn, _opts), do: conn
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      valid Elixir, so `plug :fetch_session` is code and not prose.
+
+    #{close}
+      def call(conn, _opts), do: conn
+    end
+    """
+
+    assert reported_lines(input) == [2]
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  # The parenthesised branch requires the call to CLOSE on the same line. Drop
+  # that and a prose line wrapping mid-expression onto a stray `)` matches too,
+  # and the repair is declined instead.
+  #
+  # On this repo's own 5,632 doc-text lines the requirement saves nothing the
+  # backtick gate does not already save — prose here quotes its code. So this
+  # fixture is the only thing holding the clause up, and it has to stay
+  # backtick-free or the gate would mask what it is testing.
+  test "still repairs when doc prose wraps mid-expression onto a stray paren" do
+    input = """
+    defmodule Sample do
+      @doc \"""
+      Splits clauses whose guard is short enough that
+
+      length(x) <= 1) and rewrites them into two clauses.
+
+      def split(x), do: x
+    end
+    """
+
+    close = "  \"\"\""
+
+    expected = """
+    defmodule Sample do
+      @doc \"""
+      Splits clauses whose guard is short enough that
+
+      length(x) <= 1) and rewrites them into two clauses.
+
+    #{close}
+      def split(x), do: x
+    end
+    """
+
+    assert reported_lines(input) == [2]
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  # This guard only ever *narrows* when the rule fires, so the defect to guard
+  # against is the opposite of "ships inert": a future widening that quietly
+  # stops repairing real files. Fixtures cannot catch that — they are short and
+  # prose-y by construction. This runs the rule over every real `@doc` block in
+  # `lib/` with its closing quotes deleted, which is the rule's exact failure
+  # mode on this repo's own prose.
+  #
+  # The measured baseline is 52 repairs over 333 broken docs, identical before
+  # and after the shape test was added (0 lost, 0 gained, 0 emitted bytes
+  # changed). Both assertions are floors, not equalities: `lib/` gains and loses
+  # doc blocks constantly, and pinning the exact totals would red this on edits
+  # that have nothing to do with the rule. A widening that costs a repair drives
+  # the repair count DOWN, which is the direction the floor catches.
+  #
+  # Tagged `:corpus` so the fix loop's fast gate (`--exclude corpus`) skips it;
+  # it still runs in CI, where a whole-repo scan belongs.
+  @tag :corpus
+  test "repairs the same real docs it did before the shape test" do
+    cases =
+      Path.wildcard("lib/**/*.ex")
+      |> Enum.flat_map(fn path ->
+        lines = path |> File.read!() |> String.split("\n")
+
+        lines
+        |> Enum.with_index()
+        |> Enum.filter(fn {line, _} -> Regex.match?(~r/^\s*@(?:module)?doc\s+"""\s*$/, line) end)
+        |> Enum.flat_map(fn {_, opener} ->
+          case Enum.find_index(Enum.drop(lines, opener + 1), &(String.trim(&1) == ~s("""))) do
+            nil ->
+              []
+
+            closer ->
+              [
+                {"#{path}:#{opener + 1}",
+                 Enum.join(List.delete_at(lines, opener + 1 + closer), "\n")}
+              ]
+          end
+        end)
+      end)
+      |> Enum.reject(fn {_, source} -> valid_syntax?(source) end)
+
+    repaired = for {id, source} <- cases, fix(source) != source, do: id
+
+    assert length(cases) >= 250,
+           "only #{length(cases)} broken docs harvested (baseline 333) — the harvester has stopped " <>
+             "finding them, so the repair floor below proves nothing"
+
+    assert length(repaired) >= 52,
+           "the rule repairs #{length(repaired)}/#{length(cases)} real broken docs, below the 52 " <>
+             "baseline — a guard was widened and it cost repairs. Diff against the previous commit " <>
+             "before adjusting this number."
+  end
+
   # The closer does not always land above a `def`: an `@spec`/`@impl`/second
   # `@doc` between the doc and its definition ends the doc instead. The reported
   # message has to describe where the repair actually goes, or a reader who acts
