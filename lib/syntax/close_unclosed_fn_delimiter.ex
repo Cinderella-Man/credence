@@ -76,11 +76,15 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
       stray `end` closes nothing: if the parser answers the deletion by
       reporting an opener at or above the repair as missing its terminator, the
       line deleted was that terminator and the deletion is refused.
-    * the line deleted must hold the first `end` **token** below the repair —
-      the stray one, by the shape of the bug. Walking past it to a later bare
-      `end` line deletes a real terminator, and that can rebalance the file so
-      thoroughly that it parses, with the stray `end` silently closing whatever
-      block lost its own.
+    * the line deleted must hold the first `end` **token** below the repair
+      that closes nothing opened below it — the stray one, by the shape of the
+      bug. Both directions of that are load-bearing. Walking *past* it to a
+      later bare `end` line deletes a real terminator; stopping *short* of it —
+      on the terminator of a complete block the `fn` body carries between the
+      repaired `)` and the dangling `end` — deletes a real terminator too. Both
+      can rebalance the file so thoroughly that it parses, with the stray `end`
+      silently closing whatever block lost its own, so no "does it parse" check
+      catches either.
   """
   use Credence.Syntax.Rule
 
@@ -272,12 +276,14 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
 
   defp insert_end_before(source, _line, _col), do: source
 
-  # Delete the stray `end` — the one the *shape of the bug* puts immediately
-  # after the `)` just repaired, which is the first `end` token below that line.
-  # Nothing further down is a candidate: a later bare `end` line is some real
-  # block's terminator, and deleting one of those can rebalance the file so well
-  # that it parses, with the stray `end` quietly closing the block that lost its
-  # own — indistinguishable from a repair by any "does it parse" test.
+  # Delete the stray `end` — the one the *shape of the bug* leaves behind below
+  # the `)` just repaired, which is the first `end` token below that line
+  # closing nothing opened below it. Neither a later bare `end` line nor an
+  # earlier one that terminates a block opened after the repair is a candidate:
+  # both are some real block's terminator, and deleting one of those can
+  # rebalance the file so well that it parses, with the stray `end` quietly
+  # closing the block that lost its own — indistinguishable from a repair by any
+  # "does it parse" test.
   #
   # It has to be an `end` *token*, so the search runs over the shadow: a bare
   # `end` line that is heredoc, string or comment content is not the stray one
@@ -287,7 +293,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
   defp delete_stray_end(step1, end_line) do
     lines = String.split(step1, "\n")
 
-    with {:ok, idx} <- first_end_token_line(step1, end_line),
+    with {:ok, idx} <- first_unmatched_end_line(step1, end_line),
          true <- bare_end?(Enum.at(lines, idx)),
          candidate = lines |> List.delete_at(idx) |> Enum.join("\n"),
          true <- clears_stray_end?(candidate, idx, end_line) do
@@ -297,25 +303,58 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
     end
   end
 
-  # The first line at index `from_idx` or below carrying an `end` **token**.
+  # The first line at index `from_idx` or below carrying an `end` **token** that
+  # closes nothing opened below the repair — the stray one. Counting matters:
+  # the `fn` body may well continue past the repaired `)` with a *complete*
+  # block of its own (`if … do` / `end`) before the dangling `end` arrives, and
+  # that block's own terminator is an `end` token below the repair which is not
+  # stray. Deleting it rebalances the file — the stray `end` closes the block
+  # that lost its terminator — so the result parses and compiles, and only its
+  # meaning has changed. So `do`/`fn` openers seen on the way down are tallied
+  # and an `end` is a candidate only at depth zero.
+  #
   # `SourceMask.lines/1` pairs each line with its shadow, in which every string,
-  # heredoc and comment byte is blanked, so an `end` inside one of those is not
-  # seen at all. A false positive here (an `:end` atom, say) only ever makes the
-  # rule decline, because such a line is never a bare `end` line.
-  defp first_end_token_line(source, from_idx) do
+  # heredoc and comment byte is blanked, so a delimiter word inside one of those
+  # is not seen at all. A false positive here (an `:end` atom, say) only ever
+  # makes the rule decline, because such a line is never a bare `end` line.
+  defp first_unmatched_end_line(source, from_idx) do
     source
     |> SourceMask.lines()
     |> Enum.with_index()
     |> Enum.drop(from_idx)
-    |> Enum.find_value(:none, fn {{_line, shadow}, idx} ->
-      if Regex.match?(~r/(?<![[:alnum:]_])end(?![[:alnum:]_?!])/, shadow), do: {:ok, idx}
+    |> Enum.reduce_while({:none, 0}, fn {{_line, shadow}, idx}, {_found, depth} ->
+      case close_depth(delimiters(shadow), depth) do
+        {:unmatched_end, _depth} -> {:halt, {{:ok, idx}, depth}}
+        {:ok, depth} -> {:cont, {:none, depth}}
+      end
     end)
+    |> elem(0)
   end
 
+  # `do`, `fn` and `end` tokens of one shadow line, in source order. `do:` is a
+  # keyword, not a block opener, so the trailing `:` is excluded.
+  defp delimiters(shadow) do
+    opens = token_offsets(~r/(?<![[:alnum:]_])(?:do|fn)(?![[:alnum:]_?!:])/, shadow, :open)
+    closes = token_offsets(~r/(?<![[:alnum:]_])end(?![[:alnum:]_?!])/, shadow, :close)
+
+    Enum.sort(opens ++ closes)
+  end
+
+  defp token_offsets(regex, shadow, kind) do
+    regex
+    |> Regex.scan(shadow, return: :index)
+    |> Enum.map(fn [{at, _len} | _] -> {at, kind} end)
+  end
+
+  defp close_depth([], depth), do: {:ok, depth}
+  defp close_depth([{_at, :open} | rest], depth), do: close_depth(rest, depth + 1)
+  defp close_depth([{_at, :close} | _rest], 0), do: {:unmatched_end, 0}
+  defp close_depth([{_at, :close} | rest], depth), do: close_depth(rest, depth - 1)
+
   # Did deleting line `deleted_idx` (0-based) actually remove the stray `end`?
-  # Two things must hold, and neither is "the whole file parses now" — that gate
-  # declined on any file with a second fault anywhere, this bug's own second
-  # copy included.
+  # Three things must hold, and none of them is "the whole file parses now" —
+  # that gate declined on any file with a second fault anywhere, this bug's own
+  # second copy included.
   #
   #   * No extra-`end` error is left at or above the repair. Deleting a line that
   #     is heredoc, string or comment content removes no `end` token, so that
@@ -342,8 +381,14 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
   #     deletion that left a block unterminated, because an unclosed delimiter
   #     makes the front end consume the whole file and report EOF (see
   #     `Credence.Syntax.ProgressGuard`, which refuses to compare such a stop at
-  #     all). What rules that case out is choosing the line to delete by token
-  #     position rather than by searching for one that clears the error.
+  #     all). What rules that case out is choosing the line to delete by
+  #     counting delimiters rather than by searching for one that clears the
+  #     error. The comparison itself is not what this condition rejects on in
+  #     practice: tokenizing is what fails on the input, and it fails at or
+  #     below the deleted line, so an `:end_line` reported afterwards is always
+  #     below it too. What the condition does turn back is a complaint carrying
+  #     no `:end_line` at all — a *parser*-phase fault, which only becomes
+  #     reachable once the deletion has made the file tokenize.
   defp clears_stray_end?(candidate, deleted_idx, repair_line) do
     case Code.string_to_quoted(candidate, columns: true) do
       {:ok, _ast} ->

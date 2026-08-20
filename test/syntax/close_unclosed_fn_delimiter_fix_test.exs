@@ -361,6 +361,115 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterFixTest do
     assert analyze(input) == []
   end
 
+  # The stray `end` is not always the first `end` token below the repair: the
+  # `fn` body can carry a *complete* `do`/`end` block of its own before the
+  # dangling `end` arrives. Here that is the `if` on lines 6-8, whose own
+  # terminator on line 8 is the first `end` token below the repaired `)`.
+  # Deleting line 8 rebalances the file — the stray `end` on line 10 closes the
+  # `if` instead — so the result parses and compiles, and no "does it parse"
+  # check can object; what changes is the meaning, because `length(row)` moves
+  # inside the `if`. So the line to delete is the first `end` below the repair
+  # that is *not* matched by a block opened after it.
+  test "deletes the stray end, not the terminator of a complete block above it" do
+    input = """
+    defmodule InterveningBlock do
+      def go(rows) do
+        Enum.map(rows, fn row ->
+          Enum.map(row, fn e ->
+            if e == 0 do 1 else e end)
+          if row == [] do
+            :empty
+          end
+          length(row)
+          end
+        end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule InterveningBlock do
+      def go(rows) do
+        Enum.map(rows, fn row ->
+          Enum.map(row, fn e ->
+            if e == 0 do 1 else e end end)
+          if row == [] do
+            :empty
+          end
+          length(row)
+        end)
+      end
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert valid_syntax?(fixed)
+
+    # The emitted string itself, executed: `length(row)` must still be the value
+    # of the outer `fn` body for a non-empty row. If the `if`'s terminator was
+    # deleted instead, `go/1` returns `[nil]` here and the raise fires.
+    assert {:ok, _} =
+             Credence.RuleHelpers.compile_and_capture(
+               fixed <> "\nunless InterveningBlock.go([[0, 2]]) == [2], do: raise(\"wrong\")\n"
+             )
+  end
+
+  # The third of the three conditions a deletion has to meet, on its own — the
+  # only test in this file that reaches it, because every other declining
+  # fixture is turned back by one of the first two. The occurrence here is
+  # genuine and the control below repairs it; the only difference is the
+  # `x = = 1` line, which is a *parser*-phase fault. The parser never runs on
+  # the input at all (tokenizing fails first, on the stray `end`), so that fault
+  # surfaces only once the deletion has made the file tokenize — and its
+  # complaint is `{[line: 10, column: 9], "syntax error before: ", "'='"}`,
+  # which carries no `:end_line`. It is not a mismatched delimiter, so the
+  # extra-`end` condition is satisfied, and it names no opener, so the
+  # unterminated-opener condition is satisfied too. What refuses the deletion is
+  # the third condition alone: the front end did not say where it stopped, so
+  # the rule cannot place that stop at or below the line it removed.
+  test "declines when the front end does not say where it stopped after the deletion" do
+    input = """
+    defmodule ParserFault do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end)
+          end
+        end)
+      end
+
+      def bad(x) do
+        x = = 1
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+    assert analyze(input) == []
+
+    # The control: the same file with the parser-phase fault made well-formed.
+    # The occurrence really is this rule's, and really is repaired.
+    control = String.replace(input, "x = = 1", "x = 1")
+
+    expected = """
+    defmodule ParserFault do
+      def go(m) do
+        Enum.map(m, fn r ->
+          Enum.map(r, fn e ->
+            if e == 0 do 1 else e end end)
+        end)
+      end
+
+      def bad(x) do
+        x = 1
+      end
+    end
+    """
+
+    confirm_fix(fix(control), expected)
+  end
+
   # One pass per occurrence, so three copies of the bug are three passes. This
   # says nothing about the bound on that loop — `@max_passes` is 100 — which the
   # two tests after the `Heredoc` one below pin at the boundary itself.
