@@ -1279,6 +1279,77 @@
       "error": "round cap (3) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)",
       "enqueued_at": "2026-08-19T23:09:47+02:00",
       "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_assignment_dot_syntax_fix_test.exs",
+      "reviewed_at": "2026-08-19T23:16:22+02:00",
+      "round": 2,
+      "severities": [
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "nit",
+          "outcome": "refuted",
+          "note": "The finding says the `@mixed_source` fixture is an outdented heredoc (doc line in column 0, closing `\"\"\"` in column 2) and that this makes Elixir print a \"outdented heredoc line\" warning every time `valid_syntax?/1` parses it, at lines 485 and 497. The first half is true; the second half — the only part that is a defect — is not. I ran the reviewer's own experiment, `mix test test/syntax/fix_assignment_dot_syntax_fix_test.exs 2>&1 | grep -i \"outdented heredoc\"`: no matches (grep exits 1), across a run of all 44 tests in the file. I then ran the whole fast gate, `mix test --exclude corpus --exclude idempotency`, and grepped its complete output the same way: 9102 tests, 0 failures, and zero occurrences of \"outdented heredoc\" anywhere in the suite. So no warning is emitted on any run, let alone every run. The reason is that `valid_syntax?/1` (test/support/rule_case.ex:104) parses with `Sourceror.parse_string/1`, and Sourceror passes `emit_warnings: false` to Elixir's parser (deps/sourceror/lib/sourceror.ex:196). I proved that is what suppresses it rather than guessing, by feeding the identical string to both parsers in one script: `Sourceror.parse_string/1` returned `{:ok, _}` silently, while `Code.string_to_quoted/1` on the same bytes printed the \"outdented heredoc line\" warning. The fixture is therefore genuinely outdented but structurally silent, and no code was changed — nothing reproduced to fix. Two things worth recording for the maintainer, neither a defect today. First, the column-0 placement of the doc line is not what makes the fixture work: the rule's `@bad_pattern` (lib/syntax/fix_assignment_dot_syntax.ex:118) opens with `^(\\s*[a-zA-Z_...`, so it matches an indented doc line just as well, and the reviewer's proposed edit — moving the two closing `\"\"\"` to column 0 — would have been behaviour-neutral rather than a repair. Second, the residual risk the finding gestures at is real but hypothetical: Elixir currently warns about outdented heredocs and has said they may become an error in v2.0, so if that lands, this fixture would fail at the point `Sourceror` parses it, not at the point the test file is compiled (the fixture is a `~S'''` string literal, so nothing about it is parsed as a heredoc until the rule's output is checked). That is a decision about pre-emptively editing an oracle fixture against a future compiler, on a tree where the current behaviour is clean; it is not something the present code gets wrong."
+        }
+      ],
+      "commits": [],
+      "gate": "skipped (no commits)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T23:16:22+02:00",
+      "resolved_at": "2026-08-19T23:22:26+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
+      "reviewed_at": "2026-08-19T23:27:49+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "concern",
+        "nit",
+        "nit"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Confirmed by running the rule's own `fix/1` over a module whose `@moduledoc` prose contains the sentence \"Charlist heredocs open with '''.\": the `@type t :: () -> any()` line two lines below it came back rewritten to `@type t :: (() -> any())`, i.e. the rule edited the documentation text the module produces. The cause was the per-line delimiter count in `toggle_heredoc/2`, which flips its \"am I inside a heredoc?\" state on any odd number of `\"\"\"`/`'''` on a line. The opposite direction reproduced too: a line of real code holding `~s(\"\"\")` turned the tracking *on*, and `analyze/1` returned `[]` for a perfectly ordinary `@type` line below it — the rule silently going inert with every gate green. The reviewer's second blocker is the same root cause seen from the oracle's side, and it also reproduced: appending `@type z :: () -> any()` to the rule's own source file and calling `analyze/1` returned `[]`, because a lone `'''` in the rule's own moduledoc made the tracker treat the entire implementation body as prose — so the self-corruption gate was supplying no evidence about this rule at all. Pinned with three tests (an analyze no-issue and a fix byte-identity on the charlist-prose moduledoc, plus an analyze/fix pair proving the rule keeps working after a code line carrying a lone triple quote); all failed on the old code. The fix replaces the hand-rolled delimiter counter with `Credence.SourceMask.lines/1` + `self_contained?/2`, the same primitive `PreferSpecArrowOperator` was converted to after it rewrote its own moduledoc; its documented failure direction is a missed fix inside a multi-line literal, never a corrupted one. Re-running both reproductions afterwards: the moduledoc prose comes back byte-identical, and the appended-typespec probe now reports the issue at line 267 instead of `[]` — so the self-corruption gate now actually exercises this rule."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Confirmed on `@type t :: () -> {:ok, term()}` followed by `  | {:error, term()}`: `analyze/1` flagged line 1 and `fix/1` produced `@type t :: (() -> {:ok, term()})` with the `|` line left dangling. One correction to the finding's own reasoning, which matters for severity: this is not discarded by the round's all-or-nothing rollback. Comparing the parsed syntax trees of the two forms shows the rewritten source *does* parse and compile — Elixir treats a line opening with `|` as a continuation — but as `(() -> {:ok, term()}) | {:error, term()}`, a union of a function type and a tuple, rather than the `() -> {:ok, term()} | {:error, term()}` the author wrote. So the output is silently a different type, which is the failure mode nothing downstream can catch, not a missed repair. Pinned with six tests (analyze and fix, for a `|` continuation, a `|` continuation separated by a blank line, and a `when` guard on the line below); all six failed on the old code. The fix threads the following line into the one shared predicate — `target/1` became `target/2`, still called by both `analyze/1` and `fix/1`, so there is still exactly one copy of the decision — and declines when the next non-blank line opens with `|`, `,`, `->`, `::`, `when` or a closing bracket: tokens that cannot start a statement, so they are the tail of the typespec above. Blank lines are looked past because a blank line does not end a typespec either (verified against the parser)."
+        },
+        {
+          "n": 3,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The message assertion was `assert issue.message =~ \"Wrap the function type in parens\"`, a substring check on the one string the user reads. Replaced with a whole-string `==` against the exact message the rule builds. This one passes both before and after by construction — it is a strengthening, not a defect repair — and it is committed with the rest."
+        },
+        {
+          "n": 4,
+          "severity": "nit",
+          "outcome": "fixed",
+          "note": "The 1008-combination battery only ever asserted \"check and fix agree\" and \"the rewrite parses\", both of which hold trivially if the rule rewrites nothing, so the loop would have stayed green against a dead rule. The loop now collects each combination's `rewritten?` flag and asserts the total is `5 * 3 * 5 * 3` = 225: the five attribute prefixes the rule accepts (`@typedoc` and `def f` are not typespec attributes), all three separator spellings, the five wrappable right-hand sides out of twelve, and the three suffixes that are not a trailing comment. Verified the figure is the one the current rule actually produces, and verified it is load-bearing by the fact that it is an exact count rather than a lower bound."
+        }
+      ],
+      "commits": [
+        "2c059a63515b69ebcec4e4de984824201b5f2dc7"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-19T23:27:49+02:00",
+      "resolved_at": "2026-08-19T23:43:10+02:00"
     }
   ]
 }
