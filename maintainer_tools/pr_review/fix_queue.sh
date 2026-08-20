@@ -14,8 +14,13 @@
 #
 # Usage: fix_queue.sh sync                      # backfill fixes.json
 #        fix_queue.sh status                    # digest (read-only, no lock)
-#        fix_queue.sh requeue --errors | <path>...
+#        fix_queue.sh requeue --errors | --skipped | <path>...
 # Env:   FIX_MAX_ROUNDS (3)
+#        FIX_MIN_SEVERITY (concern) — lowest severity that earns a fix session.
+#          A round of pure nits is recorded as `skipped`, not scheduled: it is
+#          not worth a ~13-minute session plus a ~4-minute gate, and scheduling
+#          it also re-stales the file and buys another review. `nit` restores
+#          the old behaviour of fixing everything.
 #
 # Sourceable: `source fix_queue.sh` defines the functions without running
 # anything (fix_loop.sh does this and calls sync_queue under its own lock).
@@ -26,6 +31,7 @@ FIXES="$FQ_SCRIPT_DIR/fixes.json"
 FQ_MANIFEST="$FQ_SCRIPT_DIR/manifest.json"
 FQ_FINDINGS="$FQ_SCRIPT_DIR/findings.md"
 FIX_MAX_ROUNDS="${FIX_MAX_ROUNDS:-3}"
+FIX_MIN_SEVERITY="${FIX_MIN_SEVERITY:-concern}"
 
 fq_log() { printf '[fix_queue] %s\n' "$*"; }
 fq_die() { printf '[fix_queue] FATAL: %s\n' "$*" >&2; exit 1; }
@@ -77,6 +83,18 @@ section_severities() {
   grep -E '^- (blocker|concern|nit):' <<<"$1" | sed -E 's/^- ([a-z]+):.*/\1/' || true
 }
 
+# schedulable <severities, one per line> — is anything here at or above
+# FIX_MIN_SEVERITY? Validates the setting on every call so a typo fails loudly
+# at the first row rather than silently scheduling (or skipping) everything.
+schedulable() {
+  case "$FIX_MIN_SEVERITY" in
+    nit)     return 0 ;;
+    concern) grep -qE '^(blocker|concern)$' <<<"$1" ;;
+    blocker) grep -qE '^blocker$'            <<<"$1" ;;
+    *) fq_die "FIX_MIN_SEVERITY must be nit, concern or blocker (got '$FIX_MIN_SEVERITY')" ;;
+  esac
+}
+
 fixes_append() { # path reviewed_at round severities_json status error(json string or null literal)
   fixes_jq '.entries += [{
       path: $p, reviewed_at: $ra, round: $round, severities: $sevs,
@@ -100,6 +118,23 @@ sync_queue() {
     jq -e --arg p "$path" --arg ra "$ra" \
       'any(.entries[]; .path == $p and .reviewed_at == $ra)' "$FIXES" | grep -q true && continue
 
+    # A path already parked at the round cap does not mint a FRESH abandoned
+    # entry every time a sibling's commit re-stales it and the reviewer runs
+    # again. The cap asked for a human; until one arrives, every later review of
+    # this file produces findings nobody will act on, and each one used to land
+    # as another `error` row. That is how close_unclosed_doc_heredoc.ex collected
+    # rounds 4, 5 AND 6 in the 2026-08-19 run — three abandoned entries, and
+    # three ~6-minute review sessions spent to create them.
+    #
+    # Clear it deliberately with: fix_queue.sh requeue <path>
+    if jq -e --arg p "$path" \
+         'any(.entries[]; .path == $p and .status == "error"
+                          and ((.error // "") | startswith("round cap")))' \
+         "$FIXES" | grep -q true; then
+      fq_log "not enqueued (already parked at the round cap, awaiting a human): $path"
+      continue
+    fi
+
     local nprev round sec sevs sevs_json
     nprev="$(jq --arg p "$path" '[.entries[] | select(.path == $p)] | length' "$FIXES")"
     round=$((nprev + 1))
@@ -118,9 +153,30 @@ sync_queue() {
       continue
     fi
     sevs_json="$(jq -R . <<<"$sevs" | jq -cs .)"
+
+    # A round carrying nothing at or above FIX_MIN_SEVERITY is recorded, not
+    # scheduled. In the 2026-08-19 run 13 of 30 completed rounds were nits only,
+    # and each cost a ~13-minute fix session plus a ~4-minute full-suite gate —
+    # 181 minutes, a quarter of the night, for findings the ledger itself grades
+    # "harmless if ignored". The findings stay in findings.md; sweep them in one
+    # batch at the end rather than one session each.
+    #
+    # The second-order saving is the larger one: a skipped round commits nothing,
+    # so nothing goes stale, so no re-review is triggered either.
+    if ! schedulable "$sevs"; then
+      fixes_append "$path" "$ra" "$round" "$sevs_json" skipped \
+        "\"nothing at or above '$FIX_MIN_SEVERITY' — findings recorded in findings.md, no fix session scheduled\""
+      fq_log "not scheduled (all below $FIX_MIN_SEVERITY): $path (round $round, $(wc -l <<<"$sevs") findings)"
+      continue
+    fi
+
     if (( round > FIX_MAX_ROUNDS )); then
       fixes_append "$path" "$ra" "$round" "$sevs_json" error \
-        "\"round cap ($FIX_MAX_ROUNDS) reached — review and fix keep disagreeing about this file; a human must look (requeue to override)\""
+        "\"round cap ($FIX_MAX_ROUNDS) reached — review and fix keep disagreeing about this file; a human must look. Override with: fix_queue.sh requeue $path\""
+      # needs_human is what status.sh actually surfaces; the manifest row stays
+      # `done`, so requeue.sh --errors (which selects MANIFEST rows with
+      # status == "error") never matched these and never will.
+      fixes_update "$path" "$ra" '.needs_human = true'
       fq_log "enqueued as ERROR (round cap): $path (round $round)"
     else
       fixes_append "$path" "$ra" "$round" "$sevs_json" pending null
@@ -136,8 +192,14 @@ queue_status() {
     ([.entries[] | select(.status == "pending")] | length) as $p |
     ([.entries[] | select(.status == "done")]    | length) as $d |
     ([.entries[] | select(.status == "error")]   | length) as $e |
+    ([.entries[] | select(.status == "skipped")] | length) as $s |
+    ([.entries[] | select(.status == "skipped") | .severities[]] | length) as $sf |
     ([.entries[] | .outcomes[]] | group_by(.outcome) | map("\(length) \(.[0].outcome)") | join(" · ")) as $oc |
-    "fixes — \($n) entr\(if $n == 1 then "y" else "ies" end): \($p) pending · \($d) done · \($e) error",
+    "fixes — \($n) entr\(if $n == 1 then "y" else "ies" end): \($p) pending · \($d) done · \($e) error\(if $s > 0 then " · \($s) skipped" else "" end)",
+    (if $s > 0 then
+      "  skipped:    \($s) round\(if $s == 1 then "" else "s" end) below the severity floor, holding \($sf) finding\(if $sf == 1 then "" else "s" end) — recorded in findings.md, never scheduled.",
+      "              sweep them with: FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped"
+     else empty end),
     (if $d > 0 then "  outcomes:   \(if $oc == "" then "none recorded" else $oc end)" else empty end),
     (if any(.entries[]; .needs_human) then
       "  needs a human (deferred findings):",
@@ -161,6 +223,19 @@ requeue_fixes() {
       skipped="$(jq '[.entries[] | select(.status == "error" and (.severities | length) == 0)] | length' "$FIXES")"
       fixes_jq "(.entries[] | select(.status == \"error\" and (.severities | length) > 0)) |= ($reset)"
       fq_log "requeued every error entry$( ((skipped > 0)) && echo " (skipped $skipped with no parsed findings — fix findings.md, delete the entry, resync)")" ;;
+    --skipped)
+      # The end-of-campaign nit sweep. These were never scheduled because they
+      # carry nothing at or above FIX_MIN_SEVERITY, so reviving them under the
+      # default floor would have sync_queue skip them straight back. Run this
+      # with the floor lowered:  FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped
+      if [[ "$FIX_MIN_SEVERITY" != nit ]]; then
+        fq_die "requeue --skipped needs FIX_MIN_SEVERITY=nit, or these entries are simply skipped again (currently '$FIX_MIN_SEVERITY')"
+      fi
+      local n
+      n="$(jq '[.entries[] | select(.status == "skipped")] | length' "$FIXES")"
+      (( n > 0 )) || { fq_log "no skipped entries to requeue"; return 0; }
+      fixes_jq "(.entries[] | select(.status == \"skipped\")) |= ($reset)"
+      fq_log "requeued $n skipped entr$( ((n == 1)) && echo y || echo ies) — run fix_loop.sh with FIX_MIN_SEVERITY=nit too, or sync_queue will re-skip any new rounds" ;;
     *)
       local p
       for p in "$@"; do
@@ -189,11 +264,11 @@ fq_main() {
       sync_queue ;;
     status) queue_status ;;
     requeue)
-      shift; [[ $# -ge 1 ]] || fq_die "usage: fix_queue.sh requeue --errors | <path>..."
+      shift; [[ $# -ge 1 ]] || fq_die "usage: fix_queue.sh requeue --errors | --skipped | <path>..."
       exec 9>"$FQ_SCRIPT_DIR/.lock"
       flock -n 9 || fq_die "review_loop/fix_loop is running — stop it first"
       requeue_fixes "$@" ;;
-    *) echo "usage: fix_queue.sh sync | status | requeue (--errors | <path>...)" >&2; exit 2 ;;
+    *) echo "usage: fix_queue.sh sync | status | requeue (--errors | --skipped | <path>...)" >&2; exit 2 ;;
   esac
 }
 

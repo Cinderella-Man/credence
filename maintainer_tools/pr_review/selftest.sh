@@ -321,6 +321,99 @@ make_repo round_cap
   && ./fix_queue.sh sync ) >/dev/null
 assert_jq "round-4 entry exists"                '.entries | length == 4'
 assert_jq "round cap turns it into error"       '.entries[3].status == "error" and (.entries[3].error | contains("round cap"))'
+# The cap says "a human must look" — needs_human is the field status.sh reads to
+# say so. Without it the entry is invisible: the MANIFEST row stays `done`, so
+# requeue.sh --errors (which selects manifest rows with status == "error") has
+# never matched a capped file and never will.
+assert_jq "round cap asks for the human it names" '.entries[3].needs_human == true'
+assert_jq "round cap names a command that works"  '.entries[3].error | contains("fix_queue.sh requeue lib/foo.ex")'
+
+# A capped path must not mint a FRESH abandoned entry every time a sibling's
+# commit re-stales it. Re-syncing against a LATER review of the same file (a new
+# reviewed_at, which is what a re-review produces) used to append round 5, then
+# 6, each costing a full review session to create and actionable by nobody.
+CURRENT="round_cap_no_duplicates"
+( cd "$R/maintainer_tools/pr_review" \
+  && jq '.files[0].reviewed_at = "2026-08-19T20:00:00+02:00"' manifest.json > .m.tmp \
+  && mv .m.tmp manifest.json \
+  && ./fix_queue.sh sync ) >/dev/null
+assert_jq "a capped path does not collect a round 5" '.entries | length == 4'
+
+# ---- severity floor --------------------------------------------------------
+# A round carrying nothing at or above FIX_MIN_SEVERITY is recorded, not
+# scheduled: 13 of 30 completed rounds in the 2026-08-19 run were nits only, at
+# ~17 minutes of machine time each.
+CURRENT="nit_only_skipped"
+make_repo nit_only_skipped
+cat > "$R/maintainer_tools/pr_review/findings.md" <<'EOF'
+## lib/foo.ex — 2026-08-19 (added, rule_syntax)
+- nit: lib/foo.ex:2 — the name foo/1 says nothing about what it checks
+- nit: lib/foo.ex:2 — the comment above foo/1 has no verb
+
+EOF
+( cd "$R/maintainer_tools/pr_review" && ./fix_queue.sh sync ) >/dev/null
+assert_jq "nit-only round is not scheduled"     '.entries[0].status == "skipped"'
+assert_jq "its findings are still recorded"     '.entries[0].severities == ["nit", "nit"]'
+assert_jq "the skip says why"                   '.entries[0].error | contains("nothing at or above")'
+# `run_fix` is a shell function, so it must be called directly — wrapping it in
+# `bash -c` spawns a shell that does not have it, the command fails silently, and
+# the HEAD comparison then passes for the wrong reason.
+run_fix true happy >/dev/null 2>&1 || true
+assert "fix_loop ran no session for a skipped entry" \
+  test "$(git -C "$R" rev-parse HEAD)" = "$INITIAL_SHA"
+assert_jq "and left it skipped"                 '.entries[0].status == "skipped"'
+assert "status.sh surfaces the skipped round" \
+  bash -c "cd '$R/maintainer_tools/pr_review' && ./fix_queue.sh status | grep -q 'skipped'"
+
+# The floor is a floor, not a filter: one concern alongside the nits schedules
+# the whole round, nits included.
+CURRENT="mixed_severity_scheduled"
+make_repo mixed_severity_scheduled
+( cd "$R/maintainer_tools/pr_review" && ./fix_queue.sh sync ) >/dev/null
+assert_jq "a round with a concern is scheduled" '.entries[0].status == "pending"'
+assert_jq "and carries its nit along"           '.entries[0].severities == ["concern", "nit"]'
+
+# FIX_MIN_SEVERITY=nit restores the old fix-everything behaviour, which is what
+# the end-of-campaign sweep runs under.
+CURRENT="floor_lowered"
+make_repo floor_lowered
+cat > "$R/maintainer_tools/pr_review/findings.md" <<'EOF'
+## lib/foo.ex — 2026-08-19 (added, rule_syntax)
+- nit: lib/foo.ex:2 — the name foo/1 says nothing about what it checks
+
+EOF
+( cd "$R/maintainer_tools/pr_review" && FIX_MIN_SEVERITY=nit ./fix_queue.sh sync ) >/dev/null
+assert_jq "floor=nit schedules a nit-only round" '.entries[0].status == "pending"'
+
+# requeue --skipped is the sweep. It refuses to run under the default floor,
+# because sync_queue would skip the revived entries straight back.
+CURRENT="requeue_skipped"
+make_repo requeue_skipped
+cat > "$R/maintainer_tools/pr_review/findings.md" <<'EOF'
+## lib/foo.ex — 2026-08-19 (added, rule_syntax)
+- nit: lib/foo.ex:2 — the name foo/1 says nothing about what it checks
+
+EOF
+( cd "$R/maintainer_tools/pr_review" && ./fix_queue.sh sync ) >/dev/null
+assert_jq "entry is skipped to begin with"      '.entries[0].status == "skipped"'
+if ( cd "$R/maintainer_tools/pr_review" && ./fix_queue.sh requeue --skipped ) >/dev/null 2>&1; then
+  bad "requeue --skipped must refuse to run under the default severity floor"
+else
+  ok
+fi
+assert_jq "refusal left the entry alone"        '.entries[0].status == "skipped"'
+( cd "$R/maintainer_tools/pr_review" && FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped ) >/dev/null
+assert_jq "revived under floor=nit"             '.entries[0].status == "pending"'
+
+# A bad floor fails loudly at the first row rather than silently scheduling or
+# skipping the entire campaign.
+CURRENT="bad_floor"
+make_repo bad_floor
+if ( cd "$R/maintainer_tools/pr_review" && FIX_MIN_SEVERITY=critical ./fix_queue.sh sync ) >/dev/null 2>&1; then
+  bad "an unrecognised FIX_MIN_SEVERITY must be fatal, not silently ignored"
+else
+  ok
+fi
 
 CURRENT="dirty_tree"
 make_repo dirty_tree

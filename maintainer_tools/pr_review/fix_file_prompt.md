@@ -22,15 +22,24 @@ Bash: you can compile, run tests, and use git.
 3. **Fix minimally.** The smallest change that removes the defect. Never
    rewrite for tidiness: per docs/02, a fix must give the exact same answer
    for every admitted input except the ones the finding is about.
-4. **Prove it.** The pinning test now passes. Then run the fast gate yourself:
+4. **Prove it.** The pinning test now passes. Then run the SCOPED check:
 
        mix format <the files you touched>
        mix compile --warnings-as-errors
-       mix test --exclude corpus --exclude idempotency
+       mix test <this rule's own test files>
 
    All green, and `git status` clean apart from `maintainer_tools/pr_review/`.
-   The wrapper re-runs this same gate after you finish; if it is red, ALL your
-   commits are discarded and the attempt counts as failed.
+
+   **Do not run the whole suite** (`mix test --exclude corpus --exclude
+   idempotency`, about four minutes). The wrapper runs it for you the moment you
+   finish and does not trust your run of it anyway — running it yourself doubles
+   the cost of every round for no added signal. If the wrapper's suite is red you
+   get its output back as feedback and the attempt retries; a red gate is one
+   more attempt, not lost work.
+
+   Run the full suite yourself only when you have a specific reason to think your
+   change reaches beyond this rule — you edited a shared helper, the dispatch, the
+   masking primitives, or anything under `test/support/`.
 5. **Commit** the test and the fix together:
 
        git add <each file by name>     # never -A, never ., never commit -a

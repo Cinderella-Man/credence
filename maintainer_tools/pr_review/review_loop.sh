@@ -240,7 +240,14 @@ main() {
     [[ "$path" == "$prev_path" ]] || retry=0
     prev_path="$path"
 
-    ROWLOG="$LOGDIR/$(tr '/' '__' <<<"$path").log"; : > "$ROWLOG"
+    # One log per SESSION, not per path. Keying the filename on the path alone
+    # and truncating meant every re-review — and every retry — erased the one
+    # before it: of the 42 review sessions in the 2026-08-19 run, 31 left no
+    # trace at all, which is why that run looked like it had idle gaps in it.
+    # A round or attempt suffix does not work here: review_loop.sh resets
+    # iter/retry at startup and campaign.sh starts a fresh process per
+    # iteration, so every log would collide on the same suffix again.
+    ROWLOG="$LOGDIR/$(tr '/' '__' <<<"$path").$(date +%Y%m%dT%H%M%S).log"; : > "$ROWLOG"
     local ndone; ndone="$(done_count)"
     rlog START "file $((ndone + 1))/$TOTAL: $path ($origin, $cat)${old:+ old=$old}"
     log "▶ $(date '+%H:%M') reviewing $path ($origin, $cat) — $ndone/$TOTAL done$([[ $retry -gt 0 ]] && echo " [retry #$retry]")"

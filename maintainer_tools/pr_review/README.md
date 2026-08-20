@@ -11,7 +11,8 @@ Two session kinds with opposite trust models:
 - **Review sessions** are read-only (no Bash, no Edit) and produce a verdict.
 - **Fix sessions** are developers: for every finding they must reproduce the
   defect with something they *executed*, pin it with a test that fails on the
-  current code, fix it minimally, prove the fast gate green, and commit — or
+  current code, fix it minimally, prove the rule's own tests green, and commit
+  — the wrapper runs the full suite itself, so the session does not — or
   honestly refute/defer with evidence. The wrapper trusts none of it: it
   re-runs the gate itself and a red gate discards every commit of the attempt.
 
@@ -46,22 +47,33 @@ branch without its own file changing. So the universe is:
   produced findings, keyed `(path, reviewed_at)` with a per-path `round`
   counter. DERIVED from manifest+findings.md (`fix_queue.sh sync` backfills),
   so it can be rebuilt at any time. Per entry: `status
-  (pending|done|error), outcomes ([{n, severity, outcome
+  (pending|done|skipped|error), outcomes ([{n, severity, outcome
   (fixed|refuted|obsolete|deferred), note}]), commits, gate, needs_human,
   attempts, error`.
 - `review_file_prompt.md` / `fix_file_prompt.md` — the two session protocols.
 - `_verdict`, `_fix_report`, `_briefing/`, `.review_logs/`, `.fix_logs/`,
   `.fix_scratch/`, `.lock`, `.campaign.lock` — transient, gitignored.
-  `.review_logs/<path>.log` and `.fix_logs/<path>.roundN.log` hold the full
+  `.review_logs/<path>.<timestamp>.log` and `.fix_logs/<path>.roundN.log` hold the full
   per-session transcripts; `.fix_logs/<path>.roundN.gate.log` the wrapper's
   own gate run.
 
 ## Sandbox model (review sessions)
 
-The session gets `Read Grep Glob Write` — **no Bash, no Edit**. It cannot
-compile or run anything (see docs/21: the OOMs came from ad-hoc compiles;
-read-only reviewers *name* the experiment, the maintainer runs it). Its only
-output channel is `_verdict`:
+The session is *asked* for `Read Grep Glob Write` — no Bash, no Edit — and the
+prompt tells it that it cannot compile or run anything (see docs/21: the OOMs
+came from ad-hoc compiles; read-only reviewers *name* the experiment, the
+maintainer runs it).
+
+**That is a request, not a sandbox.** Measured over the 2026-08-19 run: 41 of 44
+review sessions called Bash, 329 calls in total, more than they made Read calls.
+All of them were reads — `grep`, `sed -n`, `ls`, `find`, `git` — nothing
+compiled and no tree guard fired, so no harm was done. But what actually holds
+the line is `revert_new_dirt` plus the porcelain snapshot below, not the tool
+list. A reviewer that decides to run `mix run` is exactly the docs/21 OOM class,
+and nothing here stops it. Giving each reviewer its own git worktree is the fix;
+until then, treat the tool list as documentation of intent.
+
+Its only output channel is `_verdict`:
 
 ```
 OK
@@ -123,6 +135,12 @@ committed), `refuted` (reproduction attempted, code is right — with evidence),
 question only a human can settle; surfaced by `status.sh` as needs-human).
 After accepted commits the manifest refreshes: fixed files re-enter review as
 `stale`, new test files enter as `pending` — the reviewer verifies the fixer.
+A round carrying nothing at or above `FIX_MIN_SEVERITY` (default `concern`) is
+recorded as `skipped` rather than scheduled: a pile of nits is not worth a fix
+session plus a full-suite gate each, and scheduling one also re-stales the file
+and buys another review. Sweep them at the end with
+`FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped`.
+
 A file can go around the review↔fix loop at most `FIX_MAX_ROUNDS` (3) times
 before it parks as needs-human.
 
@@ -143,6 +161,7 @@ before it parks as needs-human.
 ./requeue.sh <path>...              # re-review specific rows
 ./fix_queue.sh sync                 # backfill fixes.json from findings.md
 ./fix_queue.sh requeue --errors     # fix error entries → pending
+FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped   # the end-of-campaign nit sweep
 ./fix_queue.sh requeue <path>...    # retry the latest fix entry for a path
 ./selftest.sh                       # prove the fix-pipeline mechanics
 ```
@@ -153,7 +172,7 @@ overrides it for fix sessions), `MAX_RETRIES` (3 review / 2 fix),
 ledgers every N reviewed files), `BASE_BRANCH`/`HEAD_BRANCH` for the
 generator (default `main` / `evolution_accepted`), and the fix knobs
 documented in `fix_loop.sh`'s header (`FIX_MEM_MAX`, `FIX_SESSION_TIMEOUT`,
-`FIX_GATE_TIMEOUT`, `FIX_MAX_ROUNDS`, `FIX_REFRESH`).
+`FIX_GATE_TIMEOUT`, `FIX_MAX_ROUNDS`, `FIX_MIN_SEVERITY`, `FIX_REFRESH`).
 
 Run **one loop instance at a time** (enforced with a lock file; the campaign
 holds its own second lock). Sessions are serial by design — this is a
