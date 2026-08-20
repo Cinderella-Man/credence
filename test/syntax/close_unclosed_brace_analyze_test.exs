@@ -211,6 +211,55 @@ defmodule Credence.Syntax.CloseUnclosedBraceAnalyzeTest do
     assert analyze(code) == []
   end
 
+  test "no issue when the literal opens on the line the brace would be added to" do
+    # `x = {1, 2} |> IO.inspect()` and `x = {1, 2 |> IO.inspect()}` both parse
+    # and mean different things. There is no earlier line here, so the rival
+    # placement sits inside the same line — the rule must refuse it just as it
+    # refuses the two-line spelling of the same doubt.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, 2 |> IO.inspect()
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "no issue when a rival placement sits inside the literal's last line" do
+    # The `}` could belong after the `2` rather than at the end of the line;
+    # the line above ends in `,` and is not a candidate, so only a placement
+    # weighed within the last line itself can see this ambiguity.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1,
+        2 |> IO.inspect()
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "no issue when an earlier line's comment ends in a comma" do
+    # A trailing comma pins the next line inside the literal only when it is a
+    # comma in code. This one is inside a comment, and the comment also
+    # swallows any `}` appended to that line — the same doubt the rule refuses
+    # a line ending in `# }` for.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1 # oops,
+        |> g()
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
   test "no issue when the literal's last line ends with a dangling comma" do
     # Elixir accepts a trailing comma, so closing here would parse as the
     # one-element `{:ok}` — silently dropping the missing element.

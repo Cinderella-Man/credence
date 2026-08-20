@@ -311,6 +311,60 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "leaves an earlier line whose comment ends in a comma untouched" do
+    # Same shape as the test above — a `}` appended to line 3 disappears into
+    # the comment — but the comment's last character is a `,`. A comma pins the
+    # next line inside the literal only when it is a comma in *code*; this one
+    # is prose, and treating it as code skipped the swallowed-brace probe
+    # entirely. Both readings still parse and differ (`{1 |> g()}` against the
+    # author's likely `{1} |> g()`), so the rule must refuse.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1 # oops,
+        |> g()
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "leaves an operator ambiguity on the literal's own line untouched" do
+    # The literal opens on the very line the `}` is appended to, so there is no
+    # earlier line to probe — the placement has to be weighed *within* the line.
+    # `x = {1, 2} |> IO.inspect()` and `x = {1, 2 |> IO.inspect()}` both parse
+    # and mean different things, exactly as in the two-line form above, so the
+    # rule must refuse here too rather than let the answer depend on where the
+    # author happened to break the line.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1, 2 |> IO.inspect()
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "leaves a mid-line ambiguity on the literal's last line untouched" do
+    # The same doubt on a literal that does span two lines: the `}` could sit
+    # after the `2` (`{1, 2} |> IO.inspect()`) instead of at the end of the
+    # line. The line above ends in `,` and is skipped, so nothing but a
+    # within-the-line placement can catch this one.
+    code = """
+    defmodule Example do
+      def foo do
+        x = {1,
+        2 |> IO.inspect()
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "commits nothing that a brace split over other lines could also mean" do
     # The rule only ever weighs the missing braces shared between ONE earlier
     # line and the target line, and its source says those shares "are the whole
@@ -368,6 +422,13 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
   # guards talk about: nested openings, keyword and map entries, a leading
   # comma, an operator continuation, a closing brace mid-line, and a trailing
   # comment or string that would swallow an appended `}`.
+  #
+  # Only a source the rule *repairs* with two or more braces has a rival to
+  # search, so every guard that makes the rule refuse also shrinks what this
+  # test looks at. `{:ok, %{k: 1` is here to keep that population well clear of
+  # the vacuity floor above: it is a two-brace opening with no rival placement
+  # of its own, and it was added when the within-the-line guard took the count
+  # from 621 to 456.
   defp brace_fragments do
     [
       "{1",
@@ -391,6 +452,7 @@ defmodule Credence.Syntax.CloseUnclosedBraceFixTest do
       "+ 1",
       "5",
       "b: 6",
+      "{:ok, %{k: 1",
       "{}",
       "# c",
       "\"s\" <> t",

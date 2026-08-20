@@ -55,13 +55,20 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
       tuple `{1, 2 |> IO.inspect()}`; both parse, so committing either would
       silently pick one of two meanings. A line ending in `,` is no competing
       placement — closing after a trailing comma drops an element (see below),
-      so the comma pins the next line inside the literal. When the repair needs
-      more than one `}`, a competing reading can also *split* them — some on an
-      earlier line, the rest on the last — and those placements are tried too.
-      The parser names only the *innermost* `{` it was still holding, so when a
-      literal's openings sit on different lines the scan walks back out to the
-      line the literal really opens on before it starts; otherwise the lines
-      between the two openings would never be tried.
+      so the comma pins the next line inside the literal. That is a comma in
+      *code*: one inside a comment or a string is prose, and the line is probed
+      like any other. When the repair needs more than one `}`, a competing
+      reading can also *split* them — some on an earlier line, the rest on the
+      last — and those placements are tried too. The parser names only the
+      *innermost* `{` it was still holding, so when a literal's openings sit on
+      different lines the scan walks back out to the line the literal really
+      opens on before it starts; otherwise the lines between the two openings
+      would never be tried.
+
+      The last line is weighed the same way *within itself*, because the doubt
+      does not depend on where the author broke the line: `x = {1, 2 |>
+      IO.inspect()` on one line is the same two readings as the example above,
+      and only a placement tried inside that line can see it.
 
     * **No dangling comma.** A literal whose last line ends in `,` is truncated
       mid-element; Elixir accepts a trailing comma, so closing
@@ -84,6 +91,7 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
   use Credence.Syntax.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # `{:ok, %{a: %{b: 1` and deeper — a backstop, not a target.
   @max_braces 5
@@ -219,24 +227,72 @@ defmodule Credence.Syntax.CloseUnclosedBrace do
     end)
   end
 
-  # A `}` appended to an earlier line of the literal must not also produce a
-  # parsing source — when it would (e.g. the next line starts with `|>`), the
-  # `}` genuinely belongs on either line and committing a placement would
-  # silently pick one of two meanings. A line ending in `,` is no competing
-  # placement: closing after a trailing comma drops an element (the same
-  # reasoning as target_line/3), so the comma pins the next line inside the
-  # literal.
+  # A `}` placed anywhere else in the literal must not also produce a parsing
+  # source — when it would (e.g. the next line starts with `|>`), the `}`
+  # genuinely belongs in either place and committing one would silently pick
+  # one of two meanings. Two families of rival placements are weighed: the end
+  # of each earlier line of the literal, and the inside of the target line
+  # itself.
   defp sole_placement(lines, start_line, index, count) do
-    ambiguous =
-      (start_line - 1)..(index - 1)//1
-      |> Enum.any?(fn earlier ->
-        line = String.trim_trailing(Enum.at(lines, earlier))
+    if earlier_line_placement?(lines, start_line, index, count) or
+         mid_line_placement?(lines, index, count) do
+      :ambiguous
+    else
+      :ok
+    end
+  end
 
-        line != "" and not String.ends_with?(line, ",") and
-          competing_placement?(lines, earlier, index, count)
+  # A line ending in `,` is no competing placement: closing after a trailing
+  # comma drops an element (the same reasoning as target_line/3), so the comma
+  # pins the next line inside the literal. That reasoning only holds for a
+  # comma in *code* — a comment or string ending in one is prose, and the same
+  # comment would swallow the probe's `}` too — so the test is made against the
+  # shadow, where everything that is not code has been blanked out.
+  defp earlier_line_placement?(lines, start_line, index, count) do
+    shadow = lines |> Enum.join("\n") |> SourceMask.mask() |> String.split("\n")
+
+    Enum.any?((start_line - 1)..(index - 1)//1, fn earlier ->
+      line = String.trim_trailing(Enum.at(lines, earlier))
+      code = String.trim_trailing(Enum.at(shadow, earlier, ""))
+
+      line != "" and not String.ends_with?(code, ",") and
+        competing_placement?(lines, earlier, index, count)
+    end)
+  end
+
+  # The target line's own interior is a placement too. The scan above only ever
+  # appends to the *end* of lines above the target, so a literal that opens on
+  # the very line the `}` is appended to would meet no guard at all, and a `}`
+  # belonging before a trailing operator (`x = {1, 2 |> f()`) would be
+  # committed as `{1, f(2)}` where `{1, 2} |> f()` reads just as well. Each
+  # position inside the line is tried, with the braces shared between it and
+  # the end of the line exactly as `competing_placement?/4` shares them between
+  # two lines.
+  #
+  # No masking is needed here: braces inserted inside a string, charlist or
+  # comment close nothing, so such a candidate is left short of `count` closers
+  # and cannot parse — `count` being the fewest that make the source parse.
+  defp mid_line_placement?(lines, index, count) do
+    line = Enum.at(lines, index)
+    repaired = candidate(lines, index, count)
+
+    Enum.any?(0..(String.length(line) - 1)//1, fn at ->
+      Enum.any?(1..count//1, fn taken ->
+        source = insert_and_close(lines, index, at, taken, count - taken)
+
+        source != repaired and match?({:ok, _}, Code.string_to_quoted(source))
       end)
+    end)
+  end
 
-    if ambiguous, do: :ambiguous, else: :ok
+  # The source with `taken` `}` spliced into the target line at grapheme
+  # position `at` and `rest` of them appended to its end.
+  defp insert_and_close(lines, index, at, taken, rest) do
+    {before, after_} = String.split_at(Enum.at(lines, index), at)
+
+    lines
+    |> List.replace_at(index, before <> String.duplicate("}", taken) <> after_)
+    |> candidate(index, rest)
   end
 
   # A competing reading closes the same openings, so it appends exactly as many
