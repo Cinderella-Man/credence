@@ -205,10 +205,84 @@ gen --refresh >/dev/null 2>&1
 assert_m "an opened test row stays open across a refresh" \
   "[.files[] | select(.gated_by == \"$REVIEWED\")] | all(.status != \"gated\")"
 
+# ---- migrating a manifest written before the gate existed -------------------
+# This path fires exactly once per campaign and getting it wrong is silent: the
+# gate would simply never apply to the 392 test rows already in the queue.
+CURRENT="migrate_pregate_manifest"
+make_repo migrate_pregate_manifest
+gen >/dev/null 2>&1
+# Forge a genuine pre-gate manifest: strip the new fields AND put every row
+# back to `pending`, which is what a manifest generated before the gate existed
+# actually looks like. Stripping the fields alone is not enough — the rows would
+# still carry status "gated" from this generation and the migration would never
+# be exercised. Mark one rule done so there is a reviewed row to leave alone.
+jq '.files |= map(del(.gated_by) | del(.rereviews)
+                  | if .status == "gated" then .status = "pending" else . end)
+    | (.files[] | select(.path == "lib/syntax/bar.ex"))
+        |= (.status = "done" | .verdict = "OK" | .reviewed_at = "t")' \
+  "$(pr)/manifest.json" > "$(pr)/.m" && mv "$(pr)/.m" "$(pr)/manifest.json"
+assert_m "forged manifest really has no gate" '[.files[] | select(has("gated_by"))] | length == 0'
+assert_m "and no row is gated in it" '[.files[] | select(.status == "gated")] | length == 0'
+
+gen --refresh >/dev/null 2>&1
+assert_m "migration gates the untouched test rows" \
+  '[.files[] | select(.path == "test/syntax/foo_fix_test.exs")] | .[0].status == "gated"'
+assert_m "migration does not disturb a reviewed row" \
+  '[.files[] | select(.path == "lib/syntax/bar.ex")] | .[0].status == "done" and .[0].verdict == "OK"'
+assert_m "migration leaves non-rule tests queued" \
+  '[.files[] | select(.path == "test/meta_gate_test.exs")] | .[0].status == "pending"'
+assert_m "migration backfills rereviews" '[.files[] | select(.rereviews == null)] | length == 0'
+
+# The invariant that makes the gate safe at all: a row can only be opened by a
+# rule that names it, so a gated row without a gated_by is stranded forever.
+# The re-review branch used to carry $prev.gated_by, which is absent in a
+# pre-gate manifest — that null landed on rows this branch leaves gated.
+CURRENT="no_stranded_gated_rows"
+assert_m "no gated row is missing its opener" \
+  '[.files[] | select(.status == "gated" and .gated_by == null)] | length == 0'
+
+# The live case that produced four stranded rows: a pre-gate manifest in which a
+# TEST row was already reviewed, and then a fix changed that test file. The
+# re-review branch handles it, and it is the branch that may leave the row
+# `gated` — so it must not carry a gated_by from a manifest that has none.
+CURRENT="rereviewed_test_row_is_not_stranded"
+make_repo rereviewed_test_row_is_not_stranded
+gen >/dev/null 2>&1
+jq '.files |= map(del(.gated_by) | del(.rereviews)
+                  | if .status == "gated" then .status = "pending" else . end)
+    | (.files[] | select(.path == "test/syntax/foo_fix_test.exs"))
+        |= (.status = "done" | .verdict = "FINDINGS" | .findings = 1 | .reviewed_at = "t")' \
+  "$(pr)/manifest.json" > "$(pr)/.m" && mv "$(pr)/.m" "$(pr)/manifest.json"
+echo '# a fix touched this test' >> "$R/test/syntax/foo_fix_test.exs"
+git -C "$R" commit -q -am "fix touches the test"
+gen --refresh >/dev/null 2>&1
+assert_m "the changed test row is not stranded" \
+  '[.files[] | select(.path == "test/syntax/foo_fix_test.exs")] | .[0].gated_by == "lib/syntax/foo.ex"'
+assert_m "no gated row anywhere is missing its opener" \
+  '[.files[] | select(.status == "gated" and .gated_by == null)] | length == 0'
+
+# And a second refresh must be a no-op — not a re-gate of rows already opened.
+CURRENT="migration_is_idempotent"
+make_repo migration_is_idempotent
+gen >/dev/null 2>&1
+review_one findings >/dev/null 2>&1
+( cd "$(pr)" && ./requeue.sh --gated ) >/dev/null 2>&1
+gen --refresh >/dev/null 2>&1
+assert_m "a refresh does not re-gate opened rows" \
+  '[.files[] | select(.status == "gated")] | length == 0'
+
 # ---- status.sh reports the new states ---------------------------------------
+# Its own repo: the scenario above deliberately ends with everything ungated,
+# and reusing it would have this assert pass or fail on test ORDER rather than
+# on what status.sh prints.
 CURRENT="status_output"
+make_repo status_output
+gen >/dev/null 2>&1
+assert_m "this repo has gated rows to report" '[.files[] | select(.status == "gated")] | length > 0'
 assert "status.sh names the gated rows" \
   bash -c "cd '$(pr)' && ./status.sh | grep -q 'gated'"
+assert "status.sh names the way to open them" \
+  bash -c "cd '$(pr)' && ./status.sh | grep -q -- '--gated'"
 
 echo
 if (( FAIL == 0 )); then

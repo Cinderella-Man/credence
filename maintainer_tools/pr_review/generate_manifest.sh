@@ -219,12 +219,24 @@ if [[ "$MODE" == refresh ]]; then
     ($old[0].files | map({key: .path, value: .}) | from_entries) as $idx |
     .files |= map(
       ($idx[.path] // null) as $prev |
+      # keep_status — whether to carry the old row.status over, or adopt the
+      # freshly computed one. Adopting matters exactly once, for a manifest
+      # generated before `gated_by` existed: its never-reviewed test rows are
+      # `pending` and must migrate to `gated`. A row that already has the key
+      # has been through this logic, so its status is authoritative — that is
+      # what stops a refresh RE-GATING a row its rule already opened.
+      def keep_status($prev):
+        if ($prev | has("gated_by")) then {status: $prev.status}
+        elif $prev.status == "pending" then {}
+        else {status: $prev.status} end;
+
       if $prev == null then .
       elif $prev.blob == .blob then
-        . + {status: $prev.status, verdict: $prev.verdict,
+        . + {verdict: $prev.verdict,
              findings: $prev.findings, reviewed_at: $prev.reviewed_at,
              stale: $prev.stale, rereviews: ($prev.rereviews // 0),
              error: $prev.error}
+          + keep_status($prev)
       elif $prev.status == "done" then
         # Reviewed, then a fix changed it. Send it back for ONE verification
         # pass — that is where 6 of the 7 blockers repaired in the 2026-08-19
@@ -236,16 +248,20 @@ if [[ "$MODE" == refresh ]]; then
         # Past the cap the row keeps its verdict and carries stale: true —
         # visible in status.sh, not in the queue. `requeue.sh --stale` is the
         # end-of-campaign sweep over exactly the files that actually changed.
+        # gated_by takes the FRESHLY computed value, never the one from $prev: a manifest
+        # written before the gate existed has no such key, and carrying that
+        # null onto a row this branch may leave `gated` strands it — nothing
+        # would ever match it to open it again.
         (($prev.rereviews // 0) + 1) as $n |
-        . + {stale: true, rereviews: $n, gated_by: $prev.gated_by}
+        . + {stale: true, rereviews: $n}
           + (if $n > $max
              then {status: "done", verdict: $prev.verdict,
                    findings: $prev.findings, reviewed_at: $prev.reviewed_at,
                    error: $prev.error}
              else {} end)
-      # A gated row whose rule review opened it keeps that; a still-gated row
-      # stays gated even though its blob moved.
-      else . + {status: $prev.status, gated_by: $prev.gated_by} end)' <<<"$NEW_JSON")"
+      # Not yet reviewed and the blob moved: nothing to preserve but the
+      # scheduling state. gated_by takes the freshly computed value.
+      else . + {rereviews: ($prev.rereviews // 0)} + keep_status($prev) end)' <<<"$NEW_JSON")"
 fi
 
 TMP="$(mktemp "$SCRIPT_DIR/.manifest.XXXXXX.json")"
