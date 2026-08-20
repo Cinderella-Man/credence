@@ -91,9 +91,33 @@ manifest_set() { # $1 = jq program body applied to the selected entry, rest = jq
     rm -f "$tmp"; die "jq manifest update failed"
   fi
 }
+# ungate_tests_of <rule path> — put this rule's own test rows into the queue.
+# They enter the manifest as `gated` (see generate_manifest.sh's gated_by) and
+# are only worth a session once the rule itself has come back with something:
+# in the 2026-08-19 run every one of the 14 blockers came from a `lib/` rule
+# file and none from a test file, while test files are half the universe.
+# A rule that reviews clean leaves its tests gated; requeue.sh --gated opens
+# them all when the rule pass is done.
+ungate_tests_of() { # $1 = rule path
+  local tmp n
+  n="$(jq --arg r "$1" '[.files[] | select(.gated_by == $r and .status == "gated")] | length' "$MANIFEST")"
+  (( n > 0 )) || return 0
+  tmp="$(mktemp "$SCRIPT_DIR/.manifest.XXXXXX.json")"
+  if jq --arg r "$1" \
+       '(.files[] | select(.gated_by == $r and .status == "gated")) |= (.status = "pending")' \
+       "$MANIFEST" > "$tmp"; then
+    mv "$tmp" "$MANIFEST"
+    rlog GATE "opened $n gated test row(s) for $1"
+  else
+    rm -f "$tmp"; die "jq manifest update failed while ungating tests of $1"
+  fi
+}
+
 mark_done() { # path verdict n_findings
   manifest_set '.status = "done" | .verdict = $v | .findings = $n | .reviewed_at = $ts | .error = null | .stale = false' \
     --arg p "$1" --arg v "$2" --argjson n "$3" --arg ts "$(date -Is)"
+  [[ "$2" == FINDINGS ]] && ungate_tests_of "$1"
+  return 0
 }
 mark_error() { # path reason
   manifest_set '.status = "error" | .error = $r | .reviewed_at = $ts' \

@@ -12,8 +12,13 @@
 #   --dry-run   print the would-be rows (TSV) + counts, write nothing
 #   --refresh   recompute against the CURRENT tips and merge: same-blob entries
 #               keep their status/verdict; reviewed entries whose blob changed
-#               go back to pending with stale=true; new files enter as pending
+#               go back to pending with stale=true, up to MAX_REREVIEWS times;
+#               new files enter as pending (or `gated`, see gated_by)
 # Env: BASE_BRANCH (main), HEAD_BRANCH (evolution_accepted)
+#      MAX_REREVIEWS (1) — how many times a file may be sent BACK to review
+#        after a fix changed it. 1 = the reviewer verifies the fixer's work
+#        once, then the row settles with stale: true. Set higher to restore the
+#        old behaviour of circling until the fix round cap fires.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,6 +29,7 @@ source "$SCRIPT_DIR/../stage_1_promote_fixable_rules/review_lib.sh"
 MANIFEST="$SCRIPT_DIR/manifest.json"
 BASE_BRANCH="${BASE_BRANCH:-main}"
 HEAD_BRANCH="${HEAD_BRANCH:-evolution_accepted}"
+MAX_REREVIEWS="${MAX_REREVIEWS:-1}"
 
 MODE=build
 case "${1:-}" in
@@ -89,6 +95,34 @@ sort_key() {
   printf '%s|%s|%s|%s' "$p" "$g" "$s" "$path"
 }
 
+# gated_by <path> <category> — the rule file whose review decides whether this
+# test row is worth reviewing, or "" for rows that are never gated.
+#
+# Measured over the 2026-08-19 run: 21 reviews of `lib/` rule files produced 14
+# blockers; 22 reviews of `test/` files produced ZERO — 8 concerns and 33 nits.
+# Test files are 392 of the 780 rows, half the universe, and no blocker has ever
+# come out of one. So a rule's tests are queued when the rule's own review comes
+# back with findings, and left gated when it comes back OK.
+#
+# Only per-rule test files are gated. `test_other` (meta-gates, test/support,
+# whole-suite tests) has no owning rule and stays in the queue unconditionally.
+#
+# This is a scheduling bet, not a claim that test files are clean: a vacuous test
+# masks another defect, which is the blocker definition. It is a bet that the
+# rule's own review is the cheaper place to notice. `requeue.sh --gated` opens
+# the whole set when the rule pass is done.
+gated_by() {
+  local path="$1" cat="$2" kind base rule
+  case "$cat" in
+    test_syntax|test_semantic|test_pattern) kind="${cat#test_}" ;;
+    *) return 0 ;;
+  esac
+  base="$(rule_base "$path")"
+  rule="lib/$kind/$base.ex"
+  git -C "$REPO" cat-file -e "$HEAD_SHA:$rule" 2>/dev/null && printf '%s' "$rule"
+  return 0
+}
+
 # numstat_for <origin> <path> <old_path> — echo "ins<TAB>del" ("-" for binary).
 numstat_for() {
   local origin="$1" path="$2" old="$3" line
@@ -111,7 +145,7 @@ blob_for() { # <origin> <path> — blob sha at HEAD_SHA ("-" for deleted files)
 }
 
 # ---- gather rows -----------------------------------------------------------
-# TSV per row: sort_key \t path \t origin \t category \t ins \t del \t blob \t old_path
+# TSV per row: sort_key \t path \t origin \t category \t ins \t del \t blob \t old_path \t gated_by
 rows() {
   local st p1 p2 path old origin cat nd
   declare -A changed=()
@@ -136,9 +170,9 @@ rows() {
     changed["$path"]=1
     cat="$(category "$path")"
     nd="$(numstat_for "$origin" "$path" "$old")"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
       "$(sort_key "$path" "$cat")" "$path" "$origin" "$cat" "$nd" \
-      "$(blob_for "$origin" "$path")" "$old"
+      "$(blob_for "$origin" "$path")" "$old" "$(gated_by "$path" "$cat")"
   done < <(git -C "$REPO" -c core.quotePath=false diff --name-status -M \
              "$BASE_SHA".."$HEAD_SHA")
 
@@ -146,9 +180,9 @@ rows() {
   while IFS= read -r path; do
     [[ -n "${changed[$path]:-}" ]] && continue
     cat="$(category "$path")"
-    printf '%s\t%s\t%s\t%s\t0\t0\t%s\t\n' \
+    printf '%s\t%s\t%s\t%s\t0\t0\t%s\t\t%s\n' \
       "$(sort_key "$path" "$cat")" "$path" unchanged_rule "$cat" \
-      "$(blob_for unchanged_rule "$path")"
+      "$(blob_for unchanged_rule "$path")" "$(gated_by "$path" "$cat")"
   done < <(git -C "$REPO" ls-tree -r --name-only "$HEAD_SHA" -- \
              lib/syntax lib/semantic lib/pattern | grep '\.ex$')
 }
@@ -175,11 +209,13 @@ NEW_JSON="$(jq -Rn \
       deletions:  (.[4] | tonumber? // null),
       blob: .[5],
       old_path: (if (.[6] // "") == "" then null else .[6] end),
-      status: "pending", verdict: null, findings: 0,
+      gated_by: (if (.[7] // "") == "" then null else .[7] end),
+      status: (if (.[7] // "") == "" then "pending" else "gated" end),
+      verdict: null, findings: 0, rereviews: 0,
       reviewed_at: null, stale: false, error: null}]}' <<<"$BODY")"
 
 if [[ "$MODE" == refresh ]]; then
-  NEW_JSON="$(jq --slurpfile old "$MANIFEST" '
+  NEW_JSON="$(jq --slurpfile old "$MANIFEST" --argjson max "$MAX_REREVIEWS" '
     ($old[0].files | map({key: .path, value: .}) | from_entries) as $idx |
     .files |= map(
       ($idx[.path] // null) as $prev |
@@ -187,9 +223,29 @@ if [[ "$MODE" == refresh ]]; then
       elif $prev.blob == .blob then
         . + {status: $prev.status, verdict: $prev.verdict,
              findings: $prev.findings, reviewed_at: $prev.reviewed_at,
-             stale: $prev.stale, error: $prev.error}
-      elif $prev.status == "done" then . + {stale: true}
-      else . end)' <<<"$NEW_JSON")"
+             stale: $prev.stale, rereviews: ($prev.rereviews // 0),
+             error: $prev.error}
+      elif $prev.status == "done" then
+        # Reviewed, then a fix changed it. Send it back for ONE verification
+        # pass — that is where 6 of the 7 blockers repaired in the 2026-08-19
+        # run were found. Sending it back a THIRD and FOURTH time is the loop
+        # that never converged: the re-review is a fresh full review, a freshly
+        # rewritten file reliably yields something, and every file ended parked
+        # at the fix round cap.
+        #
+        # Past the cap the row keeps its verdict and carries stale: true —
+        # visible in status.sh, not in the queue. `requeue.sh --stale` is the
+        # end-of-campaign sweep over exactly the files that actually changed.
+        (($prev.rereviews // 0) + 1) as $n |
+        . + {stale: true, rereviews: $n, gated_by: $prev.gated_by}
+          + (if $n > $max
+             then {status: "done", verdict: $prev.verdict,
+                   findings: $prev.findings, reviewed_at: $prev.reviewed_at,
+                   error: $prev.error}
+             else {} end)
+      # A gated row whose rule review opened it keeps that; a still-gated row
+      # stays gated even though its blob moved.
+      else . + {status: $prev.status, gated_by: $prev.gated_by} end)' <<<"$NEW_JSON")"
 fi
 
 TMP="$(mktemp "$SCRIPT_DIR/.manifest.XXXXXX.json")"

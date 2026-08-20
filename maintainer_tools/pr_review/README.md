@@ -31,14 +31,31 @@ branch without its own file changing. So the universe is:
 - every current `lib/{syntax,semantic,pattern}/*.ex` rule file, even if
   untouched (`origin: unchanged_rule` — reviewed from scratch).
 
+## Why a rule's tests wait for the rule
+
+A test file whose rule the campaign has not reviewed yet enters as `gated`, not
+`pending`, carrying `gated_by: <its rule>`. The rule's own review opens them —
+but only if it came back with findings. A rule that reviews clean leaves its
+tests gated.
+
+The measurement behind it, from the 2026-08-19 run: 21 reviews of `lib/` rule
+files produced **14 blockers**; 22 reviews of `test/` files produced **none** (8
+concerns, 33 nits). Test files are 392 of the 780 rows — half the universe.
+
+This is a scheduling bet, not a claim that test files are clean: a vacuous test
+masks another defect, which is the blocker definition. It bets that the rule's
+own review is the cheaper place to notice. `./requeue.sh --gated` opens the
+whole set when the rule pass is done, and `status.sh` never stops reporting the
+count.
+
 ## Data files (in this directory)
 
 - `manifest.json` — **committed**. The tick-off list. Base/head SHAs are frozen
   in at generation, so committing review progress (which moves the branch tip)
   does not change the universe. One entry per file:
-  `path, origin, category, insertions, deletions, blob, old_path, status
-  (pending|done|error), verdict (OK|FINDINGS), findings (count), reviewed_at,
-  stale, error`.
+  `path, origin, category, insertions, deletions, blob, old_path, gated_by,
+  status (pending|gated|done|error), verdict (OK|FINDINGS), findings (count),
+  reviewed_at, stale, rereviews, error`.
 - `findings.md` — **committed**. Append-only; one `##` section per file that
   produced findings, plus one `## <path> — fix round N` section per fix
   session recording what happened to each finding. `OK` files get no section
@@ -134,7 +151,13 @@ committed), `refuted` (reproduction attempted, code is right — with evidence),
 `obsolete` (an earlier commit already addressed it), `deferred` (a policy
 question only a human can settle; surfaced by `status.sh` as needs-human).
 After accepted commits the manifest refreshes: fixed files re-enter review as
-`stale`, new test files enter as `pending` — the reviewer verifies the fixer.
+`stale` — the reviewer verifies the fixer — but only `MAX_REREVIEWS` times
+(default 1). Past that the row keeps its verdict and carries `stale: true`:
+visible in `status.sh`, not in the queue, swept at the end with
+`./requeue.sh --stale`. The uncapped version is what never converged — a
+re-review is a *fresh* full review, a freshly rewritten file reliably yields
+something, and in the 2026-08-19 run every file circled until it parked at the
+fix round cap.
 A round carrying nothing at or above `FIX_MIN_SEVERITY` (default `concern`) is
 recorded as `skipped` rather than scheduled: a pile of nits is not worth a fix
 session plus a full-suite gate each, and scheduling one also re-stales the file
@@ -158,19 +181,22 @@ before it parks as needs-human.
 
 ./status.sh                         # progress digest (review + fixes)
 ./requeue.sh --errors               # review error rows → pending
+./requeue.sh --stale                # rows that settled at the re-review cap
+./requeue.sh --gated                # test rows whose rule reviewed clean
 ./requeue.sh <path>...              # re-review specific rows
 ./fix_queue.sh sync                 # backfill fixes.json from findings.md
 ./fix_queue.sh requeue --errors     # fix error entries → pending
 FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped   # the end-of-campaign nit sweep
 ./fix_queue.sh requeue <path>...    # retry the latest fix entry for a path
 ./selftest.sh                       # prove the fix-pipeline mechanics
+./selftest_manifest.sh              # prove the review-side scheduling
 ```
 
 Env: `CLAUDE_MODEL` (optional `--model` for sessions; `FIX_CLAUDE_MODEL`
 overrides it for fix sessions), `MAX_RETRIES` (3 review / 2 fix),
 `COMMIT_EVERY` (0 = the loop never touches git; N = auto-commit the three
-ledgers every N reviewed files), `BASE_BRANCH`/`HEAD_BRANCH` for the
-generator (default `main` / `evolution_accepted`), and the fix knobs
+ledgers every N reviewed files), `BASE_BRANCH`/`HEAD_BRANCH` and `MAX_REREVIEWS` for the
+generator (default `main` / `evolution_accepted` / `1`), and the fix knobs
 documented in `fix_loop.sh`'s header (`FIX_MEM_MAX`, `FIX_SESSION_TIMEOUT`,
 `FIX_GATE_TIMEOUT`, `FIX_MAX_ROUNDS`, `FIX_MIN_SEVERITY`, `FIX_REFRESH`).
 

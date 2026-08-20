@@ -4,13 +4,14 @@
 #
 # Usage: requeue.sh --errors            # every status=error entry
 #        requeue.sh --stale             # every stale=true entry (re-review)
+#        requeue.sh --gated             # every test row still waiting on its rule
 #        requeue.sh <path> [<path>...]  # specific entries (any status)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="$SCRIPT_DIR/manifest.json"
 [[ -f "$MANIFEST" ]] || { echo "no manifest.json" >&2; exit 1; }
-[[ $# -ge 1 ]] || { echo "usage: requeue.sh --errors | --stale | <path>..." >&2; exit 2; }
+[[ $# -ge 1 ]] || { echo "usage: requeue.sh --errors | --stale | --gated | <path>..." >&2; exit 2; }
 
 exec 9>"$SCRIPT_DIR/.lock"
 flock -n 9 || { echo "review_loop is running — stop it before editing the manifest" >&2; exit 1; }
@@ -30,6 +31,14 @@ requeue() { # $1 = jq select expression
 case "$1" in
   --errors) requeue '.status == "error"' ;;
   --stale)  requeue '.stale == true' ;;
+  # Gated rows were never reviewed, so RESET would not change them — flip the
+  # status only, and leave any that were already opened alone.
+  --gated)
+    tmp="$(mktemp "$SCRIPT_DIR/.manifest.XXXXXX.json")"
+    n="$(jq '[.files[] | select(.status == "gated")] | length' "$MANIFEST")"
+    jq '(.files[] | select(.status == "gated")) |= (.status = "pending")' "$MANIFEST" > "$tmp"
+    mv "$tmp" "$MANIFEST"
+    echo "opened $n gated entr$([[ $n -eq 1 ]] && echo y || echo ies)" ;;
   *)
     for p in "$@"; do
       jq -e --arg p "$p" '.files[] | select(.path == $p)' "$MANIFEST" >/dev/null \

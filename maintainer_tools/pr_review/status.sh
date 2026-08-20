@@ -12,12 +12,17 @@ jq -r '
   ([.files[] | select(.status == "done")]    | length) as $done |
   ([.files[] | select(.status == "pending")] | length) as $pending |
   ([.files[] | select(.status == "error")]   | length) as $err |
+  ([.files[] | select(.status == "gated")]   | length) as $gated |
   ([.files[] | select(.status == "done" and .verdict == "FINDINGS")] | length) as $ffiles |
   ([.files[] | select(.status == "done") | .findings] | add // 0) as $nfind |
   ([.files[] | select(.stale == true)] | length) as $stale |
   "pr_review — base \(.base[0:9]) → head \(.head[0:9])  (generated \(.generated_at))",
   "",
-  "  progress:  \($done)/\($total) done (\(if $total > 0 then ($done * 100 / $total | floor) else 0 end)%)  ·  \($pending) pending  ·  \($err) error\(if $stale > 0 then "  ·  \($stale) stale" else "" end)",
+  "  progress:  \($done)/\($total) done (\(if $total > 0 then ($done * 100 / $total | floor) else 0 end)%)  ·  \($pending) pending  ·  \($err) error\(if $stale > 0 then "  ·  \($stale) stale" else "" end)\(if $gated > 0 then "  ·  \($gated) gated" else "" end)",
+  (if $gated > 0 then
+    "             \($gated) test row\(if $gated == 1 then "" else "s" end) waiting on the verdict of the rule they belong to.",
+    "             A rule that reviews clean leaves its tests gated; open them all with: requeue.sh --gated"
+   else empty end),
   "  verdicts:  \($done - $ffiles) OK  ·  \($ffiles) with findings (\($nfind) findings total → findings.md)",
   "",
   "  by category (done/total):",

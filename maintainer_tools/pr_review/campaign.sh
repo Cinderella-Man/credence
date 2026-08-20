@@ -37,6 +37,8 @@ exec 8>"$SCRIPT_DIR/.campaign.lock"
 flock -n 8 || die "another campaign is already running"
 
 pending_reviews() { jq -r '[.files[] | select(.status == "pending")] | length' "$MANIFEST"; }
+gated_reviews()   { jq -r '[.files[] | select(.status == "gated")]   | length' "$MANIFEST"; }
+stale_reviews()   { jq -r '[.files[] | select(.stale == true and .status == "done")] | length' "$MANIFEST"; }
 pending_fixes()   { [[ -f "$FIXES" ]] && jq -r '[.entries[] | select(.status == "pending")] | length' "$FIXES" || echo 0; }
 
 reviews=0
@@ -48,7 +50,16 @@ while :; do
 
   if (( $(pending_reviews) == 0 )); then
     (( $(pending_fixes) == 0 )) || die "no reviews pending but fix entries still pending — fix_loop should have drained them"
+    # "Drained" means the QUEUE is empty, which is not the same as "everything
+    # has been looked at". Two deliberate holdbacks survive it, and saying so
+    # here is the difference between a finished campaign and one that only
+    # looks finished.
     log "drained — nothing pending to review or fix"
+    g="$(gated_reviews)"; s="$(stale_reviews)"
+    (( g > 0 )) && log "  $g test row(s) still gated — their rule reviewed clean. Open with: requeue.sh --gated"
+    (( s > 0 )) && log "  $s reviewed row(s) changed after their last review and settled at the re-review cap. Sweep with: requeue.sh --stale"
+    (( $(jq -r '[.entries[] | select(.status == "skipped")] | length' "$FIXES" 2>/dev/null || echo 0) > 0 )) \
+      && log "  nit-only fix rounds were recorded but not scheduled. Sweep with: FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped"
     break
   fi
   if (( CAP > 0 && reviews >= CAP )); then
