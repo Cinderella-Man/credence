@@ -228,6 +228,19 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeAnalyzeTest do
       assert analyze(code) == []
     end
 
+    test "a range return type that continues onto the next line" do
+      code = """
+      @type t :: () -> 1
+        .. 10
+      """
+
+      assert analyze(code) == []
+    end
+
+    test "a tail with mismatched bracket kinds" do
+      assert analyze("@type t :: () -> [integer()}") == []
+    end
+
     test "a stray closing bracket before the separator" do
       assert analyze("@type t) :: () -> any()") == []
     end

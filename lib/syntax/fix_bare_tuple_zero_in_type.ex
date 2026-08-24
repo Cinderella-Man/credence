@@ -89,7 +89,7 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
   # A line that opens with a binary operator, a `when` guard or a closing
   # bracket cannot start a statement, so it is the tail of the typespec above
   # it — and the wrap this rule appends would close before it.
-  @continuation ~r/^\s*(?:\||,|->|::|\)|\]|\}|when\b)/
+  @continuation ~r/^\s*(?:\||,|\.\.|->|::|\)|\]|\}|when\b)/
 
   @impl true
   def analyze(source) do
@@ -225,13 +225,15 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
   defp balanced?(tail) do
     tail
     |> String.to_charlist()
-    |> Enum.reduce_while(0, fn
-      c, depth when c in ~c"([{" -> {:cont, depth + 1}
-      c, 0 when c in ~c")]}" -> {:halt, :unbalanced}
-      c, depth when c in ~c")]}" -> {:cont, depth - 1}
-      _c, depth -> {:cont, depth}
+    |> Enum.reduce_while([], fn
+      ?(, stack -> {:cont, [?) | stack]}
+      ?[, stack -> {:cont, [?] | stack]}
+      ?{, stack -> {:cont, [?} | stack]}
+      c, [c | stack] when c in ~c")]}" -> {:cont, stack}
+      c, _stack when c in ~c")]}" -> {:halt, :unbalanced}
+      _c, stack -> {:cont, stack}
     end)
-    |> Kernel.==(0)
+    |> Kernel.==([])
   end
 
   # Exactly one `->` outside brackets — the function type's own arrow. A

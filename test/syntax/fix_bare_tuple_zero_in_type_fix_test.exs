@@ -271,6 +271,20 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
       confirm_fix(fix(code), code)
     end
 
+    test "a range return type that continues onto the next line" do
+      code = """
+      @type t :: () -> 1
+        .. 10
+      """
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "a tail with mismatched bracket kinds" do
+      code = "@type t :: () -> [integer()}"
+      confirm_fix(fix(code), code)
+    end
+
     test "code after a heredoc closes is still fixed" do
       input = ~S'''
       defmodule M do
