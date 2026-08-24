@@ -4,7 +4,7 @@
 # generate_manifest.sh's universe and its --refresh merge, the test-row gate,
 # and requeue.sh. Sibling of selftest.sh, which covers the fix pipeline.
 #
-# Both use the same shape: throwaway git repos under $TMPDIR, a stubbed `claude`
+# Both use the same shape: throwaway git repos under $TMPDIR, a stubbed agent
 # on PATH, and nothing that touches this repo.
 #
 # What is deliberately NOT covered: the quality of real review sessions, and the
@@ -58,23 +58,35 @@ EOF
   git -C "$R" add -A && git -C "$R" commit -q -m "the PR"
 
   local f
-  for f in generate_manifest.sh review_loop.sh requeue.sh status.sh review_file_prompt.md; do
+  for f in agent_runner.sh generate_manifest.sh review_loop.sh requeue.sh status.sh review_file_prompt.md; do
     cp "$SRC/$f" "$(pr)/"
   done
   cp "$SRC/../stage_1_promote_fixable_rules/review_lib.sh" \
      "$R/maintainer_tools/stage_1_promote_fixable_rules/"
 
   # Stubbed session: writes the verdict named by SELFTEST_VERDICT.
-  cat > "$R/bin/claude" <<'EOF'
+  cat > "$R/bin/codex" <<'EOF'
 #!/usr/bin/env bash
 set -u
+OUT=""
+EPHEMERAL=0
+SANDBOX=""
+while (($#)); do
+  if [[ "$1" == -o || "$1" == --output-last-message ]]; then OUT="$2"; shift 2
+  elif [[ "$1" == --ephemeral ]]; then EPHEMERAL=1; shift
+  elif [[ "$1" == --sandbox ]]; then SANDBOX="$2"; shift 2
+  else shift
+  fi
+done
+[[ -n "$OUT" ]] || exit 64
+[[ "$EPHEMERAL" == 1 && "$SANDBOX" == read-only ]] || exit 65
 case "${SELFTEST_VERDICT:?}" in
-  ok)       printf 'OK\n' > maintainer_tools/pr_review/_verdict ;;
+  ok)       printf 'OK\n' > "$OUT" ;;
   findings) printf 'FINDINGS\n- concern: lib/syntax/foo.ex:2 — foo/1 is wrong\n' \
-              > maintainer_tools/pr_review/_verdict ;;
+              > "$OUT" ;;
 esac
 EOF
-  chmod +x "$R/bin/claude"
+  chmod +x "$R/bin/codex" "$R/maintainer_tools/pr_review/agent_runner.sh"
 }
 
 # Env goes BEFORE the call (`MAX_REREVIEWS=1 gen --refresh`); args go after.

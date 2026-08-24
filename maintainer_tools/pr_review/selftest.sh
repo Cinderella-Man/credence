@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # selftest.sh — end-to-end tests of the fix pipeline's MECHANICS (fix_queue.sh,
-# fix_loop.sh guards, campaign.sh termination) with a stubbed `claude` and a
+# fix_loop.sh guards, campaign.sh termination) with a stubbed agent and a
 # stubbed gate, inside throwaway git repos. Never touches this repo.
 #
 # What is deliberately NOT covered: the built-in mix gate (needs Elixir; the
@@ -52,68 +52,81 @@ maintainer_tools/pr_review/.campaign.lock
 maintainer_tools/pr_review/.needs_refresh
 EOF
   local f
-  for f in fix_loop.sh fix_queue.sh fix_file_prompt.md run_capped.sh campaign.sh status.sh; do
+  for f in agent_runner.sh fix_loop.sh fix_queue.sh fix_file_prompt.md run_capped.sh campaign.sh status.sh; do
     cp "$SRC/$f" "$R/maintainer_tools/pr_review/"
   done
 
-  cat > "$R/bin/claude" <<'EOF'
+  cat > "$R/bin/codex" <<'EOF'
 #!/usr/bin/env bash
-# Stubbed session: ignores its arguments, acts per SELFTEST_SCENARIO. cwd is
-# the repo root (fix_loop cds there before invoking claude).
+# Stubbed Codex CLI: finds -o, acts per SELFTEST_SCENARIO, and writes the
+# captured final response there.
 set -u
 PR=maintainer_tools/pr_review
+[[ "$PWD" != "${SELFTEST_PRIMARY_REPO:?}" ]] || exit 66
+OUT=""
+EPHEMERAL=0
+SANDBOX=""
+while (($#)); do
+  if [[ "$1" == -o || "$1" == --output-last-message ]]; then OUT="$2"; shift 2
+  elif [[ "$1" == --ephemeral ]]; then EPHEMERAL=1; shift
+  elif [[ "$1" == --sandbox ]]; then SANDBOX="$2"; shift 2
+  else shift
+  fi
+done
+[[ -n "$OUT" ]] || exit 64
+[[ "$EPHEMERAL" == 1 && "$SANDBOX" == danger-full-access ]] || exit 65
 case "${SELFTEST_SCENARIO:?}" in
   happy|gate_red)
     printf '  def fixed_marker, do: :ok\n' >> lib/foo.ex
     printf 'assert Foo.fixed_marker() == :ok\n' >> test/foo_test.exs
     git add lib/foo.ex test/foo_test.exs
     git commit -q -m "pr_review fix: lib/foo.ex — return :ok on empty input"
-    printf 'REPORT\n- [1] fixed — reproduced with the probe, pinned in test/foo_test.exs, foo/1 now returns :ok\n- [2] refuted — read call sites and ran the battery; the name matches usage\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] fixed — reproduced with the probe, pinned in test/foo_test.exs, foo/1 now returns :ok\n- [2] refuted — read call sites and ran the battery; the name matches usage\n' > "$OUT" ;;
   malformed)
-    printf 'REPORT\n- [1] refuted — checked\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — checked\n' > "$OUT" ;;
   ledger_touch)
     echo "SESSION WAS HERE" >> "$PR/findings.md"
-    printf 'REPORT\n- [1] refuted — evidence\n- [2] refuted — evidence\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — evidence\n- [2] refuted — evidence\n' > "$OUT" ;;
   no_commits)
-    printf 'REPORT\n- [1] refuted — ran the probe, the output is correct as-is\n- [2] deferred — the name is a policy call; question: keep foo or rename battery-wide?\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — ran the probe, the output is correct as-is\n- [2] deferred — the name is a policy call; question: keep foo or rename battery-wide?\n' > "$OUT" ;;
   fixed_no_commit)
-    printf 'REPORT\n- [1] fixed — (dishonest: nothing was committed)\n- [2] refuted — fine\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] fixed — (dishonest: nothing was committed)\n- [2] refuted — fine\n' > "$OUT" ;;
   pr_review_commit)
     echo poison > "$PR/stub_note.md"
     git add "$PR/stub_note.md"
     git commit -q -m "session writes where it must not"
-    printf 'REPORT\n- [1] fixed — did it\n- [2] refuted — fine\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] fixed — did it\n- [2] refuted — fine\n' > "$OUT" ;;
   leftover_dirt)
     printf '  # dangling uncommitted edit\n' >> lib/foo.ex
-    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$OUT" ;;
   staged_ledger)
     echo "SESSION STAGES THE LEDGER" >> "$PR/findings.md"
     git add "$PR/findings.md"
-    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$OUT" ;;
   staged_track)
     printf '  # staged but never committed\n' >> lib/foo.ex
     git add lib/foo.ex
-    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$OUT" ;;
   leftover_new_file)
     printf 'the forgotten pinning test\n' > test/new_pin_test.exs
-    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] refuted — e\n- [2] refuted — e\n' > "$OUT" ;;
   merge_import)
     git merge -q --no-ff -m "merge side" side
     printf '  def own_fix, do: :ok\n' >> lib/foo.ex
     git add lib/foo.ex
     git commit -q -m "pr_review fix: lib/foo.ex — own change"
-    printf 'REPORT\n- [1] fixed — did it\n- [2] refuted — fine\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] fixed — did it\n- [2] refuted — fine\n' > "$OUT" ;;
   net_zero_fixed)
     printf '  # temporary\n' >> lib/foo.ex
     git add lib/foo.ex
     git commit -q -m "pr_review fix: lib/foo.ex — change"
     git revert --no-edit HEAD >/dev/null
-    printf 'REPORT\n- [1] fixed — honest-looking but net-zero\n- [2] refuted — fine\n' > "$PR/_fix_report" ;;
+    printf 'REPORT\n- [1] fixed — honest-looking but net-zero\n- [2] refuted — fine\n' > "$OUT" ;;
   *) echo "stub: unknown scenario" >&2; exit 3 ;;
 esac
 exit 0
 EOF
-  chmod +x "$R/bin/claude"
+  chmod +x "$R/bin/codex" "$R/maintainer_tools/pr_review/agent_runner.sh"
 
   git -C "$R" add -A
   git -C "$R" commit -q -m "initial"
@@ -146,7 +159,7 @@ EOF
 
 run_fix() { # $1 = gate cmd, $2 = scenario
   ( cd "$R/maintainer_tools/pr_review" \
-    && PATH="$R/bin:$PATH" SELFTEST_SCENARIO="$2" \
+    && PATH="$R/bin:$PATH" SELFTEST_SCENARIO="$2" SELFTEST_PRIMARY_REPO="$R" \
        FIX_GATE_CMD="$1" FIX_MEM_MAX= FIX_RETRY_STEP_S=0 MAX_RETRIES=1 \
        FIX_REFRESH=0 FIX_SESSION_TIMEOUT=120 \
        ./fix_loop.sh )
@@ -175,6 +188,10 @@ assert_jq "gate recorded green"                 '.entries[0].gate | startswith("
 assert_jq "nothing deferred"                    '.entries[0].needs_human == false'
 assert "commit kept on the branch" \
   test "$(git -C "$R" rev-list --count "$INITIAL_SHA"..HEAD)" = 1
+assert "disposable worktree removed after import" \
+  test "$(git -C "$R" worktree list --porcelain | grep -c '^worktree ')" = 1
+assert "disposable branch removed after import" \
+  bash -c "! git -C '$R' branch --list 'pr-review-attempt-*' | grep -q ."
 assert "resolution appended to findings.md" \
   grep -q '^## lib/foo.ex — fix round 1' "$R/maintainer_tools/pr_review/findings.md"
 assert "resolution names the severity" \

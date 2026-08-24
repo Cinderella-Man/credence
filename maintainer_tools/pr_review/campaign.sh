@@ -16,8 +16,8 @@
 # Usage:   campaign.sh [cap] [wait_min]
 #   cap        max review sessions this run (0 = until drained; default 0)
 #   wait_min   minutes between iterations (default 0)
-# Env: everything review_loop.sh and fix_loop.sh honour (CLAUDE_MODEL,
-#      FIX_CLAUDE_MODEL, COMMIT_EVERY, MAX_RETRIES, FIX_MEM_MAX, …).
+# Env: everything review_loop.sh and fix_loop.sh honour (AGENT_PROVIDER,
+#      AGENT_MODEL, FIX_AGENT_MODEL, COMMIT_EVERY, MAX_RETRIES, FIX_MEM_MAX, …).
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,7 +44,7 @@ pending_fixes()   { [[ -f "$FIXES" ]] && jq -r '[.entries[] | select(.status == 
 reviews=0
 while :; do
   # Fix phase first: it also drains any backlog findings.md already holds.
-  # 8>&- : children (and the claude sessions under them) must not inherit the
+  # 8>&- : children (and the agent sessions under them) must not inherit the
   # campaign lock fd — an orphaned session would hold it forever.
   "$SCRIPT_DIR/fix_loop.sh" 8>&- || die "fix_loop failed — fix the cause, then rerun campaign.sh"
 

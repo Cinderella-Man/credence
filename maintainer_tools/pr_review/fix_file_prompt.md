@@ -105,17 +105,18 @@ Bash: you can compile, run tests, and use git.
 - Git: stay on the current branch; no push, no rebase, no amend of commits
   that existed before you started, no history edits of any kind. Commit only
   files you name explicitly.
-- Never write anywhere under `maintainer_tools/pr_review/` except the report
-  file below and the scratch dir `maintainer_tools/pr_review/.fix_scratch/`
+- Never write anywhere under `maintainer_tools/pr_review/` except the scratch
+  dir `maintainer_tools/pr_review/.fix_scratch/`
   (gitignored). The ledgers there belong to the wrapper; touching them voids
   the attempt.
 - Plain English in the report: someone who has not read this prompt must
   understand what was wrong, how you proved it, and what you changed.
 
-## Report — your last act
+## Report — your final response
 
-Write exactly one file: `maintainer_tools/pr_review/_fix_report`.
-Its first line must be exactly `REPORT`, then one bullet per finding number:
+Return only the report below as your final response. Do not write it to a
+file; the runner captures it. Its first line must be exactly `REPORT`, then
+one bullet per finding number:
 
 ```
 REPORT
@@ -126,5 +127,6 @@ REPORT
 ```
 
 Every finding number appears exactly once. `fixed` requires at least one
-commit this session. Your final chat message is ignored — only this file and
-your commits are read.
+commit this session. Do not wrap the report in Markdown fences or add
+introductory text. Your commits and the captured report are both validated by
+the wrapper.

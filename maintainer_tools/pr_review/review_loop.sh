@@ -5,7 +5,7 @@
 # Per iteration: pick the first `pending` entry in manifest.json → verify the
 # worktree file still matches the manifest's frozen head → build a briefing
 # (diff / base version written to _briefing/ for the session to Read) → run one
-# fresh, read-only claude session (Read Grep Glob Write; NO Bash, NO Edit) →
+# fresh, read-only agent session →
 # read the verdict from _verdict (OK | FINDINGS + bullet lines) → append
 # findings to findings.md → tick the entry off in manifest.json → print a
 # one-line digest → yield. Resumable at any point; the manifest is the truth.
@@ -21,7 +21,9 @@
 #   cap        max files this run (0 = until manifest drained; default 0)
 #   wait_min   minutes to sleep between files (default 0)
 # Env:
-#   CLAUDE_MODEL         optional --model for the session
+#   AGENT_PROVIDER       codex (default) | claude
+#   AGENT_MODEL          optional model for both session kinds
+#   REVIEW_AGENT_MODEL   review-only model override
 #   MAX_RETRIES          no-verdict retries per row before `error` (default 3)
 #   COMMIT_EVERY         0 = never touch git (default); N = commit
 #                        manifest.json + findings.md every N reviewed files
@@ -37,6 +39,7 @@ MANIFEST="$SCRIPT_DIR/manifest.json"
 FINDINGS="$SCRIPT_DIR/findings.md"
 VERDICT="$SCRIPT_DIR/_verdict"
 PROMPT="$SCRIPT_DIR/review_file_prompt.md"
+AGENT_RUNNER="$SCRIPT_DIR/agent_runner.sh"
 BRIEFDIR="$SCRIPT_DIR/_briefing"
 LOGDIR="$SCRIPT_DIR/.review_logs"
 BAKDIR="$SCRIPT_DIR/_briefing/.bak"   # inside _briefing: gitignored, wiped per row
@@ -45,14 +48,13 @@ CAP="${1:-0}"
 WAIT_MIN="${2:-0}"
 MAX_RETRIES="${MAX_RETRIES:-3}"
 COMMIT_EVERY="${COMMIT_EVERY:-0}"
-CLAUDE_MODEL="${CLAUDE_MODEL:-}"
-ALLOWED_TOOLS="Read Grep Glob Write"
 
 log() { printf '[pr_review] %s\n' "$*"; }
 die() { printf '[pr_review] FATAL: %s\n' "$*" >&2; exit 1; }
 
 [[ -f "$MANIFEST" ]] || die "no manifest.json — run generate_manifest.sh first"
 [[ -f "$PROMPT" ]]   || die "prompt file missing: $PROMPT"
+[[ -x "$AGENT_RUNNER" ]] || die "agent runner missing or not executable: $AGENT_RUNNER"
 command -v jq >/dev/null || die "jq not found"
 mkdir -p "$LOGDIR"
 touch "$FINDINGS"   # must exist so the guard and commit_progress see one thing
@@ -125,7 +127,8 @@ mark_error() { # path reason
 }
 
 # ---- tree guard ------------------------------------------------------------
-# Sessions may only write the (gitignored) _verdict. Two layers:
+# The runner writes the (gitignored) _verdict from the agent's final response.
+# The agent itself is read-only under the Codex adapter. Two guard layers:
 #  1. The loop's own data files are backed up before and hash-checked after
 #     every session — porcelain cannot see writes into already-dirty files,
 #     and manifest.json/findings.md are dirty for the whole campaign.
@@ -202,15 +205,13 @@ build_briefing() { # path origin category old_path stale
 run_session() { # $1 = briefing text; transcript goes to ROWLOG
   local prompt rc=0
   prompt="$(cat "$PROMPT")"$'\n\n'"$1"
-  local -a model_args=()
-  [[ -n "$CLAUDE_MODEL" ]] && model_args=(--model "$CLAUDE_MODEL")
-  rlog SESSION "starting claude (model=${CLAUDE_MODEL:-default}, prompt ${#prompt} chars)"
+  rlog SESSION "starting ${AGENT_PROVIDER:-codex} (model=${REVIEW_AGENT_MODEL:-${AGENT_MODEL:-default}}, prompt ${#prompt} chars)"
   rlog SESSION "----- agent transcript -----"
   # 9>&- : do not leak the lock fd into the session (an orphaned session would
   # otherwise hold the lock after the loop dies).
-  ( cd "$REPO" && claude -p "$prompt" --allowedTools "$ALLOWED_TOOLS" "${model_args[@]}" ) \
+  ( cd "$REPO" && printf '%s' "$prompt" | AGENT_REPO="$REPO" "$AGENT_RUNNER" review "$VERDICT" ) \
     >> "$ROWLOG" 2>&1 9>&- || rc=$?
-  rlog SESSION "----- end transcript (claude exit=${rc}) -----"
+  rlog SESSION "----- end transcript (agent exit=${rc}) -----"
   return "$rc"
 }
 
@@ -350,7 +351,7 @@ main() {
       # No usable verdict: transient (crash, token limit, malformed output).
       retry=$((retry + 1))
       if (( retry > MAX_RETRIES )); then
-        mark_error "$path" "no verdict after $MAX_RETRIES retries (last claude exit=$session_rc)"
+        mark_error "$path" "no verdict after $MAX_RETRIES retries (last agent exit=$session_rc)"
         rlog ERROR "no verdict after $MAX_RETRIES retries — marked error, moving on"
         log "✗ $path — ERROR (no verdict after $MAX_RETRIES retries; requeue.sh to retry later)"
         retry=0; prev_path=""
@@ -360,8 +361,8 @@ main() {
       local mins=$((retry * 2)); (( mins > 10 )) && mins=10
       local secs=$((mins * 60))
       [[ -n "${REVIEW_RETRY_STEP_S:-}" ]] && secs=$((retry * REVIEW_RETRY_STEP_S))
-      rlog RETRY "no verdict (claude exit=$session_rc) — retry #$retry in ${secs}s"
-      log "↻ no verdict for $path (claude exit=$session_rc) — retry #$retry in ${secs}s"
+      rlog RETRY "no verdict (agent exit=$session_rc) — retry #$retry in ${secs}s"
+      log "↻ no verdict for $path (agent exit=$session_rc) — retry #$retry in ${secs}s"
       sleep "$secs"
       continue
     fi

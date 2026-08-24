@@ -2,7 +2,7 @@
 #
 # fix_loop.sh — the FIX phase of the whole-PR review campaign. Drains the fix
 # ledger (fixes.json, one entry per reviewed file whose verdict was FINDINGS):
-# per entry it briefs one claude session that must, per finding, CONFIRM with an
+# per entry it briefs one agent session that must, per finding, CONFIRM with an
 # executed reproduction, PIN with a failing test, FIX, PROVE, and COMMIT — or
 # honestly refute/defer. The session is powerful (Bash, Edit) and therefore
 # untrusted; the wrapper holds the gate:
@@ -25,11 +25,13 @@
 #   cap        max entries this run (0 = drain; default 0)
 #   wait_min   minutes to sleep between entries (default 0)
 # Env:
-#   CLAUDE_MODEL / FIX_CLAUDE_MODEL  optional --model (FIX_ wins for fix sessions)
+#   AGENT_PROVIDER       codex (default) | claude
+#   AGENT_MODEL          optional model for both session kinds
+#   FIX_AGENT_MODEL      fix-only model override
 #   MAX_RETRIES          failed attempts per entry before `error` (default 2)
 #   FIX_MEM_MAX          systemd MemoryMax for session AND gate (default 16G;
 #                        empty string disables — see docs/21 OOM history)
-#   FIX_SESSION_TIMEOUT  seconds per claude session (default 7200; 0 = none)
+#   FIX_SESSION_TIMEOUT  seconds per agent session (default 7200; 0 = none)
 #   FIX_GATE_TIMEOUT     seconds per gate step (default 2400)
 #   FIX_MAX_ROUNDS       review↔fix rounds per file before needs-human (3)
 #   FIX_REFRESH          1 = refresh manifest after accepted commits (default 1)
@@ -46,6 +48,7 @@ MANIFEST="$SCRIPT_DIR/manifest.json"
 FINDINGS="$SCRIPT_DIR/findings.md"
 REPORT="$SCRIPT_DIR/_fix_report"
 PROMPT="$SCRIPT_DIR/fix_file_prompt.md"
+AGENT_RUNNER="$SCRIPT_DIR/agent_runner.sh"
 LOGDIR="$SCRIPT_DIR/.fix_logs"
 BAKDIR="$LOGDIR/.bak"
 
@@ -56,14 +59,13 @@ FIX_MEM_MAX="${FIX_MEM_MAX-16G}"
 FIX_SESSION_TIMEOUT="${FIX_SESSION_TIMEOUT:-7200}"
 FIX_GATE_TIMEOUT="${FIX_GATE_TIMEOUT:-2400}"
 FIX_REFRESH="${FIX_REFRESH:-1}"
-FIX_MODEL="${FIX_CLAUDE_MODEL:-${CLAUDE_MODEL:-}}"
-ALLOWED_TOOLS="Read Grep Glob Write Edit Bash"
 
 log() { printf '[fix_loop] %s\n' "$*"; }
 die() { printf '[fix_loop] FATAL: %s\n' "$*" >&2; exit 1; }
 
 [[ -f "$MANIFEST" ]] || die "no manifest.json — run generate_manifest.sh first"
 [[ -f "$PROMPT" ]]   || die "prompt file missing: $PROMPT"
+[[ -x "$AGENT_RUNNER" ]] || die "agent runner missing or not executable: $AGENT_RUNNER"
 command -v jq >/dev/null || die "jq not found"
 mkdir -p "$LOGDIR" "$BAKDIR"
 touch "$FINDINGS"
@@ -188,18 +190,96 @@ build_fix_briefing() { # path round sevs_csv feedback
 }
 
 # ---- session ---------------------------------------------------------------
-run_fix_session() { # $1 = briefing text; transcript goes to FIXLOG
-  local prompt rc=0
+# The agent never runs in the maintainer's checkout. It receives a temporary
+# branch in a linked worktree at pre_sha. Only a clean, linear set of commits
+# authored during this attempt is cherry-picked back; every other artifact is
+# destroyed with the worktree.
+SESSION_ISOLATION_FAIL=""
+ACTIVE_FIX_WORKTREE=""
+ACTIVE_FIX_BRANCH=""
+cleanup_fix_worktree() {
+  local rc=0
+  if [[ -n "$ACTIVE_FIX_WORKTREE" ]]; then
+    git -C "$REPO" worktree remove --force "$ACTIVE_FIX_WORKTREE" >/dev/null 2>&1 || rc=1
+  fi
+  if [[ -n "$ACTIVE_FIX_BRANCH" ]]; then
+    git -C "$REPO" branch -D "$ACTIVE_FIX_BRANCH" >/dev/null 2>&1 || rc=1
+  fi
+  ACTIVE_FIX_WORKTREE=""
+  ACTIVE_FIX_BRANCH=""
+  return "$rc"
+}
+trap cleanup_fix_worktree EXIT
+
+run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = session_start
+  local prompt rc=0 pre_sha="$2" session_start="$3"
   prompt="$(cat "$PROMPT")"$'\n\n'"$1"
-  local -a model_args=()
-  [[ -n "$FIX_MODEL" ]] && model_args=(--model "$FIX_MODEL")
-  flog SESSION "starting claude (model=${FIX_MODEL:-default}, timeout=${FIX_SESSION_TIMEOUT}s, mem=${FIX_MEM_MAX:-uncapped})"
+  SESSION_ISOLATION_FAIL=""
+
+  local worktree branch
+  worktree="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-fix.XXXXXX")"
+  rmdir "$worktree"
+  branch="pr-review-attempt-$$-${RANDOM}"
+  ACTIVE_FIX_WORKTREE="$worktree"
+  ACTIVE_FIX_BRANCH="$branch"
+  if ! git -C "$REPO" worktree add -q -b "$branch" "$worktree" "$pre_sha"; then
+    cleanup_fix_worktree || true
+    SESSION_ISOLATION_FAIL="could not create the disposable fix worktree"
+    return 70
+  fi
+
+  flog SESSION "starting ${AGENT_PROVIDER:-codex} (model=${FIX_AGENT_MODEL:-${AGENT_MODEL:-default}}, timeout=${FIX_SESSION_TIMEOUT}s, mem=${FIX_MEM_MAX:-uncapped})"
+  flog SESSION "disposable worktree: $worktree ($branch at ${pre_sha:0:9})"
   flog SESSION "----- agent transcript -----"
   # timeout runs INSIDE the memory scope so its kill reaches the session.
-  ( cd "$REPO" && "${CAPPED[@]}" timeout -k 60 "$FIX_SESSION_TIMEOUT" \
-      claude -p "$prompt" --allowedTools "$ALLOWED_TOOLS" "${model_args[@]}" ) \
+  ( cd "$worktree" && printf '%s' "$prompt" | "${CAPPED[@]}" timeout -k 60 "$FIX_SESSION_TIMEOUT" \
+      env AGENT_REPO="$worktree" "$AGENT_RUNNER" fix "$REPORT" ) \
     >> "$FIXLOG" 2>&1 9>&- || rc=$?
-  flog SESSION "----- end transcript (claude exit=${rc}) -----"
+  flog SESSION "----- end transcript (agent exit=${rc}) -----"
+
+  local wt_branch wt_commits n_merges oldest_ct dirt
+  wt_branch="$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [[ "$wt_branch" != "$branch" ]]; then
+    SESSION_ISOLATION_FAIL="the session switched branches inside its disposable worktree"
+  elif ! git -C "$worktree" merge-base --is-ancestor "$pre_sha" HEAD; then
+    SESSION_ISOLATION_FAIL="the session rewrote history inside its disposable worktree"
+  fi
+
+  wt_commits="$(git -C "$worktree" rev-list --reverse "$pre_sha"..HEAD 2>/dev/null || true)"
+  n_merges="$(git -C "$worktree" rev-list --min-parents=2 --count "$pre_sha"..HEAD 2>/dev/null || echo 0)"
+  oldest_ct="$(git -C "$worktree" log --format=%ct "$pre_sha"..HEAD 2>/dev/null | LC_ALL=C sort -n | head -n1)"
+  if [[ -z "$SESSION_ISOLATION_FAIL" ]] \
+     && { (( n_merges > 0 )) || { [[ -n "$oldest_ct" ]] && (( oldest_ct < session_start - 120 )); }; }; then
+    SESSION_ISOLATION_FAIL="the session imported foreign commits in its disposable worktree"
+  fi
+  if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$wt_commits" ]] \
+     && git -C "$worktree" log --format= --name-only "$pre_sha"..HEAD | grep -q '^maintainer_tools/pr_review/'; then
+    SESSION_ISOLATION_FAIL="a session commit touched the campaign ledgers under maintainer_tools/pr_review/"
+  fi
+
+  dirt="$(git -C "$worktree" status --porcelain=v1)"
+  if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$dirt" ]]; then
+    if grep -q 'maintainer_tools/pr_review/' <<<"$dirt"; then
+      SESSION_ISOLATION_FAIL="the session left changes to the campaign ledgers in its disposable worktree"
+    elif grep -q '^??' <<<"$dirt"; then
+      SESSION_ISOLATION_FAIL="the session left uncommitted NEW files in its disposable worktree"
+    else
+      SESSION_ISOLATION_FAIL="the session left uncommitted changes in its disposable worktree"
+    fi
+  fi
+
+  if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$wt_commits" ]]; then
+    if ! git -C "$REPO" cherry-pick $wt_commits >> "$FIXLOG" 2>&1; then
+      git -C "$REPO" cherry-pick --abort >/dev/null 2>&1 || true
+      SESSION_ISOLATION_FAIL="could not import the disposable worktree commits into the campaign branch"
+    else
+      flog SESSION "imported $(grep -c . <<<"$wt_commits") commit(s) from disposable worktree"
+    fi
+  fi
+
+  cleanup_fix_worktree \
+    || SESSION_ISOLATION_FAIL="${SESSION_ISOLATION_FAIL:-could not remove the disposable fix worktree and branch}"
+  [[ -n "$SESSION_ISOLATION_FAIL" ]] && flog GUARD "$SESSION_ISOLATION_FAIL"
   return "$rc"
 }
 
@@ -387,9 +467,9 @@ main() {
 
     local session_rc=0 session_start
     session_start="$(date +%s)"
-    run_fix_session "$briefing" || session_rc=$?
+    run_fix_session "$briefing" "$pre_sha" "$session_start" || session_rc=$?
 
-    local fail=""
+    local fail="$SESSION_ISOLATION_FAIL"
 
     # Guard 1: the campaign ledgers are the wrapper's, not the session's.
     if [[ "$(owned_hash)" != "$owned_before" ]]; then
@@ -495,7 +575,7 @@ main() {
       local why
       if ! why="$(validate_report "$n_findings" "$n_commits")"; then
         (( n_commits > 0 )) && { ledger_safe_reset "$pre_sha"; commits=""; n_commits=0; }
-        fail="unusable report: $why (claude exit=$session_rc)"
+        fail="unusable report: $why (agent exit=$session_rc)"
         flog GUARD "$fail"
       fi
     fi

@@ -2,7 +2,8 @@
 
 Reviews **and fixes** the entire PR (`main`...`evolution_accepted`, 500+
 commits, ~690 files) **plus every rule file the PR never touched**, one file
-per fresh, sandboxed Claude session. Progress lives in `manifest.json` (review
+per fresh agent session. Codex is the default provider; a Claude adapter is
+retained for compatibility. Progress lives in `manifest.json` (review
 tick-off list) and `fixes.json` (fix ledger), so the campaign is resumable at
 any point and "how far along is it?" is one `./status.sh` away.
 
@@ -67,6 +68,7 @@ count.
   (pending|done|skipped|error), outcomes ([{n, severity, outcome
   (fixed|refuted|obsolete|deferred), note}]), commits, gate, needs_human,
   attempts, error`.
+- `agent_runner.sh` — provider-neutral session adapter (`codex` or `claude`).
 - `review_file_prompt.md` / `fix_file_prompt.md` — the two session protocols.
 - `_verdict`, `_fix_report`, `_briefing/`, `.review_logs/`, `.fix_logs/`,
   `.fix_scratch/`, `.lock`, `.campaign.lock` — transient, gitignored.
@@ -76,21 +78,16 @@ count.
 
 ## Sandbox model (review sessions)
 
-The session is *asked* for `Read Grep Glob Write` — no Bash, no Edit — and the
-prompt tells it that it cannot compile or run anything (see docs/21: the OOMs
-came from ad-hoc compiles; read-only reviewers *name* the experiment, the
-maintainer runs it).
+The Codex adapter runs review sessions with `--sandbox read-only` and
+`--ephemeral`. The prompt also tells the reviewer not to compile or run
+anything (see docs/21: the OOMs came from ad-hoc compiles; read-only reviewers
+*name* the experiment, the maintainer runs it).
 
-**That is a request, not a sandbox.** Measured over the 2026-08-19 run: 41 of 44
-review sessions called Bash, 329 calls in total, more than they made Read calls.
-All of them were reads — `grep`, `sed -n`, `ls`, `find`, `git` — nothing
-compiled and no tree guard fired, so no harm was done. But what actually holds
-the line is `revert_new_dirt` plus the porcelain snapshot below, not the tool
-list. A reviewer that decides to run `mix run` is exactly the docs/21 OOM class,
-and nothing here stops it. Giving each reviewer its own git worktree is the fix;
-until then, treat the tool list as documentation of intent.
+The legacy Claude adapter still relies on its allowed-tools request and the
+tree guard rather than an OS sandbox. The Codex path is therefore the preferred
+one. The existing porcelain and ledger guards remain as defense in depth.
 
-Its only output channel is `_verdict`:
+The runner captures the agent's final response in `_verdict`:
 
 ```
 OK
@@ -124,9 +121,12 @@ stuck file never blocks the other 700.
 
 ## Trust model (fix sessions)
 
-A fix session gets `Read Grep Glob Write Edit Bash` — it must compile, run
-tests, and commit, so it cannot be sandboxed the way reviewers are. Instead
-the wrapper (`fix_loop.sh`) is the trust boundary; after every session it:
+A fix session must compile, run tests, edit files, and commit. The wrapper
+creates a fresh temporary Git branch and linked worktree for every attempt;
+the agent never runs in the maintainer's checkout. The Codex adapter therefore
+currently uses `danger-full-access` inside that disposable worktree. Only a
+clean, linear set of commits authored during the attempt is cherry-picked into
+the campaign branch, after which `fix_loop.sh` validates the imported result:
 
 1. restores `manifest.json`/`findings.md`/`fixes.json` if the session touched
    them, and discards commits that touch `maintainer_tools/pr_review/`;
@@ -140,6 +140,9 @@ the wrapper (`fix_loop.sh`) is the trust boundary; after every session it:
    idempotency`, and the tree must stay clean (fixture-healer parity with CI).
    Red gate ⇒ `git reset --hard` to the pre-session commit (campaign ledgers
    preserved) and the session retries with the gate output as feedback.
+
+The temporary worktree and branch are force-removed after every attempt,
+whether the session succeeds, fails, times out, or leaves uncommitted files.
 
 Sessions and the gate run under a systemd `MemoryMax` scope (default 16G,
 `FIX_MEM_MAX` to change, empty to disable) — the OOM history here is unbounded
@@ -192,8 +195,10 @@ FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped   # the end-of-campaign ni
 ./selftest_manifest.sh              # prove the review-side scheduling
 ```
 
-Env: `CLAUDE_MODEL` (optional `--model` for sessions; `FIX_CLAUDE_MODEL`
-overrides it for fix sessions), `MAX_RETRIES` (3 review / 2 fix),
+Env: `AGENT_PROVIDER` (`codex` by default, or `claude`), `AGENT_BIN` (optional
+executable override), `AGENT_MODEL` (optional model for all sessions),
+`REVIEW_AGENT_MODEL` / `FIX_AGENT_MODEL` (per-mode overrides), `MAX_RETRIES`
+(3 review / 2 fix),
 `COMMIT_EVERY` (0 = the loop never touches git; N = auto-commit the three
 ledgers every N reviewed files), `BASE_BRANCH`/`HEAD_BRANCH` and `MAX_REREVIEWS` for the
 generator (default `main` / `evolution_accepted` / `1`), and the fix knobs

@@ -93,10 +93,11 @@ Every one of these shipped past a green suite in this repo at least once:
 - Do not report the same defect at multiple severities, and do not pad: an
   honest `OK` is a valuable result.
 
-## Verdict — your only output
+## Verdict — your only final response
 
-Write **exactly one file**: `maintainer_tools/pr_review/_verdict`.
-Its first line must be exactly `OK` or exactly `FINDINGS`.
+Return only the verdict below as your final response. Do not write any file.
+The runner captures your final response. Its first line must be exactly `OK`
+or exactly `FINDINGS`.
 
 Either:
 
@@ -121,5 +122,5 @@ FINDINGS
 - `experiment:` lines are optional, must reference which finding they settle,
   and must be runnable as-is (one command).
 
-One line per finding, each with a `path:line` anchor where possible. Your
-final chat response is ignored — only the verdict file is read.
+One line per finding, each with a `path:line` anchor where possible. Do not
+wrap the verdict in Markdown fences or add introductory text.
