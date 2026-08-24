@@ -1,6 +1,6 @@
 # Pattern rules
 
-Candidate: `416eaaaf` against `main`.
+Candidate: `cc25ed34` against `main`.
 
 ## Files
 

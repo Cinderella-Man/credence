@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-24T18:35:24Z",
-  "reviewed": 10,
+  "generated_at": "2026-08-24T18:38:35Z",
+  "reviewed": 11,
   "total": 780,
   "counts": {
-    "blocker": 14,
-    "concern": 26,
+    "blocker": 15,
+    "concern": 27,
     "nit": 68
   },
   "repeated_root_causes": [],
@@ -656,6 +656,18 @@
       "reviewed_path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
       "finding": "test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs:284-301 — the 1008-combination battery is vacuous-safe only by luck: if the rule rewrote nothing at all, `rewritten?` would be `false` for every combination, `assert length(analyze(line)) == 0` would hold, and the `valid_syntax?` branch would never run, so the whole loop passes green against a dead rule. Count the rewrites and assert the total (the intended figure is derivable from the fixture lists) so the battery cannot pass on an inert rule.",
       "signature": "<anchor>-# — the #-combination battery is vacuous-safe only by luck: if the rule rewrote nothing at all, `rewritten?` would be `false` for every combination, `assert length(analyze(line)) == #` would hold, and the `valid_syntax?` branch would never run, so the whole loop passes green against a dead rule. count the rewrites and assert the total (the intended figure is derivable from the fixture lists) so the battery cannot pass on an inert rule."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
+      "finding": "lib/syntax/fix_bare_tuple_zero_in_type.ex:92 — A multiline range return such as `@type t :: () -> 1` followed by `.. 10` is not recognized as a continuation, so the fix closes the function type on the first line and changes it to `(() -> 1) .. 10` instead of wrapping the complete `1..10` return type.",
+      "signature": "<anchor> — a multiline range return such as `@type t :: () -> #` followed by `.. #` is not recognized as a continuation, so the fix closes the function type on the first line and changes it to `(() -> #) .. #` instead of wrapping the complete `#..#` return type."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
+      "finding": "lib/syntax/fix_bare_tuple_zero_in_type.ex:225 — `balanced?/1` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it.",
+      "signature": "<anchor> — `balanced?/#` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it."
     }
   ]
 }

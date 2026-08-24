@@ -26,7 +26,7 @@ recorded.
 - [x] Add finding aggregation and root-cause deduplication support.
 - [x] Add cross-cutting adversarial review passes.
 - [x] Add generation of human-sized merge packets.
-- [ ] Run one real Codex integration review.
+- [x] Run one real Codex integration review.
 - [ ] Run and assess a 20-file Codex review-only pilot.
 - [ ] Complete the full category review campaign.
 - [ ] Record the final merge decision and remaining uncertainties.
@@ -43,7 +43,11 @@ recorded.
 
 ## Pilot results
 
-Not started.
+- Integration review succeeded on
+  `lib/syntax/fix_bare_tuple_zero_in_type.ex` using the Codex read-only
+  sandbox. It returned one blocker and one concern, produced a valid captured
+  verdict, changed no source files, and advanced the manifest from 10 to 11
+  reviewed files.
 
 ## Human decisions
 

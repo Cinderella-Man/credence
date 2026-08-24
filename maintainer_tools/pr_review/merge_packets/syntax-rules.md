@@ -1,6 +1,6 @@
 # Syntax rules
 
-Candidate: `416eaaaf` against `main`.
+Candidate: `cc25ed34` against `main`.
 
 ## Files
 
@@ -8,7 +8,7 @@ Candidate: `416eaaaf` against `main`.
 - `lib/syntax/close_unclosed_doc_heredoc.ex` — done, verdict: FINDINGS
 - `lib/syntax/close_unclosed_fn_delimiter.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_assignment_dot_syntax.ex` — done, verdict: FINDINGS
-- `lib/syntax/fix_bare_tuple_zero_in_type.ex` — pending, verdict: not reviewed
+- `lib/syntax/fix_bare_tuple_zero_in_type.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_capture_operator_syntax.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_div_rem.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_do_block_fusion.ex` — pending, verdict: not reviewed
@@ -125,6 +125,8 @@ Candidate: `416eaaaf` against `main`.
 - **concern** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — lib/syntax/fix_bare_tuple_zero_in_type.ex:125 — `target/1` judges "self-contained right-hand side" one line at a time, so a typespec whose return type continues onto the next line is flagged and rewritten into a differently-broken shape. On `@type t :: () -> {:ok, term()}` followed by `  | {:error, term()}`, the first line passes every gate (balanced, one top-level arrow, ends on `}`) and becomes `@type t :: (() -> {:ok, term()})`, orphaning the `|` continuation. The net user-visible outcome is a missed repair rather than shipped damage — the round's all-or-nothing rollback (lib/syntax.ex:151) discards it because the result still does not parse — but the check reports a finding the fix cannot actually repair, and it burns the round for any other rule whose repair was riding along. The moduledoc's "self-contained: brackets balanced, no second `::`, no `when` guard" list does not mention the line-locality assumption.
 - **nit** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — test/syntax/fix_bare_tuple_zero_in_type_analyze_test.exs:63 — `assert issue.message =~ "Wrap the function type in parens"` is a substring assertion on the one thing the user reads; pin the whole message with `==`, as the recent campaign commits did for the other Syntax rules.
 - **nit** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs:284-301 — the 1008-combination battery is vacuous-safe only by luck: if the rule rewrote nothing at all, `rewritten?` would be `false` for every combination, `assert length(analyze(line)) == 0` would hold, and the `valid_syntax?` branch would never run, so the whole loop passes green against a dead rule. Count the rewrites and assert the total (the intended figure is derivable from the fixture lists) so the battery cannot pass on an inert rule.
+- **blocker** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — lib/syntax/fix_bare_tuple_zero_in_type.ex:92 — A multiline range return such as `@type t :: () -> 1` followed by `.. 10` is not recognized as a continuation, so the fix closes the function type on the first line and changes it to `(() -> 1) .. 10` instead of wrapping the complete `1..10` return type.
+- **concern** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — lib/syntax/fix_bare_tuple_zero_in_type.ex:225 — `balanced?/1` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it.
 
 
 ## Maintainer decision

@@ -164,11 +164,11 @@
       "deletions": 0,
       "blob": "e231196073045a79f053e13f88ea185d52a40d79",
       "old_path": null,
-      "status": "pending",
-      "verdict": null,
-      "findings": 0,
-      "reviewed_at": null,
-      "stale": true,
+      "status": "done",
+      "verdict": "FINDINGS",
+      "findings": 2,
+      "reviewed_at": "2026-08-24T20:38:18+02:00",
+      "stale": false,
       "error": null
     },
     {

@@ -540,3 +540,6 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - commits: 6705f0dd
 - gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency — 9132 tests, 0 failures)
 
+## lib/syntax/fix_bare_tuple_zero_in_type.ex — 2026-08-24 (added, rule_syntax)
+- blocker: lib/syntax/fix_bare_tuple_zero_in_type.ex:92 — A multiline range return such as `@type t :: () -> 1` followed by `.. 10` is not recognized as a continuation, so the fix closes the function type on the first line and changes it to `(() -> 1) .. 10` instead of wrapping the complete `1..10` return type.
+- concern: lib/syntax/fix_bare_tuple_zero_in_type.ex:225 — `balanced?/1` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it.
