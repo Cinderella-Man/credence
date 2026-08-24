@@ -66,6 +66,9 @@ recorded.
 - The first real wrapper-owned fix completed in a disposable worktree. Its
   full gate passed before commit `0851b12a` was imported, and the manifest was
   refreshed afterward.
+- A second wrapper-owned fix passed the capped full gate and imported commit
+  `8cb5afd3`, resolving all three blockers in
+  `lib/syntax/fix_capture_operator_syntax.ex`.
 - User-level `systemd-run` is unavailable on this host. The cap wrapper now
   falls back to inherited `RLIMIT_AS` via `prlimit`; the Erlang VM was smoke
   tested under an 8 GiB limit. The worktree gate is non-interactive and uses a

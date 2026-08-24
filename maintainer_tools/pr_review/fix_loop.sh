@@ -113,7 +113,7 @@ owned_hash() { cat "$MANIFEST" "$FINDINGS" "$FIXES" 2>/dev/null | md5sum; }
 # tree-clean step and wedge the rest of the run.
 remove_new_untracked() {
   local line xy p
-  while IFS= read -r line; do
+  while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -n "$line" ]] || continue
     xy="${line:0:2}"; p="${line:3}"
     [[ "$xy" == '??' ]] || continue
@@ -356,7 +356,7 @@ validate_report() {
 outcomes_json() {
   local -a sevs; IFS=',' read -ra sevs <<<"$1"
   local line n o note
-  while IFS= read -r line; do
+  while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" =~ ^-\ \[([0-9]+)\]\ (fixed|refuted|obsolete|deferred)(.*)$ ]] || continue
     n="${BASH_REMATCH[1]}"; o="${BASH_REMATCH[2]}"
     note="$(sed -E 's/^[[:space:]]*(—|–|-|:)?[[:space:]]*//' <<<"${BASH_REMATCH[3]}")"
@@ -372,7 +372,7 @@ record_resolution() {
   {
     echo "## $path — fix round $round ($(date +%F))"
     local line n
-    while IFS= read -r line; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
       if [[ "$line" =~ ^-\ \[([0-9]+)\]\ (fixed|refuted|obsolete|deferred)(.*)$ ]]; then
         n="${BASH_REMATCH[1]}"
         echo "- [$n ${sevs[$((n - 1))]:-?}] ${BASH_REMATCH[2]}${BASH_REMATCH[3]}"

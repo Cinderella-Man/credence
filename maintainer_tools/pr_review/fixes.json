@@ -1472,13 +1472,13 @@
       "severities": [
         "blocker"
       ],
-      "status": "pending",
+      "status": "error",
       "attempts": 0,
       "outcomes": [],
       "commits": [],
       "gate": null,
       "needs_human": false,
-      "error": null,
+      "error": "manifest no longer carries this review (re-reviewed, requeued, or dropped) — entry superseded",
       "enqueued_at": "2026-08-24T20:52:32+02:00",
       "resolved_at": null
     },
@@ -1491,15 +1491,36 @@
         "blocker",
         "blocker"
       ],
-      "status": "pending",
-      "attempts": 0,
-      "outcomes": [],
-      "commits": [],
-      "gate": null,
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Executed the rule and confirmed it rewrote charlists, sigils, and trailing comments; added exact-output analyze/fix tests and switched matching to the byte-preserving `SourceMask`."
+        },
+        {
+          "n": 2,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Executed the rule and confirmed `cmp=&>` and `fn ->&> end` were ignored; added failing boundary tests and extended the leading boundary to `=` and an arrow’s closing `>`."
+        },
+        {
+          "n": 3,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Executed the rule and confirmed `# \"\"\"` hid a later `cmp = &>` repair; added analyze/fix regressions and removed the hand-rolled heredoc toggling in favor of `SourceMask`. All scoped checks pass: warnings-as-errors compilation and 49 tests with 0 failures."
+        }
+      ],
+      "commits": [
+        "8cb5afd3b00b9c70a18f577fa780d5c376af2e7c"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
       "needs_human": false,
       "error": null,
       "enqueued_at": "2026-08-24T20:52:32+02:00",
-      "resolved_at": null
+      "resolved_at": "2026-08-24T21:26:14+02:00"
     },
     {
       "path": "test/syntax/fix_capture_operator_syntax_analyze_test.exs",

@@ -595,3 +595,9 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - [2 concern] fixed — Executed the rule on `@type t :: () -> [integer()}`; it reported an issue and emitted `@type t :: (() -> [integer()})`, while the matching-bracket control was repaired normally. Added analyze and fix tests that failed on the mismatched input. Replaced depth-only bracket counting with an expected-closing-bracket stack. Formatting, warnings-as-errors compilation, and both rule test files pass: 65 tests, 0 failures.
 - commits: 0851b12a2a538e7bb305ffd89d51bf256b652bc9
 - gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+## lib/syntax/fix_capture_operator_syntax.ex — fix round 1 (2026-08-24)
+- [1 blocker] fixed — Executed the rule and confirmed it rewrote charlists, sigils, and trailing comments; added exact-output analyze/fix tests and switched matching to the byte-preserving `SourceMask`.
+- [2 blocker] fixed — Executed the rule and confirmed `cmp=&>` and `fn ->&> end` were ignored; added failing boundary tests and extended the leading boundary to `=` and an arrow’s closing `>`.
+- [3 blocker] fixed — Executed the rule and confirmed `# """` hid a later `cmp = &>` repair; added analyze/fix regressions and removed the hand-rolled heredoc toggling in favor of `SourceMask`. All scoped checks pass: warnings-as-errors compilation and 49 tests with 0 failures.
+- commits: 8cb5afd3b00b9c70a18f577fa780d5c376af2e7c
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)

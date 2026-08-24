@@ -1,6 +1,6 @@
 # Syntax rules
 
-Candidate: `0851b12a` against `main`.
+Candidate: `8cb5afd3` against `main`.
 
 ## Files
 
@@ -9,7 +9,7 @@ Candidate: `0851b12a` against `main`.
 - `lib/syntax/close_unclosed_fn_delimiter.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_assignment_dot_syntax.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_bare_tuple_zero_in_type.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_capture_operator_syntax.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_capture_operator_syntax.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_div_rem.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_do_block_fusion.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_elsif_in_if_chain.ex` — done, verdict: FINDINGS

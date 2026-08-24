@@ -86,6 +86,10 @@ case "${SELFTEST_SCENARIO:?}" in
     printf '  def fixed_marker, do: :ok\n' >> lib/foo.ex
     printf 'assert Foo.fixed_marker() == :ok\n' >> test/foo_test.exs
     printf 'REPORT\n- [1] fixed — reproduced with the probe, pinned in test/foo_test.exs, foo/1 now returns :ok\n- [2] refuted — read call sites and ran the battery; the name matches usage\n' > "$OUT" ;;
+  happy_no_newline)
+    printf '  def fixed_marker, do: :ok\n' >> lib/foo.ex
+    printf 'assert Foo.fixed_marker() == :ok\n' >> test/foo_test.exs
+    printf 'REPORT\n- [1] fixed — first outcome\n- [2] refuted — final outcome has no newline' > "$OUT" ;;
   malformed)
     printf 'REPORT\n- [1] refuted — checked\n' > "$OUT" ;;
   ledger_touch)
@@ -202,6 +206,13 @@ assert "resolution names the severity" \
   grep -q '^- \[1 concern\] fixed' "$R/maintainer_tools/pr_review/findings.md"
 assert "durable refresh marker created for the accepted commits" \
   test -f "$R/maintainer_tools/pr_review/.needs_refresh"
+
+CURRENT="happy_no_newline"
+make_repo happy_no_newline
+run_fix true happy_no_newline >/dev/null 2>&1
+assert_jq "final non-newline outcome is recorded" '.entries[0].outcomes | map(.n) == [1, 2]'
+assert "final non-newline resolution is appended" \
+  grep -q '^- \[2 nit\] refuted — final outcome has no newline' "$R/maintainer_tools/pr_review/findings.md"
 
 CURRENT="gate_red"
 make_repo gate_red

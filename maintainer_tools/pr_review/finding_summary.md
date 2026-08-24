@@ -1,8 +1,8 @@
 # Finding summary
 
-Generated: 2026-08-24T19:14:39Z
+Generated: 2026-08-24T19:29:09Z
 
-Progress: 20/797 files reviewed.
+Progress: 17/798 files reviewed.
 
 - Blockers: 45
 - Concerns: 35

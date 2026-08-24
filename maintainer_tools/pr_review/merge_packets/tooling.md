@@ -1,6 +1,6 @@
 # Corpus, mutation, and maintainer tooling
 
-Candidate: `0851b12a` against `main`.
+Candidate: `8cb5afd3` against `main`.
 
 ## Files
 
@@ -11,6 +11,7 @@ Candidate: `0851b12a` against `main`.
 - `maintainer_tools/escalation_ledger.md` — pending, verdict: not reviewed
 - `maintainer_tools/followup.md` — pending, verdict: not reviewed
 - `maintainer_tools/pr_review/README.md` — pending, verdict: not reviewed
+- `maintainer_tools/pr_review/adversarial_findings.md` — pending, verdict: not reviewed
 - `maintainer_tools/pr_review/adversarial_review.sh` — pending, verdict: not reviewed
 - `maintainer_tools/pr_review/agent_runner.sh` — pending, verdict: not reviewed
 - `maintainer_tools/pr_review/aggregate_findings.sh` — pending, verdict: not reviewed
