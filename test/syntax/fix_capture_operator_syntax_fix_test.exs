@@ -162,6 +162,44 @@ defmodule Credence.Syntax.FixCaptureOperatorSyntaxFixTest do
     confirm_fix(fix(source), source)
   end
 
+  test "does not modify charlists, sigils, or trailing comments" do
+    source = """
+    msg = 'compare &> here'
+    msg = ~s(compare &> here)
+    x = 1 # compare &> here
+    """
+
+    confirm_fix(fix(source), source)
+  end
+
+  test "fixes capture operators after assignment and arrow boundaries" do
+    input = """
+    cmp=&>
+    fn ->&> end
+    """
+
+    expected = """
+    cmp=&Kernel.>/2
+    fn ->&Kernel.>/2 end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "triple quotes in a comment do not hide a later capture operator" do
+    input = """
+    # \"""
+    cmp = &>
+    """
+
+    expected = """
+    # \"""
+    cmp = &Kernel.>/2
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
   test "does not modify prose inside a heredoc" do
     source = """
     @moduledoc \"\"\"

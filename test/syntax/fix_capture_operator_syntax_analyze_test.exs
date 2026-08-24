@@ -115,6 +115,32 @@ defmodule Credence.Syntax.FixCaptureOperatorSyntaxAnalyzeTest do
     assert analyze(~S'msg = "compare with &> here"') == []
   end
 
+  test "does not flag charlists, sigils, or trailing comments" do
+    source = """
+    msg = 'compare &> here'
+    msg = ~s(compare &> here)
+    x = 1 # compare &> here
+    """
+
+    assert analyze(source) == []
+  end
+
+  test "flags capture operators after assignment and arrow boundaries" do
+    assert [%Issue{meta: %{line: 1}}, %Issue{meta: %{line: 2}}] =
+             analyze("""
+             cmp=&>
+             fn ->&> end
+             """)
+  end
+
+  test "triple quotes in a comment do not hide a later capture operator" do
+    assert [%Issue{meta: %{line: 2}}] =
+             analyze("""
+             # \"""
+             cmp = &>
+             """)
+  end
+
   test "does not flag prose inside a heredoc" do
     source = """
     @moduledoc \"\"\"
