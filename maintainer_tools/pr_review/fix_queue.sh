@@ -16,7 +16,7 @@
 #        fix_queue.sh status                    # digest (read-only, no lock)
 #        fix_queue.sh requeue --errors | --skipped | <path>...
 # Env:   FIX_MAX_ROUNDS (3)
-#        FIX_MIN_SEVERITY (concern) — lowest severity that earns a fix session.
+#        FIX_MIN_SEVERITY (blocker) — lowest severity that earns a fix session.
 #          A round of pure nits is recorded as `skipped`, not scheduled: it is
 #          not worth a ~13-minute session plus a ~4-minute gate, and scheduling
 #          it also re-stales the file and buys another review. `nit` restores
@@ -31,7 +31,7 @@ FIXES="$FQ_SCRIPT_DIR/fixes.json"
 FQ_MANIFEST="$FQ_SCRIPT_DIR/manifest.json"
 FQ_FINDINGS="$FQ_SCRIPT_DIR/findings.md"
 FIX_MAX_ROUNDS="${FIX_MAX_ROUNDS:-3}"
-FIX_MIN_SEVERITY="${FIX_MIN_SEVERITY:-concern}"
+FIX_MIN_SEVERITY="${FIX_MIN_SEVERITY:-blocker}"
 
 fq_log() { printf '[fix_queue] %s\n' "$*"; }
 fq_die() { printf '[fix_queue] FATAL: %s\n' "$*" >&2; exit 1; }

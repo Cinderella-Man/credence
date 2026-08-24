@@ -25,9 +25,7 @@ case "$PROVIDER" in
     BIN="${AGENT_BIN:-codex}"
     command -v "$BIN" >/dev/null || die "Codex executable not found: $BIN"
     sandbox=read-only
-    # Fix sessions still author commits, so they need .git access. This can
-    # become workspace-write once commit ownership moves to the wrapper.
-    [[ "$MODE" == fix ]] && sandbox=danger-full-access
+    [[ "$MODE" == fix ]] && sandbox=workspace-write
     args=(exec --ephemeral --color never --sandbox "$sandbox" -C "${AGENT_REPO:?}" -o "$OUTPUT")
     [[ -n "$MODEL" ]] && args+=(--model "$MODEL")
     printf '%s' "$PROMPT" | "$BIN" "${args[@]}" -

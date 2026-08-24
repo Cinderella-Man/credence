@@ -40,17 +40,10 @@ Bash: you can compile, run tests, and use git.
    Run the full suite yourself only when you have a specific reason to think your
    change reaches beyond this rule — you edited a shared helper, the dispatch, the
    masking primitives, or anything under `test/support/`.
-5. **Commit** the test and the fix together:
-
-       git add <each file by name>     # never -A, never ., never commit -a
-       git commit -m "pr_review fix: <path> — <one line>" \
-                  -m "Finding [n] (<severity>): how it was confirmed, what changed."
-
-   Commit EVERY file you created or changed, by name — including new test
-   files. The wrapper deletes uncommitted leftovers and voids the attempt: a
-   forgotten `git add` of a pinning test fails the whole attempt loudly. Never
-   `git merge` or pull anything — only commits you author in this session are
-   accepted.
+5. **Leave the complete change in the working tree.** Do not stage or commit
+   anything. The wrapper validates your report, stages the exact changed paths,
+   runs the independent gate, creates the commit, and imports it only after the
+   gate is green.
 
 ## Outcomes (exactly one per finding)
 
@@ -102,9 +95,8 @@ Bash: you can compile, run tests, and use git.
 - Scope: ONLY the numbered findings. A new defect you notice goes into the
   report as a `- note:` line, unfixed — widening scope corrupts the campaign's
   bookkeeping.
-- Git: stay on the current branch; no push, no rebase, no amend of commits
-  that existed before you started, no history edits of any kind. Commit only
-  files you name explicitly.
+- Git: read-only inspection only. Do not add, commit, merge, pull, rebase,
+  switch branches, or edit history. The wrapper owns Git mutation.
 - Never write anywhere under `maintainer_tools/pr_review/` except the scratch
   dir `maintainer_tools/pr_review/.fix_scratch/`
   (gitignored). The ledgers there belong to the wrapper; touching them voids
@@ -126,7 +118,6 @@ REPORT
 - note: <new defect noticed but NOT fixed — for the maintainer>
 ```
 
-Every finding number appears exactly once. `fixed` requires at least one
-commit this session. Do not wrap the report in Markdown fences or add
-introductory text. Your commits and the captured report are both validated by
-the wrapper.
+Every finding number appears exactly once. `fixed` requires a corresponding
+working-tree change. Do not wrap the report in Markdown fences or add
+introductory text. The wrapper validates both the changes and captured report.

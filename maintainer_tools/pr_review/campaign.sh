@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
 #
-# campaign.sh — the full review-AND-fix campaign: alternate one read-only
-# review session with the fix phase, so a finding is confirmed, tested, fixed
-# and re-verified as soon as it is produced instead of piling up in findings.md.
+# campaign.sh — review-first campaign driver. It completes a review tranche,
+# aggregates its findings, and only then drains blocker-level fixes.
 #
-# Per iteration:
-#   1. fix_loop.sh          — drain every pending fix entry (it syncs the fix
-#                             ledger from manifest+findings itself, gates every
-#                             commit, and refreshes the manifest when commits
-#                             land so fixed files re-enter review as stale)
-#   2. review_loop.sh 1     — review exactly one pending file
-# until there is nothing pending on either side. Each child takes the shared
-# .lock itself; this wrapper holds only .campaign.lock (one campaign at a time).
+# Review and repair are deliberately separated so repeated root causes can be
+# triaged before the campaign spends fix sessions on symptoms.
 #
 # Usage:   campaign.sh [cap] [wait_min]
 #   cap        max review sessions this run (0 = until drained; default 0)
@@ -41,15 +34,19 @@ gated_reviews()   { jq -r '[.files[] | select(.status == "gated")]   | length' "
 stale_reviews()   { jq -r '[.files[] | select(.stale == true and .status == "done")] | length' "$MANIFEST"; }
 pending_fixes()   { [[ -f "$FIXES" ]] && jq -r '[.entries[] | select(.status == "pending")] | length' "$FIXES" || echo 0; }
 
-reviews=0
-while :; do
-  # Fix phase first: it also drains any backlog findings.md already holds.
-  # 8>&- : children (and the agent sessions under them) must not inherit the
-  # campaign lock fd — an orphaned session would hold it forever.
-  "$SCRIPT_DIR/fix_loop.sh" 8>&- || die "fix_loop failed — fix the cause, then rerun campaign.sh"
+reviews_before="$(jq '[.files[] | select(.status == "done")] | length' "$MANIFEST")"
+QUIET_STATUS=1 "$SCRIPT_DIR/review_loop.sh" "$CAP" "$WAIT_MIN" 8>&- \
+  || die "review_loop failed — fix the cause, then rerun campaign.sh"
+"$SCRIPT_DIR/aggregate_findings.sh" 8>&- \
+  || die "finding aggregation failed"
 
-  if (( $(pending_reviews) == 0 )); then
-    (( $(pending_fixes) == 0 )) || die "no reviews pending but fix entries still pending — fix_loop should have drained them"
+# The default severity floor is blocker. Explicitly preserve an operator's
+# override for end-of-campaign concern/nit sweeps.
+FIX_MIN_SEVERITY="${FIX_MIN_SEVERITY:-blocker}" "$SCRIPT_DIR/fix_loop.sh" 8>&- \
+  || die "fix_loop failed — fix the cause, then rerun campaign.sh"
+
+if (( $(pending_reviews) == 0 )); then
+    (( $(pending_fixes) == 0 )) || die "review queue drained but fix entries remain pending"
     # "Drained" means the QUEUE is empty, which is not the same as "everything
     # has been looked at". Two deliberate holdbacks survive it, and saying so
     # here is the difference between a finished campaign and one that only
@@ -60,20 +57,9 @@ while :; do
     (( s > 0 )) && log "  $s reviewed row(s) changed after their last review and settled at the re-review cap. Sweep with: requeue.sh --stale"
     (( $(jq -r '[.entries[] | select(.status == "skipped")] | length' "$FIXES" 2>/dev/null || echo 0) > 0 )) \
       && log "  nit-only fix rounds were recorded but not scheduled. Sweep with: FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped"
-    break
-  fi
-  if (( CAP > 0 && reviews >= CAP )); then
-    log "cap $CAP review sessions reached"
-    break
-  fi
-
-  QUIET_STATUS=1 "$SCRIPT_DIR/review_loop.sh" 1 8>&- || die "review_loop failed — fix the cause, then rerun campaign.sh"
-  reviews=$((reviews + 1))
-
-  if (( WAIT_MIN > 0 )); then
-    log "waiting ${WAIT_MIN} min…"
-    sleep "$((WAIT_MIN * 60))"
-  fi
-done
+else
+  reviews_after="$(jq '[.files[] | select(.status == "done")] | length' "$MANIFEST")"
+  log "review tranche complete — $((reviews_after - reviews_before)) review(s); inspect finding_summary.md before the next tranche"
+fi
 
 "$SCRIPT_DIR/status.sh" || true

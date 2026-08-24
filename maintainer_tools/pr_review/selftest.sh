@@ -15,6 +15,10 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/pr_review_selftest.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
 PASS=0; FAIL=0; CURRENT=""
+# Most mechanics fixtures predate the blocker-only production default and use
+# a concern+nit pair. Keep them scheduled; dedicated severity tests below
+# exercise the default separately.
+export FIX_MIN_SEVERITY=concern
 
 ok()   { PASS=$((PASS + 1)); }
 bad()  { FAIL=$((FAIL + 1)); printf 'FAIL [%s] %s\n' "$CURRENT" "$1"; }
@@ -52,7 +56,7 @@ maintainer_tools/pr_review/.campaign.lock
 maintainer_tools/pr_review/.needs_refresh
 EOF
   local f
-  for f in agent_runner.sh fix_loop.sh fix_queue.sh fix_file_prompt.md run_capped.sh campaign.sh status.sh; do
+  for f in agent_runner.sh aggregate_findings.sh fix_loop.sh fix_queue.sh fix_file_prompt.md run_capped.sh campaign.sh status.sh; do
     cp "$SRC/$f" "$R/maintainer_tools/pr_review/"
   done
 
@@ -74,13 +78,11 @@ while (($#)); do
   fi
 done
 [[ -n "$OUT" ]] || exit 64
-[[ "$EPHEMERAL" == 1 && "$SANDBOX" == danger-full-access ]] || exit 65
+[[ "$EPHEMERAL" == 1 && "$SANDBOX" == workspace-write ]] || exit 65
 case "${SELFTEST_SCENARIO:?}" in
   happy|gate_red)
     printf '  def fixed_marker, do: :ok\n' >> lib/foo.ex
     printf 'assert Foo.fixed_marker() == :ok\n' >> test/foo_test.exs
-    git add lib/foo.ex test/foo_test.exs
-    git commit -q -m "pr_review fix: lib/foo.ex — return :ok on empty input"
     printf 'REPORT\n- [1] fixed — reproduced with the probe, pinned in test/foo_test.exs, foo/1 now returns :ok\n- [2] refuted — read call sites and ran the battery; the name matches usage\n' > "$OUT" ;;
   malformed)
     printf 'REPORT\n- [1] refuted — checked\n' > "$OUT" ;;
@@ -224,20 +226,20 @@ run_fix true ledger_touch >/dev/null 2>&1
 assert "findings.md restored byte-for-byte" \
   test "$(md5sum "$R/maintainer_tools/pr_review/findings.md" | cut -d' ' -f1)" = "$BEFORE_MD5"
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names the ledgers"             '.entries[0].error | contains("ledgers")'
+assert_jq "error names campaign-file changes"  '.entries[0].error | contains("campaign files")'
 
 CURRENT="no_commits"
 make_repo no_commits
 run_fix false no_commits >/dev/null 2>&1   # gate cmd would fail — must be skipped
 assert "entry done (gate skipped, not run)" test "$(entry_status)" = done
-assert_jq "gate recorded as skipped"            '.entries[0].gate == "skipped (no commits)"'
+assert_jq "gate recorded as skipped"            '.entries[0].gate == "skipped (no changes)"'
 assert_jq "deferred flags needs_human"          '.entries[0].needs_human == true'
 
 CURRENT="fixed_no_commit"
 make_repo fixed_no_commit
 run_fix true fixed_no_commit >/dev/null 2>&1
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error says fixed-without-commit"     '.entries[0].error | contains("committed nothing")'
+assert_jq "error says fixed-without-change"     '.entries[0].error | contains("changed nothing")'
 
 CURRENT="pr_review_commit"
 make_repo pr_review_commit
@@ -251,7 +253,7 @@ make_repo leftover_dirt
 run_fix true leftover_dirt >/dev/null 2>&1
 assert "uncommitted edit reverted" git -C "$R" diff --quiet -- lib/foo.ex
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names uncommitted changes"     '.entries[0].error | contains("uncommitted")'
+assert_jq "error rejects edits for refuted findings" '.entries[0].error | contains("reports no finding")'
 
 CURRENT="staged_ledger"
 make_repo staged_ledger
@@ -262,7 +264,7 @@ assert "findings.md worktree restored byte-for-byte" \
 assert "index left clean (staged ledger edit unstaged)" \
   git -C "$R" diff --cached --quiet
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names the ledgers"             '.entries[0].error | contains("ledgers")'
+assert_jq "error names campaign-file changes"  '.entries[0].error | contains("campaign files")'
 
 CURRENT="staged_track"
 make_repo staged_track
@@ -270,14 +272,14 @@ run_fix true staged_track >/dev/null 2>&1
 assert "staged edit fully reverted (index and worktree)" \
   bash -c "[[ -z \"\$(git -C '$R' status --porcelain -- lib/foo.ex)\" ]]"
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names uncommitted changes"     '.entries[0].error | contains("uncommitted")'
+assert_jq "error rejects staged edits for refuted findings" '.entries[0].error | contains("reports no finding")'
 
 CURRENT="leftover_new_file"
 make_repo leftover_new_file
 run_fix true leftover_new_file >/dev/null 2>&1
 assert "forgotten new file deleted" bash -c "! test -e '$R/test/new_pin_test.exs'"
 assert "entry errored (not silently accepted)" test "$(entry_status)" = error
-assert_jq "error names NEW files"               '.entries[0].error | contains("NEW files")'
+assert_jq "error rejects new edits for refuted findings" '.entries[0].error | contains("reports no finding")'
 
 CURRENT="merge_import"
 make_repo merge_import
@@ -286,7 +288,7 @@ assert "merge and own commit both discarded" \
   test "$(git -C "$R" rev-parse HEAD)" = "$INITIAL_SHA"
 assert "foreign file absent" bash -c "! test -e '$R/lib/bar.ex'"
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names foreign commits"         '.entries[0].error | contains("foreign")'
+assert_jq "error rejects agent-owned commits"   '.entries[0].error | contains("only the wrapper may commit")'
 
 CURRENT="net_zero_fixed"
 make_repo net_zero_fixed
@@ -294,7 +296,7 @@ run_fix true net_zero_fixed >/dev/null 2>&1
 assert "commit+revert pair discarded" \
   test "$(git -C "$R" rev-parse HEAD)" = "$INITIAL_SHA"
 assert "entry errored" test "$(entry_status)" = error
-assert_jq "error names the net-zero effect"     '.entries[0].error | contains("net effect")'
+assert_jq "error rejects even net-zero agent commits" '.entries[0].error | contains("only the wrapper may commit")'
 
 CURRENT="ok_rereview"
 make_repo ok_rereview
@@ -357,6 +359,12 @@ CURRENT="round_cap_no_duplicates"
 assert_jq "a capped path does not collect a round 5" '.entries | length == 4'
 
 # ---- severity floor --------------------------------------------------------
+# With no override, production defaults to blocker-only scheduling.
+CURRENT="default_blocker_only"
+make_repo default_blocker_only
+( cd "$R/maintainer_tools/pr_review" && env -u FIX_MIN_SEVERITY ./fix_queue.sh sync ) >/dev/null
+assert_jq "default floor skips concern-only rounds" '.entries[0].status == "skipped"'
+
 # A round carrying nothing at or above FIX_MIN_SEVERITY is recorded, not
 # scheduled: 13 of 30 completed rounds in the 2026-08-19 run were nits only, at
 # ~17 minutes of machine time each.

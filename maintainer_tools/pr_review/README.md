@@ -69,6 +69,10 @@ count.
   (fixed|refuted|obsolete|deferred), note}]), commits, gate, needs_human,
   attempts, error`.
 - `agent_runner.sh` — provider-neutral session adapter (`codex` or `claude`).
+- `aggregate_findings.sh` — builds committed JSON/Markdown blocker and
+  repeated-root-cause summaries after each review tranche.
+- `adversarial_review.sh` — seven cross-cutting read-only review lenses.
+- `generate_merge_packets.sh` — category-based human review packets.
 - `review_file_prompt.md` / `fix_file_prompt.md` — the two session protocols.
 - `_verdict`, `_fix_report`, `_briefing/`, `.review_logs/`, `.fix_logs/`,
   `.fix_scratch/`, `.lock`, `.campaign.lock` — transient, gitignored.
@@ -121,12 +125,13 @@ stuck file never blocks the other 700.
 
 ## Trust model (fix sessions)
 
-A fix session must compile, run tests, edit files, and commit. The wrapper
+A fix session must compile, run tests, and edit files. The wrapper
 creates a fresh temporary Git branch and linked worktree for every attempt;
-the agent never runs in the maintainer's checkout. The Codex adapter therefore
-currently uses `danger-full-access` inside that disposable worktree. Only a
-clean, linear set of commits authored during the attempt is cherry-picked into
-the campaign branch, after which `fix_loop.sh` validates the imported result:
+the agent never runs in the maintainer's checkout and uses Codex's
+`workspace-write` sandbox. The agent is forbidden to commit. The wrapper
+validates its report and changed paths, creates one commit, runs the gate in
+the disposable worktree, and only then cherry-picks the green commit into the
+campaign branch:
 
 1. restores `manifest.json`/`findings.md`/`fixes.json` if the session touched
    them, and discards commits that touch `maintainer_tools/pr_review/`;
@@ -135,11 +140,11 @@ the campaign branch, after which `fix_loop.sh` validates the imported result:
 3. reverts uncommitted leftovers — tracked-file dirt voids the attempt;
 4. requires the report (`_fix_report`) to account for every finding exactly
    once, with `fixed` claims backed by commits;
-5. **re-runs the CI fast gate itself** — `mix format` on touched files,
+5. **runs the CI fast gate itself before import** — `mix format` on touched files,
    `mix compile --warnings-as-errors`, `mix test --exclude corpus --exclude
    idempotency`, and the tree must stay clean (fixture-healer parity with CI).
-   Red gate ⇒ `git reset --hard` to the pre-session commit (campaign ledgers
-   preserved) and the session retries with the gate output as feedback.
+   Red gate ⇒ the disposable branch is deleted and the session retries with
+   the gate output as feedback; the campaign branch is never touched.
 
 The temporary worktree and branch are force-removed after every attempt,
 whether the session succeeds, fails, times out, or leaves uncommitted files.
@@ -176,8 +181,8 @@ before it parks as needs-human.
 ./generate_manifest.sh              # once; refuses to overwrite
 ./generate_manifest.sh --dry-run    # preview the file list + counts
 
-./campaign.sh                       # review AND fix until both drained
-./campaign.sh 20 1                  # cap 20 review sessions, 1 min between
+./campaign.sh                       # review all pending, aggregate, fix blockers
+./campaign.sh 20 1                  # 20-review tranche, aggregate, fix blockers
 
 ./review_loop.sh [cap] [wait_min]   # review only
 ./fix_loop.sh [cap] [wait_min]      # fix only (drains the findings backlog)
@@ -193,6 +198,9 @@ FIX_MIN_SEVERITY=nit ./fix_queue.sh requeue --skipped   # the end-of-campaign ni
 ./fix_queue.sh requeue <path>...    # retry the latest fix entry for a path
 ./selftest.sh                       # prove the fix-pipeline mechanics
 ./selftest_manifest.sh              # prove the review-side scheduling
+./aggregate_findings.sh             # refresh finding_summary.{md,json}
+./adversarial_review.sh all         # seven cross-cutting read-only passes
+./generate_merge_packets.sh         # refresh merge_packets/
 ```
 
 Env: `AGENT_PROVIDER` (`codex` by default, or `claude`), `AGENT_BIN` (optional

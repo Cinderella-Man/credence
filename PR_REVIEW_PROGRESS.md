@@ -19,13 +19,13 @@ recorded.
 - [x] Capture verdicts and reports from agent final output.
 - [x] Run Codex reviewers with an ephemeral read-only sandbox.
 - [x] Run each fix attempt in a disposable Git worktree.
-- [ ] Make the wrapper, rather than the agent, own fix commits.
-- [ ] Run the independent gate in the disposable worktree before import.
-- [ ] Reduce Codex fix sessions to `workspace-write`.
-- [ ] Make the main campaign review-first and blocker-only by default.
-- [ ] Add finding aggregation and root-cause deduplication support.
-- [ ] Add cross-cutting adversarial review passes.
-- [ ] Add generation of human-sized merge packets.
+- [x] Make the wrapper, rather than the agent, own fix commits.
+- [x] Run the independent gate in the disposable worktree before import.
+- [x] Reduce Codex fix sessions to `workspace-write`.
+- [x] Make the main campaign review-first and blocker-only by default.
+- [x] Add finding aggregation and root-cause deduplication support.
+- [x] Add cross-cutting adversarial review passes.
+- [x] Add generation of human-sized merge packets.
 - [ ] Run one real Codex integration review.
 - [ ] Run and assess a 20-file Codex review-only pilot.
 - [ ] Complete the full category review campaign.
@@ -34,10 +34,12 @@ recorded.
 
 ## Verification log
 
-- 2026-08-24: `selftest.sh` passed 80 assertions after Codex runner and
-  disposable-worktree implementation.
+- 2026-08-24: `selftest.sh` passed 81 assertions after Codex runner,
+  wrapper-owned commits, pre-import gates, and disposable-worktree changes.
 - 2026-08-24: `selftest_manifest.sh` passed 36 assertions.
 - 2026-08-24: Bash syntax, ShellCheck, and `git diff --check` passed.
+- 2026-08-24: Added committed finding summaries, adversarial review lanes,
+  and category-based merge packets.
 
 ## Pilot results
 

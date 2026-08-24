@@ -192,9 +192,10 @@ build_fix_briefing() { # path round sevs_csv feedback
 # ---- session ---------------------------------------------------------------
 # The agent never runs in the maintainer's checkout. It receives a temporary
 # branch in a linked worktree at pre_sha. Only a clean, linear set of commits
-# authored during this attempt is cherry-picked back; every other artifact is
-# destroyed with the worktree.
+# produced during the attempt is validated and committed by the wrapper; every
+# other artifact is destroyed with the worktree.
 SESSION_ISOLATION_FAIL=""
+SESSION_GATE_DESC=""
 ACTIVE_FIX_WORKTREE=""
 ACTIVE_FIX_BRANCH=""
 cleanup_fix_worktree() {
@@ -211,10 +212,11 @@ cleanup_fix_worktree() {
 }
 trap cleanup_fix_worktree EXIT
 
-run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = session_start
-  local prompt rc=0 pre_sha="$2" session_start="$3"
+run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = path, $4 = round, $5 = n_findings
+  local prompt rc=0 pre_sha="$2" target_path="$3" round="$4" n_findings="$5"
   prompt="$(cat "$PROMPT")"$'\n\n'"$1"
   SESSION_ISOLATION_FAIL=""
+  SESSION_GATE_DESC=""
 
   local worktree branch
   worktree="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-fix.XXXXXX")"
@@ -237,7 +239,7 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = session_start
     >> "$FIXLOG" 2>&1 9>&- || rc=$?
   flog SESSION "----- end transcript (agent exit=${rc}) -----"
 
-  local wt_branch wt_commits n_merges oldest_ct dirt
+  local wt_branch wt_commits dirt
   wt_branch="$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   if [[ "$wt_branch" != "$branch" ]]; then
     SESSION_ISOLATION_FAIL="the session switched branches inside its disposable worktree"
@@ -246,28 +248,48 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = session_start
   fi
 
   wt_commits="$(git -C "$worktree" rev-list --reverse "$pre_sha"..HEAD 2>/dev/null || true)"
-  n_merges="$(git -C "$worktree" rev-list --min-parents=2 --count "$pre_sha"..HEAD 2>/dev/null || echo 0)"
-  oldest_ct="$(git -C "$worktree" log --format=%ct "$pre_sha"..HEAD 2>/dev/null | LC_ALL=C sort -n | head -n1)"
-  if [[ -z "$SESSION_ISOLATION_FAIL" ]] \
-     && { (( n_merges > 0 )) || { [[ -n "$oldest_ct" ]] && (( oldest_ct < session_start - 120 )); }; }; then
-    SESSION_ISOLATION_FAIL="the session imported foreign commits in its disposable worktree"
-  fi
-  if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$wt_commits" ]] \
-     && git -C "$worktree" log --format= --name-only "$pre_sha"..HEAD | grep -q '^maintainer_tools/pr_review/'; then
-    SESSION_ISOLATION_FAIL="a session commit touched the campaign ledgers under maintainer_tools/pr_review/"
-  fi
+  [[ -z "$SESSION_ISOLATION_FAIL" && -n "$wt_commits" ]] \
+    && SESSION_ISOLATION_FAIL="the agent created commits; only the wrapper may commit a fix attempt"
 
   dirt="$(git -C "$worktree" status --porcelain=v1)"
-  if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$dirt" ]]; then
-    if grep -q 'maintainer_tools/pr_review/' <<<"$dirt"; then
-      SESSION_ISOLATION_FAIL="the session left changes to the campaign ledgers in its disposable worktree"
-    elif grep -q '^??' <<<"$dirt"; then
-      SESSION_ISOLATION_FAIL="the session left uncommitted NEW files in its disposable worktree"
-    else
-      SESSION_ISOLATION_FAIL="the session left uncommitted changes in its disposable worktree"
+  if [[ -z "$SESSION_ISOLATION_FAIL" ]] && grep -q 'maintainer_tools/pr_review/' <<<"$dirt"; then
+    SESSION_ISOLATION_FAIL="the session changed campaign files under maintainer_tools/pr_review/"
+  fi
+
+  local has_changes=0
+  [[ -n "$dirt" ]] && has_changes=1
+  if [[ -z "$SESSION_ISOLATION_FAIL" ]]; then
+    local why
+    if ! why="$(validate_report "$n_findings" "$has_changes")"; then
+      SESSION_ISOLATION_FAIL="unusable report: $why (agent exit=$rc)"
     fi
   fi
 
+  if [[ -z "$SESSION_ISOLATION_FAIL" && "$has_changes" == 1 ]]; then
+    local -a changed=()
+    while IFS= read -r -d '' p; do changed+=("$p"); done \
+      < <({ git -C "$worktree" diff --name-only -z; git -C "$worktree" diff --cached --name-only -z; git -C "$worktree" ls-files --others --exclude-standard -z; })
+    mapfile -d '' -t changed < <(printf '%s\0' "${changed[@]}" | LC_ALL=C sort -zu)
+    git -C "$worktree" add -- "${changed[@]}" || SESSION_ISOLATION_FAIL="wrapper could not stage the fix attempt"
+    if [[ -z "$SESSION_ISOLATION_FAIL" ]]; then
+      git -C "$worktree" commit -q -m "pr_review fix: $target_path — wrapper-owned round $round" \
+        -m "Agent proposed the working-tree changes; the wrapper validated the report and owns this commit." \
+        || SESSION_ISOLATION_FAIL="wrapper could not commit the fix attempt"
+    fi
+  fi
+
+  if [[ -z "$SESSION_ISOLATION_FAIL" && "$has_changes" == 1 ]]; then
+    local gatelog="$LOGDIR/$(tr '/' '__' <<<"$target_path").round${round}.worktree.gate.log"
+    if run_gate "$pre_sha" "$gatelog" "$worktree"; then
+      SESSION_GATE_DESC="green ($GATE_DESC)"
+    else
+      SESSION_ISOLATION_FAIL="the wrapper's gate is RED in the disposable worktree. Gate output tail:"$'\n'"$(tail -n 40 "$gatelog")"
+    fi
+  elif [[ -z "$SESSION_ISOLATION_FAIL" ]]; then
+    SESSION_GATE_DESC="skipped (no changes)"
+  fi
+
+  wt_commits="$(git -C "$worktree" rev-list --reverse "$pre_sha"..HEAD 2>/dev/null || true)"
   if [[ -z "$SESSION_ISOLATION_FAIL" && -n "$wt_commits" ]]; then
     if ! git -C "$REPO" cherry-pick $wt_commits >> "$FIXLOG" 2>&1; then
       git -C "$REPO" cherry-pick --abort >/dev/null 2>&1 || true
@@ -286,9 +308,9 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = session_start
 # ---- report ----------------------------------------------------------------
 OUTCOME_RE='^- \[[0-9]+\] (fixed|refuted|obsolete|deferred)'
 
-# validate_report <n_findings> <n_commits> — 0 = usable; reason on stdout if not.
+# validate_report <n_findings> <has_changes:0|1> — 0 = usable; reason on stdout.
 validate_report() {
-  local n="$1" ncommits="$2"
+  local n="$1" has_changes="$2"
   [[ -f "$REPORT" ]] || { echo "no _fix_report was written"; return 1; }
   [[ "$(head -n1 "$REPORT")" == "REPORT" ]] \
     || { echo "_fix_report's first line is not exactly REPORT"; return 1; }
@@ -304,11 +326,11 @@ validate_report() {
   local nfixed ndeferred
   nfixed="$(grep -cE '^- \[[0-9]+\] fixed' "$REPORT")" || true
   ndeferred="$(grep -cE '^- \[[0-9]+\] deferred' "$REPORT")" || true
-  if (( nfixed > 0 && ncommits == 0 )); then
-    echo "report claims $nfixed finding(s) fixed but the session committed nothing"; return 1
+  if (( nfixed > 0 && has_changes == 0 )); then
+    echo "report claims $nfixed finding(s) fixed but the session changed nothing"; return 1
   fi
-  if (( ncommits > 0 && nfixed + ndeferred == 0 )); then
-    echo "the session committed code but reports no finding as fixed or deferred — refuted/obsolete findings must not change code"; return 1
+  if (( has_changes > 0 && nfixed + ndeferred == 0 )); then
+    echo "the session changed code but reports no finding as fixed or deferred — refuted/obsolete findings must not change code"; return 1
   fi
   return 0
 }
@@ -350,21 +372,21 @@ record_resolution() {
 # ---- gate ------------------------------------------------------------------
 GATE_DESC="mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean"
 
-run_gate() { # $1 = pre_sha, $2 = gate log file
-  local pre="$1" gatelog="$2" rc=0
+run_gate() { # $1 = pre_sha, $2 = gate log file, $3 = repo (default primary)
+  local pre="$1" gatelog="$2" gate_repo="${3:-$REPO}" rc=0
   : > "$gatelog"
   if [[ -n "${FIX_GATE_CMD:-}" ]]; then
-    ( cd "$REPO" && timeout -k 60 "$FIX_GATE_TIMEOUT" bash -c "$FIX_GATE_CMD" ) \
+    ( cd "$gate_repo" && timeout -k 60 "$FIX_GATE_TIMEOUT" bash -c "$FIX_GATE_CMD" ) \
       >> "$gatelog" 2>&1 || rc=$?
     return "$rc"
   fi
   local -a touched=()
   local f
   while IFS= read -r f; do
-    [[ -f "$REPO/$f" ]] && touched+=("$f")
-  done < <(git -C "$REPO" diff --name-only "$pre"..HEAD | grep -E '\.(ex|exs)$' || true)
+    [[ -f "$gate_repo/$f" ]] && touched+=("$f")
+  done < <(git -C "$gate_repo" diff --name-only "$pre"..HEAD | grep -E '\.(ex|exs)$' || true)
   (
-    cd "$REPO" || exit 70
+    cd "$gate_repo" || exit 70
     if ((${#touched[@]})); then
       echo "== mix format --check-formatted (${#touched[@]} touched files)"
       timeout -k 60 "$FIX_GATE_TIMEOUT" mix format --check-formatted "${touched[@]}" || exit 1
@@ -467,7 +489,7 @@ main() {
 
     local session_rc=0 session_start
     session_start="$(date +%s)"
-    run_fix_session "$briefing" "$pre_sha" "$session_start" || session_rc=$?
+    run_fix_session "$briefing" "$pre_sha" "$path" "$round" "$n_findings" || session_rc=$?
 
     local fail="$SESSION_ISOLATION_FAIL"
 
@@ -590,23 +612,11 @@ main() {
       flog GUARD "net-zero commits with a fixed claim — reset to $pre_sha"
     fi
 
-    # Guard 6: the wrapper's own gate. The session already ran it; trust nothing.
-    local gate_desc="skipped (no commits)"
+    # Guard 6: the wrapper gate ran in the disposable worktree before import.
+    local gate_desc="${SESSION_GATE_DESC:-skipped (no changes)}"
     if [[ -z "$fail" ]] && (( n_commits > 0 )); then
-      local gatelog="$LOGDIR/$(tr '/' '__' <<<"$path").round${round}.attempt$((retry + 1)).gate.log"
-      flog GATE "running the fast gate ($n_commits commits to verify)"
-      log "  gate: verifying $n_commits commit(s) — $GATE_DESC"
-      if run_gate "$pre_sha" "$gatelog"; then
-        gate_desc="green ($GATE_DESC)"
-        flog GATE "green"
-      else
-        local tail_out
-        tail_out="$(tail -n 40 "$gatelog")"
-        ledger_safe_reset "$pre_sha"
-        commits=""; n_commits=0
-        fail="the wrapper's gate is RED — your commits were discarded. Gate output tail:"$'\n'"$tail_out"
-        flog GATE "red — reset to $pre_sha (full output: $gatelog)"
-      fi
+      [[ "$SESSION_GATE_DESC" == green* ]] \
+        || fail="the disposable worktree did not produce a green gate result"
     fi
 
     if [[ -n "$fail" ]]; then

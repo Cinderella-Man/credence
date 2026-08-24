@@ -1,0 +1,179 @@
+# Pattern rules
+
+Candidate: `416eaaaf` against `main`.
+
+## Files
+
+- `lib/pattern/avoid_graphemes_enum_count_with_predicate.ex` — pending, verdict: not reviewed
+- `lib/pattern/avoid_graphemes_enum_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/avoid_graphemes_length.ex` — pending, verdict: not reviewed
+- `lib/pattern/avoid_length_guard_less_than2.ex` — pending, verdict: not reviewed
+- `lib/pattern/fix_ets_new_string_name.ex` — pending, verdict: not reviewed
+- `lib/pattern/fix_ets_options_bare_keypos.ex` — pending, verdict: not reviewed
+- `lib/pattern/fix_map_fetch_case_match.ex` — pending, verdict: not reviewed
+- `lib/pattern/fix_regex_match_swapped_args.ex` — pending, verdict: not reviewed
+- `lib/pattern/fix_task_shutdown_brutal_kill.ex` — pending, verdict: not reviewed
+- `lib/pattern/hallucinated_guard.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_agent_get_and_modify.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_anon_fn_application_in_pipe.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_bare_value_in_map_new.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_capture_fn_apply.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_case_boolean_result.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_case_destructure_in_pipe.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_case_on_param_dispatch.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_case_true_false.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_case_tuple_guard_dispatch.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_chunk_by_identity_for_dedup.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_codepoint_string_reverse.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_cond_two_clauses.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_crypto_hash_pipe_swapped_args.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_dead_map_update.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_destructure_reconstruct.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_doc_false_on_private.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_double_filter.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_double_sort_same_list.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_duplicate_function_clauses.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_duplicate_spec.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_eager_with_index_in_reduce.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_empty_map_new.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_enum_count_for_length.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_enum_into_empty_mapset.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_enum_sort_then_map_values.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_enum_take_negative.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_explicit_product_reduce.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_explicit_sum_reduce.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_fetch_then_update.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_filter_then_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_filter_then_first.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_find_value_default_case.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_grapheme_palindrome.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_group_by_for_frequencies.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_guard_equality_for_pattern_match.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_hallucinated_ets_keytype_option.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_hd_tl_when_cons_bound.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_identity_enum_map.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_identity_function_in_enum.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_if_empty_for_enum_min_max.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_if_true_false.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_is_nil_guard.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_kernel_op_in_pipeline.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_keyword_get_integer_key.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_keyword_get_keyword_key.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_keyword_get_with_atom_first_arg.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_length_based_indexing.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_length_comparison_for_empty.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_length_guard_to_pattern.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_length_on_mapset_new.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_append_in_recursion.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_append_in_reduce.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_concat_with_recursive_result.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_delete_at_length.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_delete_at_with_length.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_duplicate_flatten.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_duplicate_join.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_foldl.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_list_pop_at_for_access.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_literal_list_typespec.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_count_with_predicate.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_find.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_frequencies.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_list_last.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_list_reduce.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_max.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_min.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_manual_string_reverse.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_keys_enum_lookup.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_keys_for_membership.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_keys_or_values_for_iteration.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_put_get_increment.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_then_aggregate.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_map_update_then_fetch.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_missing_require_logger.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_multi_arity_fn_in_string_replace.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_negative_step_in_string_slice.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_nested_enum_on_same_enumerable.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_piped_regex_replace.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_reduce_for_group_by.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_reduce_for_map_building.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_reduce_while_without_halt.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_assignment.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_binary_syntax.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_case_nil_clause.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_comparison_guard.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_dedup_before_mapset.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_enum_join_separator.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_list_traversal.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_local_capture.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_negated_guard.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_to_list.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_redundant_underscore_bind.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_repeated_div_rem.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_sort_for_top_k.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_sort_then_at.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_sort_then_reverse.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_string_concat_in_loop.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_string_length_for_char_check.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_string_length_for_empty_check.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_take_while_length_check.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_tautological_if.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_trailing_newline_in_doc.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_underscore_function_name.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_uniq_then_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_unless_else.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_unused_computation.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_unused_underscore_assignment.ex` — pending, verdict: not reviewed
+- `lib/pattern/no_zip_then_map.ex` — pending, verdict: not reviewed
+- `lib/pattern/non_grouped_clauses.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_comprehension_for_filtered_range.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_concat_over_flat_map_identity.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_cond_for_nested_if.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_counts_for_length.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_desc_sort_over_negative_take.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_enum_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_enum_reverse_two.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_enum_slice.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_enum_split.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_erlang_float.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_explicit_binary_arithmetic.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_frequencies_over_group_by.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_function_capture.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_function_clauses_for_list_patterns.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_graphemes_for_character_uniqueness.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_guard_over_if.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_heredoc_for_multi_line_doc.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_lookup_for_digit_conversion.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_map_intersect_over_mapset_intersection.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_map_new_with_transform.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_map_new.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_map_put_new.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_mapset_for_set_equality.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_multi_clause_reduce_fn.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_negate_if_true_false.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_no_question_mark_for_non_boolean.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_pattern_match_empty_string.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_pattern_match_over_conditional_in_recursive_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_pipe_mapset_intersection.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_reduce_while_with_halt_value.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_regex_match.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_sigil_charlist.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_string_slice_for_trim_last_char.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_string_split_trim.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_then_over_capture_invocation.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_tuple_destructure_after_with_index.ex` — pending, verdict: not reviewed
+- `lib/pattern/prefer_zip_with_over_zip_then_count.ex` — pending, verdict: not reviewed
+- `lib/pattern/redundant_list_guard.ex` — pending, verdict: not reviewed
+- `lib/pattern/remove_unreachable_clauses_after_catchall.ex` — pending, verdict: not reviewed
+- `lib/pattern/rule.ex` — pending, verdict: not reviewed
+- `lib/pattern/unnecessary_grapheme_chunking.ex` — pending, verdict: not reviewed
+- `lib/pattern/use_map_join.ex` — pending, verdict: not reviewed
+
+## Active findings
+
+None recorded.
+
+
+## Maintainer decision
+
+- [ ] Accept
+- [ ] Needs changes
+- [ ] Blocked on a documented human decision
