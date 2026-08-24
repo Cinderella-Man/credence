@@ -47,6 +47,8 @@ recorded.
   preservation, `selftest.sh` passed 81 assertions, `selftest_manifest.sh`
   passed 36 assertions, Bash syntax passed, and `git diff --check` passed.
   ShellCheck was unavailable on this host.
+- 2026-08-24: The `prlimit` fallback passed the real 16 GiB-capped fast gate:
+  9,136 tests, zero failures, 1,503 excluded.
 
 ## Pilot results
 
@@ -64,9 +66,9 @@ recorded.
 - The first real wrapper-owned fix completed in a disposable worktree. Its
   full gate passed before commit `0851b12a` was imported, and the manifest was
   refreshed afterward.
-- Deployment issue: user-level `systemd-run` is unavailable on this host, so
-  bulk fix sessions remain paused until an equivalent memory cap is available
-  or explicitly accepted. The worktree gate is non-interactive and uses a
+- User-level `systemd-run` is unavailable on this host. The cap wrapper now
+  falls back to inherited `RLIMIT_AS` via `prlimit`; the Erlang VM was smoke
+  tested under an 8 GiB limit. The worktree gate is non-interactive and uses a
   private dependency copy.
 - The adversarial lanes found blockers in diagnostic ownership, cross-rule
   line stability, nested sigil masking, and execution containment. These are

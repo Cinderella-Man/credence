@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# run_capped.sh — run one command under a systemd memory ceiling. The OOM
+# run_capped.sh — run one command under a systemd or RLIMIT_AS memory ceiling. The OOM
 # history in this repo (docs/21) is unbounded compiles, not concurrency: any
 # ad-hoc evaluation of rule output or fixture strings goes through this wrapper
 # so a runaway compile kills the scope, not the machine.
@@ -21,5 +21,12 @@ if command -v systemd-run >/dev/null 2>&1 \
   exec systemd-run --user --scope -q -p MemoryMax="$MEM" -p MemorySwapMax=0 -- "$@"
 fi
 
-echo "[run_capped] WARNING: systemd-run unavailable — running UNCAPPED" >&2
+if command -v prlimit >/dev/null 2>&1 && command -v numfmt >/dev/null 2>&1; then
+  if bytes="$(numfmt --from=iec "$MEM" 2>/dev/null)" && [[ "$bytes" =~ ^[0-9]+$ ]]; then
+    echo "[run_capped] systemd user scopes unavailable — using RLIMIT_AS=$MEM" >&2
+    exec prlimit --as="$bytes" -- "$@"
+  fi
+fi
+
+echo "[run_capped] WARNING: no supported memory limiter — running UNCAPPED" >&2
 exec "$@"

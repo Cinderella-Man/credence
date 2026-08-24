@@ -44,3 +44,7 @@ FINDINGS
 
 - concern: test/corpus/fix_safety_test.exs:23 — this full-corpus sweep is `async: true` while `over_firing_test.exs` and `scope_parity_test.exs` are also async and each launches `System.schedulers_online()` workers; `mix test --only corpus` therefore runs roughly three scheduler-wide, parse-heavy sweeps concurrently, oversubscribing CPU and multiplying live AST/source memory on high-core CI runners.
 - concern: test/test_helper.exs:34 — enabling the idempotency sweep by default adds roughly 9–10 minutes to every unqualified local `mix test`, including workflows that do not pass the newly documented exclusion; the triggering input is any standard `mix test` invocation, which now processes about 5,200 fixtures through the complete repair pipeline twice.
+
+## operational resolution — 2026-08-24
+
+- The `run_capped.sh:24` concern is resolved in review tooling commit `e37d6989`'s successor: when user systemd scopes are unavailable, the wrapper uses `prlimit` to impose an inherited address-space ceiling instead of silently running uncapped.

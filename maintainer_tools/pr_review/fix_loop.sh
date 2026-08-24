@@ -29,7 +29,7 @@
 #   AGENT_MODEL          optional model for both session kinds
 #   FIX_AGENT_MODEL      fix-only model override
 #   MAX_RETRIES          failed attempts per entry before `error` (default 2)
-#   FIX_MEM_MAX          systemd MemoryMax for session AND gate (default 16G;
+#   FIX_MEM_MAX          memory ceiling for session AND gate (default 16G;
 #                        empty string disables — see docs/21 OOM history)
 #   FIX_SESSION_TIMEOUT  seconds per agent session (default 7200; 0 = none)
 #   FIX_GATE_TIMEOUT     seconds per gate step (default 2400)
@@ -98,12 +98,7 @@ git -C "$REPO" merge-base --is-ancestor "$HEAD_SHA" HEAD \
 # compiles (docs/21), and fix sessions compile.
 CAPPED=()
 if [[ -n "$FIX_MEM_MAX" ]]; then
-  if command -v systemd-run >/dev/null 2>&1 \
-     && systemd-run --user --scope -q -p MemoryMax="$FIX_MEM_MAX" true 2>/dev/null; then
-    CAPPED=(systemd-run --user --scope -q -p MemoryMax="$FIX_MEM_MAX" -p MemorySwapMax=0 --)
-  else
-    log "warning: systemd-run unavailable — sessions and gate run UNCAPPED"
-  fi
+  CAPPED=("$SCRIPT_DIR/run_capped.sh" -m "$FIX_MEM_MAX")
 fi
 
 FIXLOG=""
