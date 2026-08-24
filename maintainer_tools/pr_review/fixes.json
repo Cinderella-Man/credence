@@ -1414,6 +1414,355 @@
       "error": null,
       "enqueued_at": "2026-08-19T23:27:49+02:00",
       "resolved_at": "2026-08-19T23:43:10+02:00"
+    },
+    {
+      "path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
+      "reviewed_at": "2026-08-24T20:38:18+02:00",
+      "round": 2,
+      "severities": [
+        "blocker",
+        "concern"
+      ],
+      "status": "done",
+      "attempts": 1,
+      "outcomes": [
+        {
+          "n": 1,
+          "severity": "blocker",
+          "outcome": "fixed",
+          "note": "Executed the rule on `@type t :: () -> 1` followed by `.. 10`; it reported an issue and emitted `@type t :: (() -> 1)` followed by `.. 10`. Added analyze and fix tests that failed on that behavior. Added `..` to the continuation predicate so the rule leaves the complete multiline range untouched. Both rule test files pass."
+        },
+        {
+          "n": 2,
+          "severity": "concern",
+          "outcome": "fixed",
+          "note": "Executed the rule on `@type t :: () -> [integer()}`; it reported an issue and emitted `@type t :: (() -> [integer()})`, while the matching-bracket control was repaired normally. Added analyze and fix tests that failed on the mismatched input. Replaced depth-only bracket counting with an expected-closing-bracket stack. Formatting, warnings-as-errors compilation, and both rule test files pass: 65 tests, 0 failures."
+        }
+      ],
+      "commits": [
+        "0851b12a2a538e7bb305ffd89d51bf256b652bc9"
+      ],
+      "gate": "green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)",
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": "2026-08-24T21:05:13+02:00"
+    },
+    {
+      "path": "test/syntax/fix_bare_tuple_zero_in_type_analyze_test.exs",
+      "reviewed_at": "2026-08-24T20:39:29+02:00",
+      "round": 1,
+      "severities": [
+        "concern"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "nothing at or above 'blocker' — findings recorded in findings.md, no fix session scheduled",
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:40:09+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_capture_operator_syntax.ex",
+      "reviewed_at": "2026-08-24T20:41:03+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_capture_operator_syntax_analyze_test.exs",
+      "reviewed_at": "2026-08-24T20:41:50+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_capture_operator_syntax_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:42:42+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker",
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_div_rem.ex",
+      "reviewed_at": "2026-08-24T20:43:34+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_div_rem_test.exs",
+      "reviewed_at": "2026-08-24T20:44:06+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_do_block_fusion.ex",
+      "reviewed_at": "2026-08-24T20:44:54+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_do_block_fusion_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:45:25+02:00",
+      "round": 1,
+      "severities": [
+        "concern"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "nothing at or above 'blocker' — findings recorded in findings.md, no fix session scheduled",
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_elsif_in_if_chain.ex",
+      "reviewed_at": "2026-08-24T20:46:28+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_elsif_in_if_chain_analyze_test.exs",
+      "reviewed_at": "2026-08-24T20:47:02+02:00",
+      "round": 1,
+      "severities": [
+        "concern"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "nothing at or above 'blocker' — findings recorded in findings.md, no fix session scheduled",
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_elsif_in_if_chain_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:47:32+02:00",
+      "round": 1,
+      "severities": [
+        "concern"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "nothing at or above 'blocker' — findings recorded in findings.md, no fix session scheduled",
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_ets_match_spec_erlang_less_than.ex",
+      "reviewed_at": "2026-08-24T20:48:15+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:32+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_ets_match_spec_erlang_less_than_analyze_test.exs",
+      "reviewed_at": "2026-08-24T20:48:42+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:33+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:49:34+02:00",
+      "round": 1,
+      "severities": [
+        "blocker",
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:33+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_extra_brace_in_ets_match.ex",
+      "reviewed_at": "2026-08-24T20:50:20+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:33+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "test/syntax/fix_extra_brace_in_ets_match_fix_test.exs",
+      "reviewed_at": "2026-08-24T20:51:15+02:00",
+      "round": 1,
+      "severities": [
+        "nit"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": "nothing at or above 'blocker' — findings recorded in findings.md, no fix session scheduled",
+      "enqueued_at": "2026-08-24T20:52:33+02:00",
+      "resolved_at": null
+    },
+    {
+      "path": "lib/syntax/fix_for_comprehension_in_keyword_value.ex",
+      "reviewed_at": "2026-08-24T20:52:02+02:00",
+      "round": 1,
+      "severities": [
+        "blocker"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "outcomes": [],
+      "commits": [],
+      "gate": null,
+      "needs_human": false,
+      "error": null,
+      "enqueued_at": "2026-08-24T20:52:33+02:00",
+      "resolved_at": null
     }
   ]
 }

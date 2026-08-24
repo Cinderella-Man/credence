@@ -1,6 +1,6 @@
 # Architecture and shared core
 
-Candidate: `cc25ed34` against `main`.
+Candidate: `0851b12a` against `main`.
 
 ## Files
 
@@ -27,7 +27,10 @@ Candidate: `cc25ed34` against `main`.
 
 ## Active findings
 
-None recorded.
+- **blocker** `lib/semantic.ex` — lib/semantic.ex:460 — diagnostics are captured once and then fixed right-to-left under the assumption that each repair only affects text to its right, but `FixPlugDependencyModuleOrder` can move entire modules; when a later-line missing `Dependency.init/1` diagnostic reorders modules before an earlier `List.max/1` diagnostic is processed, the latter retains its old line number and `UndefinedFunction` may rewrite the wrong line or decline, making one rule’s repair change another rule’s admission and output.
+- **blocker** `lib/source_mask.ex` — lib/source_mask.ex:343 — paired sigil delimiters can nest, but the scanner terminates at the first closing delimiter; `~s(prefix (inner) 100% done)` exposes `100% done)` as code, allowing rules such as `FixPythonModulo` to rewrite bytes inside the sigil when the file is otherwise malformed.
+- **blocker** `lib/rule_helpers.ex` — lib/rule_helpers.ex:276 — compilation remains in-process, so arbitrary analyzed source containing `System.halt(0)` terminates the entire Credence VM despite the child-process timeout and heap limit.
+- **blocker** `lib/rule_helpers.ex` — lib/rule_helpers.ex:270 — the heap and timeout bounds apply only to the compiler child; source such as `spawn(fn -> Stream.repeatedly(fn -> :binary.copy(<<0>>, 1_000_000) end) |> Enum.to_list() end)` compiles successfully and leaves an unbounded orphan consuming memory after the monitored child exits.
 
 
 ## Maintainer decision

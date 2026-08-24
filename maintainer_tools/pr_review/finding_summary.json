@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-24T18:38:35Z",
-  "reviewed": 11,
-  "total": 780,
+  "generated_at": "2026-08-24T19:14:39Z",
+  "reviewed": 20,
+  "total": 797,
   "counts": {
-    "blocker": 15,
-    "concern": 27,
-    "nit": 68
+    "blocker": 45,
+    "concern": 35,
+    "nit": 71
   },
   "repeated_root_causes": [],
   "items": [
@@ -668,6 +668,252 @@
       "reviewed_path": "lib/syntax/fix_bare_tuple_zero_in_type.ex",
       "finding": "lib/syntax/fix_bare_tuple_zero_in_type.ex:225 — `balanced?/1` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it.",
       "signature": "<anchor> — `balanced?/#` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/syntax/fix_bare_tuple_zero_in_type_analyze_test.exs",
+      "finding": "test/syntax/fix_bare_tuple_zero_in_type_analyze_test.exs:44 — The positive tests call the rule’s `analyze/1` directly; none proves that the automatically discovered Syntax pipeline selects and repairs this realistic unparseable module, so the rule could ship inert while this file and the direct fix tests remain green.",
+      "signature": "<anchor> — the positive tests call the rule’s `analyze/#` directly; none proves that the automatically discovered syntax pipeline selects and repairs this realistic unparseable module, so the rule could ship inert while this file and the direct fix tests remain green."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs",
+      "finding": "test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs:297 — Every repair test calls the rule’s `fix/1` directly; none runs realistic invalid source through `Credence.Syntax.fix/1`. The suite can therefore pass if the new rule is missing from discovery, never reached in round order, or reverted/rolled back by round guards, while users receive the original broken typespec.",
+      "signature": "<anchor> — every repair test calls the rule’s `fix/#` directly; none runs realistic invalid source through `credence.syntax.fix/#`. the suite can therefore pass if the new rule is missing from discovery, never reached in round order, or reverted/rolled back by round guards, while users receive the original broken typespec."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_capture_operator_syntax.ex",
+      "finding": "lib/syntax/fix_capture_operator_syntax.ex:84 — Only whole-line comments and double-quoted strings are masked. Valid source such as `msg = 'compare &> here'`, `msg = ~s(compare &> here)`, or `x = 1 # compare &> here` is rewritten, changing literal values or non-code bytes.",
+      "signature": "<anchor> — only whole-line comments and double-quoted strings are masked. valid source such as `msg = 'compare &> here'`, `msg = ~s(compare &> here)`, or `x = # # compare &> here` is rewritten, changing literal values or non-code bytes."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_capture_operator_syntax.ex",
+      "finding": "lib/syntax/fix_capture_operator_syntax.ex:48 — The leading-boundary regex omits valid term boundaries such as `=` and `->`, so malformed captures in inputs like `cmp=&>` or `fn ->&> end` are neither reported nor repaired.",
+      "signature": "<anchor> — the leading-boundary regex omits valid term boundaries such as `=` and `->`, so malformed captures in inputs like `cmp=&>` or `fn ->&> end` are neither reported nor repaired."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_capture_operator_syntax.ex",
+      "finding": "lib/syntax/fix_capture_operator_syntax.ex:89 — Any odd `\"\"\"` byte sequence toggles heredoc state even inside a comment or ordinary literal; for example, `# \"\"\"` causes a later `cmp = &>` line to be silently skipped instead of repaired.",
+      "signature": "<anchor> — any odd `\"\"\"` byte sequence toggles heredoc state even inside a comment or ordinary literal; for example, `# \"\"\"` causes a later `cmp = &>` line to be silently skipped instead of repaired."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_analyze_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_analyze_test.exs:110 — The masking tests cover only whole-line comments and double-quoted strings. Inputs such as `x = 1 # compare &> here`, `msg = 'compare &> here'`, and `msg = ~s(compare &> here)` are valid code but are reported by the rule, allowing its fix to corrupt non-code bytes while this suite stays green.",
+      "signature": "<anchor> — the masking tests cover only whole-line comments and double-quoted strings. inputs such as `x = # # compare &> here`, `msg = 'compare &> here'`, and `msg = ~s(compare &> here)` are valid code but are reported by the rule, allowing its fix to corrupt non-code bytes while this suite stays green."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_analyze_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_analyze_test.exs:9 — Every positive fixture places whitespace or an opening delimiter before the capture. Real malformed inputs such as `cmp=&>` and `fn ->&> end` are silently missed by the rule, so the tests do not prove the repair fires across valid term boundaries.",
+      "signature": "<anchor> — every positive fixture places whitespace or an opening delimiter before the capture. real malformed inputs such as `cmp=&>` and `fn ->&> end` are silently missed by the rule, so the tests do not prove the repair fires across valid term boundaries."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_analyze_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_analyze_test.exs:118 — The heredoc test covers only a normal heredoc. A `\"\"\"` sequence inside a comment or ordinary literal incorrectly puts the analyzer into heredoc mode, causing a later real capture such as `cmp = &>` to be skipped without any test failure.",
+      "signature": "<anchor> — the heredoc test covers only a normal heredoc. a `\"\"\"` sequence inside a comment or ordinary literal incorrectly puts the analyzer into heredoc mode, causing a later real capture such as `cmp = &>` to be skipped without any test failure."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_fix_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_fix_test.exs:155 — The masking tests cover only whole-line comments, double-quoted strings, and heredocs. Valid inputs such as `x = 1 # compare &> here`, `msg = 'compare &> here'`, and `msg = ~s(compare &> here)` are rewritten inside non-code text, changing comments or literal values while this suite stays green.",
+      "signature": "<anchor> — the masking tests cover only whole-line comments, double-quoted strings, and heredocs. valid inputs such as `x = # # compare &> here`, `msg = 'compare &> here'`, and `msg = ~s(compare &> here)` are rewritten inside non-code text, changing comments or literal values while this suite stays green."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_fix_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_fix_test.exs:11 — Every positive fixture puts whitespace or an opening delimiter before the capture. Malformed captures after other valid term boundaries, such as `cmp=&>` and `fn ->&> end`, are silently left unrepaired without any test failing.",
+      "signature": "<anchor> — every positive fixture puts whitespace or an opening delimiter before the capture. malformed captures after other valid term boundaries, such as `cmp=&>` and `fn ->&> end`, are silently left unrepaired without any test failing."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_fix_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_fix_test.exs:165 — The heredoc test covers only a normal heredoc. A `\"\"\"` sequence in a comment or ordinary literal incorrectly makes the rule treat later code as heredoc content, so a subsequent `cmp = &>` is silently skipped while this suite stays green.",
+      "signature": "<anchor> — the heredoc test covers only a normal heredoc. a `\"\"\"` sequence in a comment or ordinary literal incorrectly makes the rule treat later code as heredoc content, so a subsequent `cmp = &>` is silently skipped while this suite stays green."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_capture_operator_syntax_fix_test.exs",
+      "finding": "test/syntax/fix_capture_operator_syntax_fix_test.exs:9 — Every repair assertion calls `FixCaptureOperatorSyntax.fix/1` directly; none calls `Credence.Syntax.fix/1` or the full pipeline. The rule could be undiscovered, ordered too late, or rolled back by pipeline validation and repair nothing in production while all these tests pass.",
+      "signature": "<anchor> — every repair assertion calls `fixcaptureoperatorsyntax.fix/#` directly; none calls `credence.syntax.fix/#` or the full pipeline. the rule could be undiscovered, ordered too late, or rolled back by pipeline validation and repair nothing in production while all these tests pass."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_div_rem.ex",
+      "finding": "lib/syntax/fix_div_rem.ex:211 — For `def f, do: if ok, do: a div b`, the new function-head pattern rewrites the whole keyword expression as `def f, do: div(if ok, do: a, b)`, changing the program instead of fixing the `if` body.",
+      "signature": "<anchor> — for `def f, do: if ok, do: a div b`, the new function-head pattern rewrites the whole keyword expression as `def f, do: div(if ok, do: a, b)`, changing the program instead of fixing the `if` body."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_div_rem.ex",
+      "finding": "lib/syntax/fix_div_rem.ex:211 — Pre-existing: the right operand always extends to the end of the line, so `x = a div b + 1` becomes `x = div(a, b + 1)` instead of `x = div(a, b) + 1`, changing operator precedence and the result.",
+      "signature": "<anchor> — pre-existing: the right operand always extends to the end of the line, so `x = a div b + #` becomes `x = div(a, b + #)` instead of `x = div(a, b) + #`, changing operator precedence and the result."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_div_rem_test.exs",
+      "finding": "test/syntax/fix_div_rem_test.exs:439 — The new “declines” tests enshrine an analyze/fix mismatch: both `IO.puts(\"a div b\"); x = n div 2` and `fn n -> n div 2 end` are reported as infix-operator issues, but `fix/1` returns them unchanged, so admitted inputs receive no repair while the tests pass.",
+      "signature": "<anchor> — the new “declines” tests enshrine an analyze/fix mismatch: both `io.puts(\"a div b\"); x = n div #` and `fn n -> n div # end` are reported as infix-operator issues, but `fix/#` returns them unchanged, so admitted inputs receive no repair while the tests pass."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_do_block_fusion.ex",
+      "finding": "lib/syntax/fix_do_block_fusion.ex:63 — pre-existing: on valid single-line nesting such as `defmodule M do def f, do: 1 end`, the rule mistakes the outer module’s `end` for a stray one-liner terminator and removes it, producing invalid code.",
+      "signature": "<anchor> — pre-existing: on valid single-line nesting such as `defmodule m do def f, do: # end`, the rule mistakes the outer module’s `end` for a stray one-liner terminator and removes it, producing invalid code."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/syntax/fix_do_block_fusion_fix_test.exs",
+      "finding": "test/syntax/fix_do_block_fusion_fix_test.exs:199 — The mixed code/moduledoc regression test uses substring assertions plus a syntax check, so it still passes if the fix deletes or rewrites other bytes while preserving those two fragments. Compare the complete fixed source with the exact expected output.",
+      "signature": "<anchor> — the mixed code/moduledoc regression test uses substring assertions plus a syntax check, so it still passes if the fix deletes or rewrites other bytes while preserving those two fragments. compare the complete fixed source with the exact expected output."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_elsif_in_if_chain.ex",
+      "finding": "lib/syntax/fix_elsif_in_if_chain.ex:112 — `fix/1` rewrites only the first `elsif`/`elif` chain. A file containing two independent bad chains remains unparsable after this rule’s single Syntax-round invocation, so the pipeline rolls the repair back and fixes neither chain.",
+      "signature": "<anchor> — `fix/#` rewrites only the first `elsif`/`elif` chain. a file containing two independent bad chains remains unparsable after this rule’s single syntax-round invocation, so the pipeline rolls the repair back and fixes neither chain."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_elsif_in_if_chain.ex",
+      "finding": "lib/syntax/fix_elsif_in_if_chain.ex:317 — the multiline-string safety check misses multiline sigils such as `~S(...)` and ordinary multiline charlists. In a repaired branch, `build_cond/3` trims and re-indents every line, changing the literal’s contents and therefore the program’s answer.",
+      "signature": "<anchor> — the multiline-string safety check misses multiline sigils such as `~s(...)` and ordinary multiline charlists. in a repaired branch, `build_cond/#` trims and re-indents every line, changing the literal’s contents and therefore the program’s answer."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/syntax/fix_elsif_in_if_chain_analyze_test.exs",
+      "finding": "test/syntax/fix_elsif_in_if_chain_analyze_test.exs:45 — The test named “reports one issue per chain” contains only one chain, so it cannot detect that `analyze/1` stops after the first chain in a file; input containing two separate `if`/`elsif` chains may leave the second unreported and unrepaired in a single-pass syntax round.",
+      "signature": "<anchor> — the test named “reports one issue per chain” contains only one chain, so it cannot detect that `analyze/#` stops after the first chain in a file; input containing two separate `if`/`elsif` chains may leave the second unreported and unrepaired in a single-pass syntax round."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/syntax/fix_elsif_in_if_chain_fix_test.exs",
+      "finding": "test/syntax/fix_elsif_in_if_chain_fix_test.exs:38 — The tests call the rule callback directly and never exercise the Syntax-round dispatcher, so they can all pass even if this new rule is unregistered or otherwise inert in the real repair pipeline; add a realistic end-to-end assertion through `Credence.Syntax.fix/1`.",
+      "signature": "<anchor> — the tests call the rule callback directly and never exercise the syntax-round dispatcher, so they can all pass even if this new rule is unregistered or otherwise inert in the real repair pipeline; add a realistic end-to-end assertion through `credence.syntax.fix/#`."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_ets_match_spec_erlang_less_than.ex",
+      "finding": "lib/syntax/fix_ets_match_spec_erlang_less_than.ex:87 — The rule treats every non-comment line as code and only masks double-quoted strings. On an unparseable file containing an inline comment, charlist, or bracket-delimited sigil such as `note = ~S([:=<,])`, it rewrites those non-code bytes to `:\"=<\"`, silently changing user data while repairing the real syntax error elsewhere.",
+      "signature": "<anchor> — the rule treats every non-comment line as code and only masks double-quoted strings. on an unparseable file containing an inline comment, charlist, or bracket-delimited sigil such as `note = ~s([:=<,])`, it rewrites those non-code bytes to `:\"=<\"`, silently changing user data while repairing the real syntax error elsewhere."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_ets_match_spec_erlang_less_than_analyze_test.exs",
+      "finding": "test/syntax/fix_ets_match_spec_erlang_less_than_analyze_test.exs:7 — Every positive test calls the rule module directly, so the suite can pass even if the Syntax phase never discovers or invokes this new rule; on realistic `guards = [{:=<, :\"$1\", cutoff}]` input, the production pipeline could leave the invalid atom unrepaired. Add an end-to-end assertion through `Credence.Syntax` or `Credence.fix`.",
+      "signature": "<anchor> — every positive test calls the rule module directly, so the suite can pass even if the syntax phase never discovers or invokes this new rule; on realistic `guards = [{:=<, :\"$#\", cutoff}]` input, the production pipeline could leave the invalid atom unrepaired. add an end-to-end assertion through `credence.syntax` or `credence.fix`."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs",
+      "finding": "test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs:162 — Comment protection is tested only on whole-line comments. The implementation rewrites `:=<` in trailing comments such as `value = 1 # [{:=<, x}]`, changing non-code bytes; this test suite would not catch that corruption.",
+      "signature": "<anchor> — comment protection is tested only on whole-line comments. the implementation rewrites `:=<` in trailing comments such as `value = # # [{:=<, x}]`, changing non-code bytes; this test suite would not catch that corruption."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs",
+      "finding": "test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs:11 — Every positive test calls the rule’s `fix/1` directly. None passes realistic unparseable input through `Credence.Syntax.fix/1`, so the suite can stay green if discovery, ordering, or the syntax-round parse gate makes the new rule inert.",
+      "signature": "<anchor> — every positive test calls the rule’s `fix/#` directly. none passes realistic unparseable input through `credence.syntax.fix/#`, so the suite can stay green if discovery, ordering, or the syntax-round parse gate makes the new rule inert."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_extra_brace_in_ets_match.ex",
+      "finding": "lib/syntax/fix_extra_brace_in_ets_match.ex:163 — The rule commits its one-brace deletion only if the entire file immediately parses. On a file containing two malformed `:ets.*` calls (or this error plus another repairable syntax error), the candidate still fails to parse, so the rule repairs neither occurrence. This defeats the Syntax round’s incremental multi-rule repair design and leaves an admitted error untouched.",
+      "signature": "<anchor> — the rule commits its one-brace deletion only if the entire file immediately parses. on a file containing two malformed `:ets.*` calls (or this error plus another repairable syntax error), the candidate still fails to parse, so the rule repairs neither occurrence. this defeats the syntax round’s incremental multi-rule repair design and leaves an admitted error untouched."
+    },
+    {
+      "severity": "nit",
+      "reviewed_path": "test/syntax/fix_extra_brace_in_ets_match_fix_test.exs",
+      "finding": "test/syntax/fix_extra_brace_in_ets_match_fix_test.exs:105 — The comment says parser columns are codepoints, but the combining-mark and emoji cases—and the rule implementation—depend on columns being graphemes; this contradictory description will mislead future offset changes.",
+      "signature": "<anchor> — the comment says parser columns are codepoints, but the combining-mark and emoji cases—and the rule implementation—depend on columns being graphemes; this contradictory description will mislead future offset changes."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/syntax/fix_for_comprehension_in_keyword_value.ex",
+      "finding": "lib/syntax/fix_for_comprehension_in_keyword_value.ex:140 — A bare comprehension with a newline after `for`, such as `%{foo: for\\n  x <- xs, do: x}`, is valid comprehension layout once parenthesized, but `check_for_keyword/3` accepts only a space or tab after `for`; the rule stays inert and the syntax pipeline leaves the file unparseable.",
+      "signature": "<anchor> — a bare comprehension with a newline after `for`, such as `%{foo: for\\n  x <- xs, do: x}`, is valid comprehension layout once parenthesized, but `check_for_keyword/#` accepts only a space or tab after `for`; the rule stays inert and the syntax pipeline leaves the file unparseable."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/semantic/no_hallucinated_guard_fn.ex",
+      "finding": "lib/semantic/no_hallucinated_guard_fn.ex:44 — claims every `is_regex/1` guard diagnostic without verifying the function is actually hallucinated; with `defp is_regex(x), do: Regex.match?(~r/a/, x)` and `def f(x) when is_regex(x)`, `FixLocalFunctionInGuard` correctly declines, then semantic fall-through hands ownership here and rewrites the intended string predicate to `is_struct(x, Regex)`, silently changing behavior.",
+      "signature": "<anchor> — claims every `is_regex/#` guard diagnostic without verifying the function is actually hallucinated; with `defp is_regex(x), do: regex.match?(~r/a/, x)` and `def f(x) when is_regex(x)`, `fixlocalfunctioninguard` correctly declines, then semantic fall-through hands ownership here and rewrites the intended string predicate to `is_struct(x, regex)`, silently changing behavior."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/semantic.ex",
+      "finding": "lib/semantic.ex:460 — diagnostics are captured once and then fixed right-to-left under the assumption that each repair only affects text to its right, but `FixPlugDependencyModuleOrder` can move entire modules; when a later-line missing `Dependency.init/1` diagnostic reorders modules before an earlier `List.max/1` diagnostic is processed, the latter retains its old line number and `UndefinedFunction` may rewrite the wrong line or decline, making one rule’s repair change another rule’s admission and output.",
+      "signature": "<anchor> — diagnostics are captured once and then fixed right-to-left under the assumption that each repair only affects text to its right, but `fixplugdependencymoduleorder` can move entire modules; when a later-line missing `dependency.init/#` diagnostic reorders modules before an earlier `list.max/#` diagnostic is processed, the latter retains its old line number and `undefinedfunction` may rewrite the wrong line or decline, making one rule’s repair change another rule’s admission and output."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/source_mask.ex",
+      "finding": "lib/source_mask.ex:343 — paired sigil delimiters can nest, but the scanner terminates at the first closing delimiter; `~s(prefix (inner) 100% done)` exposes `100% done)` as code, allowing rules such as `FixPythonModulo` to rewrite bytes inside the sigil when the file is otherwise malformed.",
+      "signature": "<anchor> — paired sigil delimiters can nest, but the scanner terminates at the first closing delimiter; `~s(prefix (inner) #% done)` exposes `#% done)` as code, allowing rules such as `fixpythonmodulo` to rewrite bytes inside the sigil when the file is otherwise malformed."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/support/idempotency.ex",
+      "finding": "test/support/idempotency.ex:123 — any exception or throw during either repair pass is converted to `false`, so the idempotency gate reports a fixpoint and permits a new ledger-free offender when pass 1 or the repaired pass crashes; triggering input is any fixture whose first repair exposes a shape that makes a later `Credence.fix/1` invocation raise or throw.",
+      "signature": "<anchor> — any exception or throw during either repair pass is converted to `false`, so the idempotency gate reports a fixpoint and permits a new ledger-free offender when pass # or the repaired pass crashes; triggering input is any fixture whose first repair exposes a shape that makes a later `credence.fix/#` invocation raise or throw."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/rule_helpers.ex",
+      "finding": "lib/rule_helpers.ex:276 — compilation remains in-process, so arbitrary analyzed source containing `System.halt(0)` terminates the entire Credence VM despite the child-process timeout and heap limit.",
+      "signature": "<anchor> — compilation remains in-process, so arbitrary analyzed source containing `system.halt(#)` terminates the entire credence vm despite the child-process timeout and heap limit."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "lib/rule_helpers.ex",
+      "finding": "lib/rule_helpers.ex:270 — the heap and timeout bounds apply only to the compiler child; source such as `spawn(fn -> Stream.repeatedly(fn -> :binary.copy(<<0>>, 1_000_000) end) |> Enum.to_list() end)` compiles successfully and leaves an unbounded orphan consuming memory after the monitored child exits.",
+      "signature": "<anchor> — the heap and timeout bounds apply only to the compiler child; source such as `spawn(fn -> stream.repeatedly(fn -> :binary.copy(<<#>>, #_#_#) end) |> enum.to_list() end)` compiles successfully and leaves an unbounded orphan consuming memory after the monitored child exits."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/support/behaviour_equivalence.ex",
+      "finding": "test/support/behaviour_equivalence.ex:389 — module fixtures are evaluated directly with no timeout or heap ceiling; a fixture with top-level `receive do after :infinity -> :ok end` hangs the suite indefinitely, while allocating or process-spawning fixtures can exhaust the runner.",
+      "signature": "<anchor> — module fixtures are evaluated directly with no timeout or heap ceiling; a fixture with top-level `receive do after :infinity -> :ok end` hangs the suite indefinitely, while allocating or process-spawning fixtures can exhaust the runner."
+    },
+    {
+      "severity": "blocker",
+      "reviewed_path": "test/support/rule_case.ex",
+      "finding": "test/support/rule_case.ex:167 — `call_fixed/4` directly compiles and executes repaired fixture text without containment; a triggering repair that emits an infinite top-level expression or a non-returning target function bypasses `compile_and_capture/1` and can hang or OOM the whole test VM.",
+      "signature": "<anchor> — `call_fixed/#` directly compiles and executes repaired fixture text without containment; a triggering repair that emits an infinite top-level expression or a non-returning target function bypasses `compile_and_capture/#` and can hang or oom the whole test vm."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "maintainer_tools/pr_review/run_capped.sh",
+      "finding": "maintainer_tools/pr_review/run_capped.sh:24 — when user systemd scopes are unavailable, the advertised safety wrapper deliberately executes the command uncapped; any documented `mix run` fixture reproduction on a container, CI shell, or host without a user systemd session regains the machine-level OOM failure this wrapper claims to prevent.",
+      "signature": "<anchor> — when user systemd scopes are unavailable, the advertised safety wrapper deliberately executes the command uncapped; any documented `mix run` fixture reproduction on a container, ci shell, or host without a user systemd session regains the machine-level oom failure this wrapper claims to prevent."
+    },
+    {
+      "severity": "nit",
+      "reviewed_path": "test/alpha_rename_test.exs",
+      "finding": "test/alpha_rename_test.exs:84 — substring-only assertion can pass if renaming also corrupts surrounding module code; triggering input is the existing `@re` fixture whose output merely needs to retain `@re =~ v1`.",
+      "signature": "<anchor> — substring-only assertion can pass if renaming also corrupts surrounding module code; triggering input is the existing `@re` fixture whose output merely needs to retain `@re =~ v#`."
+    },
+    {
+      "severity": "nit",
+      "reviewed_path": "test/alpha_rename_test.exs",
+      "finding": "test/alpha_rename_test.exs:90 — two independent substring assertions can pass with duplicated, reordered, or otherwise malformed output; triggering input is the existing `get_items?/1` fixture if the output contains both fragments anywhere.",
+      "signature": "<anchor> — two independent substring assertions can pass with duplicated, reordered, or otherwise malformed output; triggering input is the existing `get_items?/#` fixture if the output contains both fragments anywhere."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/corpus/fix_safety_test.exs",
+      "finding": "test/corpus/fix_safety_test.exs:23 — this full-corpus sweep is `async: true` while `over_firing_test.exs` and `scope_parity_test.exs` are also async and each launches `System.schedulers_online()` workers; `mix test --only corpus` therefore runs roughly three scheduler-wide, parse-heavy sweeps concurrently, oversubscribing CPU and multiplying live AST/source memory on high-core CI runners.",
+      "signature": "<anchor> — this full-corpus sweep is `async: true` while `over_firing_test.exs` and `scope_parity_test.exs` are also async and each launches `system.schedulers_online()` workers; `mix test --only corpus` therefore runs roughly three scheduler-wide, parse-heavy sweeps concurrently, oversubscribing cpu and multiplying live ast/source memory on high-core ci runners."
+    },
+    {
+      "severity": "concern",
+      "reviewed_path": "test/test_helper.exs",
+      "finding": "test/test_helper.exs:34 — enabling the idempotency sweep by default adds roughly 9–10 minutes to every unqualified local `mix test`, including workflows that do not pass the newly documented exclusion; the triggering input is any standard `mix test` invocation, which now processes about 5,200 fixtures through the complete repair pipeline twice.",
+      "signature": "<anchor> — enabling the idempotency sweep by default adds roughly #–# minutes to every unqualified local `mix test`, including workflows that do not pass the newly documented exclusion; the triggering input is any standard `mix test` invocation, which now processes about #,# fixtures through the complete repair pipeline twice."
     }
   ]
 }

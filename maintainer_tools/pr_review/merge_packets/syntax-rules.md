@@ -1,21 +1,21 @@
 # Syntax rules
 
-Candidate: `cc25ed34` against `main`.
+Candidate: `0851b12a` against `main`.
 
 ## Files
 
-- `lib/syntax/close_unclosed_brace.ex` — done, verdict: FINDINGS
-- `lib/syntax/close_unclosed_doc_heredoc.ex` — done, verdict: FINDINGS
-- `lib/syntax/close_unclosed_fn_delimiter.ex` — done, verdict: FINDINGS
+- `lib/syntax/close_unclosed_brace.ex` — pending, verdict: not reviewed
+- `lib/syntax/close_unclosed_doc_heredoc.ex` — pending, verdict: not reviewed
+- `lib/syntax/close_unclosed_fn_delimiter.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_assignment_dot_syntax.ex` — done, verdict: FINDINGS
-- `lib/syntax/fix_bare_tuple_zero_in_type.ex` — done, verdict: FINDINGS
-- `lib/syntax/fix_capture_operator_syntax.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_div_rem.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_do_block_fusion.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_elsif_in_if_chain.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_ets_match_spec_erlang_less_than.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_extra_brace_in_ets_match.ex` — pending, verdict: not reviewed
-- `lib/syntax/fix_for_comprehension_in_keyword_value.ex` — pending, verdict: not reviewed
+- `lib/syntax/fix_bare_tuple_zero_in_type.ex` — pending, verdict: not reviewed
+- `lib/syntax/fix_capture_operator_syntax.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_div_rem.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_do_block_fusion.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_elsif_in_if_chain.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_ets_match_spec_erlang_less_than.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_extra_brace_in_ets_match.ex` — done, verdict: FINDINGS
+- `lib/syntax/fix_for_comprehension_in_keyword_value.ex` — done, verdict: FINDINGS
 - `lib/syntax/fix_inline_keyword_if_in_with_clause.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_keyword_before_positional_argument.ex` — pending, verdict: not reviewed
 - `lib/syntax/fix_keyword_block_as_function_arg.ex` — pending, verdict: not reviewed
@@ -127,6 +127,17 @@ Candidate: `cc25ed34` against `main`.
 - **nit** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — test/syntax/fix_bare_tuple_zero_in_type_fix_test.exs:284-301 — the 1008-combination battery is vacuous-safe only by luck: if the rule rewrote nothing at all, `rewritten?` would be `false` for every combination, `assert length(analyze(line)) == 0` would hold, and the `valid_syntax?` branch would never run, so the whole loop passes green against a dead rule. Count the rewrites and assert the total (the intended figure is derivable from the fixture lists) so the battery cannot pass on an inert rule.
 - **blocker** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — lib/syntax/fix_bare_tuple_zero_in_type.ex:92 — A multiline range return such as `@type t :: () -> 1` followed by `.. 10` is not recognized as a continuation, so the fix closes the function type on the first line and changes it to `(() -> 1) .. 10` instead of wrapping the complete `1..10` return type.
 - **concern** `lib/syntax/fix_bare_tuple_zero_in_type.ex` — lib/syntax/fix_bare_tuple_zero_in_type.ex:225 — `balanced?/1` counts bracket depth but does not require matching bracket kinds, so input such as `@type t :: () -> [integer()}` is reported and rewritten even though the rewrite cannot repair it.
+- **blocker** `lib/syntax/fix_capture_operator_syntax.ex` — lib/syntax/fix_capture_operator_syntax.ex:84 — Only whole-line comments and double-quoted strings are masked. Valid source such as `msg = 'compare &> here'`, `msg = ~s(compare &> here)`, or `x = 1 # compare &> here` is rewritten, changing literal values or non-code bytes.
+- **blocker** `lib/syntax/fix_capture_operator_syntax.ex` — lib/syntax/fix_capture_operator_syntax.ex:48 — The leading-boundary regex omits valid term boundaries such as `=` and `->`, so malformed captures in inputs like `cmp=&>` or `fn ->&> end` are neither reported nor repaired.
+- **blocker** `lib/syntax/fix_capture_operator_syntax.ex` — lib/syntax/fix_capture_operator_syntax.ex:89 — Any odd `"""` byte sequence toggles heredoc state even inside a comment or ordinary literal; for example, `# """` causes a later `cmp = &>` line to be silently skipped instead of repaired.
+- **blocker** `lib/syntax/fix_div_rem.ex` — lib/syntax/fix_div_rem.ex:211 — For `def f, do: if ok, do: a div b`, the new function-head pattern rewrites the whole keyword expression as `def f, do: div(if ok, do: a, b)`, changing the program instead of fixing the `if` body.
+- **blocker** `lib/syntax/fix_div_rem.ex` — lib/syntax/fix_div_rem.ex:211 — Pre-existing: the right operand always extends to the end of the line, so `x = a div b + 1` becomes `x = div(a, b + 1)` instead of `x = div(a, b) + 1`, changing operator precedence and the result.
+- **blocker** `lib/syntax/fix_do_block_fusion.ex` — lib/syntax/fix_do_block_fusion.ex:63 — pre-existing: on valid single-line nesting such as `defmodule M do def f, do: 1 end`, the rule mistakes the outer module’s `end` for a stray one-liner terminator and removes it, producing invalid code.
+- **blocker** `lib/syntax/fix_elsif_in_if_chain.ex` — lib/syntax/fix_elsif_in_if_chain.ex:112 — `fix/1` rewrites only the first `elsif`/`elif` chain. A file containing two independent bad chains remains unparsable after this rule’s single Syntax-round invocation, so the pipeline rolls the repair back and fixes neither chain.
+- **blocker** `lib/syntax/fix_elsif_in_if_chain.ex` — lib/syntax/fix_elsif_in_if_chain.ex:317 — the multiline-string safety check misses multiline sigils such as `~S(...)` and ordinary multiline charlists. In a repaired branch, `build_cond/3` trims and re-indents every line, changing the literal’s contents and therefore the program’s answer.
+- **blocker** `lib/syntax/fix_ets_match_spec_erlang_less_than.ex` — lib/syntax/fix_ets_match_spec_erlang_less_than.ex:87 — The rule treats every non-comment line as code and only masks double-quoted strings. On an unparseable file containing an inline comment, charlist, or bracket-delimited sigil such as `note = ~S([:=<,])`, it rewrites those non-code bytes to `:"=<"`, silently changing user data while repairing the real syntax error elsewhere.
+- **blocker** `lib/syntax/fix_extra_brace_in_ets_match.ex` — lib/syntax/fix_extra_brace_in_ets_match.ex:163 — The rule commits its one-brace deletion only if the entire file immediately parses. On a file containing two malformed `:ets.*` calls (or this error plus another repairable syntax error), the candidate still fails to parse, so the rule repairs neither occurrence. This defeats the Syntax round’s incremental multi-rule repair design and leaves an admitted error untouched.
+- **blocker** `lib/syntax/fix_for_comprehension_in_keyword_value.ex` — lib/syntax/fix_for_comprehension_in_keyword_value.ex:140 — A bare comprehension with a newline after `for`, such as `%{foo: for\n  x <- xs, do: x}`, is valid comprehension layout once parenthesized, but `check_for_keyword/3` accepts only a space or tab after `for`; the rule stays inert and the syntax pipeline leaves the file unparseable.
 
 
 ## Maintainer decision

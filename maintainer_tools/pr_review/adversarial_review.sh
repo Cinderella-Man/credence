@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RUNNER="$SCRIPT_DIR/agent_runner.sh"
 OUT="$SCRIPT_DIR/adversarial_findings.md"
+LOG_DIR="$SCRIPT_DIR/.adversarial_logs"
 PASS="${1:-all}"
 
 declare -A LENSES=(
@@ -18,12 +19,19 @@ declare -A LENSES=(
 )
 
 run_pass() {
-  local name="$1" result
+  local name="$1" result log
   result="$(mktemp "$SCRIPT_DIR/.adversarial.${name}.XXXXXX")"
+  mkdir -p "$LOG_DIR"
+  log="$LOG_DIR/${name}-$(date +%Y%m%dT%H%M%S).log"
   prompt="You are an adversarial maintainer reviewing the main...evolution_accepted candidate. Focus only on: ${LENSES[$name]}
 
 Read the repository and PR diff. Do not modify files or run builds/tests. Return either exactly OK or FINDINGS followed by concrete bullets in the form '- blocker|concern|nit: path:line — impact and triggering input'. Avoid duplicating findings already recorded in maintainer_tools/pr_review/findings.md or this adversarial ledger."
-  printf '%s' "$prompt" | AGENT_REPO="$REPO" "$RUNNER" review "$result"
+  if ! printf '%s' "$prompt" | AGENT_REPO="$REPO" "$RUNNER" review "$result" >"$log" 2>&1; then
+    echo "adversarial pass '$name' failed; transcript: $log" >&2
+    tail -n 40 "$log" >&2
+    rm -f "$result"
+    return 1
+  fi
   {
     printf '## %s — %s\n\n' "$name" "$(date -Is)"
     cat "$result"
@@ -42,4 +50,3 @@ elif [[ -n "${LENSES[$PASS]:-}" ]]; then
 else
   echo "unknown pass: $PASS" >&2; exit 64
 fi
-

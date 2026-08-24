@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="$SCRIPT_DIR/manifest.json"
 FINDINGS="$SCRIPT_DIR/findings.md"
+ADVERSARIAL="$SCRIPT_DIR/adversarial_findings.md"
 JSON="$SCRIPT_DIR/finding_summary.json"
 MARKDOWN="$SCRIPT_DIR/finding_summary.md"
 [[ -f "$MANIFEST" && -f "$FINDINGS" ]] || { echo "manifest/findings missing" >&2; exit 1; }
@@ -15,9 +16,14 @@ awk '
   /^- (blocker|concern|nit):/ {
     severity=$2; sub(/:$/, "", severity)
     text=$0; sub(/^- [a-z]+: /, "", text)
-    printf "%s\t%s\t%s\n", severity, section, text
+    reviewed=section
+    if (FILENAME ~ /adversarial_findings[.]md$/) {
+      split(text, anchor, ":")
+      reviewed=anchor[1]
+    }
+    printf "%s\t%s\t%s\n", severity, reviewed, text
   }
-' "$FINDINGS" > "$rows"
+' "$FINDINGS" "$ADVERSARIAL" > "$rows"
 
 jq -Rn --slurpfile manifest "$MANIFEST" '
   [inputs | split("\t") | select(length >= 3) |

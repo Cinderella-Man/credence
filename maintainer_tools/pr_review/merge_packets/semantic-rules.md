@@ -1,6 +1,6 @@
 # Semantic rules
 
-Candidate: `cc25ed34` against `main`.
+Candidate: `0851b12a` against `main`.
 
 ## Files
 
@@ -100,7 +100,7 @@ Candidate: `cc25ed34` against `main`.
 
 ## Active findings
 
-None recorded.
+- **blocker** `lib/semantic/no_hallucinated_guard_fn.ex` — lib/semantic/no_hallucinated_guard_fn.ex:44 — claims every `is_regex/1` guard diagnostic without verifying the function is actually hallucinated; with `defp is_regex(x), do: Regex.match?(~r/a/, x)` and `def f(x) when is_regex(x)`, `FixLocalFunctionInGuard` correctly declines, then semantic fall-through hands ownership here and rewrites the intended string predicate to `is_struct(x, Regex)`, silently changing behavior.
 
 
 ## Maintainer decision

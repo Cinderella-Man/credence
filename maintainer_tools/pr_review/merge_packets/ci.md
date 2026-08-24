@@ -1,6 +1,6 @@
 # CI and operations
 
-Candidate: `cc25ed34` against `main`.
+Candidate: `0851b12a` against `main`.
 
 ## Files
 

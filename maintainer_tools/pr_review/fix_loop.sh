@@ -229,6 +229,19 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = path, $4 = round, $5 = n
     SESSION_ISOLATION_FAIL="could not create the disposable fix worktree"
     return 70
   fi
+  # Linked worktrees do not inherit ignored dependencies. Seed a private copy
+  # so the sandboxed agent and gate never need an interactive Hex prompt and
+  # never mutate a dependency tree shared with the maintainer checkout.
+  if [[ -d "$REPO/deps" ]]; then
+    cp -a "$REPO/deps" "$worktree/deps"
+  else
+    if ! (cd "$worktree" && CI=1 MIX_ENV=test timeout -k 30 600 mix deps.get </dev/null) \
+         >> "$FIXLOG" 2>&1; then
+      cleanup_fix_worktree || true
+      SESSION_ISOLATION_FAIL="could not bootstrap dependencies in the disposable fix worktree; run 'MIX_ENV=test mix deps.get' in the primary checkout"
+      return 70
+    fi
+  fi
 
   flog SESSION "starting ${AGENT_PROVIDER:-codex} (model=${FIX_AGENT_MODEL:-${AGENT_MODEL:-default}}, timeout=${FIX_SESSION_TIMEOUT}s, mem=${FIX_MEM_MAX:-uncapped})"
   flog SESSION "disposable worktree: $worktree ($branch at ${pre_sha:0:9})"
@@ -262,6 +275,8 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = path, $4 = round, $5 = n
     local why
     if ! why="$(validate_report "$n_findings" "$has_changes")"; then
       SESSION_ISOLATION_FAIL="unusable report: $why (agent exit=$rc)"
+    else
+      cp "$REPORT" "$BAKDIR/session_report"
     fi
   fi
 
@@ -284,6 +299,13 @@ run_fix_session() { # $1 = briefing, $2 = pre_sha, $3 = path, $4 = round, $5 = n
       SESSION_GATE_DESC="green ($GATE_DESC)"
     else
       SESSION_ISOLATION_FAIL="the wrapper's gate is RED in the disposable worktree. Gate output tail:"$'\n'"$(tail -n 40 "$gatelog")"
+    fi
+    # The report belongs to the wrapper once validated. A repository test or
+    # hook must not be able to change the outcomes recorded after the gate.
+    if [[ -f "$BAKDIR/session_report" ]]; then
+      [[ "$(md5sum < "$REPORT")" == "$(md5sum < "$BAKDIR/session_report")" ]] \
+        || flog GUARD "gate changed the captured report — restored validated copy"
+      cp "$BAKDIR/session_report" "$REPORT"
     fi
   elif [[ -z "$SESSION_ISOLATION_FAIL" ]]; then
     SESSION_GATE_DESC="skipped (no changes)"
@@ -376,7 +398,7 @@ run_gate() { # $1 = pre_sha, $2 = gate log file, $3 = repo (default primary)
   local pre="$1" gatelog="$2" gate_repo="${3:-$REPO}" rc=0
   : > "$gatelog"
   if [[ -n "${FIX_GATE_CMD:-}" ]]; then
-    ( cd "$gate_repo" && timeout -k 60 "$FIX_GATE_TIMEOUT" bash -c "$FIX_GATE_CMD" ) \
+    ( cd "$gate_repo" && CI=1 MIX_ENV=test timeout -k 60 "$FIX_GATE_TIMEOUT" bash -c "$FIX_GATE_CMD" </dev/null ) \
       >> "$gatelog" 2>&1 || rc=$?
     return "$rc"
   fi
@@ -387,17 +409,18 @@ run_gate() { # $1 = pre_sha, $2 = gate log file, $3 = repo (default primary)
   done < <(git -C "$gate_repo" diff --name-only "$pre"..HEAD | grep -E '\.(ex|exs)$' || true)
   (
     cd "$gate_repo" || exit 70
+    export CI=1 MIX_ENV=test
     if ((${#touched[@]})); then
       echo "== mix format --check-formatted (${#touched[@]} touched files)"
-      timeout -k 60 "$FIX_GATE_TIMEOUT" mix format --check-formatted "${touched[@]}" || exit 1
+      timeout -k 60 "$FIX_GATE_TIMEOUT" mix format --check-formatted "${touched[@]}" </dev/null || exit 1
       # A cached _build hides warnings in already-compiled files; force the
       # touched ones (and their dependents) through the compiler again.
       touch "${touched[@]}"
     fi
     echo "== mix compile --warnings-as-errors"
-    "${CAPPED[@]}" timeout -k 60 "$FIX_GATE_TIMEOUT" mix compile --warnings-as-errors || exit 1
+    "${CAPPED[@]}" timeout -k 60 "$FIX_GATE_TIMEOUT" mix compile --warnings-as-errors </dev/null || exit 1
     echo "== mix test --exclude corpus --exclude idempotency"
-    "${CAPPED[@]}" timeout -k 60 "$FIX_GATE_TIMEOUT" mix test --exclude corpus --exclude idempotency || exit 1
+    "${CAPPED[@]}" timeout -k 60 "$FIX_GATE_TIMEOUT" mix test --exclude corpus --exclude idempotency </dev/null || exit 1
     echo "== tree must stay clean outside pr_review (fixture healer parity with CI)"
     dirt="$(git status --porcelain=v1 -- . ':(exclude)maintainer_tools/pr_review' )"
     if [[ -n "$dirt" ]]; then

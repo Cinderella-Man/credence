@@ -44,6 +44,7 @@ make_repo() { # $1 = scenario name (repo dir name)
   git -C "$R" config user.name "pr_review selftest"
 
   mkdir -p "$R/lib" "$R/test" "$R/maintainer_tools/pr_review" "$R/bin"
+  mkdir -p "$R/deps"
   printf 'defmodule Foo do\n  def foo(_), do: :wrong\nend\n' > "$R/lib/foo.ex"
   printf '# test placeholder\n' > "$R/test/foo_test.exs"
   cat > "$R/.gitignore" <<'EOF'
@@ -54,6 +55,7 @@ maintainer_tools/pr_review/.fixes.*.json
 maintainer_tools/pr_review/.lock
 maintainer_tools/pr_review/.campaign.lock
 maintainer_tools/pr_review/.needs_refresh
+deps/
 EOF
   local f
   for f in agent_runner.sh aggregate_findings.sh fix_loop.sh fix_queue.sh fix_file_prompt.md run_capped.sh campaign.sh status.sh; do

@@ -27,7 +27,8 @@ recorded.
 - [x] Add cross-cutting adversarial review passes.
 - [x] Add generation of human-sized merge packets.
 - [x] Run one real Codex integration review.
-- [ ] Run and assess a 20-file Codex review-only pilot.
+- [x] Run and assess a 20-file Codex review-only pilot.
+- [x] Run the initial seven cross-cutting adversarial review lanes.
 - [ ] Complete the full category review campaign.
 - [ ] Record the final merge decision and remaining uncertainties.
 - [ ] Remove this progress ledger in the final cleanup commit.
@@ -40,6 +41,12 @@ recorded.
 - 2026-08-24: Bash syntax, ShellCheck, and `git diff --check` passed.
 - 2026-08-24: Added committed finding summaries, adversarial review lanes,
   and category-based merge packets.
+- 2026-08-24: All seven adversarial lanes completed without runner errors.
+  They recorded 13 findings: seven blockers, four concerns, and two nits.
+- 2026-08-24: After hardening dependency seeding and captured-report
+  preservation, `selftest.sh` passed 81 assertions, `selftest_manifest.sh`
+  passed 36 assertions, Bash syntax passed, and `git diff --check` passed.
+  ShellCheck was unavailable on this host.
 
 ## Pilot results
 
@@ -48,6 +55,23 @@ recorded.
   sandbox. It returned one blocker and one concern, produced a valid captured
   verdict, changed no source files, and advanced the manifest from 10 to 11
   reviewed files.
+- The complete pilot ran 20 Codex sessions with zero invalid outputs, retries,
+  sandbox violations, or source-tree writes. Nineteen files returned findings
+  and one returned `OK`; the tranche added 24 blockers, 5 concerns, and 1 nit.
+- The high blocker rate means the remaining 750 review rows have not been
+  released automatically. Fourteen blocker-bearing fix rounds were queued and
+  five below-floor rounds were recorded as skipped.
+- The first real wrapper-owned fix completed in a disposable worktree. Its
+  full gate passed before commit `0851b12a` was imported, and the manifest was
+  refreshed afterward.
+- Deployment issue: user-level `systemd-run` is unavailable on this host, so
+  bulk fix sessions remain paused until an equivalent memory cap is available
+  or explicitly accepted. The worktree gate is non-interactive and uses a
+  private dependency copy.
+- The adversarial lanes found blockers in diagnostic ownership, cross-rule
+  line stability, nested sigil masking, and execution containment. These are
+  now recorded in `maintainer_tools/pr_review/adversarial_findings.md` and must
+  be triaged before the remaining review queue is released.
 
 ## Human decisions
 

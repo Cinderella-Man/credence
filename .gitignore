@@ -46,6 +46,8 @@ maintainer_tools/corpus_whitelist_validator/.logs/
 maintainer_tools/pr_review/_verdict
 maintainer_tools/pr_review/_briefing/
 maintainer_tools/pr_review/.review_logs/
+maintainer_tools/pr_review/.adversarial_logs/
+maintainer_tools/pr_review/.adversarial.lock
 maintainer_tools/pr_review/.lock
 maintainer_tools/pr_review/.manifest.*.json
 maintainer_tools/pr_review/_fix_report
