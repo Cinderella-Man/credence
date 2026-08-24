@@ -601,3 +601,7 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - [3 blocker] fixed — Executed the rule and confirmed `# """` hid a later `cmp = &>` repair; added analyze/fix regressions and removed the hand-rolled heredoc toggling in favor of `SourceMask`. All scoped checks pass: warnings-as-errors compilation and 49 tests with 0 failures.
 - commits: 8cb5afd3b00b9c70a18f577fa780d5c376af2e7c
 - gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+## lib/syntax/close_unclosed_brace.ex — 2026-08-24 (added, rule_syntax)
+- blocker: lib/syntax/close_unclosed_brace.ex:190 — On CRLF input, the repair appends `}` after the retained `\r`, turning the target line’s `\r\n` into `\r}\n`; the result may parse, but it corrupts that line’s newline encoding instead of inserting the brace before the CRLF.
+## test/syntax/close_unclosed_brace_fix_test.exs — 2026-08-24 (added, test_syntax)
+- blocker: test/syntax/close_unclosed_brace_fix_test.exs:32 — Every repair assertion calls `CloseUnclosedBrace.fix/1` directly. The realistic unclosed-tuple input is never repaired through `Credence.Syntax.fix_with_trace/2` with the live rule set, so the test stays green if ordering or the progress/rollback guards prevent this rule’s repair from reaching users.
