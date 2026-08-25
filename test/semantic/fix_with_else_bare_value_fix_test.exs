@@ -137,6 +137,54 @@ defmodule Credence.Semantic.FixWithElseBareValueFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "does not rewrite a bare-value with inside quote" do
+    input = ~S"""
+    defmodule QuoteWitnessFWEBV do
+      def broken(x) do
+        with {:ok, value} <- x do
+          value
+        else
+          :error
+        end
+      end
+
+      def quoted do
+        quote do
+          with {:ok, value} <- x do
+            value
+          else
+            :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule QuoteWitnessFWEBV do
+      def broken(x) do
+        with {:ok, value} <- x do
+          value
+        else
+          _ -> :error
+        end
+      end
+
+      def quoted do
+        quote do
+          with {:ok, value} <- x do
+            value
+          else
+            :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
   test "fixed output is well-formed (parses)" do
     input = ~S"""
     defmodule ParseCheck do

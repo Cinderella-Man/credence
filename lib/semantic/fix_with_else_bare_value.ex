@@ -88,14 +88,25 @@ defmodule Credence.Semantic.FixWithElseBareValue do
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
       result =
-        Macro.prewalk(ast, fn
-          {:with, with_meta, args} ->
-            new_args = fix_else_in_with(args)
-            {:with, with_meta, new_args}
+        Macro.traverse(
+          ast,
+          0,
+          fn
+            {:quote, _, _} = node, quote_depth ->
+              {node, quote_depth + 1}
 
-          node ->
-            node
-        end)
+            {:with, with_meta, args}, 0 ->
+              {{:with, with_meta, fix_else_in_with(args)}, 0}
+
+            node, quote_depth ->
+              {node, quote_depth}
+          end,
+          fn
+            {:quote, _, _} = node, quote_depth -> {node, quote_depth - 1}
+            node, quote_depth -> {node, quote_depth}
+          end
+        )
+        |> elem(0)
 
       if result == ast do
         source
