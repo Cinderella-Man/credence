@@ -419,17 +419,37 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClauseFixTest do
 
     test "an `if` whose branch quotes an arrow and an `if` of its own" do
       code = """
-      defmodule M do
+      defmodule Credence.Syntax.FixInlineKeywordIfBranchStringFixture do
         def run(a) do
           with ref <- if a, do: "x <- if y, do: 1", else: nil,
                z <- f(a) do
             {ref, z}
           end
         end
+
+        defp f(value), do: value
       end
       """
 
-      confirm_fix(fix(code), code)
+      expected = """
+      defmodule Credence.Syntax.FixInlineKeywordIfBranchStringFixture do
+        def run(a) do
+          with ref <- (if a, do: "x <- if y, do: 1", else: nil),
+               z <- f(a) do
+            {ref, z}
+          end
+        end
+
+        defp f(value), do: value
+      end
+      """
+
+      emitted = fix(code)
+
+      confirm_fix(emitted, expected)
+      assert valid_syntax?(emitted)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+      confirm_fix(fix(emitted), emitted)
     end
 
     test "the bad shape quoted inside a heredoc, with the real error elsewhere" do

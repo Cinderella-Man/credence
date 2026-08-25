@@ -60,7 +60,7 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
   """
   use Credence.Syntax.Rule
 
-  alias Credence.Issue
+  alias Credence.{Issue, SourceMask}
 
   # A binding that is followed by another one: the parser stops at the comma
   # that closed the `if`'s keyword list.
@@ -116,7 +116,8 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
          line when is_integer(line) <- Keyword.get(meta, :line),
          col when is_integer(col) <- Keyword.get(meta, :column),
          {:ok, chars} <- line_chars(source, line),
-         {:ok, start_col, end_col} <- span(message_text(message), chars, col),
+         {:ok, shadow_chars} <- line_shadow_chars(source, line),
+         {:ok, start_col, end_col} <- span(message_text(message), shadow_chars, col),
          true <- keyword_if?(slice(chars, start_col, end_col)) do
       {:ok, line, start_col, end_col}
     else
@@ -234,6 +235,27 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
     case source |> String.split("\n") |> Enum.at(line - 1) do
       nil -> :none
       text -> {:ok, String.graphemes(text)}
+    end
+  end
+
+  defp line_shadow_chars(source, line) do
+    with {:ok, chars} <- line_chars(source, line),
+         {:ok, shadow} <- source |> SourceMask.mask() |> line_text(line) do
+      {masked, ""} =
+        Enum.map_reduce(chars, shadow, fn char, rest ->
+          size = byte_size(char)
+          <<shadow_char::binary-size(^size), rest::binary>> = rest
+          {if(shadow_char == char, do: char, else: <<1>>), rest}
+        end)
+
+      {:ok, masked}
+    end
+  end
+
+  defp line_text(source, line) do
+    case source |> String.split("\n") |> Enum.at(line - 1) do
+      nil -> :none
+      text -> {:ok, text}
     end
   end
 
