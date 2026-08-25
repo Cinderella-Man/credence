@@ -35,7 +35,7 @@ defmodule Credence.Syntax.NoCaseClosedWithBrace do
   @impl true
   def analyze(source) do
     case detect(source) do
-      {:ok, line} ->
+      {:ok, line, _column} ->
         [
           %Issue{
             rule: :no_case_closed_with_brace,
@@ -51,26 +51,22 @@ defmodule Credence.Syntax.NoCaseClosedWithBrace do
   end
 
   @impl true
-  def fix(source) do
-    case detect(source) do
-      {:ok, _line} ->
-        fixed = do_fix(source)
+  def fix(source), do: fix_all(source)
 
-        if fixed != source and parses?(fixed) do
-          fixed
-        else
-          source
-        end
+  defp fix_all(source) do
+    case detect(source) do
+      {:ok, line, column} ->
+        fixed = replace_brace_with_end(source, line, column)
+
+        if fixed == source, do: source, else: fix_all(fixed)
 
       :none ->
         source
     end
   end
 
-  defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
-
-  # Returns `{:ok, end_line}` when the source fails to parse specifically because
-  # a `do` block was closed by `}` instead of `end`.
+  # Returns the closing delimiter's position when the source fails to parse
+  # specifically because a `do` block was closed by `}` instead of `end`.
   defp detect(source) do
     close_brace = String.to_atom("}")
 
@@ -80,35 +76,13 @@ defmodule Credence.Syntax.NoCaseClosedWithBrace do
              Keyword.get(meta, :opening_delimiter) == :do and
              Keyword.get(meta, :expected_delimiter) == :end and
              Keyword.get(meta, :closing_delimiter) == close_brace do
-          {:ok, Keyword.get(meta, :end_line)}
+          {:ok, Keyword.get(meta, :end_line), Keyword.get(meta, :end_column)}
         else
           :none
         end
 
       _ ->
         :none
-    end
-  end
-
-  # Replace the mismatched `}` with `end` at the exact line reported by the parser.
-  defp do_fix(source) do
-    close_brace = String.to_atom("}")
-
-    case Code.string_to_quoted(source, columns: true) do
-      {:error, {meta, _message, _token}} when is_list(meta) ->
-        if Keyword.get(meta, :error_type) == :mismatched_delimiter and
-             Keyword.get(meta, :opening_delimiter) == :do and
-             Keyword.get(meta, :expected_delimiter) == :end and
-             Keyword.get(meta, :closing_delimiter) == close_brace do
-          line_no = Keyword.get(meta, :end_line)
-          col = Keyword.get(meta, :end_column)
-          replace_brace_with_end(source, line_no, col)
-        else
-          source
-        end
-
-      _ ->
-        source
     end
   end
 
@@ -120,8 +94,10 @@ defmodule Credence.Syntax.NoCaseClosedWithBrace do
         source
 
       line ->
-        # col is 1-indexed; split at the character before the `}`.
-        {before, rest} = String.split_at(line, col - 1)
+        # Parser columns count codepoints and are 1-indexed.
+        {before, rest} = line |> String.codepoints() |> Enum.split(col - 1)
+        before = Enum.join(before)
+        rest = Enum.join(rest)
 
         case rest do
           "}" <> after_brace ->

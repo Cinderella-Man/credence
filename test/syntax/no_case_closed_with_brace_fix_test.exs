@@ -34,6 +34,42 @@ defmodule Credence.Syntax.NoCaseClosedWithBraceFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "repairs every do block closed with a brace" do
+    input = """
+    case :first do
+      _ -> :first
+    }
+    case :second do
+      _ -> :second
+    }
+    """
+
+    expected = """
+    case :first do
+      _ -> :first
+    end
+    case :second do
+      _ -> :second
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "uses parser codepoint columns when replacing the brace" do
+    input = """
+    case :value do
+      _ -> é; }
+    """
+
+    expected = """
+    case :value do
+      _ -> é; end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
   test "fixed output no longer flags" do
     input = """
     defmodule FixDoClosedWithBrace do
