@@ -94,10 +94,11 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
-      {new_ast, changed?} =
-        Macro.prewalk(ast, false, fn
+  def fix(source, diagnostic) do
+    with {:ok, ast} <- Sourceror.parse_string(source),
+         {:ok, target_position} <- position(diagnostic) do
+      {_ast, patches} =
+        Macro.prewalk(ast, [], fn
           # &(!Mod.fun/arity) or &(not Mod.fun/arity) — remote function ref
           {:&, am,
            [
@@ -106,12 +107,18 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
                 {neg_op, nm, [{{:., dm2, [mod, fun]}, cm, []}]},
                 {:__block__, _, [arity]}
               ]}
-           ]},
-          _acc
+           ]} = node,
+          patches
           when neg_op in [:!, :not] and is_integer(arity) and arity in 1..255 ->
             args = for i <- 1..arity, do: {:&, [], [i]}
             new_call = {{:., dm2, [mod, fun]}, Keyword.delete(cm, :no_parens), args}
-            {{:&, am, [{neg_op, nm, [new_call]}]}, true}
+
+            if at_position?(node, target_position) do
+              replacement = {:&, am, [{neg_op, nm, [new_call]}]}
+              {node, [patch(node, replacement) | patches]}
+            else
+              {node, patches}
+            end
 
           # &(!fun/arity) or &(not fun/arity) — local function ref, written
           # bare (`!fun/1`, parsed as a variable node) or with empty call
@@ -123,19 +130,25 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
                 {neg_op, nm, [{atom, fm, no_args}]},
                 {:__block__, _, [arity]}
               ]}
-           ]},
-          _acc
+           ]} = node,
+          patches
           when neg_op in [:!, :not] and is_atom(atom) and (no_args == nil or no_args == []) and
                  is_integer(arity) and arity in 1..255 ->
             args = for i <- 1..arity, do: {:&, [], [i]}
             new_call = {atom, Keyword.delete(fm, :no_parens), args}
-            {{:&, am, [{neg_op, nm, [new_call]}]}, true}
+
+            if at_position?(node, target_position) do
+              replacement = {:&, am, [{neg_op, nm, [new_call]}]}
+              {node, [patch(node, replacement) | patches]}
+            else
+              {node, patches}
+            end
 
           node, acc ->
             {node, acc}
         end)
 
-      if changed?, do: Sourceror.to_string(new_ast), else: source
+      if patches == [], do: source, else: Sourceror.patch_string(source, patches)
     else
       _ -> source
     end
@@ -143,4 +156,32 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+
+  defp position(%{position: {line, col}}) when is_integer(line) and is_integer(col),
+    do: {:ok, {line, col}}
+
+  defp position(%{position: line}) when is_integer(line), do: {:ok, {line, nil}}
+  defp position(_diagnostic), do: :error
+
+  defp patch(original, replacement) do
+    %{range: Sourceror.get_range(original), change: Sourceror.to_string(replacement)}
+  end
+
+  defp at_position?(node, {target_line, nil}) do
+    case Sourceror.get_range(node) do
+      %{start: [{:line, first} | _], end: [{:line, last} | _]} -> target_line in first..last
+      _ -> false
+    end
+  end
+
+  defp at_position?(node, {target_line, target_col}) do
+    case Sourceror.get_range(node) do
+      %{start: [line: first_line, column: first_col], end: [line: last_line, column: last_col]} ->
+        {target_line, target_col} >= {first_line, first_col} and
+          {target_line, target_col} <= {last_line, last_col}
+
+      _ ->
+        false
+    end
+  end
 end

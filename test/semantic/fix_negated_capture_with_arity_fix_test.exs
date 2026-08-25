@@ -13,7 +13,7 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArityFixTest do
     FixNegatedCaptureWithArity.fix(source, %{
       severity: :error,
       message: @real_message,
-      position: {line, 1}
+      position: line
     })
   end
 
@@ -168,5 +168,25 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArityFixTest do
     """
 
     assert valid_syntax?(fix(input, 3))
+  end
+
+  test "semantic pipeline repairs the diagnosed capture without changing quoted data" do
+    input = """
+    defmodule NegatedCapturePipelineFixture do
+      def quoted, do: quote(do: &(!local_fun/1))
+      def run(xs), do: Enum.map(xs, &(!local_fun/1))
+      defp local_fun(x), do: x
+    end
+    """
+
+    expected = """
+    defmodule NegatedCapturePipelineFixture do
+      def quoted, do: quote(do: &(!local_fun/1))
+      def run(xs), do: Enum.map(xs, &(!local_fun(&1)))
+      defp local_fun(x), do: x
+    end
+    """
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
   end
 end

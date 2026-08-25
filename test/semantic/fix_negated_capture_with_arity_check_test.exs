@@ -91,7 +91,8 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArityCheckTest do
     end
     """
 
-    assert FixNegatedCaptureWithArity.should_report?(@bang_remote, fixable)
-    refute FixNegatedCaptureWithArity.should_report?(@bang_remote, skipped)
+    diagnostic = %{@bang_remote | position: 3}
+    assert FixNegatedCaptureWithArity.should_report?(diagnostic, fixable)
+    refute FixNegatedCaptureWithArity.should_report?(diagnostic, skipped)
   end
 end
