@@ -1,7 +1,10 @@
 defmodule Credence.Semantic.FixNimbleCsvDirectParseCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.FixNimbleCsvDirectParse
+  alias Credence.RuleHelpers
 
   @match_msg "NimbleCSV.parse_string/2 is undefined or private"
 
@@ -81,6 +84,55 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParseCheckTest do
 
     diag = %{severity: :warning, message: @match_msg, position: {3, 5}}
     refute FixNimbleCsvDirectParse.should_report?(diag, source)
+  end
+
+  test "compiler diagnostic is repaired through Semantic dispatch" do
+    input = """
+    defmodule FixNimbleCsvDirectParseDispatchFixture do
+      NimbleCSV.define(FixNimbleCsvDirectParseDispatchFixture.Parser,
+        separator: ",",
+        escape: "\\\""
+      )
+
+      def load(csv) do
+        NimbleCSV.parse_string(csv, skip_headers: false)
+      end
+    end
+    """
+
+    expected = """
+    defmodule FixNimbleCsvDirectParseDispatchFixture do
+      NimbleCSV.define(FixNimbleCsvDirectParseDispatchFixture.Parser,
+        separator: ",",
+        escape: "\\\""
+      )
+
+      def load(csv) do
+        FixNimbleCsvDirectParseDispatchFixture.Parser.parse_string(csv, skip_headers: false)
+      end
+    end
+    """
+
+    control = """
+    defmodule FixNimbleCsvDirectParseDispatchControl do
+      NimbleCSV.define(FixNimbleCsvDirectParseDispatchControl.Parser,
+        separator: ",",
+        escape: "\\\""
+      )
+
+      def load(csv) do
+        FixNimbleCsvDirectParseDispatchControl.Parser.parse_string(csv, skip_headers: false)
+      end
+    end
+    """
+
+    assert {:ok, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &FixNimbleCsvDirectParse.match?/1)
+
+    actual = Credence.Semantic.fix(input)
+    confirm_fix(actual, expected)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(actual)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(control)
   end
 
   test "attributes the issue to this rule" do
