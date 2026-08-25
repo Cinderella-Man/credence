@@ -239,6 +239,138 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     assert Credence.RuleCase.call_fixed(fixed, EarlyExitBehaviour, :check, [5]) == {:ok, 5}
   end
 
+  test "preserves early exit from an if with else" do
+    input = """
+    defmodule EarlyExitWithElseNBRIU do
+      def check(flag) do
+        if flag, do: return(:error), else: :ok
+        :continued
+      end
+    end
+    """
+
+    expected = """
+    defmodule EarlyExitWithElseNBRIU do
+      def check(flag) do
+        if flag do
+          :error
+        else
+          :ok
+          :continued
+        end
+      end
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert Credence.RuleCase.call_fixed(fixed, EarlyExitWithElseNBRIU, :check, [true]) == :error
+
+    assert Credence.RuleCase.call_fixed(fixed, EarlyExitWithElseNBRIU, :check, [false]) ==
+             :continued
+  end
+
+  test "nil is an early-exit value, not the not-found sentinel" do
+    input = """
+    defmodule NilEarlyExitNBRIU do
+      def check(flag) do
+        if flag, do: return(nil)
+        :continued
+      end
+    end
+    """
+
+    expected = """
+    defmodule NilEarlyExitNBRIU do
+      def check(flag) do
+        if flag do
+          nil
+        else
+          :continued
+        end
+      end
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert Credence.RuleCase.call_fixed(fixed, NilEarlyExitNBRIU, :check, [true]) == nil
+
+    assert Credence.RuleCase.call_fixed(fixed, NilEarlyExitNBRIU, :check, [false]) ==
+             :continued
+  end
+
+  test "preserves work before a terminal return in a conditional branch" do
+    input = """
+    defmodule WorkedEarlyExitNBRIU do
+      def check(flag) do
+        if flag do
+          Process.put(:worked_early_exit_nbriu, true)
+          return(:error)
+        end
+
+        :continued
+      end
+    end
+    """
+
+    expected = """
+    defmodule WorkedEarlyExitNBRIU do
+      def check(flag) do
+        if flag do
+          Process.put(:worked_early_exit_nbriu, true)
+          :error
+        else
+          :continued
+        end
+      end
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    Process.delete(:worked_early_exit_nbriu)
+    assert Credence.RuleCase.call_fixed(fixed, WorkedEarlyExitNBRIU, :check, [true]) == :error
+    assert Process.get(:worked_early_exit_nbriu) == true
+  after
+    Process.delete(:worked_early_exit_nbriu)
+  end
+
+  test "preserves early exit from a non-final case branch" do
+    input = """
+    defmodule CaseEarlyExitNBRIU do
+      def check(value) do
+        case value do
+          :bad -> return(:error)
+          _ -> :ok
+        end
+
+        :continued
+      end
+    end
+    """
+
+    expected = """
+    defmodule CaseEarlyExitNBRIU do
+      def check(value) do
+        case value do
+          :bad ->
+            :error
+
+          _ ->
+            :ok
+            :continued
+        end
+      end
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert Credence.RuleCase.call_fixed(fixed, CaseEarlyExitNBRIU, :check, [:bad]) == :error
+    assert Credence.RuleCase.call_fixed(fixed, CaseEarlyExitNBRIU, :check, [:ok]) == :continued
+  end
+
   test "strips return from case branch" do
     input = """
     defmodule DBCleaner do

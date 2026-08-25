@@ -129,16 +129,16 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
     end
   end
 
-  # `pre… ; COND_STMT ; post…`  where COND_STMT is `if/unless C do return(V) end`
-  # and `post` is non-empty, becomes `pre… ; if C do post else V end` (with the
-  # arms swapped for `unless`, which runs its body when the condition is falsy).
+  # When a non-final conditional or case arm ends in `return(V)`, move the
+  # remaining statements into every non-returning path and unwrap the returning
+  # paths. This preserves the early exit instead of discarding it.
   #
   # Verified failure this prevents: `unless n >= 0 do return({:error, :neg}) end`
   # followed by `{:ok, n}` was emitted with the `return` simply removed. That
   # compiles clean and returns `{:ok, -5}` where the author wrote
   # `{:error, :neg}` — the validation silently stops happening.
   defp restructure_early_exit({:__block__, meta, stmts}) do
-    case Enum.find_index(stmts, &early_exit_guard?/1) do
+    case Enum.find_index(stmts, &early_exit_expression?/1) do
       nil ->
         nil
 
@@ -148,35 +148,121 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
         if post == [] do
           nil
         else
-          {:__block__, meta, pre ++ [swap_arms(guard, block_of(post))]}
+          {:__block__, meta, pre ++ [restructure_expression(guard, post)]}
         end
     end
   end
 
-  defp early_exit_guard?({kind, _meta, [_condition, kw]})
+  defp early_exit_expression?({kind, _meta, [_condition, kw]})
        when kind in [:if, :unless] and is_list(kw) do
-    not has_else_branch?(kw) and do_branch_return_value(kw) != nil
-  end
+    Enum.any?(kw, fn
+      {{:__block__, _, [key]}, body} when key in [:do, :else] ->
+        match?({:ok, _}, unwrap_terminal_return(body))
 
-  defp early_exit_guard?(_), do: false
-
-  defp do_branch_return_value(kw) do
-    Enum.find_value(kw, fn
-      {{:__block__, _, [:do]}, {:return, _, [value]}} -> value
-      _ -> nil
+      _ ->
+        false
     end)
   end
 
-  defp swap_arms({kind, meta, [condition, kw]}, rest) do
-    value = do_branch_return_value(kw)
+  defp early_exit_expression?({:case, _meta, [_value, kw]}) when is_list(kw) do
+    kw
+    |> case_clauses()
+    |> Enum.any?(fn {:->, _, [_patterns, body]} ->
+      match?({:ok, _}, unwrap_terminal_return(body))
+    end)
+  end
 
-    {do_body, else_body} =
-      case kind do
-        :if -> {value, rest}
-        :unless -> {rest, value}
-      end
+  defp early_exit_expression?(_), do: false
 
-    {:if, block_form_meta(meta), [condition, [do_arm(do_body), else_arm(else_body)]]}
+  defp restructure_expression({kind, meta, [condition, kw]}, post)
+       when kind in [:if, :unless] do
+    if has_else_branch?(kw) do
+      new_kw =
+        Enum.map(kw, fn
+          {{:__block__, arm_meta, [key]}, body} when key in [:do, :else] ->
+            new_body =
+              case unwrap_terminal_return(body) do
+                {:ok, unwrapped} -> unwrapped
+                :error -> append_post(body, post)
+              end
+
+            {{:__block__, arm_meta, [key]}, new_body}
+
+          other ->
+            other
+        end)
+
+      {kind, block_form_meta(meta), [condition, new_kw]}
+    else
+      {:ok, value} =
+        kw
+        |> Enum.find_value(fn
+          {{:__block__, _, [:do]}, body} -> {:found, body}
+          _ -> nil
+        end)
+        |> then(fn {:found, body} -> unwrap_terminal_return(body) end)
+
+      {do_body, else_body} =
+        case kind do
+          :if -> {value, block_of(post)}
+          :unless -> {block_of(post), value}
+        end
+
+      {:if, block_form_meta(meta), [condition, [do_arm(do_body), else_arm(else_body)]]}
+    end
+  end
+
+  defp restructure_expression({:case, meta, [value, kw]}, post) do
+    new_kw =
+      Enum.map(kw, fn
+        {{:__block__, key_meta, [:do]}, clauses} ->
+          new_clauses =
+            Enum.map(clauses, fn {:->, arrow_meta, [patterns, body]} ->
+              new_body =
+                case unwrap_terminal_return(body) do
+                  {:ok, unwrapped} -> unwrapped
+                  :error -> append_post(body, post)
+                end
+
+              {:->, arrow_meta, [patterns, new_body]}
+            end)
+
+          {{:__block__, key_meta, [:do]}, new_clauses}
+
+        other ->
+          other
+      end)
+
+    {:case, meta, [value, new_kw]}
+  end
+
+  defp unwrap_terminal_return({:return, _, [value]}), do: {:ok, value}
+
+  defp unwrap_terminal_return({:__block__, meta, stmts}) when is_list(stmts) do
+    case List.pop_at(stmts, -1) do
+      {nil, _} ->
+        :error
+
+      {{:return, _, [value]}, preceding} ->
+        {:ok, {:__block__, meta, preceding ++ [value]}}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp unwrap_terminal_return(_), do: :error
+
+  defp append_post({:__block__, meta, stmts}, post) when is_list(stmts),
+    do: {:__block__, meta, stmts ++ post}
+
+  defp append_post(body, post), do: block_of([body | post])
+
+  defp case_clauses(kw) do
+    Enum.find_value(kw, [], fn
+      {{:__block__, _, [:do]}, clauses} -> clauses
+      _ -> nil
+    end)
   end
 
   defp do_arm(body), do: {{:__block__, [], [:do]}, body}
