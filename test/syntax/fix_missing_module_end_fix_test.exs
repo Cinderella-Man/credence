@@ -45,6 +45,15 @@ defmodule Credence.Syntax.FixMissingModuleEndFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "appends every missing end when more than 100 blocks are unclosed" do
+    input = String.duplicate("if true do\n", 101) <> ":ok\n"
+    expected = input <> String.duplicate("end\n", 101)
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+    assert analyze(emitted) == []
+  end
+
   test "leaves a complete module untouched" do
     source = """
     defmodule Solution do
