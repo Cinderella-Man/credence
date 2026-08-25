@@ -23,7 +23,7 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
     end
 
     # The left operand is re-rendered from the AST rather than reconstructed by
-    # hand, so a call, a literal list and a pipeline all survive intact.
+    # hand, so a call survives intact.
     test "keeps a complex left operand" do
       fixed =
         NoDeprecatedNotIn.fix(
@@ -31,7 +31,13 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
           diag(2)
         )
 
-      assert fixed =~ "Map.get(m, :k) not in l"
+      expected = """
+      defmodule NiFixB do
+        def f(m, l), do: Map.get(m, :k) not in l
+      end
+      """
+
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
     end
 
@@ -42,7 +48,14 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
           diag(2)
         )
 
-      assert fixed =~ "when x not in [1, 2]"
+      expected = """
+      defmodule NiFixC do
+        def f(x) when x not in [1, 2], do: :ok
+        def f(_), do: :no
+      end
+      """
+
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
     end
 
@@ -53,7 +66,15 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
           diag(3)
         )
 
-      assert fixed =~ "if x not in l"
+      expected = """
+      defmodule NiFixD do
+        def f(x, l) do
+          if x not in l, do: :missing, else: :present
+        end
+      end
+      """
+
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
     end
   end
@@ -138,21 +159,34 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
     # which is exactly where an off-by-one splice would show up. Executed on
     # both sides rather than argued.
     test "same answers on membership, absence and an empty list" do
-      before_src = """
-      defmodule NiEquiv do
+      deprecated_src = """
+      defmodule NiEquivDeprecated do
         def check(x, list), do: not x in list
       end
       """
 
-      after_src = NoDeprecatedNotIn.fix(before_src, diag(2))
-
-      assert after_src != before_src
-
-      for {x, list} <- [{1, [1, 2]}, {3, [1, 2]}, {1, []}, {nil, [nil]}, {:a, [:a, :b]}] do
-        assert call_fixed(before_src, NiEquiv, :check, [x, list]) ==
-                 call_fixed(after_src, NiEquiv, :check, [x, list]),
-               "diverged on #{inspect(x)} in #{inspect(list)}"
+      modern_src = """
+      defmodule NiEquivModern do
+        def check(x, list), do: not x in list
       end
+      """
+
+      fixed = NoDeprecatedNotIn.fix(modern_src, diag(2))
+
+      assert fixed != modern_src
+
+      witnesses = [{1, [1, 2]}, {3, [1, 2]}, {1, []}, {nil, [nil]}, {:a, [:a, :b]}]
+
+      checks = """
+      for {x, list} <- #{inspect(witnesses)} do
+        unless NiEquivDeprecated.check(x, list) == NiEquivModern.check(x, list) do
+          raise "diverged on \#{inspect(x)} in \#{inspect(list)}"
+        end
+      end
+      """
+
+      assert {:ok, _diagnostics} =
+               Credence.RuleHelpers.compile_and_capture(deprecated_src <> fixed <> checks)
     end
 
     test "the repaired source compiles without the deprecation" do
@@ -178,7 +212,13 @@ defmodule Credence.Semantic.NoDeprecatedNotInFixTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) =~ "x not in list"
+      expected = """
+      defmodule NiInteg do
+        def missing?(x, list), do: x not in list
+      end
+      """
+
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
   end
 end
