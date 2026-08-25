@@ -95,9 +95,9 @@ defmodule Credence.Semantic.FixCyclicStructReferenceNestedTest do
           defstruct [:name]
         end
 
-        def answer, do: @answer
-
         def build, do: %NestedOrderU{name: "x"}
+
+        def answer, do: @answer
       end
       """
 
@@ -107,6 +107,41 @@ defmodule Credence.Semantic.FixCyclicStructReferenceNestedTest do
 
       assert :binary.match(fixed, "defmodule NestedOrderU") <
                :binary.match(fixed, "%NestedOrderU{")
+    end
+
+    test "does not move a later module attribute before the blocked function" do
+      input = """
+      defmodule NestedAttributeOrder do
+        @x 1
+        def build, do: %NestedAttributeOrder.U{x: @x}
+        defmodule U, do: defstruct([:x])
+        @x 2
+      end
+      """
+
+      fixed = fix(input, "NestedAttributeOrder.U")
+      assert Process.register(self(), :csr_nested_attribute_receiver)
+
+      probe =
+        fixed <>
+          "\nsend(:csr_nested_attribute_receiver, {:nested_attribute_result, NestedAttributeOrder.build()})\n"
+
+      assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(probe)
+      assert_receive {:nested_attribute_result, %{__struct__: NestedAttributeOrder.U, x: 1}}
+
+      expected = """
+      defmodule NestedAttributeOrder do
+        @x 1
+
+        defmodule U, do: defstruct([:x])
+
+        def build, do: %NestedAttributeOrder.U{x: @x}
+
+        @x 2
+      end
+      """
+
+      confirm_fix(fixed, expected)
     end
   end
 

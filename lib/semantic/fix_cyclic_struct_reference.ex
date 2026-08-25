@@ -349,24 +349,41 @@ defmodule Credence.Semantic.FixCyclicStructReference do
   end
 
   defp topo_sort(modules, deps) do
-    do_topo_sort(modules, deps, MapSet.new(), [])
+    by_name = Map.new(modules, &{&1.name, &1})
+
+    case Enum.reduce_while(modules, {:ok, %{}, []}, fn module, {:ok, states, acc} ->
+           case topo_visit(module.name, by_name, deps, states, acc) do
+             :cycle -> {:halt, :cycle}
+             result -> {:cont, result}
+           end
+         end) do
+      {:ok, _states, acc} -> Enum.reverse(acc)
+      :cycle -> modules
+    end
   end
 
-  defp do_topo_sort([], _deps, _done, acc), do: Enum.reverse(acc)
+  defp topo_visit(name, by_name, deps, states, acc) do
+    case states[name] do
+      :done ->
+        {:ok, states, acc}
 
-  defp do_topo_sort(remaining, deps, done, acc) do
-    {ready, waiting} =
-      Enum.split_with(remaining, fn m ->
-        Enum.all?(deps[m.name], &MapSet.member?(done, &1))
-      end)
+      :visiting ->
+        :cycle
 
-    case ready do
-      [] ->
-        Enum.reverse(acc) ++ waiting
+      nil ->
+        states = Map.put(states, name, :visiting)
 
-      _ ->
-        new_done = Enum.reduce(ready, done, &MapSet.put(&2, &1.name))
-        do_topo_sort(waiting, deps, new_done, Enum.reverse(ready) ++ acc)
+        with {:ok, states, acc} <-
+               Enum.reduce_while(deps[name], {:ok, states, acc}, fn dependency, result ->
+                 {:ok, current_states, current_acc} = result
+
+                 case topo_visit(dependency, by_name, deps, current_states, current_acc) do
+                   :cycle -> {:halt, :cycle}
+                   visited -> {:cont, visited}
+                 end
+               end) do
+          {:ok, Map.put(states, name, :done), [Map.fetch!(by_name, name) | acc]}
+        end
     end
   end
 
