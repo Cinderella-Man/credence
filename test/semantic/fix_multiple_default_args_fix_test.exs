@@ -166,6 +166,28 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
     confirm_fix(fix(input, "defp greet/2 defines defaults multiple times."), expected)
   end
 
+  test "handles function names ending in a question mark" do
+    input = """
+    defmodule CredenceFixMultipleDefaultArgsQuestionMarkFixture do
+      def enabled?(:first, fallback \\\\ false), do: fallback
+      def enabled?(:second, fallback \\\\ false), do: fallback
+    end
+    """
+
+    expected = """
+    defmodule CredenceFixMultipleDefaultArgsQuestionMarkFixture do
+      def enabled?(arg0, fallback \\\\ false)
+
+      def enabled?(:first, fallback), do: fallback
+      def enabled?(:second, fallback), do: fallback
+    end
+    """
+
+    fixed = fix(input, default_msg("enabled?"))
+    confirm_fix(fixed, expected)
+    assert compiles?(fixed)
+  end
+
   test "inserts the header in place, preserving imports and later defs" do
     input = """
     defmodule ImportExample do

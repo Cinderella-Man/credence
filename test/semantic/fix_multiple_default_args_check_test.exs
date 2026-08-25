@@ -42,6 +42,19 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsCheckTest do
     assert FixMultipleDefaultArgs.match?(diag)
   end
 
+  test "matches a function name ending in a question mark" do
+    diag = %{
+      severity: :error,
+      message: "def enabled?/2 defines defaults multiple times.",
+      position: {6, 7}
+    }
+
+    assert FixMultipleDefaultArgs.match?(diag)
+
+    assert FixMultipleDefaultArgs.to_issue(diag).message ==
+             "def enabled?/2 defines defaults multiple times"
+  end
+
   test "ignores unrelated diagnostics" do
     diag = %{severity: :error, message: "undefined function foo/1", position: {1, 1}}
     refute FixMultipleDefaultArgs.match?(diag)

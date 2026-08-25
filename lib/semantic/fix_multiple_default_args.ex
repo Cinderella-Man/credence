@@ -66,7 +66,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgs do
 
   alias Credence.Issue
 
-  @default_msg_pattern ~r/(defp?) (\w+)\/(\d+) defines defaults multiple times/
+  @default_msg_pattern ~r/(defp?) (\w+[?!]?)\/(\d+) defines defaults multiple times/
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
