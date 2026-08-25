@@ -136,6 +136,10 @@ next_pending_fix() {
          | [.path, .reviewed_at, (.round | tostring), (.severities | join(","))] | @tsv' "$FIXES"
 }
 
+pending_fix_count() {
+  jq '[.entries[] | select(.status == "pending")] | length' "$FIXES"
+}
+
 # ledger_safe_reset <sha> — reset --hard without losing the campaign ledgers,
 # which are dirty (or untracked) in the worktree for the whole campaign.
 ledger_safe_reset() {
@@ -444,6 +448,13 @@ main() {
   [[ "$start_branch" == "$MANIFEST_HEAD_BRANCH" ]] \
     || die "checked out '$start_branch' but the campaign branch is '$MANIFEST_HEAD_BRANCH' — fix commits and the manifest refresh must land there"
 
+  # Snapshot the queue size for this invocation.  The manifest refresh can add
+  # follow-up work only after this loop finishes, so this gives the operator a
+  # stable, honest x/y for the tranche currently being drained.
+  local run_total
+  run_total="$(pending_fix_count)"
+  log "fix tranche: $run_total pending entr$( ((run_total == 1)) && echo y || echo ies)"
+
   local iter=0 retry=0 prev_key="" feedback=""
   while :; do
     rm -f "$REPORT"
@@ -465,8 +476,9 @@ main() {
     n_findings="$(awk -F',' '{print NF}' <<<"$sevs_csv")"
 
     FIXLOG="$LOGDIR/$(tr '/' '__' <<<"$path").round${round}.attempt$((retry + 1)).log"; : > "$FIXLOG"
-    flog START "fixing $path (round $round, $n_findings findings)${feedback:+ [retry #$retry]}"
-    log "▶ $(date '+%H:%M') fixing $path (round $round, $n_findings findings)$([[ $retry -gt 0 ]] && echo " [retry #$retry]")"
+    local position=$((iter + 1))
+    flog START "entry $position/$run_total: fixing $path (round $round, $n_findings findings)${feedback:+ [retry #$retry]}"
+    log "▶ $(date '+%H:%M') [$position/$run_total] fixing $path (round $round, $n_findings findings)$([[ $retry -gt 0 ]] && echo " [retry #$retry]")"
 
     # The manifest must still stand behind this exact review: the row exists,
     # still says FINDINGS, and was not re-reviewed since. A newer review (even
@@ -684,7 +696,7 @@ main() {
     [[ -n "$commits_csv" ]] && touch "$SCRIPT_DIR/.needs_refresh"
     summary="$(jq -r 'group_by(.outcome) | map("\(length) \(.[0].outcome)") | join(", ")' <<<"$oj")"
     flog DONE "$summary — gate: $gate_desc"
-    log "✓ $path — $summary$([[ -n "$commits_csv" ]] && echo " (committed: $commits_csv)")"
+    log "✓ [$position/$run_total] $path — $summary$([[ -n "$commits_csv" ]] && echo " (committed: $commits_csv)")"
     [[ "$needs_human" == true ]] && log "  ⚑ deferred finding(s) need a human — see findings.md"
 
     retry=0; feedback=""
@@ -692,7 +704,7 @@ main() {
     rm -f "$REPORT"
 
     if (( WAIT_MIN > 0 )); then
-      log "waiting ${WAIT_MIN} min before the next entry…"
+      log "waiting ${WAIT_MIN} min before the next entry ($position/$run_total processed)…"
       sleep "$((WAIT_MIN * 60))"
     fi
   done

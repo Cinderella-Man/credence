@@ -35,6 +35,8 @@ stale_reviews()   { jq -r '[.files[] | select(.stale == true and .status == "don
 pending_fixes()   { [[ -f "$FIXES" ]] && jq -r '[.entries[] | select(.status == "pending")] | length' "$FIXES" || echo 0; }
 
 reviews_before="$(jq '[.files[] | select(.status == "done")] | length' "$MANIFEST")"
+reviews_total="$(jq '.files | length' "$MANIFEST")"
+log "review phase: $reviews_before/$reviews_total done, $(pending_reviews) pending"
 QUIET_STATUS=1 "$SCRIPT_DIR/review_loop.sh" "$CAP" "$WAIT_MIN" 8>&- \
   || die "review_loop failed — fix the cause, then rerun campaign.sh"
 "$SCRIPT_DIR/aggregate_findings.sh" 8>&- \
@@ -42,6 +44,7 @@ QUIET_STATUS=1 "$SCRIPT_DIR/review_loop.sh" "$CAP" "$WAIT_MIN" 8>&- \
 
 # The default severity floor is blocker. Explicitly preserve an operator's
 # override for end-of-campaign concern/nit sweeps.
+log "fix phase: $(pending_fixes) pending entries"
 FIX_MIN_SEVERITY="${FIX_MIN_SEVERITY:-blocker}" "$SCRIPT_DIR/fix_loop.sh" 8>&- \
   || die "fix_loop failed — fix the cause, then rerun campaign.sh"
 
