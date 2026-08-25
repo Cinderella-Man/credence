@@ -1863,3 +1863,21 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 ## lib/syntax.ex — 2026-08-25 (modified, lib_core)
 - blocker: lib/syntax.ex:116 — pre-existing: a syntax rule whose `fix/1` raises, exits, or returns a non-string crashes the entire repair pipeline instead of being isolated and recorded as `{rule, :crashed}`; one defective rule therefore prevents every later syntax rule from repairing the file.
 - nit: lib/syntax.ex:220 — `default_rules()` is evaluated eagerly as the third argument to `Keyword.get/3`, so even callers supplying an exact `syntax_rules:` list still scan and sort every application module; use a lazy branch such as `Keyword.fetch/2` to avoid the unwanted discovery work.
+## test/alpha_rename_test.exs — 2026-08-25 (added, test_other)
+- nit: test/alpha_rename_test.exs:83 — the substring assertion passes even if renaming corrupts, duplicates, or reorders the surrounding module; assert the exact whole output for the existing `@re` fixture.
+- nit: test/alpha_rename_test.exs:89 — the two substring assertions pass for malformed output as long as `defp get_items?(v1)` and `[v1]` occur somewhere; assert the exact whole renamed source.
+## test/behaviour_equivalence_self_test.exs — 2026-08-25 (modified, test_other)
+- blocker: test/behaviour_equivalence_self_test.exs:187 — The over-match control uses `{1, 2, 3, 4}`, which fails the normalizer’s module/function atom checks and never tests the dangerous boundary. Ordinary returned data such as `[{Foo, :bar, 1, :left}]` is treated as a stacktrace; if a rewrite changes `:left` to `:right`, both results collapse to `:__stacktrace__` and the equivalence checker falsely approves the behavior change.
+## test/check_meta_test.exs — 2026-08-25 (modified, test_other)
+- concern: test/check_meta_test.exs:29 — The per-test timeout is raised from 60 seconds to 10 minutes based only on another module’s 106-second whole-module runtime; that does not show any individual `CheckMetaTest` test needs longer than 60 seconds, and can conceal a severe slowdown or hang for ten minutes.
+- experiment: To settle the timeout concern, run `mix test test/check_meta_test.exs --trace` and verify the reported duration of each individual test under representative full-suite load.
+## test/comment_preservation_test.exs — 2026-08-25 (modified, test_other)
+- blocker: test/comment_preservation_test.exs:128 — pre-existing: `safe_fix/2` converts every rule-fix exception into unchanged source. If a fix crashes on an original fixture, `fires?/2` skips it; if it crashes only after comment injection, the retained probe token is treated as success. The meta-gate therefore silently masks fixes that crash on commented code.
+## test/compile_bounds_test.exs — 2026-08-25 (added, test_other)
+- concern: test/compile_bounds_test.exs:85 — The deadline control depends on a trivial module taking longer than 1 ms to compile. On a fast or warmed-up runtime the child can return before the receive timeout, making this timing-dependent test fail even though the deadline is correctly consulted.
+## test/concurrent_analysis_test.exs — 2026-08-25 (added, test_other)
+- blocker: test/concurrent_analysis_test.exs:33 — Both fixtures have exactly the same single-module set, so this regression test misses partial overlap. If one source defines `Shared` plus `AOnly` and another defines `Shared` plus `BOnly`, the current composite lock keys differ; both compilations can race on `Shared` and silently lose diagnostics.
+- concern: test/concurrent_analysis_test.exs:97 — The “different modules stay concurrent” control checks only their answers. A global lock that serializes every analysis would still pass, so the test cannot enforce the concurrency property its name and comment claim.
+## test/corpus/budget_test.exs — 2026-08-25 (added, test_other)
+- concern: test/corpus/budget_test.exs:246 — The test claims to exercise every violation class, but its input produces `:out_of_sync`, `:over_cap`, and `:graduated` only; it never produces `:over_grandfather`, so that explanation branch could crash or give the wrong remedy while this test stays green.
+- concern: test/corpus/budget_test.exs:91 — The header test uses substring assertions instead of exact whole-string equality, so duplicated, malformed, or contradictory header text can still pass.
