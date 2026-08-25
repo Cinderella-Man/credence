@@ -84,6 +84,47 @@ defmodule Credence.Semantic.FixFnArityInKeywordValueFixTest do
     confirm_fix(fix(input, 3), expected)
   end
 
+  test "replaces a later arity option instead of leaving a winning duplicate" do
+    input = """
+    defmodule DuplicateFnArityExample do
+      def push(value) do
+        raise FunctionClauseError, function: :push/4, arity: 3
+      end
+    end
+    """
+
+    expected = """
+    defmodule DuplicateFnArityExample do
+      def push(value) do
+        raise FunctionClauseError, function: :push, arity: 4
+      end
+    end
+    """
+
+    confirm_fix(fix(input, 3), expected)
+  end
+
+  test "does not rewrite a matching raise inside quote on the diagnostic line" do
+    input = """
+    defmodule QuotedFnArityExample do
+      def push(value) do
+        raise FunctionClauseError, function: :push/4; quote do: (raise FunctionClauseError, function: :other/2)
+      end
+    end
+    """
+
+    expected = """
+    defmodule QuotedFnArityExample do
+      def push(value) do
+        raise FunctionClauseError, function: :push, arity: 4
+        quote do: raise(FunctionClauseError, function: :other / 2)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, 3), expected)
+  end
+
   test "no-op: exception struct without function/arity fields (ArgumentError)" do
     input = """
     defmodule OtherException do

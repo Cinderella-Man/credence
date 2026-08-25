@@ -100,18 +100,34 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
   def fix(source, diagnostic) do
     with line_no when is_integer(line_no) <- line(diagnostic),
          {:ok, ast} <- Sourceror.parse_string(source) do
-      {new_ast, changed} =
-        Macro.prewalk(ast, false, fn
-          {:raise, raise_meta, [{:__aliases__, _, [ex]} = exception, kw_list]}, acc
-          when ex in @fixable_exceptions and is_list(kw_list) ->
-            case fix_keyword_arity(kw_list, line_no) do
-              {:ok, new_kw} -> {{:raise, raise_meta, [exception, new_kw]}, true}
-              :unchanged -> {{:raise, raise_meta, [exception, kw_list]}, acc}
-            end
+      {new_ast, {changed, _quote_depth}} =
+        Macro.traverse(
+          ast,
+          {false, 0},
+          fn
+            {:quote, _, _} = node, {changed, quote_depth} ->
+              {node, {changed, quote_depth + 1}}
 
-          node, acc ->
-            {node, acc}
-        end)
+            {:raise, raise_meta, [{:__aliases__, _, [ex]} = exception, kw_list]}, acc
+            when ex in @fixable_exceptions and is_list(kw_list) and elem(acc, 1) == 0 ->
+              {_changed, quote_depth} = acc
+
+              case fix_keyword_arity(kw_list, line_no) do
+                {:ok, new_kw} -> {{:raise, raise_meta, [exception, new_kw]}, {true, quote_depth}}
+                :unchanged -> {{:raise, raise_meta, [exception, kw_list]}, acc}
+              end
+
+            node, acc ->
+              {node, acc}
+          end,
+          fn
+            {:quote, _, _} = node, {changed, quote_depth} ->
+              {node, {changed, quote_depth - 1}}
+
+            node, acc ->
+              {node, acc}
+          end
+        )
 
       if changed, do: Sourceror.to_string(new_ast), else: source
     else
@@ -133,7 +149,12 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
                {:ok, arity} <- literal_arity(int_node) do
             function_pair = {key, {:__block__, [token: inspect(fun)], [fun]}}
 
-            arity_key = {:__block__, Keyword.put(key_meta, :format, :keyword), [:arity]}
+            arity_meta =
+              key_meta
+              |> Keyword.put(:format, :keyword)
+              |> Keyword.put(:credence_generated, true)
+
+            arity_key = {:__block__, arity_meta, [:arity]}
             arity_pair = {arity_key, {:__block__, [token: Integer.to_string(arity)], [arity]}}
 
             {[function_pair, arity_pair], true}
@@ -145,7 +166,32 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
           {[pair], changed}
       end)
 
-    if changed, do: {:ok, new_pairs}, else: :unchanged
+    if changed do
+      {:ok, remove_duplicate_arities(new_pairs)}
+    else
+      :unchanged
+    end
+  end
+
+  # The generated arity immediately follows the repaired function pair. Any
+  # later arity would win when the exception struct is built, so discard it.
+  defp remove_duplicate_arities(pairs) do
+    Enum.flat_map(pairs, fn
+      {{:__block__, meta, [:arity]}, value} = pair ->
+        cond do
+          Keyword.get(meta, :credence_generated) == true ->
+            [{{:__block__, Keyword.delete(meta, :credence_generated), [:arity]}, value}]
+
+          Keyword.get(meta, :format) == :keyword ->
+            []
+
+          true ->
+            [pair]
+        end
+
+      pair ->
+        [pair]
+    end)
   end
 
   # Tagged tuples, not a nil sentinel: `nil` is itself an atom, so a bare-nil
