@@ -5,6 +5,8 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZoneCheckTest do
 
   @real_message "unknown key .zone in expression:\n\n    dt.zone\n\nthe given type does not have the given key:\n\n    dynamic(%DateTime{\n      year: term(),\n      month: term(),\n      day: term(),\n      hour: term(),\n      minute: term(),\n      second: term(),\n      time_zone: term(),\n      zone_abbr: term(),\n      utc_offset: term(),\n      std_offset: term(),\n      microsecond: term(),\n      calendar: term()\n    })\n\nwhere \"dt\" was given the type:\n\n    # type: dynamic(%DateTime{})\n    # from: credence_check.ex:139:33\n    %DateTime{} = dt\n"
 
+  @non_datetime_message "unknown key .zone in expression:\n\n    user.zone\n\nthe given type does not have the given key:\n\n    dynamic(%ZoneCheckUser{name: term()})\n\nwhere \"user\" was given the type:\n\n    # type: dynamic(%ZoneCheckUser{})\n    # from: credence_check.ex:6:34\n    %ZoneCheckUser{} = user\n"
+
   test "matches the diagnostic" do
     diag = %{
       severity: :warning,
@@ -18,6 +20,17 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZoneCheckTest do
 
   test "ignores unrelated diagnostics" do
     diag = %{severity: :warning, message: "unrelated", position: {1, 1}}
+    refute NoHallucinatedDatetimeZone.match?(diag)
+  end
+
+  test "ignores .zone diagnostics for non-DateTime structs" do
+    diag = %{
+      severity: :warning,
+      message: @non_datetime_message,
+      position: {6, 52},
+      file: "credence_check.ex"
+    }
+
     refute NoHallucinatedDatetimeZone.match?(diag)
   end
 

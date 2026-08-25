@@ -32,10 +32,11 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZone do
   alias Credence.SourceMask
 
   @match_msg "unknown key .zone in expression:"
+  @datetime_type "dynamic(%DateTime{"
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_msg)
+    String.contains?(msg, @match_msg) and String.contains?(msg, @datetime_type)
   end
 
   def match?(_), do: false
