@@ -1,11 +1,12 @@
 defmodule Credence.Syntax.FixPythonFloorDiv do
   @moduledoc """
-  Replaces Python's `//` floor-division operator with Elixir's `div/2`.
+  Replaces Python's `//` floor-division operator with Elixir's
+  `Integer.floor_div/2`.
 
   LLMs translating from Python carry over the `//` operator for integer
   division. In Elixir, `//` is not a valid arithmetic operator (it only
   exists as the range step operator, `first..last//step`), so `a // b`
-  does not parse. The integer-division function is `div/2`.
+  does not parse. The matching floor-division function is `Integer.floor_div/2`.
 
   This is a Syntax rule because `a // b` won't parse in Elixir.
 
@@ -47,13 +48,6 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
 
   Interpolation is the exception: `\#{a // b}` is real code and is still fixed.
 
-  ## Note on semantics
-
-  `div/2` truncates toward zero, matching the way these LLM translations are
-  used (the same convention as the sibling `%` → `rem/2` rule). It is *not*
-  bit-identical to Python's floor `//` for negative operands; use
-  `Integer.floor_div/2` if exact Python floor semantics are required.
-
   ## Bad
 
       def half(n), do: n // 2
@@ -61,7 +55,7 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
 
   ## Good
 
-      def half(n), do: div(n, 2)
+      def half(n), do: Integer.floor_div(n, 2)
       acc |> div(k) |> do_step()
   """
 
@@ -122,17 +116,21 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
         |> Enum.map(fn [{s, l}, left, right] -> {s, l, :infix, [left, right]} end)
         |> Enum.reject(fn m -> Enum.any?(kernel, &overlaps?(&1, m)) end)
 
-      Enum.sort_by(kernel ++ infix, fn {s, _l, _kind, _groups} -> s end)
+      matches = Enum.sort_by(kernel ++ infix, fn {s, _l, _kind, _groups} -> s end)
+
+      if adjacent?(matches), do: [], else: matches
     end
   end
 
-  # The two patterns cannot both own the same bytes. They do not overlap on any
-  # shape either rule documents (`Kernel.//` has a `.` where the infix pattern
-  # needs `\s*`), but `a // Kernel.//(b)` puts them on top of each other, and
-  # applying both there produced `div(a, div)(b)`. The qualified call wins and
-  # the infix match is dropped, which leaves the parse error in place rather
-  # than emitting something that parses and means something else.
   defp overlaps?({as, al, _, _}, {bs, bl, _, _}), do: as < bs + bl and bs < as + al
+
+  defp adjacent?([left, right | rest]) do
+    {ls, ll, _, _} = left
+    {rs, _rl, _, _} = right
+    ls + ll == rs or adjacent?([right | rest])
+  end
+
+  defp adjacent?(_matches), do: false
 
   # Matches are found in the shadow and spliced into the real line. Both are the
   # same byte length and every code byte is identical, so the match offsets are
@@ -149,21 +147,18 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
     IO.iodata_to_binary([chunks, binary_part(line, pos, byte_size(line) - pos)])
   end
 
-  # `Kernel.//` → `div`, for both pipe and standalone contexts:
-  #   `|> Kernel.//(k)` → `|> div(k)`
-  #   `Kernel.//(a, b)` → `div(a, b)`
+  # `left // right` → `Integer.floor_div(left, right)`.
   defp replacement(_line, :kernel, []), do: "div"
 
-  # `left // right` → `div(left, right)`.
   defp replacement(line, :infix, [{ls, ll}, {rs, rl}]),
-    do: ["div(", binary_part(line, ls, ll), ", ", binary_part(line, rs, rl), ")"]
+    do: ["Integer.floor_div(", binary_part(line, ls, ll), ", ", binary_part(line, rs, rl), ")"]
 
   defp build_issue(line_no) do
     %Issue{
       rule: :python_floor_div,
       message:
         "Python's `//` operator does not exist in Elixir. " <>
-          "Use `div(a, b)` for integer division.",
+          "Use `Integer.floor_div(a, b)` for floor division.",
       meta: %{line: line_no}
     }
   end

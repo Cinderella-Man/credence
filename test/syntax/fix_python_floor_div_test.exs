@@ -101,33 +101,36 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
   describe "fix/1 rewrites word // word to div" do
     test "n // 2" do
-      confirm_fix(fix("n // 2"), "div(n, 2)")
+      confirm_fix(fix("n // 2"), "Integer.floor_div(n, 2)")
     end
 
     test "no spaces n//2" do
-      confirm_fix(fix("n//2"), "div(n, 2)")
+      confirm_fix(fix("n//2"), "Integer.floor_div(n, 2)")
     end
 
     test "integer // integer" do
-      confirm_fix(fix("100 // 7"), "div(100, 7)")
+      confirm_fix(fix("100 // 7"), "Integer.floor_div(100, 7)")
     end
 
     test "in assignment" do
-      confirm_fix(fix("x = a // b"), "x = div(a, b)")
+      confirm_fix(fix("x = a // b"), "x = Integer.floor_div(a, b)")
     end
   end
 
   describe "fix/1 preserves surrounding code (local swap)" do
     test "one-liner def head" do
-      confirm_fix(fix("def half(n), do: n // 2"), "def half(n), do: div(n, 2)")
+      confirm_fix(
+        fix("def half(n), do: n // 2"),
+        "def half(n), do: Integer.floor_div(n, 2)"
+      )
     end
 
     test "comparison / guard context" do
-      confirm_fix(fix("if n // 2 == 0 do"), "if div(n, 2) == 0 do")
+      confirm_fix(fix("if n // 2 == 0 do"), "if Integer.floor_div(n, 2) == 0 do")
     end
 
     test "preserves indentation" do
-      confirm_fix(fix("      n // 2"), "      div(n, 2)")
+      confirm_fix(fix("      n // 2"), "      Integer.floor_div(n, 2)")
     end
 
     test "only touches lines with floor division" do
@@ -142,7 +145,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       expected = """
       defmodule Example do
         def foo(x), do: x + 1
-        def bar(n), do: div(n, 2)
+        def bar(n), do: Integer.floor_div(n, 2)
         def baz(y), do: y - 1
       end
       """
@@ -152,6 +155,12 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
   end
 
   describe "fix/1 rewrites Kernel.//" do
+    test "does not splice adjacent qualified and infix matches together" do
+      code = "x = Kernel.//n // 2"
+
+      confirm_fix(fix(code), code)
+    end
+
     test "standalone call" do
       confirm_fix(fix("result = Kernel.//(a, b)"), "result = div(a, b)")
     end
@@ -288,6 +297,29 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
   end
 
+  describe "fix output preserves Python floor semantics" do
+    test "negative operands floor rather than truncate toward zero" do
+      emitted =
+        fix("""
+        defmodule PythonFloorDivNegativeEmitted do
+          def run(a, b), do: a // b
+        end
+        """)
+
+      control = """
+      defmodule PythonFloorDivNegativeControl do
+        def run(a, b), do: Integer.floor_div(a, b)
+      end
+
+      unless PythonFloorDivNegativeEmitted.run(-3, 2) ==
+               PythonFloorDivNegativeControl.run(-3, 2),
+        do: raise("floor-division repair changed the negative result")
+      """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> control)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # LITERALS — a `//` inside a string is prose, not an operator
   #
@@ -308,12 +340,15 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     test "leaves the string alone while still fixing real code on the same line" do
       confirm_fix(
         fix(~S'IO.puts("path//to//file"); x = a // b'),
-        ~S'IO.puts("path//to//file"); x = div(a, b)'
+        ~S'IO.puts("path//to//file"); x = Integer.floor_div(a, b)'
       )
     end
 
     test "fixes inside interpolation — that IS code" do
-      confirm_fix(fix(~S'IO.puts("#{a // b}")'), ~S'IO.puts("#{div(a, b)}")')
+      confirm_fix(
+        fix(~S'IO.puts("#{a // b}")'),
+        ~S'IO.puts("#{Integer.floor_div(a, b)}")'
+      )
     end
 
     test "leaves an uppercase sigil alone — it does not interpolate" do
@@ -339,13 +374,16 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
 
     test "leaves a trailing comment alone while fixing the code before it" do
-      confirm_fix(fix("x = a // b  # was a // b"), "x = div(a, b)  # was a // b")
+      confirm_fix(
+        fix("x = a // b  # was a // b"),
+        "x = Integer.floor_div(a, b)  # was a // b"
+      )
     end
 
     test "a range step inside a string no longer declines the whole line" do
       confirm_fix(
         fix(~S'IO.puts("slice 0..-2//1"); x = a // b'),
-        ~S'IO.puts("slice 0..-2//1"); x = div(a, b)'
+        ~S'IO.puts("slice 0..-2//1"); x = Integer.floor_div(a, b)'
       )
     end
 
@@ -377,7 +415,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       defmodule FloorDivInteg do
         def render(n) do
           IO.puts("ratio 7 // 2 here")
-          div(n, 2)
+          Integer.floor_div(n, 2)
         end
       end
       """
