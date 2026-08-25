@@ -1,8 +1,9 @@
 defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessorFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor
 
   @minute_message "NaiveDateTime.minute/1 is undefined or private"
@@ -17,6 +18,8 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessorFixTest do
       position: position
     })
   end
+
+  defp compiles?(source), do: match?({:ok, _diagnostics}, RuleHelpers.compile_and_capture(source))
 
   test "rewrites NaiveDateTime.minute(dt) into dt.minute, keeping the binding" do
     input = """
@@ -265,6 +268,10 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessorFixTest do
     """
 
     assert compiles?(fix(input, @minute_message, {3, 28}))
+  end
+
+  test "compile checks contain top-level exits" do
+    refute compiles?("exit(:fixture_exit)")
   end
 
   test "fixed output is well-formed (parses)" do
