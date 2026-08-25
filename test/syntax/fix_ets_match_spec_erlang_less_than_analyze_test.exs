@@ -6,6 +6,22 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThanAnalyzeTest do
 
   defp analyze(code), do: FixEtsMatchSpecErlangLessThan.analyze(code)
 
+  test "syntax phase discovers the rule" do
+    code = ~S"""
+    guards = [{:=<, :"$1", cutoff}]
+    """
+
+    assert [
+             %Issue{
+               rule: :fix_ets_match_spec_erlang_less_than,
+               message:
+                 "Bare atom `:=<` is not valid Elixir. " <>
+                   "Use `:\"=<\"` for less-than-or-equal in ETS match specs.",
+               meta: %{line: 1}
+             }
+           ] == Credence.Syntax.analyze(code)
+  end
+
   test "flags a bare :=< in a match spec guard" do
     code = ~S"""
     guards = [{:=<, :"$1", cutoff}]
