@@ -64,11 +64,11 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
 
   alias Credence.Issue
 
-  @match_msg "undefined function return/"
+  @match_msg ~r/undefined function return\/1(?=\D|$)/
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_msg)
+    Regex.match?(@match_msg, msg)
   end
 
   def match?(_), do: false

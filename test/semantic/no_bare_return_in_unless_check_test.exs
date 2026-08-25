@@ -15,6 +15,13 @@ defmodule Credence.Semantic.NoBareReturnInUnlessCheckTest do
     refute NoBareReturnInUnless.match?(diag)
   end
 
+  test "ignores undefined return calls with unsupported arities" do
+    for arity <- [0, 2] do
+      diag = %{severity: :error, message: "undefined function return/#{arity}", position: {1, 1}}
+      refute NoBareReturnInUnless.match?(diag)
+    end
+  end
+
   test "ignores generic compile error wrapper" do
     diag = %{
       severity: :error,
