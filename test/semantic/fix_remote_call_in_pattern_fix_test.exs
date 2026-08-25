@@ -126,6 +126,148 @@ defmodule Credence.Semantic.FixRemoteCallInPatternFixTest do
     confirm_fix(fix(input, @real_message, 4), expected)
   end
 
+  test "fixes function-head, anonymous-function, and with patterns" do
+    function_input = ~S"""
+    defmodule RemotePatternFunctionHeadRegression do
+      def same?(state.ref, state), do: true
+      def same?(_, _), do: false
+    end
+    """
+
+    function_expected = ~S"""
+    defmodule RemotePatternFunctionHeadRegression do
+      def same?(ref, state) when ref == state.ref, do: true
+      def same?(_, _), do: false
+    end
+    """
+
+    anonymous_input = ~S"""
+    defmodule RemotePatternAnonymousRegression do
+      def matcher(state) do
+        fn
+          {state.ref, value} -> value
+          _ -> :no_match
+        end
+      end
+    end
+    """
+
+    anonymous_expected = ~S"""
+    defmodule RemotePatternAnonymousRegression do
+      def matcher(state) do
+        ref = state.ref
+
+        fn
+          {^ref, value} -> value
+          _ -> :no_match
+        end
+      end
+    end
+    """
+
+    with_input = ~S"""
+    defmodule RemotePatternWithRegression do
+      def same?(state, value) do
+        with state.ref <- value, do: true
+      end
+    end
+    """
+
+    with_expected = ~S"""
+    defmodule RemotePatternWithRegression do
+      def same?(state, value) do
+        ref = state.ref
+        with ^ref <- value, do: true
+      end
+    end
+    """
+
+    function_actual = fix(function_input, @real_message, 2)
+    anonymous_actual = fix(anonymous_input, @real_message, 4)
+    with_actual = fix(with_input, @real_message, 3)
+
+    confirm_fix(function_actual, function_expected)
+    confirm_fix(anonymous_actual, anonymous_expected)
+    confirm_fix(with_actual, with_expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(function_actual) ==
+             Credence.RuleHelpers.compile_and_capture(function_expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(anonymous_actual) ==
+             Credence.RuleHelpers.compile_and_capture(anonymous_expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(with_actual) ==
+             Credence.RuleHelpers.compile_and_capture(with_expected)
+  end
+
+  test "assignment updates later bare and field receiver reads consistently" do
+    input = ~S"""
+    defmodule RemotePatternAssignmentReadRegression do
+      def update(state, value) do
+        state.field = value
+        {state, state.field}
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule RemotePatternAssignmentReadRegression do
+      def update(state, value) do
+        new_field = value
+        {%{state | field: new_field}, new_field}
+      end
+    end
+    """
+
+    actual =
+      fix(input, "cannot invoke remote function state.field/0 inside a match", 3)
+
+    confirm_fix(actual, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(actual) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "does not rewrite matching assignment syntax inside quote" do
+    input = ~S"""
+    defmodule RemotePatternQuoteRegression do
+      def matcher(state) do
+        quoted =
+          quote do
+            state.ref = :quoted
+            state
+          end
+
+        receive do
+          {state.ref, value} -> {quoted, value}
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule RemotePatternQuoteRegression do
+      def matcher(state) do
+        quoted =
+          quote do
+            state.ref = :quoted
+            state
+          end
+
+        (
+          ref = state.ref
+
+          receive do
+            {^ref, value} -> {quoted, value}
+          end
+        )
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @real_message, 10), expected)
+  end
+
   test "leaves guards untouched (dot access is valid in a guard, a pin is not)" do
     input = ~S"""
     defmodule Ex do

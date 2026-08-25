@@ -89,9 +89,10 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
       pin_var = fresh_var_name(ast, field)
       new_var = fresh_var_name(ast, :"new_#{field}")
 
-      # Walk the AST, find pattern contexts and fix them
+      # Walk executable AST only: quoted AST is data and cannot be the source
+      # of a compiler diagnostic from this compilation.
       {new_ast, changed} =
-        Macro.prewalk(ast, false, fn
+        prewalk_unquoted(ast, false, fn
           # Handle var.field = expr assignment inside a block
           {:__block__, block_meta, exprs} = node, acc when is_list(exprs) ->
             with true <- var_receiver?(receiver),
@@ -127,6 +128,35 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
                 {node, acc}
             end
 
+          {:fn, meta, clauses} = node, acc when is_list(clauses) ->
+            case try_fix_arrow_clauses(
+                   clauses,
+                   remote_call_stripped,
+                   pin_var,
+                   diag_line
+                 ) do
+              {:ok, new_clauses, binding} ->
+                {{:__block__, [], [binding, {:fn, meta, new_clauses}]}, true}
+
+              :error ->
+                {node, acc}
+            end
+
+          {:with, meta, args} = node, acc when is_list(args) ->
+            case try_fix_with(args, remote_call_stripped, pin_var, diag_line) do
+              {:ok, new_args, binding} ->
+                {{:__block__, [], [binding, {:with, meta, new_args}]}, true}
+
+              :error ->
+                {node, acc}
+            end
+
+          {kind, meta, [head, body]} = node, acc when kind in [:def, :defp] ->
+            case try_fix_function_head(head, remote_call_stripped, pin_var, diag_line) do
+              {:ok, new_head} -> {{kind, meta, [new_head, body]}, true}
+              :error -> {node, acc}
+            end
+
           node, acc ->
             {node, acc}
         end)
@@ -158,7 +188,14 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
               {:->, arrow_meta, [patterns, body]}, eacc ->
                 {new_patterns, pat_changed} =
                   Enum.map_reduce(patterns, false, fn pattern, pacc ->
-                    {new_p, c} = replace_remote_in_pattern(pattern, remote_call_stripped, pin_ast)
+                    {new_p, c} =
+                      replace_remote_in_pattern(
+                        pattern,
+                        remote_call_stripped,
+                        pin_ast,
+                        diag_line
+                      )
+
                     {new_p, pacc or c}
                   end)
 
@@ -181,12 +218,103 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
     if changed, do: {:ok, new_kw, binding}, else: :error
   end
 
+  defp try_fix_arrow_clauses(clauses, remote_call_stripped, var_name, diag_line) do
+    pin_ast = {:^, [line: diag_line], [{var_name, [line: diag_line], nil}]}
+    binding = build_binding(remote_call_stripped, var_name, diag_line)
+
+    {new_clauses, changed} =
+      Enum.map_reduce(clauses, false, fn
+        {:->, meta, [patterns, body]} = clause, acc ->
+          {new_patterns, pattern_changed} =
+            Enum.map_reduce(patterns, false, fn pattern, pattern_acc ->
+              {new_pattern, changed} =
+                replace_remote_in_pattern(
+                  pattern,
+                  remote_call_stripped,
+                  pin_ast,
+                  diag_line
+                )
+
+              {new_pattern, pattern_acc or changed}
+            end)
+
+          if pattern_changed do
+            {{:->, meta, [new_patterns, body]}, true}
+          else
+            {clause, acc}
+          end
+
+        clause, acc ->
+          {clause, acc}
+      end)
+
+    if changed, do: {:ok, new_clauses, binding}, else: :error
+  end
+
+  defp try_fix_with(args, remote_call_stripped, var_name, diag_line) do
+    pin_ast = {:^, [line: diag_line], [{var_name, [line: diag_line], nil}]}
+    binding = build_binding(remote_call_stripped, var_name, diag_line)
+
+    {new_args, changed} =
+      Enum.map_reduce(args, false, fn
+        {:<-, meta, [pattern, value]} = clause, acc ->
+          {new_pattern, pattern_changed} =
+            replace_remote_in_pattern(pattern, remote_call_stripped, pin_ast, diag_line)
+
+          if pattern_changed do
+            {{:<-, meta, [new_pattern, value]}, true}
+          else
+            {clause, acc}
+          end
+
+        arg, acc ->
+          {arg, acc}
+      end)
+
+    if changed, do: {:ok, new_args, binding}, else: :error
+  end
+
+  defp try_fix_function_head(head, remote_call_stripped, var_name, diag_line) do
+    var = {var_name, [line: diag_line], nil}
+
+    {new_head, changed} =
+      replace_remote_in_pattern(head, remote_call_stripped, var, diag_line)
+
+    if changed do
+      {{:., [], [receiver_ast, field]}, _, _} = remote_call_stripped
+      rhs = {{:., [], [receiver_ast, field]}, [no_parens: true], []}
+      equality = {:==, [line: diag_line], [var, rhs]}
+
+      guarded_head =
+        case new_head do
+          {:when, meta, args} ->
+            {patterns, [guard]} = Enum.split(args, -1)
+            {:when, meta, patterns ++ [{:and, [line: diag_line], [guard, equality]}]}
+
+          _ ->
+            {:when, [line: diag_line], [new_head, equality]}
+        end
+
+      {:ok, guarded_head}
+    else
+      :error
+    end
+  end
+
+  defp build_binding(remote_call_stripped, var_name, diag_line) do
+    {{:., [], [receiver_ast, field]}, _, _} = remote_call_stripped
+    binding_rhs = {{:., [], [receiver_ast, field]}, [no_parens: true], []}
+
+    {:=, [line: diag_line], [{var_name, [line: diag_line], nil}, binding_rhs]}
+  end
+
   # Fix var.field = expr assignment: rewrite to new_<field> = expr and
   # replace bare var references in subsequent expressions with %{var | field: new_<field}.
   defp try_fix_block_assignment(exprs, remote_call_stripped, receiver, new_var_name, diag_line) do
     {{:., [], [_, field]}, _, _} = remote_call_stripped
 
-    with {:ok, index, rhs} <- find_remote_assignment(exprs, remote_call_stripped),
+    with {:ok, index, rhs} <-
+           find_remote_assignment(exprs, remote_call_stripped, diag_line),
          false <- receiver_rebound_after?(exprs, index, receiver) do
       new_var = {new_var_name, [line: diag_line], nil}
       new_binding = {:=, [line: diag_line], [new_var, rhs]}
@@ -202,7 +330,13 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
             new_binding
 
           {expr, i} when i > index ->
-            replace_bare_receiver(expr, receiver, map_update)
+            replace_receiver_reads(
+              expr,
+              receiver,
+              field,
+              new_var,
+              map_update
+            )
 
           {expr, _} ->
             expr
@@ -284,12 +418,12 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
   end
 
   # Find the first assignment with a remote-call LHS matching remote_call_stripped.
-  defp find_remote_assignment(exprs, remote_call_stripped) do
+  defp find_remote_assignment(exprs, remote_call_stripped, diag_line) do
     exprs
     |> Enum.with_index()
     |> Enum.find_value(:error, fn
       {{:=, _meta, [lhs, rhs]}, index} ->
-        if strip_meta(lhs) == remote_call_stripped do
+        if strip_meta(lhs) == remote_call_stripped and at_line?(lhs, diag_line) do
           {:ok, index, rhs}
         end
 
@@ -298,23 +432,30 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
     end)
   end
 
-  # Replace bare receiver references (not dot-access like receiver.field) with replacement.
-  # Uses a custom walker that skips dot-access children to avoid replacing receiver inside
-  # receiver.field expressions.
-  defp replace_bare_receiver(ast, receiver, replacement) do
+  # Replace bare receiver references with the updated map and reads of the
+  # assigned field with its new value.
+  defp replace_receiver_reads(ast, receiver, field, new_var, replacement) do
     receiver_stripped = strip_meta(build_receiver_ast(receiver))
-    do_replace_bare(ast, receiver_stripped, replacement)
+    do_replace_receiver_reads(ast, receiver_stripped, field, new_var, replacement)
   end
 
-  defp do_replace_bare(node, recv, repl) do
+  defp do_replace_receiver_reads(node, recv, field, new_var, repl) do
     case node do
+      {:quote, _, _} ->
+        node
+
       # 3-tuple with list args (most common AST form)
       {form, meta, args} when is_list(args) ->
-        if is_dot_call_with_receiver?(form, recv) do
-          # Dot-access call like state.streams — don't recurse into children
-          node
-        else
-          {form, meta, Enum.map(args, &do_replace_bare(&1, recv, repl))}
+        case dot_call_field(form, recv) do
+          ^field ->
+            new_var
+
+          other_field when is_atom(other_field) and not is_nil(other_field) ->
+            node
+
+          nil ->
+            {form, meta,
+             Enum.map(args, &do_replace_receiver_reads(&1, recv, field, new_var, repl))}
         end
 
       # 3-tuple with non-list arg (leaf like {:state, [], nil})
@@ -322,16 +463,17 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
         if strip_meta(node) == recv do
           repl
         else
-          {form, meta, do_replace_bare(arg, recv, repl)}
+          {form, meta, do_replace_receiver_reads(arg, recv, field, new_var, repl)}
         end
 
       # 2-tuple
       {left, right} ->
-        {do_replace_bare(left, recv, repl), do_replace_bare(right, recv, repl)}
+        {do_replace_receiver_reads(left, recv, field, new_var, repl),
+         do_replace_receiver_reads(right, recv, field, new_var, repl)}
 
       # List
       list when is_list(list) ->
-        Enum.map(list, &do_replace_bare(&1, recv, repl))
+        Enum.map(list, &do_replace_receiver_reads(&1, recv, field, new_var, repl))
 
       # Leaf
       _ ->
@@ -340,11 +482,11 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
   end
 
   # Check if form is {:., _, [recv_ast, _field]} and strip_meta(recv_ast) == recv
-  defp is_dot_call_with_receiver?({:., _, [recv_ast, _field]}, recv) do
-    strip_meta(recv_ast) == recv
+  defp dot_call_field({:., _, [recv_ast, field]}, recv) do
+    if strip_meta(recv_ast) == recv, do: field
   end
 
-  defp is_dot_call_with_receiver?(_, _), do: false
+  defp dot_call_field(_, _), do: nil
 
   # Build the bare receiver AST (e.g. {:state, [], nil} for [:state])
   defp build_receiver_ast(receiver) do
@@ -367,8 +509,8 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
   end
 
   # Replace remote call nodes in a pattern with a pinned variable.
-  defp replace_remote_in_pattern(node, remote_call_stripped, pin_ast) do
-    if strip_meta(node) == remote_call_stripped do
+  defp replace_remote_in_pattern(node, remote_call_stripped, pin_ast, diag_line) do
+    if strip_meta(node) == remote_call_stripped and at_line?(node, diag_line) do
       {pin_ast, true}
     else
       case node do
@@ -379,7 +521,9 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
 
           {new_patterns, changed} =
             Enum.map_reduce(patterns, false, fn pat, acc ->
-              {new_pat, c} = replace_remote_in_pattern(pat, remote_call_stripped, pin_ast)
+              {new_pat, c} =
+                replace_remote_in_pattern(pat, remote_call_stripped, pin_ast, diag_line)
+
               {new_pat, acc or c}
             end)
 
@@ -388,7 +532,9 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
         {form, meta, args} when is_list(args) ->
           {new_args, changed} =
             Enum.map_reduce(args, false, fn arg, acc ->
-              {new_arg, c} = replace_remote_in_pattern(arg, remote_call_stripped, pin_ast)
+              {new_arg, c} =
+                replace_remote_in_pattern(arg, remote_call_stripped, pin_ast, diag_line)
+
               {new_arg, acc or c}
             end)
 
@@ -396,18 +542,26 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
 
         {form, meta, arg} ->
           # 3-tuple with non-list arg (leaf like {:state, [], nil})
-          {new_arg, changed} = replace_remote_in_pattern(arg, remote_call_stripped, pin_ast)
+          {new_arg, changed} =
+            replace_remote_in_pattern(arg, remote_call_stripped, pin_ast, diag_line)
+
           {{form, meta, new_arg}, changed}
 
         {left, right} ->
-          {new_left, lc} = replace_remote_in_pattern(left, remote_call_stripped, pin_ast)
-          {new_right, rc} = replace_remote_in_pattern(right, remote_call_stripped, pin_ast)
+          {new_left, lc} =
+            replace_remote_in_pattern(left, remote_call_stripped, pin_ast, diag_line)
+
+          {new_right, rc} =
+            replace_remote_in_pattern(right, remote_call_stripped, pin_ast, diag_line)
+
           {{new_left, new_right}, lc or rc}
 
         list when is_list(list) ->
           {new_list, changed} =
             Enum.map_reduce(list, false, fn elem, acc ->
-              {new_elem, c} = replace_remote_in_pattern(elem, remote_call_stripped, pin_ast)
+              {new_elem, c} =
+                replace_remote_in_pattern(elem, remote_call_stripped, pin_ast, diag_line)
+
               {new_elem, acc or c}
             end)
 
@@ -416,6 +570,32 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
         _ ->
           {node, false}
       end
+    end
+  end
+
+  defp at_line?({_, meta, _}, line) when is_list(meta), do: meta[:line] == line
+  defp at_line?(_, _), do: false
+
+  defp prewalk_unquoted(ast, acc, fun) do
+    {ast, acc} = fun.(ast, acc)
+
+    case ast do
+      {:quote, _, _} ->
+        {ast, acc}
+
+      tuple when is_tuple(tuple) ->
+        {items, acc} =
+          tuple
+          |> Tuple.to_list()
+          |> Enum.map_reduce(acc, &prewalk_unquoted(&1, &2, fun))
+
+        {List.to_tuple(items), acc}
+
+      list when is_list(list) ->
+        Enum.map_reduce(list, acc, &prewalk_unquoted(&1, &2, fun))
+
+      _ ->
+        {ast, acc}
     end
   end
 
