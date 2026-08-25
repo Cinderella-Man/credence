@@ -139,6 +139,29 @@ defmodule Credence.Semantic.FixRaiseInKeywordValueFixTest do
     refute Enum.any?(after_diags, &FixRaiseInKeywordValue.match?/1)
   end
 
+  test "semantic pipeline dispatches the diagnostic to this rule" do
+    input = """
+    defmodule CredenceRaiseInKeywordPipeline do
+      def f(_, _), do: raise ArgumentError, "bad argument"
+    end
+    """
+
+    expected = """
+    defmodule CredenceRaiseInKeywordPipeline do
+      def f(_, _), do: raise(ArgumentError, "bad argument")
+    end
+    """
+
+    {:ok, before_diags} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(before_diags, &FixRaiseInKeywordValue.match?/1)
+
+    fixed = Credence.Semantic.fix(input)
+    confirm_fix(fixed, expected)
+
+    assert {:ok, after_diags} = RuleHelpers.compile_and_capture(fixed)
+    refute Enum.any?(after_diags, &FixRaiseInKeywordValue.match?/1)
+  end
+
   test "fixes raise whose argument is a bare if (keywords stay bound to the if)" do
     input = """
     defmodule M do
