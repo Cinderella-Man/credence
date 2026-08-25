@@ -36,6 +36,16 @@ defmodule Credence.Semantic.NoBareNamesInSpec do
 
   def match?(_), do: false
 
+  @doc """
+  Reports the diagnostic only when its source location identifies a fixable
+  bare name in an `@spec`. The compiler uses the same undefined-type message
+  for `@type`, `@callback`, and other type declarations, while `match?/1`
+  receives no source with which to distinguish them.
+  """
+  def should_report?(diagnostic, source) do
+    fix(source, diagnostic) != source
+  end
+
   @impl true
   def to_issue(diagnostic) do
     %Issue{
