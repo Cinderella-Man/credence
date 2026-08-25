@@ -32,6 +32,31 @@ defmodule Credence.Semantic.NoDuplicateDefstructFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "repairs a real compiler diagnostic through the semantic pipeline" do
+    input = ~S"""
+    defmodule PipelineDuplicateDefstruct do
+      defstruct [:a]
+      defstruct [:a, :b]
+    end
+    """
+
+    expected = ~S"""
+    defmodule PipelineDuplicateDefstruct do
+      defstruct [:a, :b]
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoDuplicateDefstruct.match?/1)
+
+    fixed = Credence.Semantic.fix(input)
+
+    confirm_fix(fixed, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(fixed) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "fixed output is well-formed and keeps only the last defstruct" do
     input = ~S"""
     defmodule DuplicateDefstruct do
