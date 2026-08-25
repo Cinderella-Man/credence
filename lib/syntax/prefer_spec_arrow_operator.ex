@@ -37,6 +37,7 @@ defmodule Credence.Syntax.PreferSpecArrowOperator do
   """
   use Credence.Syntax.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @impl true
   def analyze(source) do
@@ -76,8 +77,13 @@ defmodule Credence.Syntax.PreferSpecArrowOperator do
   # read the same shadow or the rule fixes what it never reported.
   defp fix_line(line, shadow) do
     with true <- missing_arrow?(shadow),
-         {:ok, prefix, inner, after_close} <- extract_spec_parts(line) do
-      "#{prefix}(#{inner}) :: #{String.trim_leading(after_close)}"
+         {:ok, _prefix, _inner, after_close} <- extract_spec_parts(shadow) do
+      trimmed_after = String.trim_leading(after_close)
+      match_size = byte_size(shadow) - byte_size(trimmed_after)
+      pattern = binary_part(shadow, 0, match_size)
+      replacement = binary_part(line, 0, match_size) |> String.trim_trailing()
+
+      SourceMask.replace_code(line, shadow, pattern, replacement <> " :: ", global: false)
     else
       _ -> line
     end

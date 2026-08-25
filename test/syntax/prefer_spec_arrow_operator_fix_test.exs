@@ -3,6 +3,7 @@ defmodule Credence.Syntax.PreferSpecArrowOperatorFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Syntax.PreferSpecArrowOperator
 
   defp analyze(code), do: PreferSpecArrowOperator.analyze(code)
@@ -19,6 +20,26 @@ defmodule Credence.Syntax.PreferSpecArrowOperatorFixTest do
 
     test "single param" do
       confirm_fix(fix("@spec foo(integer()) string()"), "@spec foo(integer()) :: string()")
+    end
+
+    test "quoted atom containing a close parenthesis" do
+      input = ~S'@spec foo(:"a)") integer()'
+      expected = ~S'@spec foo(:"a)") :: integer()'
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+
+      module = fn spec ->
+        """
+        defmodule PreferSpecArrowQuotedAtomFixture do
+          #{spec}
+          def foo(:"a)"), do: 1
+        end
+        """
+      end
+
+      assert RuleHelpers.compile_and_capture(module.(emitted)) ==
+               RuleHelpers.compile_and_capture(module.(expected))
     end
 
     test "module return type" do
