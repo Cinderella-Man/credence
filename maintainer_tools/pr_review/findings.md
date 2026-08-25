@@ -2167,3 +2167,128 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - blocker: STATUS.md:46 — The release procedure edits `CHANGELOG.md` and immediately tags and pushes without committing that edit. `v0.8.1` would therefore point to the pre-release commit whose changelog still says `Unreleased`, while the dated changelog remains only in the maintainer’s working tree.
 ## priv/mutation_runner.exs — 2026-08-25 (added, other)
 - blocker: priv/mutation_runner.exs:29 — `Code.compile_string/2` executes mutant top-level code without a heap ceiling. A mutant that allocates indefinitely can exhaust the machine before the outer wall-clock timeout kills its BEAM, despite the file explicitly admitting heap-blowing mutants; compile through the bounded `Credence.RuleHelpers.compile_and_capture/1` mechanism or launch this BEAM with an equivalent per-process heap limit.
+## proposal.md — 2026-08-25 (added, other)
+- concern: proposal.md:202 — The “Immediate next task” tells maintainers to implement the Codex runner and run the pilot, but `PR_REVIEW_PROGRESS.md` records both as completed; the unstamped “Current state” is likewise stale (for example, 563 commits/710 files and 78 self-test assertions versus the current 570 commits/727 files and 81 assertions). Following this proposal now would repeat completed, potentially costly work instead of continuing the full review campaign.
+## lib/syntax/fix_div_rem.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Focused ExUnit execution confirmed `def f, do: if ok, do: a div b` became `def f, do: div(if ok, do: a, b)`. Added an exact-output and compiled-behavior regression test; made the function-head prefix select the innermost `do:`. The emitted repair matches the control.
+- [2 blocker] fixed — Focused ExUnit execution confirmed `x = a div b + 1` became `x = div(a, b + 1)`. Added an exact-output and compiled-behavior regression test; bounded the right operand before following top-level operators. The emitted repair matches `div(a, b) + 1`. Formatting, warnings-as-errors compilation, and all 37 rule tests pass.
+- commits: f73592ac6385fd3a44ed6d6c8f0d927e581f4cec
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_div_rem_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] fixed — `mix test test/syntax/fix_div_rem_test.exs` confirmed both analyzed inputs remained unchanged, with exact assertion failures for the multi-statement and anonymous-function cases. Updated those tests to require exact repaired output and execute each emitted repair against a control via `RuleHelpers.compile_and_capture/1`. The fixer now recognizes assignment boundaries after semicolons, expression boundaries after `->`, and closing `end` boundaries. Formatting, warnings-as-errors compilation, and all 37 scoped tests pass.
+- commits: 274650772c107371e0f68d31dee0521a5c985f5e
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_do_block_fusion.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — `MIX_OS_CONCURRENCY_LOCK=0 mix test test/syntax/fix_do_block_fusion_fix_test.exs:118` confirmed the rule emitted `defmodule DoBlockFusionNestedModule do def value, do: 1`, dropping the required final `end`. Added a regression test proving the original and emitted strings compile via `RuleHelpers.compile_and_capture/1`, requiring exact unchanged output, and requiring no analysis issue. Changed the trailing-`end` detection and removal to skip inputs that already parse, while leaving the other fusion repairs active. The pinning test passes; formatting, warnings-as-errors compilation, and both rule-specific test files pass with 25 tests and 0 failures.
+- commits: cb4f386a927dc05c2432547ac7b8c8bf24210713
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_elsif_in_if_chain.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — The focused test showed only the first of two independent chains was rewritten, leaving the second `elsif` intact. Added an exact-output test requiring both chains to become valid `cond` blocks; changed `fix/1` to repeat successful rewrites. The rule test passes.
+- [2 blocker] fixed — Focused tests showed multiline `~S(...)` strings and ordinary charlists were re-indented and changed. Added byte-exact tests requiring both inputs to remain untouched; expanded multiline-literal detection for charlists and all sigil delimiters. Formatting, warnings-as-errors compilation, and all 39 rule tests pass.
+- commits: 4264b9bb9890f5baa2e4dd9986d8ca0ac21bd6bf
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_ets_match_spec_erlang_less_than.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — A focused ExUnit regression confirmed the rule changed `:=<` inside a bracket-delimited sigil, charlist, and inline comment while repairing a real guard; it failed with those protected bytes rewritten. The test now checks exact emitted output and idempotency. Detection and replacement now use `SourceMask.lines/1`, preserving non-code bytes. Formatting, warnings-as-errors compilation, and both rule test files pass: 34 tests, 0 failures.
+- commits: 2711a67306843683172469055bdb1e291dfcba1b
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_ets_match_spec_erlang_less_than_analyze_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] fixed — A controlled discovery mutation confirmed the gap: all 12 existing direct-rule tests passed while the rule was undiscoverable. The new end-to-end `Credence.Syntax.analyze/1` test then failed with `right: []`. Restoring discovery made the pinning test pass; formatting, warnings-as-errors compilation, and both rule test files passed with 35 tests and 0 failures.
+- commits: 0ed94a7c90904fcfda11ac69d48c74b5ca42f402
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_ets_match_spec_erlang_less_than_fix_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] refuted — Executed `MIX_OS_CONCURRENCY_LOCK=0 mix test maintainer_tools/pr_review/.fix_scratch/ets_less_than_repro_test.exs`; the exact input `value = 1 # [{:=<, x}]` remained byte-identical, and the reproduction passed.
+- [2 blocker] refuted — The same executed reproduction passed realistic unparseable input through `Credence.Syntax.fix/1`; it emitted exactly `guards = [{:"=<", :"$1", cutoff}]` and the emitted string parsed successfully. The checked-in rule battery also passed: 22 tests, 0 failures.
+- gate: skipped (no changes)
+
+## lib/syntax/fix_extra_brace_in_ets_match.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Confirmed with the existing mixed-error fixture: the focused test passed only because `fix/1` returned the malformed source unchanged; after changing its expected output, it failed showing the unrepaired `}})`. Added exact tests proving one pass repairs an ETS error despite another syntax error and repeated passes repair two malformed ETS calls. Removed the whole-file reparse veto while retaining the parser, ETS-call, and delimiter-shape guards. Formatting, warnings-as-errors compilation, and both rule test files pass (35 tests, 0 failures); the fixture healer left the files stable.
+- commits: b42b87962306f05d18cfd125d7e47bd4d4eca067
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_for_comprehension_in_keyword_value.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Executed the newline fixture and confirmed the rule emitted the unchanged invalid source; the regression test then failed with that exact output. Added a test asserting the exact repaired source and valid syntax. The rule now recognizes the parser’s next-line diagnostic, validates the comprehension, and emits valid `for(\n…)` syntax. Formatting, warnings-as-errors compilation, and both rule test files pass with 36 tests and 0 failures.
+- commits: 091d84201d665cc46a557c46143939c976067cc0
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_capture_operator_syntax_fix_test.exs — fix round 2 (2026-08-25)
+- [1 blocker] fixed — Confirmed the existing 28-test battery passed despite containing no `Credence.Syntax.fix/1` or `fix_with_trace/1` call. Added an end-to-end test using realistic malformed module source; it asserts the exact repaired source and trace `[{FixCaptureOperatorSyntax, 1}]`, proving discovery and retention by the production syntax round. Formatting, warnings-as-errors compilation, and the scoped 29-test battery pass.
+- commits: da4ff12ccabc4d213d68465a0db265b8bbcecac4
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_inline_keyword_if_in_with_clause.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Executed a 51-binding regression and observed one issue remaining at line 54 after only 50 rewrites. Added an exact-output test with a unique fixture module that compiles the emitted source, confirms no remaining issue, and checks idempotency. Removed the 50-rewrite ceiling so every proven repair is applied. Formatting, warnings-as-errors compilation, and the rule’s 20 tests pass.
+- commits: c2585ee173ce309710337d51f41b085e691d4370
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_inline_keyword_if_in_with_clause_fix_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] fixed — The capped reproduction showed the rule emitted the input unchanged and `Code.string_to_quoted/2` returned an “unexpected expression after keyword list” error. The updated regression test failed on that unchanged output, then passed after anchor detection was moved onto a grapheme-aligned `SourceMask` shadow so `<- if` inside branch strings is ignored. The emitted repair now matches the exact expected source, parses, compiles through `RuleHelpers.compile_and_capture/1`, and is idempotent; formatting, warnings-as-errors compilation, and all 20 scoped tests pass.
+- commits: cd49a7bcf368191f50c5ec5d8ca9302ce5f6f7a9
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_keyword_before_positional_argument.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Executed a temporary ExUnit reproduction: `analyze/1` returned `[]` for `foo(árg: 1, positional)`. Added exact-output, syntax, analyze, and idempotency tests; changed the keyword matcher to recognize Unicode lowercase letters and identifiers. Scoped compile and 59 rule tests pass.
+- [2 blocker] fixed — Executed a temporary ExUnit reproduction over 21 broken calls: the emitted result remained unparsable and left `foo(k: 21, p21)` unrepaired. Added an exact 21-call output test with syntax and idempotency checks; removed the arbitrary 20-pass limit while retaining the source-change termination guard. Scoped compile and 59 rule tests pass.
+- commits: 6b88c0047a567268efd32d5b434efa33bef5f38d
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_keyword_block_as_function_arg.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — A 21-call reproduction showed `fix/1` repaired only 20 calls, leaving emitted source unparsable. Added a regression test asserting exact emitted output, no remaining analysis issue, and successful bounded compilation alongside a control. Removed the arbitrary 20-pass cap while retaining the no-change termination guard; scoped compilation and 43 rule tests pass.
+- commits: 20eade5d3d0e7acc3c3b26904122806e84f19a78
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_keyword_list_colon_syntax.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Executed the rule on 51 malformed keywords and confirmed its emitted output remained invalid with one issue at `:k51: 51`. Added a regression test that failed on that exact mismatch and compares compilation of the emitted string with the corrected control. Replaced the fixed 50-pass cap with a finite source-byte-size budget. The pinning test passes, both rule test files pass (30 tests), formatting is clean, and compilation succeeds with warnings treated as errors.
+- commits: 95c4d5f197fa23c07b29d0bb1c74639ad8bde419
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_mismatched_closing_brace.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Confirmed the rule changed `def f, do: [1, 2}` into the valid but potentially incorrect list `def f, do: [1, 2]`. Added a regression requiring ambiguous input to remain unchanged and unreported. Detection now requires a later code-level `}` outside strings/comments, matching the rule’s documented nested tuple/map case.
+- [2 blocker] fixed — Confirmed 51 mismatches left line 51 unrepaired, reported, and unparsable. Added an exact 51-mismatch regression covering syntax, cleared findings, and idempotence. Removed the arbitrary 50-fix ceiling; all 12 scoped tests, formatting, and warnings-as-errors compilation pass.
+- commits: 44528dd6839afaaa519b63c61f100eca7291e80c
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_mismatched_closing_brace_analyze_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] obsolete — Commit 44528dd6 already added the ambiguity guard and exact regression test. Executing the live rule on `def f, do: [1, 2}` produced `%{unchanged: true, issues: [], emitted: "def f, do: [1, 2}"}`; the rule’s fix battery passed with 8 tests and 0 failures.
+- gate: skipped (no changes)
+
+## lib/syntax/fix_misplaced_when_guard.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Executed the rule on the reported comprehension and confirmed it emitted `for x <- :def when ...`; `compile_and_capture/1` then reported `undefined function when/2`. Added an exact-output test that compiles the emitted result and its control. Updated keyword detection to exclude colon-prefixed atoms.
+- [2 blocker] fixed — Executed the rule on 21 misplaced guards and confirmed it reported 20 issues, leaving line 21 unparseable. Added a 21-guard test proving exact output, all 21 findings, idempotence, valid syntax, and successful Syntax-round commit. Removed the 20-edit cap; termination remains guaranteed because every repair shortens the source. Formatting, warnings-as-errors compilation, and all 76 scoped tests pass.
+- commits: 5388ebcdebeaf8e0bc0376e1859641076b92a6cd
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_missing_module_end.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — A capped execution showed the rule emitted only 100 `end`s for 101 unclosed blocks, leaving a parser error, while the 101-`end` control parsed. Added an exact-output regression for 101 blocks and observed it fail. Removed the arbitrary append limit so repair continues until parsing succeeds; the pinning test, formatting, warnings-as-errors compilation, and both rule test files now pass.
+- commits: ae3589913756932e6e59cd0061c65b4d1bf2a03d
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_mixed_required_optional_map_keys.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Confirmed by executing a temporary ExUnit reproduction: the rule emitted `:# note\n  a => 1`, which failed parsing. Added exact-output, parsing, and idempotency tests for comments after both a map opener and a preceding comma. The fix now preserves leading comments and whitespace as trivia before arrowifying the key.
+- [2 blocker] fixed — Confirmed with a 21-entry reproduction: only 20 entries changed and the output retained the original parse error. Added an exact-output, parsing, and idempotency test covering 21 entries. Removed the fixed edit budget so repairs continue until the parser finds no matching defect. Formatting, warnings-as-errors compilation, and both scoped test files pass with 44 tests and 0 failures.
+- commits: fc85171c22f4f974d56909bfbc1e358bf58d6a90
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_python_augmented_assignment.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Confirmed with the rule’s actual output `items = items + ([1])`; `RuleHelpers.compile_and_capture/1` reported incompatible types for `Kernel.+/2`, and the pinning test initially failed because `++` was expected. Added exact list/string output assertions and compile-time execution against controls. The rule now emits `++` for list literals and `<>` for double-quoted string literals. Formatting, warnings-as-errors compilation, and all 47 focused tests pass.
+- commits: 9ca08572fc129f1100be294e245b82887e75433f
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## test/syntax/fix_python_augmented_assignment_test.exs — fix round 1 (2026-08-25)
+- [1 blocker] fixed — Confirmed by injecting a parseable unrelated module-name corruption: the former substring checks would retain both fragments, while the new whole-source `confirm_fix/2` assertion failed with `Wrong` versus `Both`. Replaced the substring and parseability assertions with one exact expected-source comparison.
+- [2 blocker] fixed — Confirmed the pipeline-coverage gap by running the new end-to-end test with `syntax_rules: []`; it failed because `count += 1` remained unchanged. Added a pipeline test asserting the complete repaired source and exact trace `[{FixPythonAugmentedAssignment, 1}]`. The focused 48-test battery, formatting, and warnings-as-errors compilation all pass.
+- commits: d9d57f63981ef1ead96baf67c827d9d4762dc278
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+
+## lib/syntax/fix_python_floor_div.ex — fix round 1 (2026-08-25)
+- [1 blocker] fixed — capped execution confirmed `x = Kernel.//n // 2` emitted `x = divdiv(n, 2)`; an exact-output regression test failed on that corruption, and adjacent matches are now rejected so the source remains unchanged.
+- [2 blocker] refuted — capped `Code.string_to_quoted/1` returned `{:error, ... "syntax error before: ')'"}` for both `Kernel.//(1..10, 2)` and `Kernel.//((1..10), 2)`; `compile_and_capture/1` likewise reported invalid syntax, so the claimed legitimate qualified call does not exist on this Elixir version.
+- [3 blocker] fixed — capped execution confirmed `a // b` emitted `div(a, b)`; a semantic regression test executed the rule’s emitted module against an `Integer.floor_div/2` control and failed for `-3, 2`; infix repairs now emit `Integer.floor_div/2`. Formatting, warnings-as-errors compilation, and all 44 rule tests pass.
+- commits: 08ccb0783507a5f7b681b3709be45314aabc1935
+- gate: green (mix format (touched) · compile --warnings-as-errors · mix test --exclude corpus --exclude idempotency · tree clean)
+

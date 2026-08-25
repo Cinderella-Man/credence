@@ -13564,11 +13564,11 @@
       "blob": "688d156b7d11fbb2ff7d89fa2e7e6c905cfd737d",
       "old_path": null,
       "gated_by": null,
-      "status": "pending",
-      "verdict": null,
-      "findings": 0,
+      "status": "done",
+      "verdict": "FINDINGS",
+      "findings": 1,
       "rereviews": 0,
-      "reviewed_at": null,
+      "reviewed_at": "2026-08-25T06:22:22+02:00",
       "stale": false,
       "error": null
     }
