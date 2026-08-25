@@ -362,4 +362,34 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     confirm_fix(fixed, expected)
     assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
   end
+
+  test "matches and repairs the compiler diagnostic through the semantic pipeline" do
+    input = ~S"""
+    defmodule AsyncStreamCaseDispatchRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          {:ok, results} -> results
+          {:error, reason} -> {:error, reason}
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule AsyncStreamCaseDispatchRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
+      end
+    end
+    """
+
+    fixed =
+      Credence.Semantic.fix(input,
+        semantic_rules: [FixTaskAsyncStreamCaseMatch]
+      )
+
+    confirm_fix(fixed, expected)
+  end
 end
