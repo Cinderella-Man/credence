@@ -40,20 +40,20 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBrace do
     * the source's *first* parse error is `syntax error before: '=>'`, and the
       blamed position really holds an `=>`;
     * there is a `{` somewhere before that arrow;
-    * inserting `%` in front of that brace makes the **whole file** parse, and
-      produces a real map literal at the very line and column that was edited.
-      This is what rejects a brace that is not the container's (`{"a{b" => 1}`),
-      a brace that is already a map's (`%%{` never parses) and a struct's
-      (`%Foo%{` never parses);
+    * after repairing every successive parser-blamed arrow, the **whole file**
+      parses, and each insertion produces a real map literal at the very line
+      and column that was edited. This is what rejects a brace that is not the
+      container's (`{"a{b" => 1}`), a brace that is already a map's (`%%{` never
+      parses) and a struct's (`%Foo%{` never parses);
     * every element of the map that appears is a key/value pair. `%{...}` parses
       happily with a stray non-pair element (`{"a" => 1, b}` would become
       `%{"a" => 1, b}`, which parses but fails to compile), so that shape is
       reported as no issue and left byte-identical rather than repaired into
       code that still does not build.
 
-  A file holding more than one of these is repaired only if the first repair
-  makes the whole file parse; otherwise the rule declines rather than edit a
-  file whose remaining errors it cannot account for.
+  A file holding more than one of these is repaired in one pass. If a later
+  parser error is not another matching arrow error, the rule declines rather
+  than edit a file whose remaining errors it cannot account for.
   """
   use Credence.Syntax.Rule
 
@@ -90,27 +90,45 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBrace do
   end
 
   # Single source of truth for both callbacks: either there is a brace to turn
-  # into `%{` — and the resulting file is known to parse into a map of pairs at
-  # that exact spot — or there is nothing to report.
+  # into `%{` — and the resulting file is known to parse into maps of pairs at
+  # every edited spot — or there is nothing to report.
   defp locate(source) do
+    case repair_all(source, [], nil) do
+      {:ok, repaired, [{line, _col} | _edits]} -> {:ok, line, repaired}
+      _ -> :none
+    end
+  end
+
+  defp repair_all(source, edits, previous_error) do
     lines = String.split(source, "\n")
 
-    with {:error, {meta, message, @arrow_token}} <-
-           Code.string_to_quoted(source, columns: true, emit_warnings: false),
-         true <- is_list(meta),
-         line when is_integer(line) <- Keyword.get(meta, :line),
-         col when is_integer(col) <- Keyword.get(meta, :column),
-         true <- String.contains?(message_text(message), @error_fragment),
-         {:ok, chars} <- line_chars(lines, line),
-         true <- arrow_at?(chars, col),
-         {:ok, brace_line, brace_col} <- find_open_brace(lines, line, col),
-         repaired = insert_percent(lines, brace_line, brace_col),
-         {:ok, ast} <-
-           Code.string_to_quoted(repaired, columns: true, emit_warnings: false),
-         true <- map_of_pairs_at?(ast, brace_line, brace_col) do
-      {:ok, brace_line, repaired}
-    else
-      _ -> :none
+    case Code.string_to_quoted(source, columns: true, emit_warnings: false) do
+      {:ok, ast} ->
+        ordered_edits = Enum.reverse(edits)
+
+        if ordered_edits != [] and maps_of_pairs_at?(ast, ordered_edits) do
+          {:ok, source, ordered_edits}
+        else
+          :none
+        end
+
+      {:error, {meta, message, @arrow_token}} when is_list(meta) ->
+        with line when is_integer(line) <- Keyword.get(meta, :line),
+             col when is_integer(col) <- Keyword.get(meta, :column),
+             false <- previous_error == {line, col},
+             true <- String.contains?(message_text(message), @error_fragment),
+             {:ok, chars} <- line_chars(lines, line),
+             true <- arrow_at?(chars, col),
+             {:ok, brace_line, brace_col} <- find_open_brace(lines, line, col) do
+          repaired = insert_percent(lines, brace_line, brace_col)
+          shifted_error = {line, if(brace_line == line, do: col + 1, else: col)}
+          repair_all(repaired, [{brace_line, brace_col} | edits], shifted_error)
+        else
+          _ -> :none
+        end
+
+      _ ->
+        :none
     end
   end
 
@@ -188,19 +206,22 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBrace do
   # `%` was inserted at, and that map's elements must all be key/value pairs —
   # a bare element (`%{"a" => 1, b}`) parses but does not compile, so it is not
   # a repair.
-  defp map_of_pairs_at?(ast, line, col) do
-    {_ast, found?} =
-      Macro.prewalk(ast, false, fn
-        {:%{}, meta, args} = node, found? when is_list(args) ->
-          {node,
-           found? or
-             (Keyword.get(meta, :line) == line and Keyword.get(meta, :column) == col and
-                Enum.all?(args, &match?({_key, _value}, &1)))}
+  defp maps_of_pairs_at?(ast, edits) do
+    {_ast, found} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:%{}, meta, args} = node, found when is_list(args) ->
+          position = {Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
-        node, found? ->
-          {node, found?}
+          if position in edits and Enum.all?(args, &match?({_key, _value}, &1)) do
+            {node, MapSet.put(found, position)}
+          else
+            {node, found}
+          end
+
+        node, found ->
+          {node, found}
       end)
 
-    found?
+    found == MapSet.new(edits)
   end
 end

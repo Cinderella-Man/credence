@@ -139,13 +139,13 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBraceAnalyzeTest do
       assert analyze(code) == []
     end
 
-    test "two arrow tuples in one file — one repair does not make it parse" do
+    test "two arrow tuples in one file are both repairable" do
       code = """
       a = {"x" => 1}
       b = {"y" => 2}
       """
 
-      assert analyze(code) == []
+      assert [%Issue{rule: :no_map_arrow_syntax_in_tuple_brace, meta: %{line: 1}}] = analyze(code)
     end
   end
 

@@ -178,7 +178,17 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBraceFixTest do
       b = {"y" => 2}
       """
 
-      confirm_fix(fix(code), code)
+      expected = """
+      a = %{"x" => 1}
+      b = %{"y" => 2}
+      """
+
+      fixed = fix(code)
+
+      confirm_fix(fixed, expected)
+      assert valid_syntax?(fixed)
+      assert analyze(fixed) == []
+      confirm_fix(fix(fixed), fixed)
     end
   end
 
