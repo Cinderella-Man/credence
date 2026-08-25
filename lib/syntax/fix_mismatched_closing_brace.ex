@@ -23,18 +23,17 @@ defmodule Credence.Syntax.FixMismatchedClosingBrace do
   use Credence.Syntax.Rule
 
   alias Credence.Issue
-
-  @max_fixes 50
+  alias Credence.SourceMask
 
   @impl true
   def analyze(source) do
     case detect(source) do
-      {:ok, line} ->
+      {:ok, meta} ->
         [
           %Issue{
             rule: :fix_mismatched_closing_brace,
             message: "Mismatched `}` closing a `[` — replace the `}` with `]`.",
-            meta: %{line: line}
+            meta: %{line: meta[:end_line]}
           }
         ]
 
@@ -44,22 +43,20 @@ defmodule Credence.Syntax.FixMismatchedClosingBrace do
   end
 
   @impl true
-  def fix(source), do: do_fix(source, 0)
+  def fix(source), do: do_fix(source)
 
-  defp do_fix(source, count) when count < @max_fixes do
+  defp do_fix(source) do
     case detect(source) do
-      {:ok, _line} ->
-        fixed = swap_brace_to_bracket(source)
-        if fixed == source, do: source, else: do_fix(fixed, count + 1)
+      {:ok, meta} ->
+        fixed = replace_brace_with_bracket(source, meta[:end_line], meta[:end_column])
+        if fixed == source, do: source, else: do_fix(fixed)
 
       :none ->
         source
     end
   end
 
-  defp do_fix(source, _count), do: source
-
-  # Returns `{:ok, line}` when the source fails to parse specifically because
+  # Returns the parser metadata when the source fails to parse specifically because
   # a `[` was closed by `}` instead of `]`.
   defp detect(source) do
     close_brace = String.to_atom("}")
@@ -71,8 +68,9 @@ defmodule Credence.Syntax.FixMismatchedClosingBrace do
         if Keyword.get(meta, :error_type) == :mismatched_delimiter and
              Keyword.get(meta, :opening_delimiter) == open_bracket and
              Keyword.get(meta, :expected_delimiter) == close_bracket and
-             Keyword.get(meta, :closing_delimiter) == close_brace do
-          {:ok, Keyword.get(meta, :end_line)}
+             Keyword.get(meta, :closing_delimiter) == close_brace and
+             nested_in_braces?(source, meta) do
+          {:ok, meta}
         else
           :none
         end
@@ -82,27 +80,18 @@ defmodule Credence.Syntax.FixMismatchedClosingBrace do
     end
   end
 
-  # Replace the mismatched `}` with `]` at the exact position reported by the parser.
-  defp swap_brace_to_bracket(source) do
-    close_brace = String.to_atom("}")
-    open_bracket = String.to_atom("[")
-    close_bracket = String.to_atom("]")
-
-    case Code.string_to_quoted(source, columns: true) do
-      {:error, {meta, _message, _token}} when is_list(meta) ->
-        if Keyword.get(meta, :error_type) == :mismatched_delimiter and
-             Keyword.get(meta, :opening_delimiter) == open_bracket and
-             Keyword.get(meta, :expected_delimiter) == close_bracket and
-             Keyword.get(meta, :closing_delimiter) == close_brace do
-          line_no = Keyword.get(meta, :end_line)
-          col = Keyword.get(meta, :end_column)
-          replace_brace_with_bracket(source, line_no, col)
-        else
-          source
-        end
-
-      _ ->
-        source
+  # The diagnostic alone is ambiguous: the opening `[` may itself be the typo.
+  # This rule is only safe in its documented case, where a later code-level `}`
+  # still closes the surrounding tuple or map.
+  defp nested_in_braces?(source, meta) do
+    with {:ok, offset} <-
+           SourceMask.byte_offset(source, meta[:end_line], meta[:end_column]),
+         shadow = SourceMask.mask(source),
+         suffix_size = byte_size(shadow) - offset - 1,
+         true <- suffix_size >= 0 do
+      String.contains?(binary_part(shadow, offset + 1, suffix_size), "}")
+    else
+      _ -> false
     end
   end
 
