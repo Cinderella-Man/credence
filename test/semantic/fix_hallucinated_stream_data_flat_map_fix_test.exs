@@ -79,6 +79,30 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMapFixTest do
     confirm_fix(fix(input, {3, 17}), expected)
   end
 
+  test "fixes a call through a short alias using the emitted diagnostic" do
+    input = """
+    defmodule CredenceStreamDataFlatMapShortAlias do
+      alias StreamData, as: SD
+      def gen(g, f), do: SD.flat_map(g, f)
+    end
+    """
+
+    expected = """
+    defmodule CredenceStreamDataFlatMapShortAlias do
+      alias StreamData, as: SD
+      def gen(g, f), do: SD.bind(g, f)
+    end
+    """
+
+    assert {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    diagnostic = Enum.find(diagnostics, &(&1.message == @message))
+
+    assert diagnostic
+    confirm_fix(FixHallucinatedStreamDataFlatMap.fix(input, diagnostic), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "a multi-line call keeps its arguments byte-for-byte" do
     input = """
     defmodule CredenceStreamDataFlatMapMultiline do

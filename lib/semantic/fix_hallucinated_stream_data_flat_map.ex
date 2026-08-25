@@ -25,13 +25,14 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
   private` are claimed: a user module whose path merely ends in `StreamData`
   (`MyApp.StreamData.flat_map/2 …`) and other arities stay unclaimed. The
   `Elixir.StreamData.flat_map(…)` spelling emits the same message but is
-  deliberately left unfixed: the anchor only accepts an exact single-segment
-  `StreamData` alias whose `flat_map` token sits exactly at the flagged
-  column, and the fix no-ops rather than risk a wrong edit (same policy as
-  `FixHallucinatedMapsetAny`). An `alias …, as: StreamData` spelling that
-  resolves to another module never produces this message (the compiler
-  reports the expanded module path), and a shadowed-but-valid call elsewhere
-  in the file is protected by the anchor. The `should_report?/2` phase hook
+  deliberately left unfixed: the anchor accepts a single-segment alias whose
+  `flat_map` token sits exactly at the flagged column. This covers both the
+  literal `StreamData.flat_map` spelling and short aliases such as
+  `alias StreamData, as: SD`; the diagnostic's expanded module name proves
+  that the flagged alias resolves to `StreamData`. An `alias …, as: StreamData`
+  spelling that resolves to another module never produces this message (the
+  compiler reports the expanded module path), and a shadowed-but-valid call
+  elsewhere in the file is protected by the anchor. The `should_report?/2` phase hook
   keeps `analyze` honest by reporting an issue only when `fix/2` would
   actually rewrite the source.
 
@@ -69,10 +70,6 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
   alias Credence.Issue
 
   @message_prefix "StreamData.flat_map/2 is undefined or private"
-
-  # `StreamData.` — the diagnostic column points at `flat_map`, eleven
-  # characters after the start of the qualified call.
-  @prefix_width 11
 
   @name "flat_map"
   @name_width String.length(@name)
@@ -132,22 +129,26 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
     end
   end
 
-  # A candidate is the `flat_map` token of a `StreamData.flat_map` dot-call
-  # with an exact single-segment `[:StreamData]` alias, starting on the
-  # flagged line. The direct call carries two arguments, the piped form one,
-  # the capture form zero — the rename is valid for all three, so all
-  # qualify; `Elixir.StreamData` and multi-segment user aliases never do.
+  # A candidate is the `flat_map` token of a dot-call through a single-segment
+  # alias, starting on the flagged line. The compiler diagnostic contains the
+  # expanded module name, so its `StreamData.flat_map/2` wording proves that
+  # the alias at the anchored column resolves to StreamData. The direct call
+  # carries two arguments, the piped form one, the capture form zero — the
+  # rename is valid for all three. `Elixir.StreamData` and other multi-segment
+  # aliases never qualify.
   defp candidates_on_line(source, ast, line_no) do
     lines = String.split(source, "\n")
 
     {_, found} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:StreamData]} = alias_node, :flat_map]}, _, args} = node, acc
+        {{:., _, [{:__aliases__, _, [alias_name]} = alias_node, :flat_map]}, _, args} = node, acc
         when is_list(args) and length(args) <= 2 ->
           case Sourceror.get_range(alias_node) do
             %{start: start} ->
               if start[:line] == line_no do
-                case name_range(lines, line_no, start[:column]) do
+                prefix_width = String.length(Atom.to_string(alias_name)) + 1
+
+                case name_range(lines, line_no, start[:column], prefix_width) do
                   {:ok, range} -> {node, [range | acc]}
                   :error -> {node, acc}
                 end
@@ -170,8 +171,8 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
   # column, then verified against the source text — unusual spacing around
   # the dot (or any other column drift) fails the check and the fix no-ops
   # instead of patching the wrong bytes.
-  defp name_range(lines, line_no, alias_col) do
-    name_col = alias_col + @prefix_width
+  defp name_range(lines, line_no, alias_col, prefix_width) do
+    name_col = alias_col + prefix_width
     line_text = Enum.at(lines, line_no - 1) || ""
 
     if String.slice(line_text, name_col - 1, @name_width) == @name do
