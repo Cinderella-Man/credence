@@ -49,6 +49,47 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
     confirm_fix(fix(input, @message_after), expected)
   end
 
+  test "dispatches the compiler's case-after diagnostic through the semantic pipeline" do
+    input = ~S"""
+    defmodule CaseAfterSemanticPipelineFixture do
+      def clean_up do
+        case :ok do
+          :ok -> :success
+          _ -> :failure
+        after
+          IO.puts("done")
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule CaseAfterSemanticPipelineFixture do
+      def clean_up do
+        try do
+          case :ok do
+            :ok -> :success
+            _ -> :failure
+          end
+        after
+          IO.puts("done")
+        end
+      end
+    end
+    """
+
+    {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(
+             diagnostics,
+             &(&1.severity == :error and &1.message == @message_after and
+                 FixAfterOrRescueInCase.match?(&1))
+           )
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "wraps case-rescue in try" do
     input = ~S"""
     defmodule CaseWithRescue do
