@@ -220,7 +220,7 @@ defmodule Credence.Syntax.WhenGuardPosition do
   end
 
   defp last_keyword(text) do
-    ~r/(?<![\w.])([a-z]+)(?![\w?!])/
+    ~r/(?<![\w.:])([a-z]+)(?![\w?!])/
     |> Regex.scan(text)
     |> Enum.map(fn [_full, word] -> word end)
     |> Enum.filter(&(&1 in @keywords))

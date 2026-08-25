@@ -62,9 +62,6 @@ defmodule Credence.Syntax.FixMisplacedWhenGuard do
   alias Credence.Issue
   alias Credence.Syntax.WhenGuardPosition
 
-  # One generated file with a systematic habit, not twenty separate defects.
-  @max_edits 20
-
   # `when` itself. One adjacent space goes with it, never an adjacent newline —
   # `delete_when/2` carries which one and why.
   @when_token "when"
@@ -103,24 +100,20 @@ defmodule Credence.Syntax.FixMisplacedWhenGuard do
   # and `fix/1` cannot disagree about how many defects there are or where.
   #
   # Terminates because each edit removes at least one byte, so the source strictly
-  # shortens; `@max_edits` is a backstop, not the argument.
-  defp repairs(source), do: repairs(source, @max_edits, [])
+  # shortens.
+  defp repairs(source), do: repairs(source, [])
 
-  defp repairs(source, 0, found), do: {source, Enum.reverse(found)}
-
-  defp repairs(source, budget, found) do
+  defp repairs(source, found) do
     case WhenGuardPosition.locate(source) do
       {:ok, :clause_head, comma_at} ->
         repairs(
           delete(source, comma_at, 1),
-          budget - 1,
           [{:clause_head, line_of(source, comma_at)} | found]
         )
 
       {:ok, :for_filter, when_at} ->
         repairs(
           delete_when(source, when_at),
-          budget - 1,
           [{:for_filter, line_of(source, when_at)} | found]
         )
 

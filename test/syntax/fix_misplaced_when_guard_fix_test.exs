@@ -182,6 +182,17 @@ defmodule Credence.Syntax.FixMisplacedWhenGuardFixTest do
       assert valid_syntax?(fix(input))
     end
 
+    test "a bare keyword atom in the generator expression is not a clause head" do
+      input = "for x <- :def, when String.length(inspect(x)) > 0, do: x"
+      expected = "for x <- :def, String.length(inspect(x)) > 0, do: x"
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
     # `delete_when/2` never swallows the newline: joining the lines is a bigger edit
     # than the defect, and it would shift the line numbers `analyze/1` reports for
     # every later repair. With no space after `when` to take, it takes the one before,
@@ -359,6 +370,28 @@ defmodule Credence.Syntax.FixMisplacedWhenGuardFixTest do
       assert Enum.map(issues, & &1.meta.line) == [3, 6]
       assert Enum.any?(issues, &(&1.message =~ "comprehension filter"))
       assert Enum.any?(issues, &(&1.message =~ "Remove the comma"))
+    end
+
+    test "more than twenty defects are all repaired in one call" do
+      input =
+        Enum.map_join(1..21, "\n", fn n ->
+          "def f#{n}(x), when x > 0, do: x"
+        end)
+
+      expected =
+        Enum.map_join(1..21, "\n", fn n ->
+          "def f#{n}(x) when x > 0, do: x"
+        end)
+
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+      assert valid_syntax?(emitted)
+      assert length(analyze(input)) == 21
+      assert analyze(emitted) == []
+
+      assert {^expected, [{Credence.Syntax.FixMisplacedWhenGuard, 1}]} =
+               Credence.Syntax.fix_with_trace(input)
     end
   end
 
