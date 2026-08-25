@@ -26,6 +26,49 @@ defmodule Credence.Syntax.NoMarkdownCodeFencesFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "fixes fences with spaced and hyphenated language tags" do
+    expected = """
+    defmodule TaggedFenceSolution do
+      def hello, do: :world
+    end
+    """
+
+    for opening_fence <- ["``` elixir", "```elixir-livebook"] do
+      input = opening_fence <> "\n" <> expected <> "```\n"
+      emitted = fix(input)
+      exact_output? = emitted == expected
+
+      assert exact_output?
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+  end
+
+  test "syntax pipeline applies the fence repair end-to-end" do
+    input = """
+    ``` elixir
+    defmodule PipelineTaggedFenceSolution do
+      def hello, do: :world
+    end
+    ```
+    """
+
+    expected = """
+    defmodule PipelineTaggedFenceSolution do
+      def hello, do: :world
+    end
+    """
+
+    emitted = Credence.Syntax.fix(input, syntax_rules: [NoMarkdownCodeFences])
+    exact_output? = emitted == expected
+
+    assert exact_output?
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "fixed output no longer flags" do
     assert analyze(
              fix("""

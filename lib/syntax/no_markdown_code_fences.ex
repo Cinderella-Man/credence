@@ -46,7 +46,7 @@ defmodule Credence.Syntax.NoMarkdownCodeFences do
 
   # A standalone markdown code-fence line: optional surrounding whitespace, three
   # backticks, an optional language tag, nothing else. Never valid Elixir.
-  @fence_pattern ~r/^\s*```[\w]*\s*$/
+  @fence_pattern ~r/^\s*```\s*[\w-]*\s*$/
 
   @impl true
   def analyze(source) do
