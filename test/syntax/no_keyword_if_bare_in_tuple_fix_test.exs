@@ -1,8 +1,9 @@
 defmodule Credence.Syntax.NoKeywordIfBareInTupleFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [compiles?: 1, confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Syntax.NoKeywordIfBareInTuple
 
   defp analyze(code), do: NoKeywordIfBareInTuple.analyze(code)
@@ -336,8 +337,11 @@ defmodule Credence.Syntax.NoKeywordIfBareInTupleFixTest do
       end
       """
 
-      confirm_fix(fix(code), expected)
-      assert compiles?(fix(code))
+      emitted = fix(code)
+
+      confirm_fix(emitted, expected)
+      assert RuleHelpers.compile_and_capture(emitted) == {:ok, []}
+      assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
     end
   end
 end
