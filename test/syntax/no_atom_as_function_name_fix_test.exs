@@ -77,6 +77,21 @@ defmodule Credence.Syntax.NoAtomAsFunctionNameFixTest do
 
       confirm_fix(fix(input), expected)
     end
+
+    test "non-ASCII text before the malformed call does not shift the colon" do
+      input = ~S'x = "é"; :helper(1)'
+      expected = ~S'x = "é"; helper(1)'
+
+      confirm_fix(fix(input), expected)
+      assert valid_syntax?(fix(input))
+    end
+
+    test "a Unicode identifier" do
+      output = fix("x = :café(1)")
+
+      confirm_fix(output, "x = café(1)")
+      assert valid_syntax?(output)
+    end
   end
 
   # Every occurrence in ONE call, and this is not a preference. The Syntax round is a
@@ -127,6 +142,16 @@ defmodule Credence.Syntax.NoAtomAsFunctionNameFixTest do
       assert length(analyze(input)) == 3
       assert valid_syntax?(fix(input))
       assert analyze(fix(input)) == []
+    end
+
+    test "more than twenty occurrences" do
+      input = Enum.map_join(1..21, " + ", &":f#{&1}(1)")
+      expected = Enum.map_join(1..21, " + ", &"f#{&1}(1)")
+      output = fix(input)
+
+      confirm_fix(output, expected)
+      assert valid_syntax?(output)
+      assert analyze(output) == []
     end
 
     # The round-level consequence, end to end.

@@ -59,8 +59,8 @@ defmodule Credence.Syntax.NoAtomAsFunctionName do
   therefore loops, re-asking the parser after each edit rather than guessing where
   the next one is.
 
-  It terminates because every edit removes exactly one character, so the source is
-  strictly shorter each time; `@max_edits` is a backstop, not the argument.
+  It terminates because every edit removes exactly one byte, so the source is
+  strictly shorter each time.
 
   ## Bad (won't parse — syntax error before `'('`)
 
@@ -76,11 +76,7 @@ defmodule Credence.Syntax.NoAtomAsFunctionName do
 
   # A bare atom, immediately before the offending `(`. `(?<!\w)` stops it matching
   # the tail of `::` in a typespec or of a word already ending in a colon.
-  @bare_atom ~r/(?<!\w):\w+[?!]?$/
-
-  # A file with many of these is one generated file with a systematic mistake, not
-  # twenty separate ones; 20 is well past anything observed.
-  @max_edits 20
+  @bare_atom ~r/(?<!\w):\w+[?!]?$/u
 
   @impl true
   def analyze(source) do
@@ -105,14 +101,12 @@ defmodule Credence.Syntax.NoAtomAsFunctionName do
 
   # The one loop both callbacks share, so they cannot disagree about how many
   # occurrences there are: `{repaired_source, [line_of_each_repair]}`.
-  defp repairs(source), do: repairs(source, @max_edits, [])
+  defp repairs(source), do: repairs(source, [])
 
-  defp repairs(source, 0, acc), do: {source, Enum.reverse(acc)}
-
-  defp repairs(source, budget, acc) do
+  defp repairs(source, acc) do
     case locate(source) do
       {:ok, line, _column, offset} ->
-        repairs(drop_colon(source, line, offset), budget - 1, [line | acc])
+        repairs(drop_colon(source, line, offset), [line | acc])
 
       :none ->
         {source, Enum.reverse(acc)}
@@ -138,7 +132,8 @@ defmodule Credence.Syntax.NoAtomAsFunctionName do
   defp drop_colon(source, line_no, offset) do
     lines = String.split(source, "\n")
     line = Enum.at(lines, line_no - 1)
-    without = String.slice(line, 0, offset) <> String.slice(line, (offset + 1)..-1//1)
+    <<before::binary-size(^offset), ?:, suffix::binary>> = line
+    without = before <> suffix
 
     lines
     |> List.replace_at(line_no - 1, without)
