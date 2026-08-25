@@ -335,11 +335,20 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       end
       '''
 
-      fixed = fix(code)
+      expected = ~S'''
+      defmodule Both do
+        @moduledoc """
+      documented += 1
+        """
 
-      assert fixed =~ "    count = count + (1)"
-      assert fixed =~ "documented += 1"
-      assert valid_syntax?(fixed)
+        def go(count) do
+          count = count + (1)
+          count
+        end
+      end
+      '''
+
+      confirm_fix(fix(code), expected)
     end
 
     test "the rule does not rewrite its own source file" do
@@ -347,6 +356,31 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
 
       confirm_fix(fix(source), source)
     end
+  end
+
+  test "the syntax round discovers and retains the repair" do
+    input = """
+    defmodule AugmentedAssignmentPipelineTestSubject do
+      def run(count) do
+        count += 1
+        count
+      end
+    end
+    """
+
+    expected = """
+    defmodule AugmentedAssignmentPipelineTestSubject do
+      def run(count) do
+        count = count + (1)
+        count
+      end
+    end
+    """
+
+    {fixed, applied} = Credence.Syntax.fix_with_trace(input)
+
+    confirm_fix(fixed, expected)
+    assert applied == [{FixPythonAugmentedAssignment, 1}]
   end
 
   # ═══════════════════════════════════════════════════════════════════
