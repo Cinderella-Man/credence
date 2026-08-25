@@ -66,7 +66,7 @@ defmodule Credence.Semantic.NoDefineMatchFn do
           # sibling modules (or a conflict-free file), breaking otherwise-valid code.
           {:defmodule, meta, [name, body]}, acc when is_list(body) ->
             if defines_local_match?(body) do
-              renamed = rename_module_body(body)
+              renamed = rename_module_body(body, fresh_target_name(body))
               {{:defmodule, meta, [name, renamed]}, true}
             else
               {{:defmodule, meta, [name, body]}, acc}
@@ -94,6 +94,30 @@ defmodule Credence.Semantic.NoDefineMatchFn do
   defp match_head?({:when, _, [inner | _]}), do: match_head?(inner)
   defp match_head?(_), do: false
 
+  defp fresh_target_name(body, suffix \\ nil) do
+    name = if suffix, do: :"match_pattern_#{suffix}?", else: :match_pattern?
+
+    if defines_function?(body, name, 2) do
+      fresh_target_name(body, (suffix || 1) + 1)
+    else
+      name
+    end
+  end
+
+  defp defines_function?(body, name, arity) do
+    Enum.any?(module_expressions(body), fn
+      {kind, _, [head | _]} when kind in [:def, :defp] -> function_head?(head, name, arity)
+      _ -> false
+    end)
+  end
+
+  defp function_head?({name, _, args}, name, arity) when is_list(args), do: length(args) == arity
+
+  defp function_head?({:when, _, [inner | _]}, name, arity),
+    do: function_head?(inner, name, arity)
+
+  defp function_head?(_, _, _), do: false
+
   defp module_expressions([{:do, {:__block__, _, expressions}}]), do: expressions
 
   defp module_expressions([{{:__block__, _, [:do]}, {:__block__, _, expressions}}]),
@@ -104,29 +128,29 @@ defmodule Credence.Semantic.NoDefineMatchFn do
 
   # Rewrite each direct module expression separately so nested modules retain
   # their own lexical scope and are considered by the outer traversal later.
-  defp rename_module_body([{do_key, {:__block__, meta, expressions}}]) do
-    [{do_key, {:__block__, meta, Enum.map(expressions, &rename_module_expression/1)}}]
+  defp rename_module_body([{do_key, {:__block__, meta, expressions}}], target) do
+    [{do_key, {:__block__, meta, Enum.map(expressions, &rename_module_expression(&1, target))}}]
   end
 
-  defp rename_module_body([{do_key, expression}]) do
-    [{do_key, rename_module_expression(expression)}]
+  defp rename_module_body([{do_key, expression}], target) do
+    [{do_key, rename_module_expression(expression, target)}]
   end
 
-  defp rename_module_expression({:defmodule, _, _} = expression), do: expression
+  defp rename_module_expression({:defmodule, _, _} = expression, _target), do: expression
 
-  defp rename_module_expression(expression) do
-    {renamed, _} = rename_match_refs(expression)
+  defp rename_module_expression(expression, target) do
+    {renamed, _} = rename_match_refs(expression, target)
     renamed
   end
 
   # Rename only local `match?/2` calls, definition heads, and captures.
   # Qualified calls (`Kernel.match?`) are left untouched.
-  defp rename_match_refs(ast) do
+  defp rename_match_refs(ast, target) do
     Macro.prewalk(ast, false, fn
       {:&, capture_meta, [{:/, slash_meta, [{:match?, match_meta, context}, 2]}]}, _acc
       when is_atom(context) ->
         renamed =
-          {:&, capture_meta, [{:/, slash_meta, [{:match_pattern?, match_meta, context}, 2]}]}
+          {:&, capture_meta, [{:/, slash_meta, [{target, match_meta, context}, 2]}]}
 
         {renamed, true}
 
@@ -137,14 +161,13 @@ defmodule Credence.Semantic.NoDefineMatchFn do
         renamed =
           {:&, capture_meta,
            [
-             {:/, slash_meta,
-              [{:match_pattern?, match_meta, context}, {:__block__, arity_meta, [2]}]}
+             {:/, slash_meta, [{target, match_meta, context}, {:__block__, arity_meta, [2]}]}
            ]}
 
         {renamed, true}
 
       {:match?, meta, [left, right]}, _acc ->
-        {{:match_pattern?, meta, [left, right]}, true}
+        {{target, meta, [left, right]}, true}
 
       {:match?, meta, args}, acc when is_list(args) ->
         {{:match?, meta, args}, acc}

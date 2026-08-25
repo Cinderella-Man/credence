@@ -4,6 +4,7 @@ defmodule Credence.Semantic.NoDefineMatchFnFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoDefineMatchFn
+  alias Credence.RuleHelpers
 
   @real_message "imported Kernel.match?/2 conflicts with local function"
 
@@ -73,6 +74,54 @@ defmodule Credence.Semantic.NoDefineMatchFnFixTest do
     """
 
     confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "leaves a match?/1 capture unchanged" do
+    input = """
+    defmodule NoDefineMatchFnCaptureArityFixture do
+      def match?(x), do: {:one, x}
+      defp match?(a, b), do: a == b
+      def one, do: &match?/1
+      def two, do: &match?/2
+    end
+    """
+
+    expected = """
+    defmodule NoDefineMatchFnCaptureArityFixture do
+      def match?(x), do: {:one, x}
+      defp match_pattern?(a, b), do: a == b
+      def one, do: &match?/1
+      def two, do: &match_pattern?/2
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "uses a fresh name when match_pattern?/2 already exists" do
+    input = """
+    defmodule NoDefineMatchFnExistingTargetFixture do
+      defp match?(a, b), do: {:original, a, b}
+      defp match_pattern?(a, b), do: {:existing, a, b}
+      def original(a, b), do: match?(a, b)
+      def existing(a, b), do: match_pattern?(a, b)
+    end
+    """
+
+    expected = """
+    defmodule NoDefineMatchFnExistingTargetFixture do
+      defp match_pattern_2?(a, b), do: {:original, a, b}
+      defp match_pattern?(a, b), do: {:existing, a, b}
+      def original(a, b), do: match_pattern_2?(a, b)
+      def existing(a, b), do: match_pattern?(a, b)
+    end
+    """
+
+    actual = fix(input, @real_message)
+
+    confirm_fix(actual, expected)
+    assert RuleHelpers.compile_and_capture(actual) == {:ok, []}
+    assert RuleHelpers.compile_and_capture(expected) == {:ok, []}
   end
 
   test "renames a guarded local match? clause and its call sites" do
