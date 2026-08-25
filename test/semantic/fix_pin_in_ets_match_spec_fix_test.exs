@@ -17,6 +17,28 @@ defmodule Credence.Semantic.FixPinInEtsMatchSpecFixTest do
     FixPinInEtsMatchSpec.fix(source, %{severity: :error, message: message, position: position})
   end
 
+  test "semantic pipeline repairs the compiler-reported ETS pin" do
+    input = """
+    defmodule FixPinInEtsMatchSpecPipeline do
+      def reset(table, name) do
+        :ets.match_delete(table, {{^name, :_}, :_})
+      end
+    end
+    """
+
+    expected = """
+    defmodule FixPinInEtsMatchSpecPipeline do
+      def reset(table, name) do
+        :ets.match_delete(table, {{name, :_}, :_})
+      end
+    end
+    """
+
+    assert {:error, [_diagnostic | _]} = Credence.RuleHelpers.compile_and_capture(input)
+    confirm_fix(Credence.Semantic.fix(input), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "strips pin operator from match_delete call" do
     input = """
     defmodule FixPinInEtsMatchSpec do
