@@ -105,13 +105,14 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
+  def fix(source, diagnostic) do
+    with target_line when is_integer(target_line) <- line(diagnostic),
+         {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           {:case, meta, [condition, clauses_block]} = node, false ->
             if map_fetch_call?(condition) do
-              case replace_none_in_clauses(clauses_block) do
+              case replace_none_in_clauses(clauses_block, target_line) do
                 {:ok, new_clauses} -> {{:case, meta, [condition, new_clauses]}, true}
                 :error -> {node, false}
               end
@@ -132,11 +133,12 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
   defp map_fetch_call?({{:., _, [{:__aliases__, _, [:Map]}, :fetch]}, _, [_, _]}), do: true
   defp map_fetch_call?(_), do: false
 
-  defp replace_none_in_clauses([{{:__block__, do_meta, [:do]}, clause_asts}])
+  defp replace_none_in_clauses([{{:__block__, do_meta, [:do]}, clause_asts}], target_line)
        when is_list(clause_asts) do
     {none_clauses, other_clauses} = Enum.split_with(clause_asts, &none_clause?/1)
 
-    if match?([_], none_clauses) and Enum.all?(other_clauses, &tuple_clause?/1) do
+    if one_none_clause_on_line?(none_clauses, target_line) and
+         Enum.all?(other_clauses, &tuple_clause?/1) do
       new_clauses = Enum.map(clause_asts, &rename_none_clause/1)
       {:ok, [{{:__block__, do_meta, [:do]}, new_clauses}]}
     else
@@ -144,10 +146,17 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
     end
   end
 
-  defp replace_none_in_clauses(_), do: :error
+  defp replace_none_in_clauses(_, _target_line), do: :error
 
   defp none_clause?({:->, _, [[{:__block__, _, [:none]}], _body]}), do: true
   defp none_clause?(_), do: false
+
+  defp none_clause_line({:->, _, [[{:__block__, meta, [:none]}], _body]}), do: meta[:line]
+
+  defp one_none_clause_on_line?([clause], target_line),
+    do: none_clause_line(clause) == target_line
+
+  defp one_none_clause_on_line?(_clauses, _target_line), do: false
 
   defp rename_none_clause({:->, arrow_meta, [[{:__block__, pat_meta, [:none]}], body]}) do
     {:->, arrow_meta, [[{:__block__, pat_meta, [:error]}], body]}

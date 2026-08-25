@@ -20,7 +20,13 @@ defmodule Credence.Semantic.FixMapFetchNoneClauseFixTest do
   """
 
   defp fix(source) do
-    FixMapFetchNoneClause.fix(source, %{severity: :warning, message: @message, position: 4})
+    line =
+      source
+      |> String.split("\n")
+      |> Enum.find_index(&(String.trim_leading(&1) |> String.starts_with?(":none")))
+      |> Kernel.+(1)
+
+    FixMapFetchNoneClause.fix(source, %{severity: :warning, message: @message, position: line})
   end
 
   test "renames :none to :error in a Map.fetch case" do
@@ -47,6 +53,52 @@ defmodule Credence.Semantic.FixMapFetchNoneClauseFixTest do
     """
 
     confirm_fix(fix(input), expected)
+  end
+
+  test "uses the diagnostic line instead of rewriting an earlier quoted case" do
+    input = ~S"""
+    defmodule Example do
+      def quoted do
+        quote do
+          case Map.fetch(map, key) do
+            :none -> :quoted_missing
+            {:ok, value} -> value
+          end
+        end
+      end
+
+      def find(map, key) do
+        case Map.fetch(map, key) do
+          :none -> :missing
+          {:ok, value} -> value
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule Example do
+      def quoted do
+        quote do
+          case Map.fetch(map, key) do
+            :none -> :quoted_missing
+            {:ok, value} -> value
+          end
+        end
+      end
+
+      def find(map, key) do
+        case Map.fetch(map, key) do
+          :error -> :missing
+          {:ok, value} -> value
+        end
+      end
+    end
+    """
+
+    diagnostic = %{severity: :warning, message: @message, position: {13, 7}}
+
+    confirm_fix(FixMapFetchNoneClause.fix(input, diagnostic), expected)
   end
 
   test "renames a bare :none clause with an empty body" do
