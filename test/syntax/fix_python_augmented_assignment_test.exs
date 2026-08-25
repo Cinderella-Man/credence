@@ -4,6 +4,7 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixPythonAugmentedAssignment
+  alias Credence.RuleHelpers
 
   defp analyze(code), do: FixPythonAugmentedAssignment.analyze(code)
   defp fix(code), do: FixPythonAugmentedAssignment.fix(code)
@@ -100,6 +101,27 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   end
 
   describe "fix/1 — bare-variable rewrites (RHS parenthesised)" do
+    test "+= selects Elixir concatenation for literal lists and strings" do
+      cases = [
+        {"items += [1]", "items = items ++ ([1])", "[0]", "[0, 1]"},
+        {~S|text += "x"|, ~S|text = text <> ("x")|, ~S|"a"|, ~S|"ax"|}
+      ]
+
+      for {input, expected, initial, result} <- cases do
+        emitted = fix(input)
+        confirm_fix(emitted, expected)
+
+        actual =
+          "unless (fn #{variable(input)} -> #{emitted}; #{variable(input)} end).(#{initial}) == #{result}, do: raise(\"wrong result\")"
+
+        control =
+          "unless (fn #{variable(input)} -> #{expected}; #{variable(input)} end).(#{initial}) == #{result}, do: raise(\"wrong result\")"
+
+        assert RuleHelpers.compile_and_capture(actual) ==
+                 RuleHelpers.compile_and_capture(control)
+      end
+    end
+
     test "fixes += with simple variable" do
       confirm_fix(fix("count += 1"), "count = count + (1)")
     end
@@ -165,6 +187,8 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       confirm_fix(fix(source), expected)
     end
   end
+
+  defp variable(input), do: input |> String.split() |> hd()
 
   describe "fix/1 — parenthesising keeps Python operator precedence" do
     # Python `x *= 3 + 4` means `x = x * (3 + 4)` (== 14), NOT `x = x * 3 + 4`
@@ -353,13 +377,13 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "a `#` inside a string is not a comment" do
-      confirm_fix(fix(~S'msg += "a # b"'), ~S'msg = msg + ("a # b")')
+      confirm_fix(fix(~S'msg += "a # b"'), ~S'msg = msg <> ("a # b")')
     end
 
     test "a trailing string stays in the expression and its comment does not" do
       fixed = fix(~S'msg += "abc"  # trailing note')
 
-      confirm_fix(fixed, ~S'msg = msg + ("abc")  # trailing note')
+      confirm_fix(fixed, ~S'msg = msg <> ("abc")  # trailing note')
       assert valid_syntax?(fixed)
     end
 

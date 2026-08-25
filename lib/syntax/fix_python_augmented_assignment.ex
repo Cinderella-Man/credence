@@ -117,10 +117,18 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignment do
 
   defp fix_line(line, shadow) do
     case captures(line, shadow) do
-      {indent, var, op, rhs, tail} -> "#{indent}#{var} = #{var} #{op} (#{rhs})#{tail}"
-      nil -> line
+      {indent, var, op, rhs, tail} ->
+        operator = elixir_operator(op, rhs)
+        "#{indent}#{var} = #{var} #{operator} (#{rhs})#{tail}"
+
+      nil ->
+        line
     end
   end
+
+  defp elixir_operator("+", "[" <> _rest), do: "++"
+  defp elixir_operator("+", <<?", _rest::binary>>), do: "<>"
+  defp elixir_operator(op, _rhs), do: op
 
   # `{indent, var, op, rhs, tail}` for a fixable line, or `nil`. The match is
   # located in the shadow and every returned byte is read out of the real line at
