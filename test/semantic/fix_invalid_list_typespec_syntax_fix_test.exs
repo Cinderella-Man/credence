@@ -1,7 +1,8 @@
 defmodule Credence.Semantic.FixInvalidListTypespecSyntaxFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, compiles?: 1, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleHelpers, only: [compiles?: 1]
 
   alias Credence.Semantic.FixInvalidListTypespecSyntax
 
@@ -51,6 +52,10 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntaxFixTest do
     assert compiles?(fix(input, 2))
   end
 
+  test "fixture compilation is bounded" do
+    refute compiles?("Enum.flat_map(1..10, &Stream.cycle([&1]))")
+  end
+
   test "fixed output is well-formed (parses)" do
     input = """
     defmodule SolutionL do
@@ -62,6 +67,30 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntaxFixTest do
     """
 
     assert valid_syntax?(fix(input, 2))
+  end
+
+  test "dispatches the compiler diagnostic through the semantic pipeline" do
+    input = """
+    defmodule SolutionFFILTSSemanticPipeline do
+      @spec f(list([integer(), atom()])) :: boolean()
+      def f(_items), do: true
+    end
+    """
+
+    expected = """
+    defmodule SolutionFFILTSSemanticPipeline do
+      @spec f(list([integer() | atom()])) :: boolean()
+      def f(_items), do: true
+    end
+    """
+
+    {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    fixed = Credence.Semantic.fix(input)
+
+    assert Enum.any?(diagnostics, &FixInvalidListTypespecSyntax.match?/1)
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "distinct element types become a union" do
