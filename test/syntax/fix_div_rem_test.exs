@@ -296,6 +296,32 @@ defmodule Credence.Syntax.FixDivRemTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "fix/1 — keyword-body function heads" do
+    test "fixes infix div inside a nested keyword body" do
+      confirm_fix(
+        FixDivRem.fix("def f, do: if ok, do: a div b"),
+        "def f, do: if ok, do: div(a, b)"
+      )
+
+      emitted =
+        FixDivRem.fix(
+          "defmodule FixDivRemNestedKeywordEmitted do\n" <>
+            "  def f(ok, a, b), do: if ok, do: a div b\nend"
+        )
+
+      control = """
+      defmodule FixDivRemNestedKeywordControl do
+        def f(ok, a, b), do: if(ok, do: div(a, b))
+      end
+
+      unless FixDivRemNestedKeywordEmitted.f(true, 7, 2) ==
+               FixDivRemNestedKeywordControl.f(true, 7, 2),
+        do: raise("nested keyword repair changed the result")
+      """
+
+      assert {:ok, [%{severity: :warning}]} =
+               Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> control)
+    end
+
     test "fixes a def head with a compound left operand" do
       confirm_fix(
         FixDivRem.fix("def f(n), do: n * (n + 1) div 2"),
@@ -324,6 +350,30 @@ defmodule Credence.Syntax.FixDivRemTest do
 
       confirm_fix(fixed, "def f(n), do: div(n * (n + 1), 2)")
       assert valid_syntax?(fixed)
+    end
+  end
+
+  describe "fix/1 — right operand boundaries" do
+    test "does not absorb a following addition into the divisor" do
+      confirm_fix(FixDivRem.fix("x = a div b + 1"), "x = div(a, b) + 1")
+
+      emitted =
+        FixDivRem.fix(
+          "defmodule FixDivRemRightBoundaryEmitted do\n" <>
+            "  def f(a, b), do: a div b + 1\nend"
+        )
+
+      control = """
+      defmodule FixDivRemRightBoundaryControl do
+        def f(a, b), do: div(a, b) + 1
+      end
+
+      unless FixDivRemRightBoundaryEmitted.f(7, 2) ==
+               FixDivRemRightBoundaryControl.f(7, 2),
+        do: raise("right operand repair changed precedence")
+      """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> control)
     end
   end
 

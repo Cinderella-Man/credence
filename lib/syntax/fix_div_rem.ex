@@ -208,17 +208,19 @@ defmodule Credence.Syntax.FixDivRem do
   # Left operand = everything between `=` (or line start) and the operator.
   # Right operand = everything after the operator to end of expression.
   defp rewrite_infix(line, shadow, op) do
-    pattern = ~r/^(\s*(?:\w+\s*=\s*|defp?\s+.*?,\s*do:\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
+    pattern = ~r/^(\s*(?:\w+\s*=\s*|defp?\s+.*,\s*do:\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
 
     case Regex.run(pattern, shadow, return: :index) do
       [_full, _prefix, {ls, ll}, {rs, rl}, _trailing] ->
         if declined?(binary_part(shadow, ls, ll)) do
           line
         else
-          stop = rs + rl
+          right_end = find_right_end(shadow, rs)
+          right_length = min(rl, right_end - rs)
+          stop = rs + right_length
 
           binary_part(line, 0, ls) <>
-            "#{op}(#{binary_part(line, ls, ll)}, #{binary_part(line, rs, rl)})" <>
+            "#{op}(#{binary_part(line, ls, ll)}, #{binary_part(line, rs, right_length)})" <>
             binary_part(line, stop, byte_size(line) - stop)
         end
 
@@ -341,9 +343,21 @@ defmodule Credence.Syntax.FixDivRem do
         # Comma at depth 0 — this ends the arg
         pos
 
+      whitespace when depth == 0 and whitespace in [32, 9] ->
+        if followed_by_operator?(line, pos, len) do
+          pos
+        else
+          do_find_right_end(line, pos + 1, len, depth, pos + 1)
+        end
+
       _ ->
         do_find_right_end(line, pos + 1, len, depth, pos + 1)
     end
+  end
+
+  defp followed_by_operator?(line, pos, len) do
+    rest = binary_part(line, pos, len - pos) |> String.trim_leading()
+    Regex.match?(~r/^(?:\+|-|\*|\/|==|!=|<=|>=|<|>|&&|\|\||\|>|<>|\+\+|--|and\b|or\b|in\b)/, rest)
   end
 
   defp build_issue(op, line) do
