@@ -337,6 +337,34 @@ defmodule Credence.Syntax.NoFnAsVariableFixTest do
       confirm_fix(fix(input), expected)
       assert valid_syntax?(fix(input))
     end
+
+    test "does not rename a called fn inside a string before the identifier" do
+      input = """
+      "fn.foo"; defmodule StringBeforeIdentifier do
+        def foo([fn]), do: fn
+      end
+      """
+
+      expected =
+        """
+        "fn.foo"; defmodule StringBeforeIdentifier do
+          def foo([func]), do: func
+        end
+        """
+
+      emitted = fix(input)
+
+      control = """
+      "fn.foo"; defmodule StringBeforeIdentifierControl do
+        def foo([func]), do: func
+      end
+      """
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(control)
+    end
   end
 
   # The widening must not make the rule braver about real keywords. Each of

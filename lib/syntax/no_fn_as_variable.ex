@@ -47,7 +47,7 @@ defmodule Credence.Syntax.NoFnAsVariable do
   """
   use Credence.Syntax.Rule
 
-  alias Credence.Issue
+  alias Credence.{Issue, SourceMask}
 
   # Bound on the repair loop (one iteration per `fn` replacement).
   @max_passes 20
@@ -178,15 +178,15 @@ defmodule Credence.Syntax.NoFnAsVariable do
   # parser now blames the unterminated `defmodule do` — no column, and the line
   # is not "nothing but fn". Reproduced live on the ledger's own source.
   defp find_standalone_fn(source) do
-    lines = String.split(source, "\n")
+    lines = SourceMask.lines(source)
 
     lines
     |> Enum.with_index()
-    |> Enum.find_value(:none, fn {line, idx} ->
+    |> Enum.find_value(:none, fn {{line, shadow}, idx} ->
       cond do
         # `fn.(v)` / `fn.field` — the keyword can never be followed by a dot, so
         # this needs no clause check and no positional evidence to be certain.
-        col = called_fn_column(line) -> {:ok, idx + 1, col}
+        col = called_fn_column(shadow) -> {:ok, idx + 1, col}
         clause_follows?(lines, idx) -> nil
         String.trim(line) == "fn" -> {:ok, idx + 1, find_fn_column(line)}
         col = value_position_fn_column(line) -> {:ok, idx + 1, col}
@@ -226,10 +226,10 @@ defmodule Credence.Syntax.NoFnAsVariable do
   defp clause_follows?(lines, idx) do
     lines
     |> Enum.drop(idx + 1)
-    |> Enum.find(&(String.trim(&1) != ""))
+    |> Enum.find(fn {line, _shadow} -> String.trim(line) != "" end)
     |> case do
       nil -> false
-      next -> String.contains?(next, "->")
+      {line, _shadow} -> String.contains?(line, "->")
     end
   end
 
