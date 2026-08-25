@@ -53,6 +53,13 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBraceFixTest do
       confirm_fix(fix(code), expected)
     end
 
+    test "for more occurrences than the former rewrite safety cap" do
+      code = Enum.map_join(1..51, "\n", fn i -> "value_#{i} = {key: #{i}}" end)
+      expected = String.replace(code, " = {", " = %{")
+
+      confirm_fix(fix(code), expected)
+    end
+
     test "when the braces are nested inside one another" do
       code = "x = {a: {b: 1}}"
 

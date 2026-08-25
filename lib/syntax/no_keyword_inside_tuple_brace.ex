@@ -65,10 +65,6 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBrace do
   # large broken file.
   @window_lines 20
 
-  # One file can hold several of these. Each rewrite is re-detected from scratch,
-  # so the cap is only a backstop against an unforeseen loop.
-  @max_rewrites 50
-
   @impl true
   def analyze(source) do
     case locate(source) do
@@ -89,16 +85,14 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBrace do
   end
 
   @impl true
-  def fix(source), do: rewrite(source, @max_rewrites)
+  def fix(source), do: rewrite(source)
 
-  defp rewrite(source, 0), do: source
-
-  defp rewrite(source, budget) do
+  defp rewrite(source) do
     case locate(source) do
       {:ok, line, col} ->
         source
         |> insert_at(line, col, "%")
-        |> rewrite(budget - 1)
+        |> rewrite()
 
       :none ->
         source
