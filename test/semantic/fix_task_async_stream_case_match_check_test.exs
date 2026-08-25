@@ -42,6 +42,26 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchCheckTest do
     assert FixTaskAsyncStreamCaseMatch.match?(diag)
   end
 
+  test "compiler diagnostics reach this rule through the Semantic pipeline" do
+    source = """
+    defmodule TaskAsyncStreamCaseMatchCheckPipelineFixture do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun, max_concurrency: 4) do
+          {:ok, results} -> results
+          {:error, reason} -> reason
+        end
+      end
+    end
+    """
+
+    issues = Credence.Semantic.analyze(source)
+
+    assert Enum.map(issues, & &1.rule) == [
+             :fix_task_async_stream_case_match,
+             :fix_task_async_stream_case_match
+           ]
+  end
+
   test "ignores unrelated diagnostics" do
     diag = %{severity: :warning, message: "unrelated", position: 1}
     refute FixTaskAsyncStreamCaseMatch.match?(diag)
