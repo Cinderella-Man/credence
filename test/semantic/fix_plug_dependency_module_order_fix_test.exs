@@ -304,4 +304,107 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrderFixTest do
     confirm_fix(fix(input, message), expected)
     assert valid_syntax?(fix(input, message))
   end
+
+  test "a column-zero end inside a dependency heredoc is not its module boundary" do
+    input = ~S'''
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+
+    defmodule Foo.Dep do
+      @text """
+    end
+    still literal
+    """
+      def init(x), do: x
+    end
+    '''
+
+    expected = ~S'''
+    defmodule Foo.Dep do
+      @text """
+    end
+    still literal
+    """
+      def init(x), do: x
+    end
+
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+    '''
+
+    message = "function Foo.Dep.init/1 is undefined (module Foo.Dep is not available)"
+
+    confirm_fix(fix(input, message), expected)
+    assert valid_syntax?(fix(input, message))
+  end
+
+  test "top-level setup between the router and dependency stays before the dependency" do
+    input = """
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+
+    alias Foo.Support
+
+    defmodule Foo.Dep do
+      def init(x), do: Support.init(x)
+    end
+    """
+
+    expected = """
+    alias Foo.Support
+
+    defmodule Foo.Dep do
+      def init(x), do: Support.init(x)
+    end
+
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+    """
+
+    message = "function Foo.Dep.init/1 is undefined (module Foo.Dep is not available)"
+
+    confirm_fix(fix(input, message), expected)
+  end
+
+  test "a plug line inside an earlier heredoc does not select that module as the caller" do
+    input = ~S'''
+    defmodule Foo.Earlier do
+      @text """
+      plug Foo.Dep
+      """
+    end
+
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+
+    defmodule Foo.Dep do
+      def init(x), do: x
+    end
+    '''
+
+    expected = ~S'''
+    defmodule Foo.Earlier do
+      @text """
+      plug Foo.Dep
+      """
+    end
+
+    defmodule Foo.Dep do
+      def init(x), do: x
+    end
+
+    defmodule Foo.Router do
+      plug Foo.Dep
+    end
+    '''
+
+    message = "function Foo.Dep.init/1 is undefined (module Foo.Dep is not available)"
+
+    confirm_fix(fix(input, message), expected)
+  end
 end

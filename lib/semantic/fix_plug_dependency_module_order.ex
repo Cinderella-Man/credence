@@ -68,6 +68,7 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrder do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # The module in `(module ... is not available)` must be the same module the
   # `init/1` call was made on — the backreference pins that.
@@ -120,9 +121,10 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrder do
   # Reorder module definitions so the dependency module comes first.
   defp reorder_modules(source, module_name) do
     lines = String.split(source, "\n")
+    shadow_lines = source |> SourceMask.mask() |> String.split("\n")
 
-    with {:ok, dep_start, dep_end} <- find_module_range(lines, module_name),
-         {:ok, user_start, user_end} <- find_using_module_range(lines, module_name),
+    with {:ok, dep_start, dep_end} <- find_module_range(shadow_lines, module_name),
+         {:ok, user_start, user_end} <- find_using_module_range(shadow_lines, module_name),
          true <- dep_start > user_end do
       do_reorder(lines, dep_start, dep_end, user_start, user_end)
     else
@@ -250,7 +252,14 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrder do
     dep_mod = Enum.slice(lines, (dep_start - 1)..(dep_end - 1))
     after_dep = if dep_end < total, do: Enum.slice(lines, dep_end..(total - 1)), else: []
 
-    new_lines = before ++ dep_mod ++ gap ++ user_mod ++ after_dep
+    new_lines =
+      if Enum.all?(gap, &(String.trim(&1) == "")) do
+        before ++ dep_mod ++ gap ++ user_mod ++ after_dep
+      else
+        {leading_space, gap_code} = Enum.split_while(gap, &(String.trim(&1) == ""))
+        before ++ gap_code ++ dep_mod ++ leading_space ++ user_mod ++ after_dep
+      end
+
     Enum.join(new_lines, "\n")
   end
 
