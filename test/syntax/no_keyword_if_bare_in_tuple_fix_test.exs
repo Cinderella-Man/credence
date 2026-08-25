@@ -212,6 +212,33 @@ defmodule Credence.Syntax.NoKeywordIfBareInTupleFixTest do
 
       confirm_fix(fix(code), expected)
     end
+
+    test "more than fifty occurrences are all repaired" do
+      code =
+        Enum.map_join(1..51, "\n", fn i ->
+          "v#{i} = {:ok, if x#{i}, do: 1, else: 2}"
+        end)
+
+      expected =
+        Enum.map_join(1..51, "\n", fn i ->
+          "v#{i} = {:ok, (if x#{i}, do: 1, else: 2)}"
+        end)
+
+      confirm_fix(fix(code), expected)
+    end
+  end
+
+  describe "pipeline integration" do
+    test "Credence.fix/2 discovers and applies the rule" do
+      code = "value = {:ok, if flag, do: 1, else: 2}"
+      expected = "value = {:ok, (if flag, do: 1, else: 2)}"
+
+      result = Credence.fix(code, analyze_after: false)
+
+      assert result.code == expected
+
+      assert {Credence.Syntax.NoKeywordIfBareInTuple, 1} in result.applied_rules
+    end
   end
 
   describe "leaves the source byte-identical" do
