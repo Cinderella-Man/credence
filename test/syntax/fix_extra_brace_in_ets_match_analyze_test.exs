@@ -145,7 +145,7 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatchAnalyzeTest do
     assert analyze(code) == []
   end
 
-  test "no issue when the file is also broken somewhere else" do
+  test "flags the ETS error when the file is also broken somewhere else" do
     code = """
     defmodule Example do
       def lookup(t) do
@@ -158,7 +158,7 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatchAnalyzeTest do
     end
     """
 
-    assert analyze(code) == []
+    assert [%Issue{rule: :fix_extra_brace_in_ets_match, meta: %{line: 3}}] = analyze(code)
   end
 
   test "no issue for an unrelated syntax error" do

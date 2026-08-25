@@ -30,25 +30,23 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatch do
     * **The parser must report this exact mismatch.** `Code.string_to_quoted/2`
       names the delimiters it tripped over; we act only on
       `error_type: :mismatched_delimiter` with a `(` opened, a `}` met and a `)`
-      expected. That is the parser telling us this `}` closes nothing. A file
-      unparseable for any other reason is left untouched, and a `}` inside a
-      string, heredoc, sigil or comment can never be the reported token.
+      expected. That is the parser telling us this `}` closes nothing, and a
+      `}` inside a string, heredoc, sigil or comment can never be the reported
+      token.
 
     * **The offending `}` must be the second of `}})`.** The parser hands back
       the exact line and column of the token, and we act only when the previous
       character is `}` and the next is `)` — the "one brace too many closing a
       nested tuple argument" shape. `f(a, b}, c)` and friends are somebody
-      else's repair; a second extra brace (`:"$2"}}})`) leaves an unmatched `}`
-      behind and is refused by the reparse guard below.
+      else's repair.
 
     * **The opening `(` must belong to an `:ets.` call.** The same metadata
       carries the position of the `(`, so we can require `:ets.<fun>`
       immediately before it. Extra braces elsewhere are left for a sister rule
       rather than claimed by a rule whose name promises ETS.
 
-    * **The result must parse.** The deletion is committed only when the
-      *whole* source parses afterwards, so an ambiguous or partial repair is
-      dropped rather than guessed at.
+    * **Only the parser-reported error is repaired.** The rest of the file may
+      still be malformed; later syntax passes can repair the next error.
 
   Deleting the reported closer is the minimal edit: nothing else in the file
   moves, and every character the tokenizer had already accepted stays where it
@@ -84,8 +82,8 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatch do
     end
   end
 
-  # Single source of truth for both callbacks: either we have a deletion that
-  # parses, or there is nothing to report.
+  # Single source of truth for both callbacks: either we have a guarded
+  # deletion, or there is nothing to report.
   defp repair(source) do
     with {:ok, open_line, open_col, line_no, col} <- detect(source),
          lines = String.split(source, "\n"),
@@ -149,8 +147,8 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatch do
     end
   end
 
-  # Drop the reported `}` and commit only if the whole source parses. Nothing
-  # else in the file moves.
+  # Drop the reported `}`. Nothing else in the file moves; another syntax error
+  # may remain for a later pass.
   defp delete_brace(lines, line_no, col) do
     {:ok, chars} = line_chars(lines, line_no)
     repaired = chars |> List.delete_at(col - 1) |> List.to_string()
@@ -160,7 +158,7 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatch do
       |> List.replace_at(line_no - 1, repaired)
       |> Enum.join("\n")
 
-    if match?({:ok, _}, Code.string_to_quoted(candidate)), do: {:ok, candidate}, else: :none
+    {:ok, candidate}
   end
 
   # The parser counts columns in graphemes, not bytes and not codepoints: a

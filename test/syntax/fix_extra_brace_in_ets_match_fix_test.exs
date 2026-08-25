@@ -219,8 +219,8 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatchFixTest do
     confirm_fix(fix(code), code)
   end
 
-  test "leaves a file that is also broken elsewhere untouched" do
-    code = """
+  test "repairs the reported ETS error while another syntax error remains" do
+    input = """
     defmodule Example do
       def lookup(t) do
         :ets.match(t, {{:"$1"}, :"$2"}})
@@ -232,7 +232,39 @@ defmodule Credence.Syntax.FixExtraBraceInEtsMatchFixTest do
     end
     """
 
-    confirm_fix(fix(code), code)
+    expected = """
+    defmodule Example do
+      def lookup(t) do
+        :ets.match(t, {{:"$1"}, :"$2"})
+      end
+
+      def other do
+        x = [1, 2
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "repairs two malformed ETS calls incrementally" do
+    input = """
+    :ets.match(first, {{:"$1"}, :"$2"}})
+    :ets.match(second, {{:"$3"}, :"$4"}})
+    """
+
+    after_first = """
+    :ets.match(first, {{:"$1"}, :"$2"})
+    :ets.match(second, {{:"$3"}, :"$4"}})
+    """
+
+    expected = """
+    :ets.match(first, {{:"$1"}, :"$2"})
+    :ets.match(second, {{:"$3"}, :"$4"})
+    """
+
+    confirm_fix(fix(input), after_first)
+    confirm_fix(fix(fix(input)), expected)
   end
 
   test "leaves an unrelated syntax error untouched" do
