@@ -68,7 +68,7 @@ defmodule Credence.Semantic.NoDuplicateDefstructFixTest do
     confirm_fix(fix(input), expected)
   end
 
-  test "leaves nested-module duplicates untouched (only top-level module handled)" do
+  test "removes duplicate defstruct inside a nested module" do
     input = ~S"""
     defmodule Outer do
       defmodule Inner do
@@ -78,7 +78,73 @@ defmodule Credence.Semantic.NoDuplicateDefstructFixTest do
     end
     """
 
-    confirm_fix(fix(input), input)
+    expected = ~S"""
+    defmodule Outer do
+      defmodule Inner do
+        defstruct [:a, :b]
+      end
+    end
+    """
+
+    fixed = fix(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "removes duplicate defstruct inside a conditional block" do
+    input = ~S"""
+    defmodule ConditionalDefstruct do
+      if true do
+        defstruct [:a]
+        defstruct [:a, :b]
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule ConditionalDefstruct do
+      if true do
+        defstruct [:a, :b]
+      end
+    end
+    """
+
+    fixed = fix(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "removes duplicate defstruct from a module in a multi-module file" do
+    input = ~S"""
+    defmodule FirstDefstruct do
+      defstruct [:a]
+      defstruct [:a, :b]
+    end
+
+    defmodule SecondDefstruct do
+      def value, do: :ok
+    end
+    """
+
+    expected = ~S"""
+    defmodule FirstDefstruct do
+      defstruct [:a, :b]
+    end
+
+    defmodule SecondDefstruct do
+      def value, do: :ok
+    end
+    """
+
+    fixed = fix(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "returns source unchanged when no duplicates" do

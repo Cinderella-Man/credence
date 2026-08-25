@@ -49,39 +49,58 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
   @impl true
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
-      case ast do
-        {:defmodule, m_meta,
-         [alias_node, [{{:__block__, do_meta, [:do]}, {:__block__, b_meta, body}}]]} ->
-          defstruct_nodes =
-            Enum.filter(body, fn
-              {:defstruct, _, _} -> true
-              _ -> false
-            end)
+      patches =
+        ast
+        |> module_nodes()
+        |> Enum.flat_map(fn module ->
+          module
+          |> defstructs_in_module()
+          |> Enum.drop(-1)
+          |> Enum.map(&remove_statement_patch/1)
+        end)
 
-          if length(defstruct_nodes) <= 1 do
-            source
-          else
-            last = List.last(defstruct_nodes)
-
-            cleaned =
-              Enum.reject(body, fn node ->
-                node != last and match?({:defstruct, _, _}, node)
-              end)
-
-            new_body = {:__block__, b_meta, cleaned}
-
-            new_ast =
-              {:defmodule, m_meta, [alias_node, [{{:__block__, do_meta, [:do]}, new_body}]]}
-
-            Sourceror.to_string(new_ast)
-          end
-
-        _ ->
-          source
-      end
+      if patches == [], do: source, else: Sourceror.patch_string(source, patches)
     else
       _ -> source
     end
+  end
+
+  defp module_nodes({:quote, _, _}), do: []
+
+  defp module_nodes({:defmodule, _, args} = node) do
+    [node | module_nodes(args)]
+  end
+
+  defp module_nodes(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> Enum.flat_map(&module_nodes/1)
+  end
+
+  defp module_nodes(list) when is_list(list), do: Enum.flat_map(list, &module_nodes/1)
+  defp module_nodes(_), do: []
+
+  defp defstructs_in_module({:defmodule, _, [_name, body]}), do: collect_defstructs(body)
+
+  defp collect_defstructs({:defmodule, _, _}), do: []
+  defp collect_defstructs({:quote, _, _}), do: []
+  defp collect_defstructs({:defstruct, _, _} = node), do: [node]
+
+  defp collect_defstructs(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> Enum.flat_map(&collect_defstructs/1)
+  end
+
+  defp collect_defstructs(list) when is_list(list), do: Enum.flat_map(list, &collect_defstructs/1)
+  defp collect_defstructs(_), do: []
+
+  defp remove_statement_patch(node) do
+    %{end: end_position} = Sourceror.get_range(node)
+
+    %{
+      range: %{
+        start: [line: Sourceror.get_start_position(node)[:line], column: 1],
+        end: [line: end_position[:line] + 1, column: 1]
+      },
+      change: ""
+    }
   end
 
   defp line(%{position: {line, _col}}), do: line
