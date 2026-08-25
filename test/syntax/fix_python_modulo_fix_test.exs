@@ -12,20 +12,20 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "identifier % integer" do
-    test "year % 4 → rem(year, 4)" do
-      confirm_fix(fix("year % 4"), "rem(year, 4)")
+    test "year % 4 → Integer.mod(year, 4)" do
+      confirm_fix(fix("year % 4"), "Integer.mod(year, 4)")
     end
 
-    test "n % 2 → rem(n, 2)" do
-      confirm_fix(fix("n % 2"), "rem(n, 2)")
+    test "n % 2 → Integer.mod(n, 2)" do
+      confirm_fix(fix("n % 2"), "Integer.mod(n, 2)")
     end
 
-    test "year % 100 → rem(year, 100)" do
-      confirm_fix(fix("year % 100"), "rem(year, 100)")
+    test "year % 100 → Integer.mod(year, 100)" do
+      confirm_fix(fix("year % 100"), "Integer.mod(year, 100)")
     end
 
-    test "year % 400 → rem(year, 400)" do
-      confirm_fix(fix("year % 400"), "rem(year, 400)")
+    test "year % 400 → Integer.mod(year, 400)" do
+      confirm_fix(fix("year % 400"), "Integer.mod(year, 400)")
     end
   end
 
@@ -34,12 +34,12 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "identifier % identifier" do
-    test "a % b → rem(a, b)" do
-      confirm_fix(fix("a % b"), "rem(a, b)")
+    test "a % b → Integer.mod(a, b)" do
+      confirm_fix(fix("a % b"), "Integer.mod(a, b)")
     end
 
-    test "n % divisor → rem(n, divisor)" do
-      confirm_fix(fix("n % divisor"), "rem(n, divisor)")
+    test "n % divisor → Integer.mod(n, divisor)" do
+      confirm_fix(fix("n % divisor"), "Integer.mod(n, divisor)")
     end
   end
 
@@ -48,8 +48,30 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "integer % integer" do
-    test "100 % 7 → rem(100, 7)" do
-      confirm_fix(fix("100 % 7"), "rem(100, 7)")
+    test "100 % 7 → Integer.mod(100, 7)" do
+      confirm_fix(fix("100 % 7"), "Integer.mod(100, 7)")
+    end
+
+    test "preserves Python modulo semantics for a negative literal" do
+      emitted = fix("-5 % 2")
+      fixture = "unless #{emitted} == 1, do: raise(\"wrong modulo result\")"
+      control = "unless Integer.mod(-5, 2) == 1, do: raise(\"wrong modulo result\")"
+
+      confirm_fix(emitted, "Integer.mod(-5, 2)")
+
+      assert Credence.RuleHelpers.compile_and_capture(fixture) ==
+               Credence.RuleHelpers.compile_and_capture(control)
+    end
+
+    test "preserves Python modulo semantics for a negative identifier" do
+      emitted = fix("x % 2")
+      fixture = "x = -5; unless #{emitted} == 1, do: raise(\"wrong modulo result\")"
+      control = "x = -5; unless Integer.mod(x, 2) == 1, do: raise(\"wrong modulo result\")"
+
+      confirm_fix(emitted, "Integer.mod(x, 2)")
+
+      assert Credence.RuleHelpers.compile_and_capture(fixture) ==
+               Credence.RuleHelpers.compile_and_capture(control)
     end
   end
 
@@ -58,12 +80,12 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "without spaces" do
-    test "n%2 → rem(n, 2)" do
-      confirm_fix(fix("n%2"), "rem(n, 2)")
+    test "n%2 → Integer.mod(n, 2)" do
+      confirm_fix(fix("n%2"), "Integer.mod(n, 2)")
     end
 
-    test "year%4 → rem(year, 4)" do
-      confirm_fix(fix("year%4"), "rem(year, 4)")
+    test "year%4 → Integer.mod(year, 4)" do
+      confirm_fix(fix("year%4"), "Integer.mod(year, 4)")
     end
   end
 
@@ -72,16 +94,16 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "in comparisons" do
-    test "n % 2 == 0 → rem(n, 2) == 0" do
-      confirm_fix(fix("n % 2 == 0"), "rem(n, 2) == 0")
+    test "n % 2 == 0 → Integer.mod(n, 2) == 0" do
+      confirm_fix(fix("n % 2 == 0"), "Integer.mod(n, 2) == 0")
     end
 
-    test "year % 4 != 0 → rem(year, 4) != 0" do
-      confirm_fix(fix("year % 4 != 0"), "rem(year, 4) != 0")
+    test "year % 4 != 0 → Integer.mod(year, 4) != 0" do
+      confirm_fix(fix("year % 4 != 0"), "Integer.mod(year, 4) != 0")
     end
 
-    test "n % 2 == 1 → rem(n, 2) == 1" do
-      confirm_fix(fix("n % 2 == 1"), "rem(n, 2) == 1")
+    test "n % 2 == 1 → Integer.mod(n, 2) == 1" do
+      confirm_fix(fix("n % 2 == 1"), "Integer.mod(n, 2) == 1")
     end
   end
 
@@ -90,12 +112,12 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "in assignments" do
-    test "remainder = n % 2 → remainder = rem(n, 2)" do
-      confirm_fix(fix("remainder = n % 2"), "remainder = rem(n, 2)")
+    test "remainder = n % 2 → remainder = Integer.mod(n, 2)" do
+      confirm_fix(fix("remainder = n % 2"), "remainder = Integer.mod(n, 2)")
     end
 
-    test "r = a % b → r = rem(a, b)" do
-      confirm_fix(fix("r = a % b"), "r = rem(a, b)")
+    test "r = a % b → r = Integer.mod(a, b)" do
+      confirm_fix(fix("r = a % b"), "r = Integer.mod(a, b)")
     end
   end
 
@@ -104,24 +126,31 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "multiple on same line" do
+    test "repairs every operation in a chained modulo expression" do
+      emitted = fix("a % b % c")
+
+      confirm_fix(emitted, "Integer.mod(Integer.mod(a, b), c)")
+      assert valid_syntax?(emitted)
+    end
+
     test "tuple with three modulo ops" do
       confirm_fix(
         fix("{year % 4, year % 100, year % 400}"),
-        "{rem(year, 4), rem(year, 100), rem(year, 400)}"
+        "{Integer.mod(year, 4), Integer.mod(year, 100), Integer.mod(year, 400)}"
       )
     end
 
     test "boolean expression" do
       confirm_fix(
         fix("year % 4 == 0 and year % 100 != 0"),
-        "rem(year, 4) == 0 and rem(year, 100) != 0"
+        "Integer.mod(year, 4) == 0 and Integer.mod(year, 100) != 0"
       )
     end
 
     test "complex boolean with or" do
       confirm_fix(
         fix("year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)"),
-        "rem(year, 4) == 0 and (rem(year, 100) != 0 or rem(year, 400) == 0)"
+        "Integer.mod(year, 4) == 0 and (Integer.mod(year, 100) != 0 or Integer.mod(year, 400) == 0)"
       )
     end
   end
@@ -134,14 +163,14 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     test "when year % 4 != 0" do
       confirm_fix(
         fix("def leap?(year) when year % 4 != 0, do: false"),
-        "def leap?(year) when rem(year, 4) != 0, do: false"
+        "def leap?(year) when Integer.mod(year, 4) != 0, do: false"
       )
     end
 
     test "when n % 2 == 0" do
       confirm_fix(
         fix("def even?(n) when n % 2 == 0, do: true"),
-        "def even?(n) when rem(n, 2) == 0, do: true"
+        "def even?(n) when Integer.mod(n, 2) == 0, do: true"
       )
     end
   end
@@ -163,9 +192,9 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
       expected = """
       defmodule LeapYear do
-        def leap_year?(year) when rem(year, 4) != 0, do: false
-        def leap_year?(year) when rem(year, 100) != 0, do: true
-        def leap_year?(year) when rem(year, 400) == 0, do: true
+        def leap_year?(year) when Integer.mod(year, 4) != 0, do: false
+        def leap_year?(year) when Integer.mod(year, 100) != 0, do: true
+        def leap_year?(year) when Integer.mod(year, 400) == 0, do: true
         def leap_year?(_year), do: false
       end
       """
@@ -187,7 +216,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
       expected = """
       def leap_year?(year) do
-        case {rem(year, 4), rem(year, 100), rem(year, 400)} do
+        case {Integer.mod(year, 4), Integer.mod(year, 100), Integer.mod(year, 400)} do
           {0, 0, 0} -> true
           {0, 0, _} -> false
           {0, _, _} -> true
@@ -208,7 +237,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
       expected = """
       def leap_year?(year) do
-        rem(year, 4) == 0 and (rem(year, 100) != 0 or rem(year, 400) == 0)
+        Integer.mod(year, 4) == 0 and (Integer.mod(year, 100) != 0 or Integer.mod(year, 400) == 0)
       end
       """
 
@@ -236,9 +265,9 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       expected = """
       def fizzbuzz(n) do
         cond do
-          rem(n, 15) == 0 -> "FizzBuzz"
-          rem(n, 3) == 0 -> "Fizz"
-          rem(n, 5) == 0 -> "Buzz"
+          Integer.mod(n, 15) == 0 -> "FizzBuzz"
+          Integer.mod(n, 3) == 0 -> "Fizz"
+          Integer.mod(n, 5) == 0 -> "Buzz"
           true -> to_string(n)
         end
       end
@@ -254,11 +283,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "realistic even/odd" do
     test "one-liner even? predicate" do
-      confirm_fix(fix("def even?(n), do: n % 2 == 0"), "def even?(n), do: rem(n, 2) == 0")
+      confirm_fix(fix("def even?(n), do: n % 2 == 0"), "def even?(n), do: Integer.mod(n, 2) == 0")
     end
 
     test "one-liner odd? predicate" do
-      confirm_fix(fix("def odd?(n), do: n % 2 != 0"), "def odd?(n), do: rem(n, 2) != 0")
+      confirm_fix(fix("def odd?(n), do: n % 2 != 0"), "def odd?(n), do: Integer.mod(n, 2) != 0")
     end
   end
 
@@ -279,7 +308,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       expected = """
       defmodule Example do
         def foo(x), do: x + 1
-        def bar(n), do: rem(n, 2) == 0
+        def bar(n), do: Integer.mod(n, 2) == 0
         def baz(y), do: y - 1
       end
       """
@@ -288,7 +317,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     end
 
     test "preserves indentation" do
-      confirm_fix(fix("      n % 2"), "      rem(n, 2)")
+      confirm_fix(fix("      n % 2"), "      Integer.mod(n, 2)")
     end
   end
 
@@ -424,13 +453,13 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     test "leaves the string alone while still fixing real code on the same line" do
       confirm_fix(
         fix(~S'IO.puts("50% left"); x = n % 2'),
-        ~S'IO.puts("50% left"); x = rem(n, 2)'
+        ~S'IO.puts("50% left"); x = Integer.mod(n, 2)'
       )
     end
 
     test "fixes inside interpolation — that IS code" do
       source = ~S'IO.puts("#{n % 2}")'
-      expected = ~S'IO.puts("#{rem(n, 2)}")'
+      expected = ~S'IO.puts("#{Integer.mod(n, 2)}")'
       confirm_fix(fix(source), expected)
     end
 
@@ -440,7 +469,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     end
 
     test "leaves a trailing comment alone while fixing the code before it" do
-      confirm_fix(fix("n % 2 # 50% note"), "rem(n, 2) # 50% note")
+      confirm_fix(fix("n % 2 # 50% note"), "Integer.mod(n, 2) # 50% note")
     end
 
     test "leaves a character-literal escape alone" do
@@ -473,7 +502,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
   # ═══════════════════════════════════════════════════════════════════
   # PRECEDENCE — Python's `%` shares precedence with `*` and `/`
   #
-  # `a * b % 2` means `(a * b) % 2`. Emitting `a * rem(b, 2)` parses,
+  # `a * b % 2` means `(a * b) % 2`. Emitting `a * Integer.mod(b, 2)` parses,
   # compiles, and computes a different number — so those lines are
   # declined and the parse error is left in place.
   # ═══════════════════════════════════════════════════════════════════
@@ -488,7 +517,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     end
 
     test "still fixes after `+`, which binds looser than `%` in Python" do
-      confirm_fix(fix("x = a + b % 2"), "x = a + rem(b, 2)")
+      confirm_fix(fix("x = a + b % 2"), "x = a + Integer.mod(b, 2)")
     end
 
     test "does not report a declined precedence hazard" do
@@ -515,7 +544,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       defmodule ModuloInteg do
         def render(n) do
           IO.puts("100% done")
-          rem(n, 2)
+          Integer.mod(n, 2)
         end
       end
       """

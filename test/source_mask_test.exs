@@ -253,7 +253,7 @@ defmodule Credence.SourceMaskTest do
       # above, and prove nothing.
       source = "x = a % 2\n"
 
-      assert Credence.Syntax.FixPythonModulo.fix(source) == "x = rem(a, 2)\n"
+      assert Credence.Syntax.FixPythonModulo.fix(source) == "x = Integer.mod(a, 2)\n"
     end
   end
 
