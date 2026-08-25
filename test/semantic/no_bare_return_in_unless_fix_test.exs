@@ -4,11 +4,20 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoBareReturnInUnless
+  alias Credence.RuleHelpers
 
   @msg "undefined function return/1"
 
   defp fix(source, line \\ 1) do
     NoBareReturnInUnless.fix(source, %{severity: :error, message: @msg, position: {line, 1}})
+  end
+
+  defp assert_compiles_like(fixed, control, assertions) do
+    emitted_result = RuleHelpers.compile_and_capture(fixed <> "\n" <> assertions)
+    control_result = RuleHelpers.compile_and_capture(control <> "\n" <> assertions)
+
+    assert emitted_result == control_result
+    assert emitted_result == {:ok, []}
   end
 
   @input """
@@ -233,10 +242,24 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     fixed = fix(input)
 
-    assert Credence.RuleCase.call_fixed(fixed, EarlyExitBehaviour, :check, [-5]) ==
-             {:error, :neg}
+    control = """
+    defmodule EarlyExitBehaviour do
+      def check(n) do
+        if n >= 0 do
+          {:ok, n}
+        else
+          {:error, :neg}
+        end
+      end
+    end
+    """
 
-    assert Credence.RuleCase.call_fixed(fixed, EarlyExitBehaviour, :check, [5]) == {:ok, 5}
+    assertions = """
+    unless EarlyExitBehaviour.check(-5) == {:error, :neg}, do: raise("lost early exit")
+    unless EarlyExitBehaviour.check(5) == {:ok, 5}, do: raise("changed control branch")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
   end
 
   test "preserves early exit from an if with else" do
@@ -264,10 +287,14 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
-    assert Credence.RuleCase.call_fixed(fixed, EarlyExitWithElseNBRIU, :check, [true]) == :error
+    control = expected
 
-    assert Credence.RuleCase.call_fixed(fixed, EarlyExitWithElseNBRIU, :check, [false]) ==
-             :continued
+    assertions = """
+    unless EarlyExitWithElseNBRIU.check(true) == :error, do: raise("lost early exit")
+    unless EarlyExitWithElseNBRIU.check(false) == :continued, do: raise("changed else branch")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
   end
 
   test "nil is an early-exit value, not the not-found sentinel" do
@@ -294,10 +321,14 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
-    assert Credence.RuleCase.call_fixed(fixed, NilEarlyExitNBRIU, :check, [true]) == nil
+    control = expected
 
-    assert Credence.RuleCase.call_fixed(fixed, NilEarlyExitNBRIU, :check, [false]) ==
-             :continued
+    assertions = """
+    unless NilEarlyExitNBRIU.check(true) == nil, do: raise("changed nil early exit")
+    unless NilEarlyExitNBRIU.check(false) == :continued, do: raise("changed control branch")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
   end
 
   test "preserves work before a terminal return in a conditional branch" do
@@ -329,11 +360,15 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
+    control = expected
+
+    assertions = """
     Process.delete(:worked_early_exit_nbriu)
-    assert Credence.RuleCase.call_fixed(fixed, WorkedEarlyExitNBRIU, :check, [true]) == :error
-    assert Process.get(:worked_early_exit_nbriu) == true
-  after
-    Process.delete(:worked_early_exit_nbriu)
+    unless WorkedEarlyExitNBRIU.check(true) == :error, do: raise("lost early exit")
+    unless Process.get(:worked_early_exit_nbriu) == true, do: raise("lost preceding work")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
   end
 
   test "preserves early exit from a non-final case branch" do
@@ -367,8 +402,52 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
-    assert Credence.RuleCase.call_fixed(fixed, CaseEarlyExitNBRIU, :check, [:bad]) == :error
-    assert Credence.RuleCase.call_fixed(fixed, CaseEarlyExitNBRIU, :check, [:ok]) == :continued
+    control = expected
+
+    assertions = """
+    unless CaseEarlyExitNBRIU.check(:bad) == :error, do: raise("lost early exit")
+    unless CaseEarlyExitNBRIU.check(:ok) == :continued, do: raise("changed control branch")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
+  end
+
+  test "production semantic dispatch assigns and repairs return/1" do
+    input = """
+    defmodule NoBareReturnDispatchNBRIU do
+      def check(value) do
+        unless value == :ok do
+          return({:error, :bad})
+        end
+
+        :ok
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoBareReturnDispatchNBRIU do
+      def check(value) do
+        if value == :ok do
+          :ok
+        else
+          {:error, :bad}
+        end
+      end
+    end
+    """
+
+    fixed = Credence.Semantic.fix(input)
+    confirm_fix(fixed, expected)
+
+    control = expected
+
+    assertions = """
+    unless NoBareReturnDispatchNBRIU.check(:bad) == {:error, :bad}, do: raise("lost dispatch repair")
+    unless NoBareReturnDispatchNBRIU.check(:ok) == :ok, do: raise("changed control branch")
+    """
+
+    assert_compiles_like(fixed, control, assertions)
   end
 
   test "strips return from case branch" do
