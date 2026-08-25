@@ -293,6 +293,52 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     confirm_fix(fix(input, message, 3), expected)
   end
 
+  test "fixes every other admitted bitwise spelling" do
+    cases = [
+      {"bor", 2, "bor(5, 2)", "Elixir.Bitwise.bor(5, 2)", "Bor", 7},
+      {"bsr", 2, "bsr(16, 2)", "Elixir.Bitwise.bsr(16, 2)", "Bsr", 4},
+      {"bxor", 2, "bxor(5, 3)", "Elixir.Bitwise.bxor(5, 3)", "Bxor", 6},
+      {"bnot", 1, "bnot(5)", "Elixir.Bitwise.bnot(5)", "Bnot", -6},
+      {"&&&", 2, "5 &&& 3", "Elixir.Bitwise.band(5, 3)", "And", 1},
+      {"<<<", 2, "2 <<< 3", "Elixir.Bitwise.bsl(2, 3)", "LeftShift", 16}
+    ]
+
+    for {spelling, arity, bad_expression, good_expression, suffix, value} <- cases do
+      fixture_module = "FixErlangBitwiseBif#{suffix}Fixture"
+      control_module = "FixErlangBitwiseBif#{suffix}Control"
+
+      input = """
+      defmodule #{fixture_module} do
+        def value, do: #{bad_expression}
+      end
+      """
+
+      expected = """
+      defmodule #{fixture_module} do
+        def value, do: #{good_expression}
+      end
+      """
+
+      control = """
+      defmodule #{control_module} do
+        def value, do: #{good_expression}
+      end
+
+      unless #{control_module}.value() == #{value}, do: raise("wrong bitwise result")
+      """
+
+      fixed = fix(input, "undefined function #{spelling}/#{arity}", 2)
+
+      fixed_with_witness =
+        fixed <>
+          "\nunless #{fixture_module}.value() == #{value}, do: raise(\"wrong bitwise result\")\n"
+
+      confirm_fix(fixed, expected)
+      assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed_with_witness)
+      assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(control)
+    end
+  end
+
   test "operator fix produces valid syntax" do
     message = "undefined function |||/2"
     assert valid_syntax?(fix(@or_input, message, 3))
