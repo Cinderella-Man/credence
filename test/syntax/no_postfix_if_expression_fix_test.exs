@@ -1,8 +1,9 @@
 defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [compiles?: 1, confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Syntax.NoPostfixIfExpression
 
   defp analyze(code), do: NoPostfixIfExpression.analyze(code)
@@ -30,6 +31,32 @@ defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
     """
 
     confirm_fix(fix(input), expected)
+  end
+
+  test "repairs the syntax error through the production pipeline" do
+    input = """
+    defmodule NoPostfixIfExpressionPipelineFixture do
+      def update(current_max, period, type) do
+        new_max = current_max
+        new_max = max(current_max, period) if type == :sma
+        new_max
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoPostfixIfExpressionPipelineFixture do
+      def update(current_max, period, type) do
+        new_max = current_max
+        if type == :sma, do: max(current_max, period), else: new_max
+      end
+    end
+    """
+
+    result = Credence.fix(input)
+
+    assert result.code == expected
+    assert {NoPostfixIfExpression, 1} in result.applied_rules
   end
 
   test "fixes an indented accumulator rebinding" do
@@ -80,7 +107,7 @@ defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
 
   test "fixed output compiles — the `else:` branch names a real binding" do
     input = """
-    defmodule Trend do
+    defmodule NoPostfixIfExpressionCompileFixture do
       def update(current_max, period, type) do
         new_max = current_max
         new_max = max(current_max, period) if type == :sma
@@ -89,10 +116,20 @@ defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
     end
     """
 
-    assert compiles?(fix(input))
-  after
-    :code.purge(Trend)
-    :code.delete(Trend)
+    control = """
+    defmodule NoPostfixIfExpressionCompileFixture do
+      def update(current_max, period, type) do
+        new_max = current_max
+        new_max = if type == :sma, do: max(current_max, period), else: new_max
+        new_max
+      end
+    end
+    """
+
+    emitted = fix(input)
+
+    assert RuleHelpers.compile_and_capture(emitted) == {:ok, []}
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(control)
   end
 
   # --- everything below must come back byte-identical ---
