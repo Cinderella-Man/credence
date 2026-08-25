@@ -121,34 +121,49 @@ defmodule Credence.Semantic.FixStructTestInGuard do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        {new_ast, changed} =
-          Macro.prewalk(ast, false, fn node, changed ->
-            case rewrite_clause(node) do
-              {:ok, rewritten} -> {rewritten, true}
-              :decline -> {node, changed}
-            end
-          end)
+  def fix(source, diagnostic) do
+    with {:ok, target_line} <- map_get_diagnostic(diagnostic),
+         {:ok, ast} <- Sourceror.parse_string(source) do
+      {new_ast, changed} =
+        Macro.prewalk(ast, false, fn node, changed ->
+          case rewrite_clause(node, target_line) do
+            {:ok, rewritten} -> {rewritten, true}
+            :decline -> {node, changed}
+          end
+        end)
 
-        if changed, do: Sourceror.to_string(new_ast), else: source
-
-      _error ->
-        source
+      if changed, do: Sourceror.to_string(new_ast), else: source
+    else
+      _error -> source
     end
   end
+
+  defp map_get_diagnostic(%{
+         message: "cannot invoke remote function Map.get/2 inside a guard",
+         position: {line, _column}
+       })
+       when is_integer(line),
+       do: {:ok, line}
+
+  defp map_get_diagnostic(%{
+         message: "cannot invoke remote function Map.get/2 inside a guard",
+         position: line
+       })
+       when is_integer(line),
+       do: {:ok, line}
+
+  defp map_get_diagnostic(_diagnostic), do: :error
 
   @kinds [:def, :defp, :defmacro, :defmacrop]
 
   # A clause whose guard holds exactly one liftable struct test, over a parameter that
   # is a plain variable. Everything else declines, and each decline is a recorded
   # corruption path rather than a missing feature.
-  defp rewrite_clause({kind, kind_meta, [{:when, when_meta, [call, guard]} | rest]})
+  defp rewrite_clause({kind, kind_meta, [{:when, when_meta, [call, guard]} | rest]}, target_line)
        when kind in @kinds do
     with false <- contains_or?(guard),
          conjuncts = split_and(guard),
-         {:ok, alias_node, var} <- single_struct_test(conjuncts),
+         {:ok, alias_node, var, ^target_line} <- single_struct_test(conjuncts),
          {:ok, new_call} <- bind_struct_pattern(call, alias_node, var) do
       remaining = Enum.reject(conjuncts, &struct_test(&1))
 
@@ -158,7 +173,7 @@ defmodule Credence.Semantic.FixStructTestInGuard do
     end
   end
 
-  defp rewrite_clause(_node), do: :decline
+  defp rewrite_clause(_node, _target_line), do: :decline
 
   defp rebuild(kind, kind_meta, _when_meta, call, [], rest), do: {kind, kind_meta, [call | rest]}
 
@@ -169,13 +184,13 @@ defmodule Credence.Semantic.FixStructTestInGuard do
   # `Map.get(var, :__struct__) == Alias`, either way round. `{alias_node, var_name}`.
   defp struct_test({:==, _meta, [left, right]}) do
     cond do
-      match?({:ok, _}, struct_get(left)) and alias?(right) ->
-        {:ok, var} = struct_get(left)
-        {right, var}
+      match?({:ok, _, _}, struct_get(left)) and alias?(right) ->
+        {:ok, var, line} = struct_get(left)
+        {right, var, line}
 
-      match?({:ok, _}, struct_get(right)) and alias?(left) ->
-        {:ok, var} = struct_get(right)
-        {left, var}
+      match?({:ok, _, _}, struct_get(right)) and alias?(left) ->
+        {:ok, var, line} = struct_get(right)
+        {left, var, line}
 
       true ->
         nil
@@ -184,9 +199,9 @@ defmodule Credence.Semantic.FixStructTestInGuard do
 
   defp struct_test(_node), do: nil
 
-  defp struct_get({{:., _, [{:__aliases__, _, [:Map]}, :get]}, _, [{var, _, ctx}, key]})
+  defp struct_get({{:., _, [{:__aliases__, _, [:Map]}, :get]}, call_meta, [{var, _, ctx}, key]})
        when is_atom(var) and is_atom(ctx) do
-    if literal(key) == :__struct__, do: {:ok, var}, else: :error
+    if literal(key) == :__struct__, do: {:ok, var, call_meta[:line]}, else: :error
   end
 
   defp struct_get(_node), do: :error
@@ -204,7 +219,7 @@ defmodule Credence.Semantic.FixStructTestInGuard do
 
   defp single_struct_test(conjuncts) do
     case Enum.flat_map(conjuncts, fn c -> List.wrap(struct_test(c)) end) do
-      [{alias_node, var}] -> {:ok, alias_node, var}
+      [{alias_node, var, line}] -> {:ok, alias_node, var, line}
       _many_or_none -> :decline
     end
   end

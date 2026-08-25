@@ -5,6 +5,7 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
     only: [call_fixed: 4, compiles?: 1, confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixStructTestInGuard
+  alias Credence.RuleHelpers
 
   @real_message "cannot invoke remote function Map.get/2 inside a guard"
 
@@ -144,6 +145,53 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
 
   # Each of these is a recorded corruption path, not a missing feature.
   describe "declines, byte for byte" do
+    test "a different remote-function diagnostic cannot rewrite quoted data" do
+      input = """
+      defmodule StructGuardUnrelatedDiagnostic do
+        def quoted,
+          do: quote(do: (def q(v) when Map.get(v, :__struct__) == Regex, do: v))
+
+        def f(n) when String.length(n) > 0, do: :ok
+      end
+      """
+
+      assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+      diagnostic = Enum.find(diagnostics, &(&1.severity == :error))
+      assert diagnostic.message == "cannot invoke remote function String.length/1 inside a guard"
+
+      confirm_fix(FixStructTestInGuard.fix(input, diagnostic), input)
+
+      map_diagnostic_at_the_error = %{
+        diagnostic
+        | message: "cannot invoke remote function Map.get/2 inside a guard"
+      }
+
+      confirm_fix(FixStructTestInGuard.fix(input, map_diagnostic_at_the_error), input)
+    end
+
+    test "an application module aliased as Map is not Elixir's Map" do
+      input = """
+      defmodule StructGuardAliasedMap do
+        alias StructGuardAliasedMap.Custom, as: Map
+
+        defmodule Custom do
+          def get(_value, :__struct__), do: Regex
+        end
+
+        def f(v) when Map.get(v, :__struct__) == Regex, do: :custom
+        def f(_v), do: :fallback
+      end
+      """
+
+      assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+      diagnostic = Enum.find(diagnostics, &(&1.severity == :error))
+
+      assert diagnostic.message ==
+               "cannot invoke remote function StructGuardAliasedMap.Custom.get/2 inside a guard"
+
+      confirm_fix(FixStructTestInGuard.fix(input, diagnostic), input)
+    end
+
     # THE hazard docs/18 records as the hole its proposed containment check does not
     # close. Moving `%Regex{}` onto `%{} = re` would REPLACE the pattern rather than
     # intersect with it, and the guard is gone, so the clause matches every map.
