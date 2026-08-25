@@ -213,6 +213,25 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThanFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "fixes code without rewriting inline comments, charlists, or sigils" do
+    input = """
+    note = ~S([:=<,])
+    chars = '[ :=<, ]'
+    guards = [{:=<, :"$1", cutoff}] # example [{:=<, x}]
+    """
+
+    expected = """
+    note = ~S([:=<,])
+    chars = '[ :=<, ]'
+    guards = [{:"=<", :"$1", cutoff}] # example [{:=<, x}]
+    """
+
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+    confirm_fix(fix(emitted), emitted)
+  end
+
   test "fixed output no longer flags" do
     input = ~S"""
     guards = [{:=<, :"$1", cutoff}]

@@ -40,12 +40,12 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
   `:=<` at end of line is skipped for the same reason — the operand may simply
   be on the following line.
 
-  Comment lines, heredoc bodies, and text inside a double-quoted string are
-  skipped as well, so prose mentioning `:=<` keeps its bytes.
+  Comments, strings, charlists, sigils, and heredoc bodies are skipped as well,
+  so prose mentioning `:=<` keeps its bytes.
   """
   use Credence.Syntax.Rule
 
-  alias Credence.Issue
+  alias Credence.{Issue, SourceMask}
 
   @bad ":=<"
   @good ~s(:"=<")
@@ -59,64 +59,33 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
   @impl true
   def analyze(source) do
     source
-    |> eligible_lines()
-    |> Enum.flat_map(fn {line, line_no, eligible?} ->
-      if eligible?,
-        do: Enum.map(occurrences(line), fn _ -> build_issue(line_no) end),
-        else: []
+    |> SourceMask.lines()
+    |> Enum.with_index(1)
+    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
+      Enum.map(occurrences(shadow), fn _ -> build_issue(line_no) end)
     end)
   end
 
   @impl true
   def fix(source) do
     source
-    |> eligible_lines()
-    |> Enum.map_join("\n", fn {line, _line_no, eligible?} ->
-      if eligible?, do: fix_line(line), else: line
-    end)
-  end
-
-  # Walks the lines once, carrying heredoc state, and tags each line with
-  # whether the rule may touch it. `analyze` and `fix` read the same tag, so
-  # `analyze` can never flag a line `fix` refuses to rewrite.
-  defp eligible_lines(source) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_reduce(false, fn {line, line_no}, in_heredoc? ->
-      eligible? = not in_heredoc? and not comment?(line)
-      {{line, line_no, eligible?}, toggle_heredoc(in_heredoc?, line)}
-    end)
-    |> elem(0)
-  end
-
-  defp comment?(line), do: Regex.match?(~r/^\s*#/, line)
-
-  # Heredoc bodies are prose (`@moduledoc """ … """`), not code. An odd number of
-  # `"""` on a line flips the state; a stray delimiter therefore only ever makes
-  # the rule skip more, never rewrite more.
-  defp toggle_heredoc(in_heredoc?, line) do
-    if rem(count_occurrences(line, ~s(""")), 2) == 1, do: not in_heredoc?, else: in_heredoc?
-  end
-
-  defp count_occurrences(line, needle) do
-    div(byte_size(line) - byte_size(String.replace(line, needle, "")), byte_size(needle))
+    |> SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
   end
 
   # Every eligible `:=<` on the line, as the byte offset of its `:`, in source
   # order. The match consumes the leading boundary character (if any), so the
   # atom itself starts at the last three bytes of the match.
-  defp occurrences(line) do
+  defp occurrences(shadow) do
     @pattern
-    |> Regex.scan(line, return: :index)
+    |> Regex.scan(shadow, return: :index)
     |> Enum.map(fn [{start, len}] -> start + len - byte_size(@bad) end)
-    |> Enum.reject(&inside_string?(line, &1))
   end
 
   # Splice right-to-left so each replacement leaves the offsets of the ones
   # still to come untouched.
-  defp fix_line(line) do
-    line
+  defp fix_line(line, shadow) do
+    shadow
     |> occurrences()
     |> Enum.reverse()
     |> Enum.reduce(line, fn start, acc ->
@@ -125,20 +94,6 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
       binary_part(acc, 0, start) <>
         @good <> binary_part(acc, start + len, byte_size(acc) - start - len)
     end)
-  end
-
-  # True when byte `pos` sits inside a double-quoted string on this line: an odd
-  # number of quotes precedes it, once escaped quotes (`\"`) and the character
-  # literal `?"` are discounted. Miscounting can only make the rule skip a real
-  # target, never rewrite a protected one.
-  defp inside_string?(line, pos) do
-    prefix =
-      line
-      |> binary_part(0, pos)
-      |> String.replace(~S(\"), "")
-      |> String.replace(~S(?"), "")
-
-    rem(count_occurrences(prefix, ~s(")), 2) == 1
   end
 
   defp build_issue(line) do
