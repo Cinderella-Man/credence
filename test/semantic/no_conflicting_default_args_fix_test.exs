@@ -18,7 +18,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsFixTest do
     "def #{fun}/#{low_arity} conflicts with defaults from #{fun}/#{high_arity}"
   end
 
-  test "removes redundant lower-arity clause with when guard" do
+  test "preserves a lower-arity clause with a when guard" do
     input = """
     defmodule Example do
       def sequence(name, formatter_fn \\\\ fn n -> n end) do
@@ -31,15 +31,30 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsFixTest do
     end
     """
 
-    expected = """
-    defmodule Example do
-      def sequence(name, formatter_fn \\\\ fn n -> n end) do
-        {name, formatter_fn}
-      end
+    confirm_fix(fix(input, conflict_msg("sequence", 1, 2), 6), input)
+  end
+
+  test "real compiler diagnostic is repaired through the semantic pipeline" do
+    input = """
+    defmodule PipelineDefaultArgs do
+      def greet(name, greeting \\\\ "Hello"), do: {greeting, name}
+      def greet(name), do: greet(name, "Hello")
     end
     """
 
-    confirm_fix(fix(input, conflict_msg("sequence", 1, 2), 6), expected)
+    expected = """
+    defmodule PipelineDefaultArgs do
+      def greet(name, greeting \\\\ "Hello"), do: {greeting, name}
+    end
+    """
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(diagnostics, fn diagnostic ->
+             NoConflictingDefaultArgs.match?(diagnostic) and diagnostic.position == {3, 7}
+           end)
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
   test "removes redundant lower-arity clause without guard" do

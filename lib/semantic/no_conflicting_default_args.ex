@@ -117,8 +117,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgs do
     end
   end
 
-  defp clause_args({kind, _, [{:when, _, [head | _]} | _]}) when kind in [:def, :defp],
-    do: head_args(head)
+  defp clause_args({kind, _, [{:when, _, _} | _]}) when kind in [:def, :defp], do: :error
 
   defp clause_args({kind, _, [head | _]}) when kind in [:def, :defp], do: head_args(head)
   defp clause_args(_), do: :error
