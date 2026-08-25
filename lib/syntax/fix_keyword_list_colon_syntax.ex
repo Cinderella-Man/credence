@@ -36,15 +36,11 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
   alias Credence.Issue
   alias Credence.SourceMask
 
-  # One edit removes one stray colon; a file with more needs more passes. The
-  # cap is a belt-and-braces guard against a rewrite loop.
-  @max_passes 50
-
   # A keyword-list identifier: lowercase/underscore start, optional `?`/`!` end.
   @identifier ~r/^[a-z_][a-zA-Z0-9_]*[?!]?$/
 
   @impl true
-  def analyze(source), do: collect_issues(source, @max_passes, [])
+  def analyze(source), do: collect_issues(source, byte_size(source), [])
 
   defp collect_issues(_source, 0, acc), do: Enum.reverse(acc)
 
@@ -59,7 +55,7 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
   end
 
   @impl true
-  def fix(source), do: run(source, @max_passes)
+  def fix(source), do: run(source, byte_size(source))
 
   defp run(source, 0), do: source
 

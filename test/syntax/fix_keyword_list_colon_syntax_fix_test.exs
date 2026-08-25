@@ -57,6 +57,17 @@ defmodule Credence.Syntax.FixKeywordListColonSyntaxFixTest do
       confirm_fix(fix(input), expected)
     end
 
+    test "more than fifty malformed keywords" do
+      input = "[" <> Enum.map_join(1..51, ", ", &":k#{&1}: #{&1}") <> "]"
+      expected = "[" <> Enum.map_join(1..51, ", ", &"k#{&1}: #{&1}") <> "]"
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
     test "with question mark suffix" do
       input = "[valid: 1, :ready?: true]"
 
