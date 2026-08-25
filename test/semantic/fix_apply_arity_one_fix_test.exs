@@ -155,7 +155,7 @@ defmodule Credence.Semantic.FixApplyArityOneFixTest do
     confirm_fix(fix(input, 6), expected)
   end
 
-  test "no issue: bails entirely when the file defines apply itself" do
+  test "a sibling module's apply definition does not suppress the fix" do
     input = """
     defmodule ApplyOwner do
       def apply(x), do: x
@@ -166,10 +166,55 @@ defmodule Credence.Semantic.FixApplyArityOneFixTest do
     end
     """
 
-    confirm_fix(fix(input, 6), input)
+    expected = """
+    defmodule ApplyOwner do
+      def apply(x), do: x
+    end
+
+    defmodule FixApplyArityOneExample do
+      def run(g), do: apply(g, [])
+    end
+    """
+
+    confirm_fix(fix(input, 6), expected)
   end
 
-  test "no issue: bails entirely when the file defdelegates apply" do
+  test "leaves quoted apply on the diagnostic line untouched" do
+    input = """
+    defmodule FixApplyArityOneExample do
+      def run(g), do: {quote(do: apply(g)), apply(g)}
+    end
+    """
+
+    expected = """
+    defmodule FixApplyArityOneExample do
+      def run(g), do: {quote(do: apply(g)), apply(g, [])}
+    end
+    """
+
+    confirm_fix(fix(input, 2), expected)
+  end
+
+  test "compiler diagnostic is repaired through Semantic dispatch" do
+    input = """
+    defmodule FixApplyArityOneDispatchFixture do
+      def run(g), do: apply(g)
+    end
+    """
+
+    expected = """
+    defmodule FixApplyArityOneDispatchFixture do
+      def run(g), do: apply(g, [])
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &FixApplyArityOne.match?/1)
+    confirm_fix(Credence.Semantic.fix(input), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "a sibling module's defdelegate does not suppress the fix" do
     input = """
     defmodule ApplyOwner do
       defdelegate apply(x), to: Kernel, as: :to_string
@@ -180,7 +225,28 @@ defmodule Credence.Semantic.FixApplyArityOneFixTest do
     end
     """
 
-    confirm_fix(fix(input, 6), input)
+    expected = """
+    defmodule ApplyOwner do
+      defdelegate apply(x), to: Kernel, as: :to_string
+    end
+
+    defmodule FixApplyArityOneExample do
+      def run(g), do: apply(g, [])
+    end
+    """
+
+    confirm_fix(fix(input, 6), expected)
+  end
+
+  test "bails when the diagnostic module itself defines apply" do
+    input = """
+    defmodule FixApplyArityOneExample do
+      def apply(x), do: x
+      def run(g), do: apply(g)
+    end
+    """
+
+    confirm_fix(fix(input, 3), input)
   end
 
   test "no issue: leaves the capture &apply/1 alone" do
