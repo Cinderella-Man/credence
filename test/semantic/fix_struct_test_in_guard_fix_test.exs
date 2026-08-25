@@ -2,7 +2,7 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
   use ExUnit.Case
 
   import Credence.RuleCase,
-    only: [call_fixed: 4, compiles?: 1, confirm_fix: 2, valid_syntax?: 1]
+    only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixStructTestInGuard
   alias Credence.RuleHelpers
@@ -11,6 +11,18 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
 
   defp fix(source, message \\ @real_message) do
     FixStructTestInGuard.fix(source, %{severity: :error, message: message, position: {2, 1}})
+  end
+
+  defp compile_and_send(source, expressions) do
+    recipient = self() |> inspect() |> String.trim_leading("#PID")
+
+    probe = """
+    send(:erlang.list_to_pid(~c\"#{recipient}\"), {:dispatch_results, [#{Enum.join(expressions, ", ")}]})
+    """
+
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(source <> "\n" <> probe)
+    assert_receive {:dispatch_results, results}
+    results
   end
 
   describe "moves the struct test into the pattern" do
@@ -41,7 +53,14 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      assert fix(input) =~ "def f(%Regex{} = v), do: :r"
+      expected = """
+      defmodule StructGuard do
+        def f(%Regex{} = v), do: :r
+        def f(_v), do: :o
+      end
+      """
+
+      confirm_fix(fix(input), expected)
     end
 
     # The struct test is lifted out and the rest of the `and` chain stays. `%Regex{} = v`
@@ -55,7 +74,14 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      assert fix(input) =~ "def f(%Regex{} = v) when is_map(v), do: :r"
+      expected = """
+      defmodule StructGuard do
+        def f(%Regex{} = v) when is_map(v), do: :r
+        def f(_v), do: :o
+      end
+      """
+
+      confirm_fix(fix(input), expected)
     end
 
     test "a parameter that is not the first one" do
@@ -66,7 +92,14 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      assert fix(input) =~ "def go(x, %Regex{} = re)"
+      expected = """
+      defmodule StructGuard do
+        def go(x, %Regex{} = re), do: {:regex_matched, x}
+        def go(x, _other), do: {:plain, x}
+      end
+      """
+
+      confirm_fix(fix(input), expected)
     end
 
     test "a dotted alias" do
@@ -77,7 +110,14 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      assert fix(input) =~ "def f(%NaiveDateTime{} = v), do: :dt"
+      expected = """
+      defmodule StructGuard do
+        def f(%NaiveDateTime{} = v), do: :dt
+        def f(_v), do: :o
+      end
+      """
+
+      confirm_fix(fix(input), expected)
     end
 
     test "defp" do
@@ -89,7 +129,15 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      assert fix(input) =~ "defp f(%Regex{} = v), do: :r"
+      expected = """
+      defmodule StructGuard do
+        defp f(%Regex{} = v), do: :r
+        defp f(_v), do: :o
+        def call(x), do: f(x)
+      end
+      """
+
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -97,6 +145,10 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
   # author evidently meant. The "before" has no runtime behaviour to preserve — it is a
   # hard CompileError — so this is the whole equivalence argument.
   describe "the repaired module compiles and dispatches correctly" do
+    test "fixture compilation contains nonterminating top-level code" do
+      refute RuleHelpers.compiles?("Enum.flat_map(1..10, &Stream.cycle([&1]))")
+    end
+
     test "the input does not compile and the output does" do
       input = """
       defmodule DispatchCheck do
@@ -105,8 +157,8 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
       end
       """
 
-      refute compiles?(input)
-      assert compiles?(fix(input))
+      refute RuleHelpers.compiles?(input)
+      assert RuleHelpers.compiles?(fix(input))
     end
 
     test "only the named struct takes the first clause" do
@@ -119,12 +171,16 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
 
       fixed = fix(input)
 
-      # Matched on the tag, not by comparing two Regex structs — a compiled
-      # `:re_pattern` is not reliably equal across compilations.
-      assert match?({:regex, _}, call_fixed(fixed, DispatchExec, :f, [~r/x/]))
-      assert call_fixed(fixed, DispatchExec, :f, [%{a: 1}]) == {:plain, %{a: 1}}
-      assert call_fixed(fixed, DispatchExec, :f, ["s"]) == {:plain, "s"}
-      assert call_fixed(fixed, DispatchExec, :f, [1]) == {:plain, 1}
+      results =
+        compile_and_send(fixed, [
+          "DispatchExec.f(~r/x/)",
+          "DispatchExec.f(%{a: 1})",
+          ~s|DispatchExec.f("s")|,
+          "DispatchExec.f(1)"
+        ])
+
+      assert [{:regex, regex}, {:plain, %{a: 1}}, {:plain, "s"}, {:plain, 1}] = results
+      assert Regex.source(regex) == "x"
     end
 
     test "the and-chain case dispatches correctly too" do
@@ -137,9 +193,11 @@ defmodule Credence.Semantic.FixStructTestInGuardFixTest do
 
       fixed = fix(input)
 
-      assert call_fixed(fixed, DispatchConj, :f, [~r/x/]) == :r
-      assert call_fixed(fixed, DispatchConj, :f, [%{a: 1}]) == :o
-      assert call_fixed(fixed, DispatchConj, :f, [1]) == :o
+      assert compile_and_send(fixed, [
+               "DispatchConj.f(~r/x/)",
+               "DispatchConj.f(%{a: 1})",
+               "DispatchConj.f(1)"
+             ]) == [:r, :o, :o]
     end
   end
 
