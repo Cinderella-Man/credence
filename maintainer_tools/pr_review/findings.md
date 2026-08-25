@@ -2036,3 +2036,15 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 ## test/support/rule_duplication.ex — 2026-08-25 (added, test_other)
 - blocker: test/support/rule_duplication.ex:226 — `firing_sets/2` converts every exception, throw, and exit from `rule.check/2` into “did not fire.” If a rule crashes on its own or distinguishing corpus examples, its firing set can become empty and `duplicate_pairs/3` skips it, so the duplicate gate silently passes instead of exposing that it was disarmed.
 - nit: test/support/rule_duplication.ex:53 — The moduledoc says the intersection currently reports three ledgered pairs, but the current gate ledger contains one; this stale measurement misleads maintainers assessing the threshold.
+## test/support/self_corruption.ex — 2026-08-25 (added, test_other)
+- blocker: test/support/self_corruption.ex:146 — `Enum.zip/2` truncates to the shorter line list, so a fix that only appends lines or deletes unchanged trailing lines is reported as zero corruption; the supposedly non-vacuous gate can therefore silently miss a destructive rule.
+## test/syntax_round_safety_test.exs — 2026-08-25 (added, test_other)
+- blocker: test/syntax_round_safety_test.exs:263 — The default-rule safety cases only check that repaired fragments occur and that the result parses. On `@two_faults` or the missing-`end` fixture, an additional rule can rewrite unrelated code to different but parseable meaning and these tests still pass; assert the exact whole output and exact applied-rule trace.
+## maintainer_tools/199-no_negative_step_in_string_slice.patch — 2026-08-25 (added, tooling)
+- blocker: maintainer_tools/199-no_negative_step_in_string_slice.patch:35 — The check only reports two-argument calls, so `str |> String.slice(n..-1)` is never diagnosed and therefore never repaired, even though the patch’s fixer explicitly handles that form.
+- blocker: maintainer_tools/199-no_negative_step_in_string_slice.patch:35 — The matcher rewrites `String.slice/2` even when `String` is a lexical alias for a custom module; changing `2..-1` to `2..-1//1` can change the range from descending to empty and give the custom function a different answer.
+## maintainer_tools/escalation_ledger.md — 2026-08-25 (added, tooling)
+- concern: maintainer_tools/escalation_ledger.md:948 — Twelve “blocked on” instructions in the re-queue table are truncated mid-word (lines 948, 950, 957–959, 965, 967–968, and 970–971), so maintainers cannot recover the required next-run actions from this purported durable record.
+- nit: maintainer_tools/escalation_ledger.md:80 — The nine-row cluster summary says “4 DROP” and immediately clarifies that the listed DROP rows total five, making the disposition count self-contradictory.
+## maintainer_tools/followup.md — 2026-08-25 (modified, tooling)
+- concern: maintainer_tools/followup.md:61 — The historical reason falsely says `FixErlangBitwiseBif` does not exist. Both cited disposition sources explicitly say the rule is live, handles all six operators, and require this claim to be removed, so the file contradicts its declared source of truth and can mislead maintainers about missing coverage.
