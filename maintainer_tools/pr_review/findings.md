@@ -2089,3 +2089,15 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 - nit: maintainer_tools/pr_review/status.sh:24 — the suggested `requeue.sh --gated` command is not runnable from a normal checkout because the script directory is not ordinarily on `PATH`; print an invocation with a usable path. The retry instruction at line 32 has the same problem.
 ## maintainer_tools/proposed_assumptions.md — 2026-08-25 (added, tooling)
 - concern: maintainer_tools/proposed_assumptions.md:19 — The claimed “stage-3 pre-pass skip-set” does not exist: `resurrect_loop.sh` never reads the mapping into `SKIP`, and proposed rules have already been removed from `followup.md`. Deleting mapping rows before re-feeding instead erases the only record of which rule bases need stage 1, potentially stranding them permanently.
+## maintainer_tools/stage_1_promote_fixable_rules/review_loop.sh — 2026-08-25 (modified, tooling)
+- blocker: maintainer_tools/stage_1_promote_fixable_rules/review_loop.sh:315 — Semantic and Syntax rows now exclude every test tagged `:corpus`, not merely the Pattern-only files under `test/corpus/`. This skips the rule-specific real-source regression at `test/syntax/close_unclosed_doc_heredoc_fix_test.exs:725`, so a change that breaks that Syntax rule can pass the acceptance gate and be committed and pushed.
+## .github/run-ci-locally.sh — 2026-08-25 (added, ci)
+- blocker: .github/run-ci-locally.sh:27 — Any argument other than exactly `check` or `all` skips every test and still prints “ALL REQUESTED CI JOBS PASSED” with exit status 0; a typo such as `.github/run-ci-locally.sh al` therefore reports success without running CI.
+## .github/workflows/ci.yml — 2026-08-25 (added, ci)
+- blocker: .github/workflows/ci.yml:42 — The third-party `erlef/setup-beam` action is pinned only to the mutable `v1` tag in all three jobs. If that tag or upstream repository is compromised, arbitrary code runs in CI; pin the action to a reviewed full commit SHA.
+## docs/01_ast-callback-interface-analysis.md — 2026-08-25 (modified, docs)
+- nit: docs/01_ast-callback-interface-analysis.md:8 — The banner says 155 Pattern rules live today, but the current `lib/pattern/` contains 159 modules using `Credence.Pattern.Rule`; the supposedly current count is already stale.
+## docs/11-qa-roadmap.md — 2026-08-25 (modified, docs)
+- concern: docs/11-qa-roadmap.md:4 — The banner says the roadmap was “executed,” but its §1 generative-testing work remains explicitly open as T5.5/C2.3 in `docs/22-remaining-work.md`; this can mislead maintainers into treating unfinished QA work as complete.
+## docs/12-improvement-proposals.md — 2026-08-25 (added, docs)
+- blocker: docs/12-improvement-proposals.md:192 — C6 calls a supervised `Task` with a timeout “sandboxed” and bounded, but a timeout does not prevent compile-time OOM and a linked task killed by a heap limit can take down the caller; the repository’s later implementation notes explicitly require an unlinked monitored process plus a heap ceiling, so this proposal could recreate the pipeline-crashing failure it claims to prevent.
