@@ -1,8 +1,9 @@
 defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, compiles?: 1, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.FixMultipleDefaultArgs
 
   defp fix(source, message) do
@@ -61,7 +62,41 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
     """
 
     assert valid_syntax?(fix(input, default_msg("greet")))
-    assert compiles?(fix(input, default_msg("greet")))
+    assert RuleHelpers.compiles?(fix(input, default_msg("greet")))
+  end
+
+  test "compilation checks are bounded" do
+    runaway = "Stream.repeatedly(fn -> :ok end) |> Enum.to_list()"
+
+    refute RuleHelpers.compiles?(runaway)
+  end
+
+  test "dispatches the compiler's multiple-defaults diagnostic through the semantic pipeline" do
+    input = """
+    defmodule CredenceFixMultipleDefaultArgsPipelineFixture do
+      def greet(:a, name \\\\ "world"), do: name
+      def greet(:b, name \\\\ "world"), do: name
+    end
+    """
+
+    expected =
+      """
+      defmodule CredenceFixMultipleDefaultArgsPipelineFixture do
+        def greet(arg0, name \\\\ "world")
+
+        def greet(:a, name), do: name
+        def greet(:b, name), do: name
+      end
+      """
+      |> String.trim_trailing()
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &FixMultipleDefaultArgs.match?/1)
+
+    emitted = Credence.Semantic.fix(input)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
   end
 
   test "preserves guards on pattern clauses" do
@@ -185,7 +220,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
 
     fixed = fix(input, default_msg("enabled?"))
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert RuleHelpers.compiles?(fixed)
   end
 
   test "inserts the header in place, preserving imports and later defs" do
@@ -225,7 +260,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
 
     fixed = fix(input, default_msg("greet"))
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert RuleHelpers.compiles?(fixed)
   end
 
   test "leaves a same-name function of a different arity untouched" do
@@ -283,7 +318,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
 
     fixed = fix(input, default_msg("walk"))
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert RuleHelpers.compiles?(fixed)
   end
 
   test "no-op when clauses declare defaults on different positions" do
