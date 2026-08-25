@@ -78,9 +78,6 @@ defmodule Credence.Syntax.FixMixedRequiredOptionalMapKeys do
   alias Credence.Issue
   alias Credence.SourceMask
 
-  # One generated file with a systematic habit, not twenty separate defects.
-  @max_edits 20
-
   # The parser's own words. Matching the message rather than only the `','` token is
   # what separates this from every other error that stops at a comma.
   @message_fragment "unexpected expression after keyword list"
@@ -109,16 +106,13 @@ defmodule Credence.Syntax.FixMixedRequiredOptionalMapKeys do
 
   # The one loop both callbacks share, so they cannot disagree about how many entries
   # need rewriting. Terminates because each pass replaces `key:` with `:key =>` and so
-  # strictly reduces the number of keyword entries the parser can still object to;
-  # `@max_edits` is a backstop, not the argument.
-  defp repairs(source), do: repairs(source, @max_edits, [])
+  # strictly reduces the number of keyword entries the parser can still object to.
+  defp repairs(source), do: repairs(source, [])
 
-  defp repairs(source, 0, acc), do: {source, Enum.reverse(acc)}
-
-  defp repairs(source, budget, acc) do
+  defp repairs(source, acc) do
     case locate(source) do
       {:ok, key_start, colon_at} ->
-        repairs(arrow_ify(source, key_start, colon_at), budget - 1, [
+        repairs(arrow_ify(source, key_start, colon_at), [
           line_of(source, colon_at) | acc
         ])
 
@@ -194,23 +188,36 @@ defmodule Credence.Syntax.FixMixedRequiredOptionalMapKeys do
   # kept exactly as it was, which is what makes this safe on a multi-line map — the
   # key may be preceded by a newline and indentation.
   defp arrow_ify(source, key_start, colon_at) do
-    {whitespace, key} =
-      source
-      |> binary_part(key_start, colon_at - key_start)
-      |> split_leading_whitespace()
+    entry_prefix = binary_part(source, key_start, colon_at - key_start)
+    trivia_size = leading_trivia_size(entry_prefix, 0)
+    trivia = binary_part(entry_prefix, 0, trivia_size)
+    key = binary_part(entry_prefix, trivia_size, byte_size(entry_prefix) - trivia_size)
 
     binary_part(source, 0, key_start) <>
-      whitespace <>
+      trivia <>
       ":" <>
       key <>
       " =>" <>
       binary_part(source, colon_at + 1, byte_size(source) - colon_at - 1)
   end
 
-  defp split_leading_whitespace(text) do
-    trimmed = String.trim_leading(text)
-    {binary_part(text, 0, byte_size(text) - byte_size(trimmed)), trimmed}
+  defp leading_trivia_size(text, index) when index < byte_size(text) do
+    byte = :binary.at(text, index)
+
+    cond do
+      space?(byte) -> leading_trivia_size(text, index + 1)
+      byte == ?# -> leading_trivia_size(text, comment_end(text, index + 1))
+      true -> index
+    end
   end
+
+  defp leading_trivia_size(_text, index), do: index
+
+  defp comment_end(text, index) when index < byte_size(text) do
+    if :binary.at(text, index) == ?\n, do: index + 1, else: comment_end(text, index + 1)
+  end
+
+  defp comment_end(_text, index), do: index
 
   defp space?(byte), do: byte in [?\s, ?\t, ?\n, ?\r]
 

@@ -81,6 +81,48 @@ defmodule Credence.Syntax.FixMixedRequiredOptionalMapKeysFixTest do
       confirm_fix(fix(input), expected)
       assert valid_syntax?(fix(input))
     end
+
+    test "a comment between the map opener and the offending key stays before the key" do
+      input = """
+      x = %{
+        # note
+        a: 1,
+        "k" => 2
+      }
+      """
+
+      expected = """
+      x = %{
+        # note
+        :a => 1,
+        "k" => 2
+      }
+      """
+
+      once = fix(input)
+
+      confirm_fix(once, expected)
+      assert valid_syntax?(once)
+      confirm_fix(fix(once), once)
+    end
+
+    test "a comment between a preceding comma and the offending key stays before the key" do
+      input = """
+      x = %{a: 1, # note
+        b: 2, "k" => 3}
+      """
+
+      expected = """
+      x = %{:a => 1, # note
+        :b => 2, "k" => 3}
+      """
+
+      once = fix(input)
+
+      confirm_fix(once, expected)
+      assert valid_syntax?(once)
+      confirm_fix(fix(once), once)
+    end
   end
 
   # Every occurrence in ONE call, and that is required rather than tidy. The Syntax
@@ -113,6 +155,18 @@ defmodule Credence.Syntax.FixMixedRequiredOptionalMapKeysFixTest do
 
       confirm_fix(fix(input), expected)
       assert valid_syntax?(fix(input))
+    end
+
+    test "more than twenty offending entries are all repaired" do
+      keyword_entries = Enum.map_join(1..21, ", ", &"k#{&1}: #{&1}")
+      arrow_entries = Enum.map_join(1..21, ", ", &":k#{&1} => #{&1}")
+      input = ~s|x = %{#{keyword_entries}, "arrow" => 0}|
+      expected = ~s|x = %{#{arrow_entries}, "arrow" => 0}|
+      once = fix(input)
+
+      confirm_fix(once, expected)
+      assert valid_syntax?(once)
+      confirm_fix(fix(once), once)
     end
 
     test "the whole round commits instead of rolling back" do
