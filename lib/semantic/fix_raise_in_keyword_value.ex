@@ -63,7 +63,9 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
+  def fix(source, diagnostic) do
+    diagnostic_line = line(diagnostic)
+
     with {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
@@ -71,6 +73,7 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
           when is_list(kw_meta) ->
             # Only fix bare raise in `do:` keyword values (not `do...end` blocks)
             if Keyword.get(kw_meta, :format) == :keyword and
+                 Keyword.get(raise_meta, :line) == diagnostic_line and
                  not Keyword.has_key?(raise_meta, :closing) do
               case Sourceror.get_range({:raise, raise_meta, args}) do
                 %Sourceror.Range{end: end_pos} ->
@@ -93,9 +96,23 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
             {node, acc}
         end)
 
-      if changed, do: Sourceror.to_string(new_ast), else: source
+      if changed do
+        replace_line(source, Sourceror.to_string(new_ast), diagnostic_line)
+      else
+        source
+      end
     else
       _ -> source
+    end
+  end
+
+  defp replace_line(source, formatted, line_no) do
+    source_lines = String.split(source, "\n")
+    formatted_lines = String.split(formatted, "\n")
+
+    case Enum.fetch(formatted_lines, line_no - 1) do
+      {:ok, line} -> source_lines |> List.replace_at(line_no - 1, line) |> Enum.join("\n")
+      :error -> source
     end
   end
 

@@ -48,7 +48,7 @@ defmodule Credence.Semantic.FixRaiseInKeywordValueFixTest do
     confirm_fix(fix(input, @diagnostic_msg, 2), expected)
   end
 
-  test "fixes every bare raise in do: values, including single-argument raise" do
+  test "fixes only the bare raise at the diagnostic position" do
     input = """
     defmodule M do
       def a(_), do: raise ArgumentError, "x"
@@ -59,7 +59,7 @@ defmodule Credence.Semantic.FixRaiseInKeywordValueFixTest do
     expected = """
     defmodule M do
       def a(_), do: raise(ArgumentError, "x")
-      def b(_), do: raise("boom")
+      def b(_), do: raise "boom"
     end
     """
 

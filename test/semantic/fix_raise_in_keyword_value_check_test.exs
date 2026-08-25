@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.FixRaiseInKeywordValueCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.RuleHelpers
   alias Credence.Semantic.FixRaiseInKeywordValue
 
@@ -61,6 +63,25 @@ defmodule Credence.Semantic.FixRaiseInKeywordValueCheckTest do
 
     diag = %{severity: :warning, message: @diagnostic_msg, position: 2}
     refute FixRaiseInKeywordValue.should_report?(diag, source)
+  end
+
+  test "should_report? does not claim an unrelated diagnostic when a bare raise exists elsewhere" do
+    source = """
+    defmodule CredenceRaiseInKeywordPositionMismatch do
+      def unrelated(x), do: foo x, bar: 1
+      def raises(_, _), do: raise ArgumentError, "bad"
+    end
+    """
+
+    {_, diags} = RuleHelpers.compile_and_capture(source)
+
+    diag =
+      Enum.find(diags, fn diag ->
+        diag.position == 2 and FixRaiseInKeywordValue.match?(diag)
+      end)
+
+    refute FixRaiseInKeywordValue.should_report?(diag, source)
+    confirm_fix(FixRaiseInKeywordValue.fix(source, diag), source)
   end
 
   test "should_report? is false when the raise is already parenthesised" do
