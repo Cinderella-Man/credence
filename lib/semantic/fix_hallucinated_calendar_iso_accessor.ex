@@ -18,11 +18,10 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
   variable binding and every other line untouched.
 
   Only arity-1 messages are claimed: `check` and `fix` agree, and a
-  hallucinated `Calendar.ISO.date/3` has no single obvious intent. Aliased
-  spellings (`alias Calendar.ISO` + `ISO.date(dt)`) are deliberately left
-  unfixed — the compiler reports the expanded module path, so the anchored
-  rename would not find `Calendar.ISO.` at the flagged position and no-ops
-  rather than risk a wrong edit.
+  hallucinated `Calendar.ISO.date/3` has no single obvious intent. The
+  compiler reports the expanded module path for aliased spellings too, so
+  `alias Calendar.ISO` + `ISO.date(dt)` is repaired at the diagnostic's
+  anchored position as well.
 
   `UndefinedFunction` claims this diagnostic too — it accepts every "is
   undefined or private" message — and this rule takes the slot on the default
@@ -60,7 +59,7 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
     "Calendar.ISO.time/1" => {"time", "DateTime.to_time"}
   }
 
-  @module_prefix "Calendar.ISO."
+  @module_prefixes ["Calendar.ISO.", "ISO."]
 
   @impl true
   def match?(%{severity: :warning, message: msg}) when is_binary(msg) do
@@ -90,10 +89,10 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
   def fix(source, _diagnostic), do: source
 
   # The diagnostic column points at the function name of the flagged call.
-  # The rename fires only when `Calendar.ISO.` immediately precedes that
-  # column and the function name sits exactly at it — an alias, an `as:`
-  # rename, or any column drift fails the anchor and returns the source
-  # unchanged instead of risking an edit somewhere else on the line.
+  # The rename fires only when `Calendar.ISO.` or its conventional `ISO.`
+  # alias immediately precedes that column and the function name sits exactly
+  # at it. Any other alias or column drift returns the source unchanged instead
+  # of risking an edit somewhere else on the line.
   defp rename_at(source, line_no, col, func, replacement) do
     lines = String.split(source, "\n")
 
@@ -105,9 +104,11 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
         prefix = String.slice(line, 0, col - 1)
         rest = String.slice(line, col - 1, String.length(line))
 
-        if String.ends_with?(prefix, @module_prefix) and String.starts_with?(rest, func) do
+        module_prefix = Enum.find(@module_prefixes, &String.ends_with?(prefix, &1))
+
+        if module_prefix && String.starts_with?(rest, func) do
           kept_prefix =
-            String.slice(prefix, 0, String.length(prefix) - String.length(@module_prefix))
+            String.slice(prefix, 0, String.length(prefix) - String.length(module_prefix))
 
           kept_rest = String.slice(rest, String.length(func), String.length(rest))
 

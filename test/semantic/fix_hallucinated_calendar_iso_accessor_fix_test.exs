@@ -198,7 +198,7 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessorFixTest do
     confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
-  test "end-to-end: an aliased call is deliberately left unfixed (anchor requires Calendar.ISO.)" do
+  test "end-to-end: fixes an aliased Calendar.ISO call" do
     input = """
     defmodule CredenceCalendarIsoAliasE2E do
       alias Calendar.ISO
@@ -210,7 +210,18 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessorFixTest do
     end
     """
 
-    confirm_fix(Credence.Semantic.fix(input), input)
+    expected = """
+    defmodule CredenceCalendarIsoAliasE2E do
+      alias Calendar.ISO
+
+      def extract(dt) do
+        date = DateTime.to_date(dt)
+        date.year
+      end
+    end
+    """
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
   test "fixed flagship output compiles" do
