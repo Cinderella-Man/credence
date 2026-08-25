@@ -127,8 +127,11 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
            Regex.named_captures(@match_re, diagnostic.message),
          {:ok, ast} <- Sourceror.parse_string(source),
          target = {String.to_atom(name), String.to_integer(arity)},
-         {:ok, params, body} <- inlinable_helper(ast, target) do
-      {new_ast, changed} = inline_in_guards(ast, target, params, body)
+         {:ok, module} <- diagnosed_module(ast, line(diagnostic)),
+         {:ok, module_body} <- module_body(module),
+         {:ok, params, body} <- inlinable_helper(module_body, target) do
+      {new_body, changed} = inline_in_guards(module_body, target, params, body)
+      new_ast = replace_node(ast, module_body, new_body)
 
       if changed, do: Sourceror.to_string(new_ast), else: source
     else
@@ -140,6 +143,8 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
   # its parameters are distinct plain variables, and its body is a single
   # guard-safe expression over them.
   defp inlinable_helper(ast, {name, arity} = target) do
+    local_signatures = ast |> local_defs() |> Enum.map(&def_head/1) |> MapSet.new()
+
     with [{kind, _, [call, body_kw]}] <- local_defs(ast, target),
          true <- kind in [:def, :defp],
          {^name, _, raw_args} <- call,
@@ -148,7 +153,7 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
          {:ok, params} <- plain_params(args),
          {:ok, body} <- body_of(body_kw),
          body = unwrap_block(body),
-         true <- guard_safe?(body, params) do
+         true <- guard_safe?(body, params, local_signatures) do
       {:ok, params, body}
     else
       _ -> :error
@@ -178,27 +183,31 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
   defp guard_call_args(ctx) when is_atom(ctx), do: []
 
   # Only the helper's own parameters, literals, and calls a guard permits.
-  defp guard_safe?({:__block__, _, [literal]}, _params) when not is_tuple(literal), do: true
-  defp guard_safe?(literal, _params) when is_atom(literal) or is_number(literal), do: true
+  defp guard_safe?({:__block__, _, [literal]}, _params, _locals) when not is_tuple(literal),
+    do: true
 
-  defp guard_safe?({var, _, ctx}, params) when is_atom(var) and is_atom(ctx),
+  defp guard_safe?(literal, _params, _locals)
+       when is_atom(literal) or is_number(literal),
+       do: true
+
+  defp guard_safe?({var, _, ctx}, params, _locals) when is_atom(var) and is_atom(ctx),
     do: var in params
 
-  defp guard_safe?({op, _, args}, params) when is_atom(op) and is_list(args),
-    do: op in @guard_safe and Enum.all?(args, &guard_safe?(&1, params))
+  defp guard_safe?({op, _, args}, params, locals) when is_atom(op) and is_list(args),
+    do:
+      op in @guard_safe and
+        not MapSet.member?(locals, {op, length(args)}) and
+        Enum.all?(args, &guard_safe?(&1, params, locals))
 
-  defp guard_safe?(_node, _params), do: false
+  defp guard_safe?(_node, _params, _locals), do: false
 
   # Replace every guard-position call to `target` with the helper's body, its
   # parameters substituted by that call's arguments.
   defp inline_in_guards(ast, target, params, body) do
-    Macro.prewalk(ast, false, fn
+    map_scope(ast, false, fn
       {:when, when_meta, [fn_head, guard]}, acc ->
         {new_guard, changed} = inline_call(guard, target, params, body)
-
-        if changed,
-          do: {{:when, when_meta, [fn_head, new_guard]}, true},
-          else: {{:when, when_meta, [fn_head, guard]}, acc}
+        {{:when, when_meta, [fn_head, new_guard]}, acc || changed}
 
       node, acc ->
         {node, acc}
@@ -262,18 +271,100 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
 
   # Every def/defp clause for `target`, guarded heads included — more than one
   # clause (or a guarded one) fails the shape check above.
-  defp local_defs(ast, target) do
-    {_, defs} =
-      Macro.prewalk(ast, [], fn
-        {kind, _, [_ | _]} = node, acc when kind in [:def, :defp] ->
-          if def_head(node) == target, do: {node, [node | acc]}, else: {node, acc}
+  defp local_defs(ast, target), do: Enum.filter(local_defs(ast), &(def_head(&1) == target))
 
-        node, acc ->
-          {node, acc}
+  defp local_defs(ast) do
+    {_, defs} =
+      map_scope(ast, [], fn
+        {kind, _, [_ | _]} = node, acc when kind in [:def, :defp] -> {node, [node | acc]}
+        node, acc -> {node, acc}
       end)
 
     Enum.reverse(defs)
   end
+
+  # Walk executable source in one module, but never generated code or a nested
+  # module, where names resolve in a different lexical scope.
+  defp map_scope({form, _, _} = node, acc, _fun) when form in [:quote, :defmodule],
+    do: {node, acc}
+
+  defp map_scope(node, acc, fun) do
+    {node, acc} = fun.(node, acc)
+
+    case node do
+      {form, meta, args} when is_list(args) ->
+        {args, acc} = Enum.map_reduce(args, acc, &map_scope(&1, &2, fun))
+        {{form, meta, args}, acc}
+
+      list when is_list(list) ->
+        Enum.map_reduce(list, acc, &map_scope(&1, &2, fun))
+
+      tuple when is_tuple(tuple) ->
+        {items, acc} = tuple |> Tuple.to_list() |> Enum.map_reduce(acc, &map_scope(&1, &2, fun))
+        {List.to_tuple(items), acc}
+
+      other ->
+        {other, acc}
+    end
+  end
+
+  defp diagnosed_module(ast, diagnostic_line) do
+    modules = collect_modules(ast)
+
+    modules
+    |> Enum.filter(fn {:defmodule, meta, _} ->
+      start_line = Keyword.get(meta, :line, 0)
+      end_line = meta |> Keyword.get(:end, []) |> Keyword.get(:line, start_line)
+      diagnostic_line >= start_line and diagnostic_line <= end_line
+    end)
+    |> Enum.min_by(
+      fn {:defmodule, meta, _} ->
+        Keyword.get(Keyword.get(meta, :end, []), :line, 0) - Keyword.get(meta, :line, 0)
+      end,
+      fn -> nil end
+    )
+    |> case do
+      nil -> if length(modules) == 1, do: {:ok, hd(modules)}, else: :error
+      module -> {:ok, module}
+    end
+  end
+
+  defp collect_modules({:quote, _, _}), do: []
+
+  defp collect_modules({:defmodule, _, args} = module) do
+    [module | Enum.flat_map(args, &collect_modules/1)]
+  end
+
+  defp collect_modules({_, _, args}) when is_list(args),
+    do: Enum.flat_map(args, &collect_modules/1)
+
+  defp collect_modules(list) when is_list(list), do: Enum.flat_map(list, &collect_modules/1)
+
+  defp collect_modules(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Enum.flat_map(&collect_modules/1)
+
+  defp collect_modules(_), do: []
+
+  defp module_body({:defmodule, _, [_name, body_kw]}) do
+    body_of(body_kw)
+  end
+
+  defp replace_node(node, target, replacement) when node == target, do: replacement
+
+  defp replace_node({form, meta, args}, target, replacement) when is_list(args),
+    do: {form, meta, Enum.map(args, &replace_node(&1, target, replacement))}
+
+  defp replace_node(list, target, replacement) when is_list(list),
+    do: Enum.map(list, &replace_node(&1, target, replacement))
+
+  defp replace_node(tuple, target, replacement) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&replace_node(&1, target, replacement))
+    |> List.to_tuple()
+  end
+
+  defp replace_node(node, _target, _replacement), do: node
 
   defp def_head({_kind, _, [{:when, _, [call | _]} | _]}), do: call_name_arity(call)
   defp def_head({_kind, _, [call | _]}), do: call_name_arity(call)

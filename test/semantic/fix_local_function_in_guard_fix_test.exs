@@ -219,4 +219,76 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not borrow a helper from another module" do
+    input = """
+    defmodule LocalFnGuardOwnerFLFIG do
+      defp allowed(x), do: is_integer(x)
+    end
+
+    defmodule LocalFnGuardCallerFLFIG do
+      def run(x) when allowed(x), do: x
+    end
+    """
+
+    confirm_fix(
+      fix(input, "cannot find or invoke local allowed/1 inside a guard", 6),
+      input
+    )
+  end
+
+  test "rewrites only the diagnosed module and leaves quoted guards untouched" do
+    input = """
+    defmodule LocalFnGuardQuoteFLFIG do
+      defp allowed(x), do: is_integer(x)
+      def run(x) when allowed(x), do: x
+
+      def generated do
+        quote do
+          def run(x) when allowed(x), do: x
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule LocalFnGuardQuoteFLFIG do
+      defp allowed(x), do: is_integer(x)
+      def run(x) when is_integer(x), do: x
+
+      def generated do
+        quote do
+          def run(x) when allowed(x), do: x
+        end
+      end
+    end
+    """
+
+    confirm_fix(
+      fix(input, "cannot find or invoke local allowed/1 inside a guard", 3),
+      expected
+    )
+  end
+
+  test "declines when a guard-safe name resolves to a local function" do
+    input = """
+    defmodule LocalFnGuardShadowFLFIG do
+      import Kernel, except: [is_map: 1]
+      defp is_map(_x), do: false
+      defp eligible(x), do: is_map(x)
+      def run(x) when eligible(x), do: x
+    end
+    """
+
+    fixed = fix(input, "cannot find or invoke local eligible/1 inside a guard", 5)
+
+    confirm_fix(fixed, input)
+    assert {:error, input_diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(
+             input_diagnostics,
+             &(&1.message ==
+                 "cannot find or invoke local eligible/1 inside a guard. Only macros can be invoked inside a guard and they must be defined before their invocation. Called as: eligible(x)")
+           )
+  end
 end
