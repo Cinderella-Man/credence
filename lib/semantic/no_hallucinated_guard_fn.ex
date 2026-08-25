@@ -57,8 +57,9 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
+  def fix(source, diagnostic) do
+    with {line, column} <- position(diagnostic),
+         {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           # Only the single-argument call `is_regex(x)` — the exact shape the
@@ -66,9 +67,13 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
           # `is_regex` variable (args is `nil`) or any other arity cannot
           # produce that diagnostic and is left untouched, so the rewrite is
           # always `is_regex(x)` → `is_struct(x, Regex)`.
-          {:is_regex, meta, [arg]}, _acc ->
-            regex_alias = {:__aliases__, [line: meta[:line]], [:Regex]}
-            {{:is_struct, meta, [arg, regex_alias]}, true}
+          {:is_regex, meta, [arg]} = node, acc ->
+            if meta[:line] == line and meta[:column] == column do
+              regex_alias = {:__aliases__, [line: meta[:line]], [:Regex]}
+              {{:is_struct, meta, [arg, regex_alias]}, true}
+            else
+              {node, acc}
+            end
 
           node, acc ->
             {node, acc}
@@ -82,4 +87,10 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+
+  defp position(%{position: {line, column}})
+       when is_integer(line) and is_integer(column),
+       do: {line, column}
+
+  defp position(_diagnostic), do: :error
 end

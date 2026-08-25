@@ -7,8 +7,8 @@ defmodule Credence.Semantic.NoHallucinatedGuardFnFixTest do
 
   @real_message "cannot find or invoke local is_regex/1 inside a guard. Only macros can be invoked inside a guard and they must be defined before their invocation. Called as: is_regex(format)"
 
-  defp fix(source, message, line \\ 1) do
-    NoHallucinatedGuardFn.fix(source, %{severity: :error, message: message, position: {line, 1}})
+  defp fix(source, message, position \\ {2, 33}) do
+    NoHallucinatedGuardFn.fix(source, %{severity: :error, message: message, position: position})
   end
 
   test "replaces is_regex with is_struct(Regex) in guard" do
@@ -93,5 +93,58 @@ defmodule Credence.Semantic.NoHallucinatedGuardFnFixTest do
     """
 
     confirm_fix(fix(input, @real_message), input)
+  end
+
+  test "rewrites only the is_regex call identified by the diagnostic" do
+    input = """
+    defmodule NoHallucinatedGuardFnScopeFixture do
+      def check(value) when is_regex(value), do: true
+      def quoted(value), do: quote(do: is_regex(value))
+      def ordinary(value), do: is_regex(value)
+    end
+    """
+
+    expected = """
+    defmodule NoHallucinatedGuardFnScopeFixture do
+      def check(value) when is_struct(value, Regex), do: true
+      def quoted(value), do: quote(do: is_regex(value))
+      def ordinary(value), do: is_regex(value)
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    diagnostic = Enum.find(diagnostics, &NoHallucinatedGuardFn.match?/1)
+    confirm_fix(NoHallucinatedGuardFn.fix(input, diagnostic), expected)
+  end
+
+  test "repairs the real compiler diagnostic through semantic dispatch" do
+    input = """
+    defmodule NoHallucinatedGuardFnPipelineFixture do
+      def check(value, format) when is_regex(format) do
+        Regex.match?(format, value)
+      end
+
+      def check(_value, _format), do: false
+    end
+    """
+
+    expected = """
+    defmodule NoHallucinatedGuardFnPipelineFixture do
+      def check(value, format) when is_struct(format, Regex) do
+        Regex.match?(format, value)
+      end
+
+      def check(_value, _format), do: false
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoHallucinatedGuardFn.match?/1)
+
+    emitted = Credence.Semantic.fix(input)
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
   end
 end
