@@ -4,6 +4,7 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParseFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixNimbleCsvDirectParse
+  alias Credence.RuleHelpers
 
   @match_msg "NimbleCSV.parse_string/2 is undefined or private"
 
@@ -217,5 +218,61 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParseFixTest do
     """
 
     confirm_fix(fix(input, @match_msg, 5), expected)
+  end
+
+  test "skips a same-named reference in a string before the diagnosed call" do
+    input = """
+    defmodule CsvLoader do
+      NimbleCSV.define(MyParser, separator: ",", escape: "\\\"")
+
+      def load(csv) do
+        IO.puts("NimbleCSV.parse_string"); NimbleCSV.parse_string(csv)
+      end
+    end
+    """
+
+    expected = """
+    defmodule CsvLoader do
+      NimbleCSV.define(MyParser, separator: ",", escape: "\\\"")
+
+      def load(csv) do
+        IO.puts("NimbleCSV.parse_string"); MyParser.parse_string(csv)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @match_msg, 5), expected)
+  end
+
+  test "qualifies a parser defined at top level when the call is in a module" do
+    input = """
+    NimbleCSV.define(MyParser, separator: ",", escape: "\\\"")
+
+    defmodule Loader do
+      def load(csv), do: NimbleCSV.parse_string(csv)
+    end
+    """
+
+    expected = """
+    NimbleCSV.define(MyParser, separator: ",", escape: "\\\"")
+
+    defmodule Loader do
+      def load(csv), do: Elixir.MyParser.parse_string(csv)
+    end
+    """
+
+    actual = fix(input, @match_msg, 4)
+    confirm_fix(actual, expected)
+
+    control = """
+    NimbleCSV.define(MyParserControlFNCDP, separator: ",", escape: "\\\"")
+
+    defmodule LoaderControlFNCDP do
+      def load(csv), do: Elixir.MyParserControlFNCDP.parse_string(csv)
+    end
+    """
+
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(actual)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(control)
   end
 end

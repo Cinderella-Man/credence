@@ -67,6 +67,7 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # Standalone `NimbleCSV.parse_string` (not `Foo.NimbleCSV....`), arity 1 or 2
   # only — those are the arities a defined parser actually exports.
@@ -122,14 +123,27 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
   # target, or any target that is not a literal alias (`__MODULE__.Parser`, a
   # variable, ...) — those make the intended parser ambiguous.
   defp find_nimble_csv_define(ast) do
-    {_, defines} =
-      Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:NimbleCSV]}, :define]}, _meta, [target | _]} = node, acc ->
-          {node, [classify_target(target) | acc]}
+    {_, {_module_depth, defines}} =
+      Macro.traverse(
+        ast,
+        {0, []},
+        fn
+          {:defmodule, _, _} = node, {depth, acc} ->
+            {node, {depth + 1, acc}}
 
-        node, acc ->
-          {node, acc}
-      end)
+          {{:., _, [{:__aliases__, _, [:NimbleCSV]}, :define]}, _meta, [target | _]} = node,
+          {depth, acc} ->
+            parser = classify_target(target, depth == 0)
+            {node, {depth, [parser | acc]}}
+
+          node, acc ->
+            {node, acc}
+        end,
+        fn
+          {:defmodule, _, _} = node, {depth, acc} -> {node, {depth - 1, acc}}
+          node, acc -> {node, acc}
+        end
+      )
 
     case Enum.uniq(defines) do
       [parser] when is_binary(parser) -> {:ok, parser}
@@ -137,11 +151,17 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
     end
   end
 
-  defp classify_target({:__aliases__, _, parts}) do
-    if Enum.all?(parts, &is_atom/1), do: parts_to_module_string(parts), else: :unresolvable
+  defp classify_target({:__aliases__, _, parts}, top_level?) do
+    if Enum.all?(parts, &is_atom/1) do
+      parser = parts_to_module_string(parts)
+
+      if top_level? and hd(parts) != :"Elixir", do: "Elixir." <> parser, else: parser
+    else
+      :unresolvable
+    end
   end
 
-  defp classify_target(_), do: :unresolvable
+  defp classify_target(_, _top_level?), do: :unresolvable
 
   # Convert alias parts to a dotted module string: [:CsvLoader, :Parser] → "CsvLoader.Parser"
   defp parts_to_module_string(parts) do
@@ -152,13 +172,19 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
   # `<Parser>.parse_string` on the target line.
   defp replace_on_line(source, line_no, parser_name) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
     |> Enum.map_join("\n", fn
-      {line, ^line_no} ->
-        Regex.replace(@call_re, line, "#{parser_name}.parse_string", global: false)
+      {{line, shadow}, ^line_no} ->
+        SourceMask.replace_code(
+          line,
+          shadow,
+          @call_re,
+          "#{parser_name}.parse_string",
+          global: false
+        )
 
-      {line, _} ->
+      {{line, _shadow}, _} ->
         line
     end)
   end
