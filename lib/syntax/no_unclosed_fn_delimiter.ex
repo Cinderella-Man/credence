@@ -34,14 +34,14 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiter do
   @impl true
   def analyze(source) do
     case repair(source) do
-      {:fixed, _fixed, line} ->
-        [
+      {:fixed, _fixed, lines} ->
+        Enum.map(lines, fn line ->
           %Issue{
             rule: :no_unclosed_fn_delimiter,
             message: "`fn` block closed with `)` instead of `end`; insert the missing `end`.",
             meta: %{line: line}
           }
-        ]
+        end)
 
       :no_fix ->
         []
@@ -51,7 +51,7 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiter do
   @impl true
   def fix(source) do
     case repair(source) do
-      {:fixed, fixed, _line} -> fixed
+      {:fixed, fixed, _lines} -> fixed
       :no_fix -> source
     end
   end
@@ -66,11 +66,11 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiter do
   # never emit a corrupted, still-unparseable rewrite.
   defp repair(source) do
     case detect(source) do
-      {:ok, line, _col} ->
-        fixed = do_fix(source, 0)
+      {:ok, _line, _col} ->
+        {fixed, lines} = do_fix(source, 0, [])
 
         if fixed != source and parses?(fixed) do
-          {:fixed, fixed, line}
+          {:fixed, fixed, lines}
         else
           :no_fix
         end
@@ -82,20 +82,20 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiter do
 
   defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
 
-  defp do_fix(source, passes) when passes < @max_passes do
+  defp do_fix(source, passes, lines) when passes < @max_passes do
     case detect(source) do
       {:ok, line, col} ->
         case insert_end_before(source, line, col) do
-          ^source -> source
-          fixed -> do_fix(fixed, passes + 1)
+          ^source -> {source, lines}
+          fixed -> do_fix(fixed, passes + 1, [line | lines])
         end
 
       :none ->
-        source
+        {source, Enum.reverse(lines)}
     end
   end
 
-  defp do_fix(source, _passes), do: source
+  defp do_fix(source, _passes, lines), do: {source, Enum.reverse(lines)}
 
   # Ask the parser where (if anywhere) an `fn` was closed by `)` instead of
   # `end`. Returns `{:ok, end_line, end_column}` for the offending `)`.
