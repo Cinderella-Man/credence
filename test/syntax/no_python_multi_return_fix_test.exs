@@ -3,7 +3,7 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
-  alias Credence.Syntax.NoPythonMultiReturn
+  alias Credence.{RuleHelpers, Syntax.NoPythonMultiReturn}
 
   defp analyze(code), do: NoPythonMultiReturn.analyze(code)
   defp fix(code), do: NoPythonMultiReturn.fix(code)
@@ -30,6 +30,52 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
     """
 
     confirm_fix(fix(input), expected)
+  end
+
+  test "fixes an operator expression followed by another return value" do
+    input = """
+    defmodule NoPythonMultiReturnOperatorExpression do
+      def run(a, b, c) do
+        a + b, c
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoPythonMultiReturnOperatorExpression do
+      def run(a, b, c) do
+        {a + b, c}
+      end
+    end
+    """
+
+    fixed = fix(input)
+
+    confirm_fix(fixed, expected)
+    assert RuleHelpers.compile_and_capture(fixed) == RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "keeps an inline comment outside the generated tuple" do
+    input = """
+    defmodule NoPythonMultiReturnInlineComment do
+      def run(a, b) do
+        a, b # explanation
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoPythonMultiReturnInlineComment do
+      def run(a, b) do
+        {a, b} # explanation
+      end
+    end
+    """
+
+    fixed = fix(input)
+
+    confirm_fix(fixed, expected)
+    assert RuleHelpers.compile_and_capture(fixed) == RuleHelpers.compile_and_capture(expected)
   end
 
   test "fixed output no longer flags" do

@@ -183,8 +183,9 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   #     [?-, c(c1), c(c2), c(c3), c(c4),
   #      ?-, c(d1), c(d2)]
   defp wrapped_line(line) do
-    parts = split_at_depth_zero_commas(line)
-    trimmed = String.trim(line)
+    {code, comment} = split_inline_comment(line)
+    parts = split_at_depth_zero_commas(code)
+    trimmed = String.trim(code)
 
     with [_, _ | _] <- parts,
          false <- String.starts_with?(trimmed, ","),
@@ -192,7 +193,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
          true <- Enum.all?(parts, &(String.trim(to_string(&1)) != "")),
          joined = Enum.join(parts, ","),
          {leading, rest} = split_leading_ws(joined),
-         fixed = leading <> "{" <> rest <> "}",
+         fixed = wrap_before_comment(leading, rest, comment),
          false <- parses?(line),
          true <- parses?(fixed) do
       {:ok, fixed}
@@ -203,6 +204,38 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
 
   defp parses?(line) do
     match?({:ok, _}, Code.string_to_quoted(String.trim(line)))
+  end
+
+  defp wrap_before_comment(leading, rest, ""), do: leading <> "{" <> rest <> "}"
+
+  defp wrap_before_comment(leading, rest, comment) do
+    body = String.trim_trailing(rest)
+    spacing = binary_part(rest, byte_size(body), byte_size(rest) - byte_size(body))
+    leading <> "{" <> body <> "}" <> spacing <> comment
+  end
+
+  defp split_inline_comment(line) do
+    {code, comment} = split_inline_comment(String.to_charlist(line), [], nil)
+    {code |> Enum.reverse() |> to_string(), to_string(comment)}
+  end
+
+  defp split_inline_comment([], code, _quote), do: {code, []}
+  defp split_inline_comment([?# | _] = comment, code, nil), do: {code, comment}
+
+  defp split_inline_comment([?\\, escaped | rest], code, quote) when not is_nil(quote) do
+    split_inline_comment(rest, [escaped, ?\\ | code], quote)
+  end
+
+  defp split_inline_comment([quote | rest], code, quote) do
+    split_inline_comment(rest, [quote | code], nil)
+  end
+
+  defp split_inline_comment([quote | rest], code, nil) when quote in [?", ?'] do
+    split_inline_comment(rest, [quote | code], quote)
+  end
+
+  defp split_inline_comment([char | rest], code, quote) do
+    split_inline_comment(rest, [char | code], quote)
   end
 
   # Returns a MapSet of line numbers that are bare atoms inside a bare-form
@@ -822,12 +855,17 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # Without this check the rule would wrap these in a tuple, producing
   # `{raise ArgumentError, "msg"}` which is a syntax error.
   defp function_call_before?(current_chars) do
-    case Enum.drop_while(current_chars, &(&1 == ?\s or &1 == ?\t)) do
-      [ch | rest] when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
+    trimmed = Enum.drop_while(current_chars, &(&1 == ?\s or &1 == ?\t))
+
+    case {operator_expression?(trimmed), trimmed} do
+      {true, _} ->
+        false
+
+      {false, [ch | rest]} when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
         check_call_after_identifier(rest)
 
       # Atom-prefixed module call like `:ets.new arg1, arg2` or `:timer.tc fun, arg`
-      [?: | rest] ->
+      {false, [?: | rest]} ->
         case Enum.drop_while(rest, &(&1 == ?\s or &1 == ?\t)) do
           [ch | _] when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
             # Consume the atom name and optional .function
@@ -847,6 +885,16 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
           _ ->
             false
         end
+
+      _ ->
+        false
+    end
+  end
+
+  defp operator_expression?(chars) do
+    case Code.string_to_quoted(to_string(chars)) do
+      {:ok, {operator, _, args}} when is_atom(operator) and is_list(args) ->
+        Macro.operator?(operator, length(args))
 
       _ ->
         false
