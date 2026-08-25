@@ -82,6 +82,24 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValueFixTest do
 
       confirm_fix(fix(code), expected)
     end
+
+    test "when a newline follows the for keyword" do
+      code = """
+      %{foo: for
+        x <- xs, do: x}
+      """
+
+      expected = """
+      %{foo: for(
+        x <- xs, do: x)}
+      """
+
+      fixed = fix(code)
+
+      confirm_fix(fixed, expected)
+      assert valid_syntax?(fixed)
+      assert valid_syntax?(expected)
+    end
   end
 
   describe "places the closing paren at the end of the comprehension" do

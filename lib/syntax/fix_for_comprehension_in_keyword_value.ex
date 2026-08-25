@@ -72,7 +72,7 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValue do
   @impl true
   def analyze(source) do
     case locate(source) do
-      {:ok, line, _col, _end_line, _end_col} ->
+      {:ok, line, _col, _open_col, _end_line, _end_col} ->
         [
           %Issue{
             rule: :fix_for_comprehension_in_keyword_value,
@@ -95,12 +95,12 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValue do
 
   defp rewrite(source, budget) do
     case locate(source) do
-      {:ok, line, col, end_line, end_col} ->
+      {:ok, line, _col, open_col, end_line, end_col} ->
         # `)` first: it is never before `(`, so inserting it cannot shift the
         # column the `(` was measured at.
         source
         |> insert_at(end_line, end_col, ")")
-        |> insert_at(line, col, "(")
+        |> insert_at(line, open_col, "(")
         |> rewrite(budget - 1)
 
       :none ->
@@ -116,11 +116,12 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValue do
          true <- is_list(meta),
          line when is_integer(line) <- Keyword.get(meta, :line),
          col when is_integer(col) <- Keyword.get(meta, :column),
-         true <- String.contains?(message_text(message), @error_fragment),
          lines = String.split(source, "\n"),
+         {:ok, line, col} <- error_position(lines, line, col, message_text(message)),
          :ok <- check_for_keyword(lines, line, col),
+         open_col = opening_col(lines, line, col),
          {:ok, end_line, end_col} <- find_close(lines, line, col) do
-      {:ok, line, col, end_line, end_col}
+      {:ok, line, col, open_col, end_line, end_col}
     else
       _ -> :none
     end
@@ -132,17 +133,48 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValue do
   defp message_text({prefix, suffix}), do: to_string(prefix) <> to_string(suffix)
   defp message_text(other), do: inspect(other)
 
+  defp error_position(lines, line, col, message) do
+    cond do
+      String.contains?(message, @error_fragment) ->
+        {:ok, line, col}
+
+      String.starts_with?(message, "syntax error before:") and line > 1 ->
+        previous_line_for(lines, line - 1)
+
+      true ->
+        :none
+    end
+  end
+
+  defp previous_line_for(lines, line) do
+    chars = lines |> Enum.at(line - 1, "") |> String.graphemes()
+    col = length(chars) - length(Enum.take_while(Enum.reverse(chars), &(&1 in [" ", "\t"]))) - 2
+
+    case Enum.slice(chars, col - 1, 3) do
+      ["f", "o", "r"] -> {:ok, line, col}
+      _ -> :none
+    end
+  end
+
   # The same error covers `if`, `with`, `case`… used bare in a container. Only
   # act when the column the parser blamed really holds the `for` keyword.
   defp check_for_keyword(lines, line, col) do
     with {:ok, chars} <- line_chars(lines, line),
          ["f", "o", "r"] <- Enum.slice(chars, col - 1, 3),
-         next when next in [" ", "\t"] <- at(chars, col + 3),
+         next = at(chars, col + 3),
+         true <- next in [" ", "\t"] or (is_nil(next) and line < length(lines)),
          false <- identifier_char?(at(chars, col - 1)) do
       :ok
     else
       _ -> :none
     end
+  end
+
+  defp opening_col(lines, line, col) do
+    {:ok, chars} = line_chars(lines, line)
+    after_keyword = Enum.drop(chars, col + 2)
+
+    if Enum.all?(after_keyword, &(&1 in [" ", "\t"])), do: col + 3, else: col
   end
 
   # Offer the parser every plausible end of the comprehension, nearest first,
@@ -200,7 +232,14 @@ defmodule Credence.Syntax.FixForComprehensionInKeywordValue do
   defp comprehension?(taken) do
     text = taken |> Enum.reverse() |> Enum.join()
 
-    case Code.string_to_quoted("(" <> text <> ")", emit_warnings: false) do
+    wrapped =
+      if Regex.match?(~r/^for[ \t]*\n/, text) do
+        "for(" <> String.slice(text, 3..-1//1) <> ")"
+      else
+        "(" <> text <> ")"
+      end
+
+    case Code.string_to_quoted(wrapped, emit_warnings: false) do
       {:ok, {:for, _meta, args}} when is_list(args) -> do_last?(List.last(args))
       _ -> false
     end
