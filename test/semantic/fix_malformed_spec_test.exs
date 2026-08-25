@@ -174,6 +174,57 @@ defmodule Credence.Semantic.FixMalformedSpecTest do
       confirm_fix(FixMalformedSpec.fix(source, diagnostic), source)
     end
 
+    test "declines a named argument when the spec omits its return type" do
+      source = """
+      defmodule MalformedSpecNamedMissingReturn do
+        @spec f(count :: integer())
+        def f(x), do: x
+      end
+      """
+
+      confirm_fix(FixMalformedSpec.fix(source, only_diagnostic(source)), source)
+    end
+
+    test "preserves everything after the spec's closing parenthesis" do
+      comment_source = """
+      defmodule MalformedSpecTrailingComment do
+        @spec f(integer() :: atom()) # important
+        def f(x), do: x
+      end
+      """
+
+      comment_expected = """
+      defmodule MalformedSpecTrailingComment do
+        @spec f(integer()) :: atom() # important
+        def f(x), do: x
+      end
+      """
+
+      semicolon_source = """
+      defmodule MalformedSpecTrailingCode do
+        @spec f(integer() :: atom()); def marker, do: :ok
+        def f(x), do: x
+      end
+      """
+
+      semicolon_expected = """
+      defmodule MalformedSpecTrailingCode do
+        @spec f(integer()) :: atom(); def marker, do: :ok
+        def f(x), do: x
+      end
+      """
+
+      confirm_fix(
+        FixMalformedSpec.fix(comment_source, only_diagnostic(comment_source)),
+        comment_expected
+      )
+
+      confirm_fix(
+        FixMalformedSpec.fix(semicolon_source, only_diagnostic(semicolon_source)),
+        semicolon_expected
+      )
+    end
+
     test "a position pointing at a non-@spec line is a no-op, not a crash" do
       source = """
       defmodule M do

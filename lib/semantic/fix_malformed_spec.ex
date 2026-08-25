@@ -94,12 +94,17 @@ defmodule Credence.Semantic.FixMalformedSpec do
   defp fix_line(line) do
     with {:ok, prefix, inner, after_close} <- extract_spec_parts(line),
          false <- String.contains?(after_close, "::"),
-         pos when is_integer(pos) <- find_last_separator(inner) do
-      {params_part, "::" <> return_part} = String.split_at(inner, pos)
-      "#{prefix}(#{String.trim_trailing(params_part)}) :: #{String.trim_leading(return_part)}"
+         pos when is_integer(pos) <- find_last_separator(inner),
+         {params_part, "::" <> return_part} = String.split_at(inner, pos),
+         false <- named_argument?(params_part) do
+      "#{prefix}(#{String.trim_trailing(params_part)}) :: #{String.trim_leading(return_part)}#{after_close}"
     else
       _ -> line
     end
+  end
+
+  defp named_argument?(params_part) do
+    Regex.match?(~r/(?:^|,)\s*[a-z_][a-zA-Z0-9_]*\s*$/, params_part)
   end
 
   # Extracts the prefix (`@spec func_name`), the content between the outermost
