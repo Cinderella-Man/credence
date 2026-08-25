@@ -59,7 +59,8 @@ defmodule Credence.Semantic.MissingUseExunitCase do
   def match?(%{severity: :error, message: message}) do
     String.contains?(message, "undefined function test/") or
       String.contains?(message, "undefined function describe/") or
-      String.contains?(message, "undefined function setup/")
+      String.contains?(message, "undefined function setup/") or
+      String.contains?(message, "undefined function setup_all/")
   end
 
   def match?(_), do: false
@@ -96,10 +97,10 @@ defmodule Credence.Semantic.MissingUseExunitCase do
         _node, true ->
           {nil, true}
 
-        {:defmodule, _, [_name, kw]}, false ->
+        {:defmodule, _, [_name, kw]} = node, false ->
           case extract_do_body(kw) do
             nil ->
-              {:__skip__, false}
+              {node, false}
 
             body ->
               statements = block_to_list(body)
@@ -107,7 +108,7 @@ defmodule Credence.Semantic.MissingUseExunitCase do
               if has_exunit_calls?(body) and not has_use_exunit?(statements) do
                 {:__skip__, true}
               else
-                {:__skip__, false}
+                {node, false}
               end
           end
 
