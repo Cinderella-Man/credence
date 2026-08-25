@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.FixLocalFunctionInGuard
 
   @real_message "cannot find or invoke local is_range/1 inside a guard. Only macros can be invoked inside a guard and they must be defined before their invocation. Called as: is_range(length_range)"
@@ -72,6 +74,36 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
 
     assert FixLocalFunctionInGuard.match?(diag)
     refute FixLocalFunctionInGuard.should_report?(diag, source)
+  end
+
+  test "reports and repairs a fixable local function call in a guard end to end" do
+    source = """
+    defmodule LocalFnInGuardCheckPositive do
+      defp is_even(x), do: rem(x, 2) == 0
+      def classify(x) when is_even(x), do: :even
+    end
+    """
+
+    expected = """
+    defmodule LocalFnInGuardCheckPositive do
+      defp is_even(x), do: rem(x, 2) == 0
+      def classify(x) when rem(x, 2) == 0, do: :even
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(source)
+
+    diagnostic = Enum.find(diagnostics, &FixLocalFunctionInGuard.match?/1)
+    assert diagnostic
+    assert FixLocalFunctionInGuard.should_report?(diagnostic, source)
+
+    assert [issue] = Credence.Semantic.analyze(source)
+    assert issue.rule == :fix_local_function_in_guard
+
+    fixed = Credence.Semantic.fix(source)
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "attributes the issue to this rule" do
