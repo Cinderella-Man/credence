@@ -4,6 +4,7 @@ defmodule Credence.Syntax.NoExtraBracketAfterEndFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoExtraBracketAfterEnd
+  alias Credence.Syntax.NoUnclosedFnDelimiter
 
   defp analyze(code), do: NoExtraBracketAfterEnd.analyze(code)
   defp fix(code), do: NoExtraBracketAfterEnd.fix(code)
@@ -179,6 +180,58 @@ defmodule Credence.Syntax.NoExtraBracketAfterEndFixTest do
 
     confirm_fix(fix(input), expected)
     assert valid_syntax?(fix(input))
+  end
+
+  test "cuts at the parser column when a string starts with a combining mark" do
+    input = """
+    def f do
+      case y do
+        _ -> "́" end]
+    end
+    """
+
+    expected = """
+    def f do
+      case y do
+        _ -> "́" end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  test "repairs its bracket while a later syntax error remains" do
+    input = """
+    def f do
+      case :ok do
+        _ -> 1
+      end]
+      Enum.map([], fn x -> x)
+    end
+    """
+
+    intermediate =
+      "def f do\n  case :ok do\n    _ -> 1\n  end\n  Enum.map([], fn x -> x)\nend\n"
+
+    expected = """
+    def f do
+      case :ok do
+        _ -> 1
+      end
+      Enum.map([], fn x -> x end)
+    end
+    """
+
+    confirm_fix(fix(input), intermediate)
+
+    emitted =
+      Credence.Syntax.fix(input,
+        syntax_rules: [NoExtraBracketAfterEnd, NoUnclosedFnDelimiter]
+      )
+
+    confirm_fix(emitted, expected)
+    assert valid_syntax?(emitted)
   end
 
   test "no-op on valid code" do

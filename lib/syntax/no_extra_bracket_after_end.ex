@@ -28,11 +28,11 @@ defmodule Credence.Syntax.NoExtraBracketAfterEnd do
   For the parser to report this error, the innermost open delimiter at the `]`
   is a `do` — so any `[` that is still open sits *below* that `do` on the
   delimiter stack and cannot legally be closed here. Once the `]` is dropped,
-  the rule re-parses: it keeps the edit **only if the whole source now parses**.
-  A source that still fails to parse without the `]` is one where the bracket
-  was not the (only) mistake — e.g. an `end` is missing too — and guessing which
-  token to invent there is not something this rule does. Such sources are left
-  untouched *and* unflagged, so `analyze/1` and `fix/1` never disagree.
+  the rule re-parses: it keeps the edit when the source parses or the parser
+  advances to a later line. The latter lets the Syntax round hand a later,
+  independent error to another rule without accepting edits that leave the
+  parser stuck at this bracket's line. `analyze/1` and `fix/1` share that
+  decision and therefore never disagree.
   """
   use Credence.Syntax.Rule
 
@@ -64,20 +64,31 @@ defmodule Credence.Syntax.NoExtraBracketAfterEnd do
   end
 
   # The single decision both `analyze/1` and `fix/1` are built on: either there
-  # is a stray `]` whose removal makes the source parse — `{:ok, line, fixed}` —
-  # or there is nothing this rule may safely touch.
+  # is a stray `]` whose removal clears this line — `{:ok, line, fixed}` — or
+  # there is nothing this rule may safely touch.
   defp repair(source) do
     with {:ok, line, col} <- locate_stray_bracket(source),
          true <- end_before_bracket?(source, line, col),
          {:ok, fixed} <- remove_bracket(source, line, col),
-         true <- parses?(fixed) do
+         true <- parser_advances?(fixed, line) do
       {:ok, line, fixed}
     else
       _ -> :none
     end
   end
 
-  defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
+  defp parser_advances?(source, repaired_line) do
+    case Code.string_to_quoted(source, columns: true) do
+      {:ok, _} ->
+        true
+
+      {:error, {meta, _message, _token}} when is_list(meta) ->
+        Keyword.get(meta, :line, 0) > repaired_line
+
+      _ ->
+        false
+    end
+  end
 
   # Returns `{:ok, line, column}` when the source fails to parse specifically
   # because a `do` block was closed by `]` instead of `end`.
@@ -101,16 +112,14 @@ defmodule Credence.Syntax.NoExtraBracketAfterEnd do
   end
 
   # Verify that the `]` at (line_no, col) is immediately preceded by `end`.
-  # The parser counts columns in graphemes, which is exactly what
-  # `String.split_at/2` slices by — so combining accents, flags and ZWJ emoji
-  # earlier on the line do not shift the cut.
+  # Parser columns count Unicode codepoints, including a leading combining mark.
   defp end_before_bracket?(source, line_no, col) do
     case line_at(source, line_no) do
       nil ->
         false
 
       line ->
-        {before, rest} = String.split_at(line, col - 1)
+        {before, rest} = split_at_parser_column(line, col)
         # The `]` must be present and the text before it must end with `end`.
         String.starts_with?(rest, "]") and String.ends_with?(String.trim_trailing(before), "end")
     end
@@ -121,7 +130,7 @@ defmodule Credence.Syntax.NoExtraBracketAfterEnd do
     lines = String.split(source, "\n")
 
     with line when is_binary(line) <- Enum.at(lines, line_no - 1),
-         {before, "]" <> after_bracket} <- String.split_at(line, col - 1) do
+         {before, "]" <> after_bracket} <- split_at_parser_column(line, col) do
       new_line = before <> after_bracket
       {:ok, lines |> List.replace_at(line_no - 1, new_line) |> Enum.join("\n")}
     else
@@ -130,4 +139,20 @@ defmodule Credence.Syntax.NoExtraBracketAfterEnd do
   end
 
   defp line_at(source, line_no), do: source |> String.split("\n") |> Enum.at(line_no - 1)
+
+  defp split_at_parser_column(line, col) do
+    {before, rest} = String.split_at(line, col - 1)
+
+    if String.starts_with?(rest, "]") do
+      {before, rest}
+    else
+      # Unicode segmentation attaches a combining mark at the start of a
+      # string literal to the preceding quote, while the parser counts that
+      # mark as its own column. In that case the grapheme cut is one past `]`.
+      case String.split_at(before, -1) do
+        {prefix, "]"} -> {prefix, "]" <> rest}
+        _ -> {before, rest}
+      end
+    end
+  end
 end
