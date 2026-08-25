@@ -128,8 +128,17 @@ defmodule Credence.Semantic.FixStructTestInGuardCheckTest do
 
       result = Credence.fix(source)
 
+      expected =
+        """
+        defmodule LiveDispatch do
+          def f(%Regex{} = v), do: {:regex, v}
+          def f(v), do: {:plain, v}
+        end
+        """
+        |> String.trim_trailing()
+
       assert result.applied_rules == [{FixStructTestInGuard, 1}]
-      assert result.code =~ "def f(%Regex{} = v)"
+      assert result.code == expected
     end
   end
 end
