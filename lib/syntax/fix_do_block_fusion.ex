@@ -71,11 +71,13 @@ defmodule Credence.Syntax.FixDoBlockFusion do
 
   @impl true
   def analyze(source) do
+    valid_source? = valid_source?(source)
+
     source
     |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {{line, shadow}, line_no} ->
-      if fused?(shadow) do
+      if fused?(shadow, valid_source?) do
         [
           %Credence.Issue{
             rule: __MODULE__,
@@ -91,9 +93,11 @@ defmodule Credence.Syntax.FixDoBlockFusion do
 
   @impl true
   def fix(source) do
+    valid_source? = valid_source?(source)
+
     source
     |> Credence.SourceMask.lines()
-    |> Enum.map_join("\n", fn pair -> pair |> fix_line() |> elem(0) end)
+    |> Enum.map_join("\n", fn pair -> pair |> fix_line(valid_source?) |> elem(0) end)
   end
 
   # ORDER MATTERS - fixes cascade: `, do do` needs the double collapsed first so the
@@ -102,13 +106,13 @@ defmodule Credence.Syntax.FixDoBlockFusion do
   # The `{line, shadow}` pair moves through the cascade together and each stage
   # splices the same bytes into both — see the moduledoc for why the shadow is
   # carried rather than recomputed between stages.
-  defp fix_line(pair) do
+  defp fix_line(pair, valid_source?) do
     pair
     |> replace_both(@double_do, "do")
     |> replace_both(@paren_do_colon, "), do: ")
     |> replace_both(@comma_do_eol, " do")
     |> replace_both(@comma_do_midline, ", do: ")
-    |> strip_stray_trailing_end()
+    |> strip_stray_trailing_end(valid_source?)
   end
 
   # Every match is located in the shadow; the identical replacement text is
@@ -136,7 +140,9 @@ defmodule Credence.Syntax.FixDoBlockFusion do
   # is asked of the *shadow's* expression, so a `do`/`fn`/`end` appearing inside a
   # string no longer counts as opening a block — while the bytes that survive into
   # the output are the real line's.
-  defp strip_stray_trailing_end({line, shadow}) do
+  defp strip_stray_trailing_end(pair, true), do: pair
+
+  defp strip_stray_trailing_end({line, shadow}, false) do
     case Regex.run(@do_colon_trailing_end, shadow, return: :index) do
       [{match_start, match_len}, prefix, {expr_start, expr_len} = expr] ->
         if Regex.match?(@block_keyword, binary_part(shadow, expr_start, expr_len)) do
@@ -160,11 +166,13 @@ defmodule Credence.Syntax.FixDoBlockFusion do
       binary_part(subject, match_end, byte_size(subject) - match_end)
   end
 
-  defp fused?(shadow) do
+  defp fused?(shadow, valid_source?) do
     Regex.match?(@comma_do_eol, shadow) or Regex.match?(@double_do, shadow) or
       Regex.match?(@paren_do_colon, shadow) or Regex.match?(@comma_do_midline, shadow) or
-      stray_trailing_end?(shadow)
+      (not valid_source? and stray_trailing_end?(shadow))
   end
+
+  defp valid_source?(source), do: match?({:ok, _}, Sourceror.parse_string(source))
 
   defp stray_trailing_end?(shadow) do
     case Regex.run(@do_colon_trailing_end, shadow) do

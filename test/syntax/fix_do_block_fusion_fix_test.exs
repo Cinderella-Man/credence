@@ -115,6 +115,16 @@ defmodule Credence.Syntax.FixDoBlockFusionFixTest do
     assert valid_syntax?(code)
   end
 
+  test "one-line definition nested in a module keeps the module terminator" do
+    code = "defmodule DoBlockFusionNestedModule do def value, do: 1 end"
+    emitted = fix(code)
+
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(code)
+    assert analyze(code) == []
+    confirm_fix(emitted, code)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
+
   test "fix output is well-formed and analyze reaches a fixpoint" do
     code = """
     defmodule Solution do
