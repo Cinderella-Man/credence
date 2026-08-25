@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixFunctionInModuleAttributeInlineUsages
 
@@ -27,6 +27,22 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
            )
          end)}
     end
+  end
+
+  test "compile assertions bound nonterminating top-level code" do
+    previous_timeout = Application.get_env(:credence, :compile_timeout_ms)
+    Application.put_env(:credence, :compile_timeout_ms, 50)
+
+    on_exit(fn ->
+      if previous_timeout do
+        Application.put_env(:credence, :compile_timeout_ms, previous_timeout)
+      else
+        Application.delete_env(:credence, :compile_timeout_ms)
+      end
+    end)
+
+    assert {:error, [_diagnostic]} =
+             Credence.RuleHelpers.compile_and_capture("receive do after :infinity -> :ok end")
   end
 
   test "replaces @attr fn definition with defp and @attr refs with captures" do
@@ -343,7 +359,7 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
     """
 
     confirm_fix(fix(input), expected)
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "fixed flagship output compiles" do
@@ -358,7 +374,7 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
     end
     """
 
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "fixed direct-call output compiles" do
@@ -370,7 +386,7 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
     end
     """
 
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "end-to-end: the semantic phase dispatches this rule on the real diagnostic" do
