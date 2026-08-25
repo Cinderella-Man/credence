@@ -28,6 +28,39 @@ defmodule Credence.Syntax.NoAfterInAnonFnFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "production Syntax pipeline discovers and applies the rule" do
+    input = """
+    defmodule NoAfterInAnonFnPipelineFixture do
+      def start(parent, task, processor) do
+        spawn_monitor(fn ->
+          result = processor.(task)
+          send(parent, {:done, result})
+        after
+          0 -> nil
+        end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoAfterInAnonFnPipelineFixture do
+      def start(parent, task, processor) do
+        spawn_monitor(fn ->
+          result = processor.(task)
+          send(parent, {:done, result})
+        end)
+      end
+    end
+    """
+
+    {actual, applied} = Credence.Syntax.fix_with_trace(input)
+
+    assert actual == expected
+    assert {NoAfterInAnonFn, 1} in applied
+    confirm_fix(actual, fix(input))
+    assert valid_syntax?(actual)
+  end
+
   test "fixed output no longer flags" do
     input = """
     spawn_monitor(fn ->
