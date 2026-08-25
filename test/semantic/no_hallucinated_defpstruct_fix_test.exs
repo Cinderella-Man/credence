@@ -7,7 +7,7 @@ defmodule Credence.Semantic.NoHallucinatedDefpstructFixTest do
 
   @message "undefined function defpstruct/2 (there is no such import)"
 
-  defp fix(source, message, line \\ 1) do
+  defp fix(source, message, line \\ 2) do
     NoHallucinatedDefpstruct.fix(source, %{
       severity: :error,
       message: message,
@@ -126,6 +126,78 @@ defmodule Credence.Semantic.NoHallucinatedDefpstructFixTest do
     """
 
     confirm_fix(fix(input, @message), expected)
+  end
+
+  test "block repair preserves non-code and references in sibling modules" do
+    input = ~S'''
+    defmodule BlockOwner do
+      defpstruct Node do
+        defstruct [:x]
+      end
+
+      # keep example %Node{x: 1}
+      def text, do: "%Node{x: 2}"
+      def docs, do: """
+      keep %Node{x: 3}
+      """
+      def local, do: %Node{x: 4}
+    end
+
+    defmodule Node do
+      defstruct [:x]
+    end
+
+    defmodule StructConsumer do
+      def external, do: %Node{x: 5}
+    end
+    '''
+
+    expected = ~S'''
+    defmodule BlockOwner do
+      defstruct [:x]
+
+      # keep example %Node{x: 1}
+      def text, do: "%Node{x: 2}"
+      def docs, do: """
+      keep %Node{x: 3}
+      """
+      def local, do: %__MODULE__{x: 4}
+    end
+
+    defmodule Node do
+      defstruct [:x]
+    end
+
+    defmodule StructConsumer do
+      def external, do: %Node{x: 5}
+    end
+    '''
+
+    confirm_fix(fix(input, @message), expected)
+  end
+
+  test "repairs the block call on the diagnostic line" do
+    input = ~S"""
+    defmodule MultipleBlocks do
+      defpstruct First do
+        defstruct [:a]
+      end
+      defpstruct Second do
+        defstruct [:b]
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule MultipleBlocks do
+      defpstruct First do
+        defstruct [:a]
+      end
+      defstruct [:b]
+    end
+    """
+
+    confirm_fix(fix(input, @message, 5), expected)
   end
 
   # The line-based transform only reproduces one shape faithfully (single-line
@@ -288,6 +360,30 @@ defmodule Credence.Semantic.NoHallucinatedDefpstructFixTest do
              %{severity: :error, message: @message_p_kw},
              input
            )
+  end
+
+  test "a defstruct in a sibling module does not suppress keyword repair" do
+    input = ~S"""
+    defmodule AlreadyValid do
+      defstruct [:ok]
+    end
+
+    defmodule BrokenKeyword do
+      defpstruct nope: 0
+    end
+    """
+
+    expected = ~S"""
+    defmodule AlreadyValid do
+      defstruct [:ok]
+    end
+
+    defmodule BrokenKeyword do
+      defstruct nope: 0
+    end
+    """
+
+    confirm_fix(fix(input, @message_kw, 6), expected)
   end
 
   test "the repaired keyword form compiles" do

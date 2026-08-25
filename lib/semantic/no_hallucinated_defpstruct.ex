@@ -58,6 +58,7 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # Both spellings, each with its arity slash, so `defpstructp/1` cannot be read
   # as `defpstruct` plus a stray character — the bug this list was widened to
@@ -95,9 +96,15 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   def fix(source, diagnostic) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
-        case find_defpstruct(ast) do
-          nil -> fix_keyword_form(source, ast)
-          _found -> fix_block_form(source, ast, diagnostic)
+        case find_call(ast, line(diagnostic)) do
+          {:block, name_parts, range, inner_body} ->
+            fix_block_form(source, ast, name_parts, range, inner_body)
+
+          {:keyword, name, node} ->
+            fix_keyword_form(source, ast, name, node)
+
+          nil ->
+            source
         end
 
       _ ->
@@ -108,9 +115,8 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   # `defpstruct now: 0` — only the macro name is wrong. Rewrite that identifier
   # and nothing else: the patch spans exactly the name's own bytes, so a
   # same-spelled word elsewhere on the line is out of range by construction.
-  defp fix_keyword_form(source, ast) do
-    with {name, node} <- find_keyword_form(ast),
-         false <- has_defstruct?(ast),
+  defp fix_keyword_form(source, ast, name, node) do
+    with false <- has_defstruct?(ast, node),
          %{start: [line: line, column: column]} <- Sourceror.get_range(node) do
       width = name |> Atom.to_string() |> String.length()
 
@@ -125,30 +131,29 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
     end
   end
 
-  defp find_keyword_form(ast) do
-    Macro.prewalk(ast, nil, fn
-      {name, _meta, [_single_arg]} = node, nil when name in @macro_names ->
-        {node, {name, node}}
-
-      node, acc ->
-        {node, acc}
-    end)
-    |> elem(1)
-  end
-
   # A module cannot carry two `defstruct`s; renaming into a second one trades
   # this diagnostic for a new one.
-  defp has_defstruct?(ast) do
+  defp has_defstruct?(ast, target) do
+    target_line = Sourceror.get_start_position(target)[:line]
+
+    case enclosing_module(ast, target_line) do
+      nil -> defstruct_in?(ast, false)
+      module -> module |> module_body() |> defstruct_in?(true)
+    end
+  end
+
+  defp defstruct_in?(ast, skip_nested_modules?) do
     Macro.prewalk(ast, false, fn
+      {:defmodule, _, _} = node, found when skip_nested_modules? -> {Macro.escape(node), found}
       {:defstruct, _, _} = node, _ -> {node, true}
       node, acc -> {node, acc}
     end)
     |> elem(1)
   end
 
-  defp fix_block_form(source, ast, _diagnostic) do
-    with {_name_parts, range, inner_body} <- find_defpstruct(ast),
-         true <- safe_to_fix?(inner_body) do
+  defp fix_block_form(source, ast, name_parts, range, inner_body) do
+    with true <- safe_to_fix?(inner_body) do
+      source = replace_struct_refs(source, ast, name_parts, range.start[:line])
       lines = String.split(source, "\n")
       start_idx = range.start[:line] - 1
       end_idx = range.end[:line] - 1
@@ -194,33 +199,46 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
         result_lines = before ++ replacement ++ after_
         result = Enum.join(result_lines, "\n")
 
-        # Replace %StructName{ with %__MODULE__{
-        replace_struct_refs(result, ast)
+        result
       end
     else
       _ -> source
     end
   end
 
-  # Find the block-form call in the AST and return {name_parts, range, inner_body}.
-  defp find_defpstruct(ast) do
-    Macro.prewalk(ast, nil, fn
-      {name, _meta, [{:__aliases__, _, name_parts}, body]} = node, nil
-      when name in @macro_names ->
-        case extract_do_body(body) do
-          {:ok, inner} ->
-            range = Sourceror.get_range(node)
-            {node, {name_parts, range, inner}}
+  # Select the call named by the compiler diagnostic. Falling back is safe only
+  # when the diagnostic has no usable line and the source contains one candidate.
+  defp find_call(ast, target_line) do
+    calls =
+      Macro.prewalk(ast, [], fn
+        {name, _meta, [{:__aliases__, _, name_parts}, body]} = node, acc
+        when name in @macro_names ->
+          case extract_do_body(body) do
+            {:ok, inner} ->
+              call = {:block, name_parts, Sourceror.get_range(node), inner}
+              {node, [{Sourceror.get_start_position(node)[:line], call} | acc]}
 
-          _ ->
-            {node, nil}
-        end
+            _ ->
+              {node, acc}
+          end
 
-      node, acc ->
-        {node, acc}
-    end)
-    |> elem(1)
+        {name, _meta, [_single_arg]} = node, acc when name in @macro_names ->
+          {node, [{Sourceror.get_start_position(node)[:line], {:keyword, name, node}} | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+      |> elem(1)
+
+    case Enum.filter(calls, fn {call_line, _call} -> call_line == target_line end) do
+      [{_, call}] -> call
+      [] when not is_integer(target_line) -> unique_call(calls)
+      _ -> nil
+    end
   end
+
+  defp unique_call([{_, call}]), do: call
+  defp unique_call(_), do: nil
 
   defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: {:ok, body}
   defp extract_do_body(_), do: :error
@@ -306,18 +324,61 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
     end
   end
 
-  # Replace %StructName{ with %__MODULE__{ in source text.
-  defp replace_struct_refs(source, ast) do
-    case find_defpstruct(ast) do
-      {name_parts, _range, _inner} ->
-        name = Enum.map_join(name_parts, ".", &Atom.to_string/1)
-        pattern = "%#{name}{"
-        String.replace(source, pattern, "%__MODULE__{")
+  # Rewrite code references only inside the module that owns the wrapper.
+  defp replace_struct_refs(source, ast, name_parts, target_line) do
+    {first, last} =
+      case enclosing_module(ast, target_line) do
+        nil -> {1, length(String.split(source, "\n"))}
+        module -> module_line_range(module)
+      end
 
-      _ ->
-        source
-    end
+    pattern = "%#{Enum.map_join(name_parts, ".", &Atom.to_string/1)}{"
+
+    source
+    |> SourceMask.lines()
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn
+      {{line, shadow}, line_no} when line_no >= first and line_no <= last ->
+        SourceMask.replace_code(line, shadow, pattern, "%__MODULE__{")
+
+      {{line, _shadow}, _line_no} ->
+        line
+    end)
   end
+
+  defp enclosing_module(ast, target_line) do
+    {_, modules} =
+      Macro.prewalk(ast, [], fn
+        {:defmodule, _, _} = node, modules ->
+          range = Sourceror.get_range(node)
+
+          if range.start[:line] <= target_line and target_line <= range.end[:line] do
+            {node, [node | modules]}
+          else
+            {node, modules}
+          end
+
+        node, modules ->
+          {node, modules}
+      end)
+
+    Enum.min_by(
+      modules,
+      fn node ->
+        range = Sourceror.get_range(node)
+        range.end[:line] - range.start[:line]
+      end,
+      fn -> nil end
+    )
+  end
+
+  defp module_line_range(module) do
+    range = Sourceror.get_range(module)
+    {range.start[:line], range.end[:line]}
+  end
+
+  defp module_body({:defmodule, _, [_name, [do: body]]}), do: body
+  defp module_body({:defmodule, _, [_name, [{{:__block__, _, [:do]}, body}]]}), do: body
 
   defp find_indent(line) do
     case Regex.run(~r/^(\s*)/, line) do
@@ -328,4 +389,5 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+  defp line(_), do: nil
 end
