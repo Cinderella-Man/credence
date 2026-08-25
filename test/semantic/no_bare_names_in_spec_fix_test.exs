@@ -3,6 +3,7 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoBareNamesInSpec
 
   @diagnostic %{
@@ -61,7 +62,7 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
     end
     """
 
-    assert Credence.RuleCase.compiles?(fix(input))
+    assert {:ok, []} = RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "returns source unchanged when no bare name matches" do
@@ -164,22 +165,25 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
       end
       """
 
-      diagnostic = %{
-        message:
-          "credence_check.ex:2: type #{unquote(name)}/0 undefined (no such type in Solution)",
-        position: 2,
-        file: "credence_check.ex",
-        severity: :error
-      }
+      assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
 
-      out = fix(input, diagnostic)
+      assert Enum.any?(diagnostics, fn diagnostic ->
+               NoBareNamesInSpec.match?(diagnostic) and
+                 diagnostic.message ==
+                   "credence_check.ex:2: type #{unquote(name)}/0 undefined " <>
+                     "(no such type in Solution)"
+             end)
+
+      {out, trace} =
+        Credence.Semantic.fix_with_trace(input, semantic_rules: [NoBareNamesInSpec])
 
       refute out == input,
              "no-op: the rule claimed the diagnostic and changed nothing, so the compile " <>
                "error survives every pass while no other rule can claim it"
 
       confirm_fix(out, expected)
-      assert Credence.RuleCase.compiles?(out)
+      assert trace == [{NoBareNamesInSpec, 1}]
+      assert RuleHelpers.compile_and_capture(out) == RuleHelpers.compile_and_capture(expected)
     end
   end
 
@@ -198,17 +202,21 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
     end
     """
 
-    diagnostic = %{
-      message: "credence_check.ex:2: type bare_v/0 undefined (no such type in Solution)",
-      position: 2,
-      file: "credence_check.ex",
-      severity: :error
-    }
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
 
-    out = fix(input, diagnostic)
+    assert Enum.any?(diagnostics, fn diagnostic ->
+             NoBareNamesInSpec.match?(diagnostic) and
+               diagnostic.message ==
+                 "credence_check.ex:2: type bare_v/0 undefined (no such type in Solution)"
+           end)
+
+    {out, trace} =
+      Credence.Semantic.fix_with_trace(input, semantic_rules: [NoBareNamesInSpec])
+
     refute out == input, "a spec carrying a `when` guard was left untouched"
     confirm_fix(out, expected)
-    assert Credence.RuleCase.compiles?(out)
+    assert trace == [{NoBareNamesInSpec, 1}]
+    assert RuleHelpers.compile_and_capture(out) == RuleHelpers.compile_and_capture(expected)
   end
 
   test "declines a name the `when` guard binds — annotating it does not compile" do
@@ -237,7 +245,7 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
 
     confirm_fix(out, input)
     assert out =~ "when t: atom()", "the guard binding was rewritten"
-    assert Credence.RuleCase.compiles?(out)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(out)
   end
 
   test "never rewrites the function-name position, even when it shares the name" do
@@ -259,7 +267,7 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
 
     out = fix(input)
     confirm_fix(out, expected)
-    assert Credence.RuleCase.compiles?(out)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(out)
   end
 
   test "declines a parameterised type — that is not the bare `name/0` reported" do
