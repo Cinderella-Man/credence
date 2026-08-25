@@ -224,6 +224,30 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessorFixTest do
     confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
+  test "fixes an aliased Calendar.ISO call at the compiler's diagnostic position" do
+    input = """
+    defmodule CredenceCalendarIsoAliasDiagnostic do
+      alias Calendar.ISO
+
+      def extract(dt) do
+        ISO.date(dt)
+      end
+    end
+    """
+
+    expected = """
+    defmodule CredenceCalendarIsoAliasDiagnostic do
+      alias Calendar.ISO
+
+      def extract(dt) do
+        DateTime.to_date(dt)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @date_message, {5, 5}), expected)
+  end
+
   test "fixed flagship output compiles" do
     input = """
     defmodule CredenceCalendarIsoCompiles do

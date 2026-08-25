@@ -106,19 +106,36 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
 
         module_prefix = Enum.find(@module_prefixes, &String.ends_with?(prefix, &1))
 
-        if module_prefix && String.starts_with?(rest, func) do
-          kept_prefix =
-            String.slice(prefix, 0, String.length(prefix) - String.length(module_prefix))
+        case {module_prefix, rest} do
+          {module_prefix, rest} when not is_nil(module_prefix) ->
+            if String.starts_with?(rest, func) do
+              kept_prefix =
+                String.slice(prefix, 0, String.length(prefix) - String.length(module_prefix))
 
-          kept_rest = String.slice(rest, String.length(func), String.length(rest))
+              kept_rest = String.slice(rest, String.length(func), String.length(rest))
+              replace_line(lines, line_no, kept_prefix <> replacement <> kept_rest)
+            else
+              source
+            end
 
-          lines
-          |> List.replace_at(line_no - 1, kept_prefix <> replacement <> kept_rest)
-          |> Enum.join("\n")
-        else
-          source
+          {nil, "ISO." <> rest} ->
+            if String.starts_with?(rest, func) do
+              kept_rest = String.slice(rest, String.length(func), String.length(rest))
+              replace_line(lines, line_no, prefix <> replacement <> kept_rest)
+            else
+              source
+            end
+
+          _other ->
+            source
         end
     end
+  end
+
+  defp replace_line(lines, line_no, replacement) do
+    lines
+    |> List.replace_at(line_no - 1, replacement)
+    |> Enum.join("\n")
   end
 
   # `starts_with?` (not `contains?`) so a user module whose path merely ends
