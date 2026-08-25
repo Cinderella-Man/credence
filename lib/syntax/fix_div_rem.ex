@@ -208,7 +208,8 @@ defmodule Credence.Syntax.FixDivRem do
   # Left operand = everything between `=` (or line start) and the operator.
   # Right operand = everything after the operator to end of expression.
   defp rewrite_infix(line, shadow, op) do
-    pattern = ~r/^(\s*(?:\w+\s*=\s*|defp?\s+.*,\s*do:\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
+    pattern =
+      ~r/^(\s*(?:(?:.*;\s*)?\w+\s*=\s*|defp?\s+.*,\s*do:\s*|.*->\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
 
     case Regex.run(pattern, shadow, return: :index) do
       [_full, _prefix, {ls, ll}, {rs, rl}, _trailing] ->
@@ -357,7 +358,11 @@ defmodule Credence.Syntax.FixDivRem do
 
   defp followed_by_operator?(line, pos, len) do
     rest = binary_part(line, pos, len - pos) |> String.trim_leading()
-    Regex.match?(~r/^(?:\+|-|\*|\/|==|!=|<=|>=|<|>|&&|\|\||\|>|<>|\+\+|--|and\b|or\b|in\b)/, rest)
+
+    Regex.match?(
+      ~r/^(?:\+|-|\*|\/|==|!=|<=|>=|<|>|&&|\|\||\|>|<>|\+\+|--|and\b|or\b|in\b|end\b)/,
+      rest
+    )
   end
 
   defp build_issue(op, line) do

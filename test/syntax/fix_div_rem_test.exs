@@ -483,17 +483,59 @@ defmodule Credence.Syntax.FixDivRemTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # DECLINED — an operand the lazy group cannot bound safely
+  # STATEMENT AND FUNCTION BOUNDARIES
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fix/1 — declines unbounded left operands" do
-    test "declines a multi-statement line rather than swallowing the first statement" do
+  describe "fix/1 — statement and function boundaries" do
+    test "fixes an infix operator after an earlier statement" do
       source = ~S'IO.puts("a div b"); x = n div 2'
-      confirm_fix(FixDivRem.fix(source), source)
+      expected = ~S'IO.puts("a div b"); x = div(n, 2)'
+      emitted = FixDivRem.fix(source)
+
+      confirm_fix(emitted, expected)
+
+      program = """
+      defmodule FixDivRemStatementBoundaryEmitted do
+        def f(n) do
+          #{emitted}
+          x
+        end
+      end
+
+      defmodule FixDivRemStatementBoundaryControl do
+        def f(n) do
+          IO.puts("a div b")
+          x = div(n, 2)
+          x
+        end
+      end
+
+      unless FixDivRemStatementBoundaryEmitted.f(7) ==
+               FixDivRemStatementBoundaryControl.f(7),
+        do: raise("statement-boundary repair changed the result")
+      """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(program)
     end
 
-    test "declines an anonymous function body" do
-      confirm_fix(FixDivRem.fix("fn n -> n div 2 end"), "fn n -> n div 2 end")
+    test "fixes an infix operator in an anonymous function body" do
+      emitted = FixDivRem.fix("fn n -> n div 2 end")
+      confirm_fix(emitted, "fn n -> div(n, 2) end")
+
+      program = """
+      defmodule FixDivRemAnonymousFunctionEmitted do
+        def f, do: (#{emitted}).(7)
+      end
+
+      defmodule FixDivRemAnonymousFunctionControl do
+        def f, do: (fn n -> div(n, 2) end).(7)
+      end
+
+      unless FixDivRemAnonymousFunctionEmitted.f() == FixDivRemAnonymousFunctionControl.f(),
+        do: raise("anonymous-function repair changed the result")
+      """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(program)
     end
   end
 end
