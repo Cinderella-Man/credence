@@ -106,18 +106,38 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
 
   @impl true
   def fix(source, %{message: msg} = diagnostic) do
-    target_line = line(diagnostic)
+    {target_line, target_column} = position(diagnostic)
 
     with [_, var] <- Regex.run(@bare_pin_clause, msg),
          {:ok, ast} <- Sourceror.parse_string(source) do
       pinned = String.to_atom(var)
+
+      {_ast, candidates} =
+        Macro.prewalk(ast, [], fn
+          {:->, arrow_meta, [[{:^, pin_meta, [{^pinned, _, nil}]}], _body]} = node, acc ->
+            candidate = {Keyword.get(arrow_meta, :line), Keyword.get(pin_meta, :column)}
+            {node, [candidate | acc]}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      target =
+        candidates
+        |> Enum.filter(fn {candidate_line, _column} -> candidate_line == target_line end)
+        |> Enum.min_by(
+          fn {_line, column} -> column_distance(column, target_column) end,
+          fn -> nil end
+        )
 
       result =
         Macro.prewalk(ast, fn
           # A clause whose whole pattern is the bare pin of the flagged
           # variable, on the diagnostic line: rewrite `^var ->` to `%^var{}`.
           {:->, arrow_meta, [[{:^, pin_meta, [{^pinned, _, nil}]}], body]} = node ->
-            if Keyword.get(arrow_meta, :line) == target_line do
+            location = {Keyword.get(arrow_meta, :line), Keyword.get(pin_meta, :column)}
+
+            if location == target do
               new_pattern =
                 {:%, pin_meta, [{:^, pin_meta, [{pinned, pin_meta, nil}]}, {:%{}, pin_meta, []}]}
 
@@ -140,6 +160,11 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
     end
   end
 
-  defp line(%{position: {line, _col}}), do: line
-  defp line(%{position: line}) when is_integer(line), do: line
+  defp position(%{position: {line, column}}), do: {line, column}
+  defp position(%{position: line}) when is_integer(line), do: {line, nil}
+  defp line(diagnostic), do: diagnostic |> position() |> elem(0)
+
+  defp column_distance(_column, nil), do: 0
+  defp column_distance(nil, _target_column), do: 0
+  defp column_distance(column, target_column), do: abs(column - target_column)
 end

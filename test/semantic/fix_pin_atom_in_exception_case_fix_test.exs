@@ -189,6 +189,50 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCaseFixTest do
     confirm_fix(fix(input, {3, 30}), expected)
   end
 
+  test "rewrites only the compiler-flagged clause when identical pins share a line" do
+    input = """
+    defmodule CredencePinAtomSameLineRegression do
+      def test(fun) do
+        exception = ArgumentError
+
+        try do
+          fun.()
+        rescue
+          e -> case e do ^exception -> :wrong; _ -> :other end; case exception do ^exception -> :kept; _ -> :other end
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule CredencePinAtomSameLineRegression do
+      def test(fun) do
+        exception = ArgumentError
+
+        try do
+          fun.()
+        rescue
+          e ->
+            case e do
+              %^exception{} -> :wrong
+              _ -> :other
+            end
+
+            case exception do
+              ^exception -> :kept
+              _ -> :other
+            end
+        end
+      end
+    end
+    """
+
+    {:ok, diags} = RuleHelpers.compile_and_capture(input)
+    [diag] = Enum.filter(diags, &FixPinAtomInExceptionCase.match?/1)
+
+    confirm_fix(FixPinAtomInExceptionCase.fix(input, diag), expected)
+  end
+
   test "leaves a pin of a different variable untouched" do
     input = """
     defmodule Other do
