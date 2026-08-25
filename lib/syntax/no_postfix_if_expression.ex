@@ -26,8 +26,8 @@ defmodule Credence.Syntax.NoPostfixIfExpression do
   **whole file**, not just the broken line. So a match is only the first of five
   gates; a line is rewritten only when all of them hold:
 
-  1. it is not a comment line, and not inside a `\"\"\"` heredoc (so prose and
-     documentation examples are never rewritten);
+  1. it is wholly code according to `Credence.SourceMask` (so strings, comments,
+     charlists, sigils, and both kinds of heredoc are never rewritten);
   2. the line **does not parse on its own** — every valid line above parses, so
      none of them can reach the rewrite. This also passes over a modifier whose
      expression ends in a bare identifier (`total = total + x if x > 0` parses,
@@ -36,10 +36,10 @@ defmodule Credence.Syntax.NoPostfixIfExpression do
   3. the captured expression and condition each parse as a *single* expression
      (this drops `x = a if b if c`, `x = "yes" if a else "no"`, and any other
      split that isn't really an expression plus a condition);
-  4. the variable is **mentioned earlier in the file**, so the `else:` branch
-     refers to an existing binding — otherwise the rewrite would parse but not
-     compile (`undefined variable`), and guessing `else: nil` instead would
-     silently change the value the code ends up with;
+  4. the variable is **bound earlier in the same function**, so the `else:`
+     branch refers to an existing binding — otherwise the rewrite would parse
+     but not compile (`undefined variable`), and guessing `else: nil` instead
+     would silently change the value the code ends up with;
   5. the rewritten line is **re-parsed and compared against the original
      fragments' ASTs**. Splicing text can reassociate: `x = foo a, b if c`
      would become `foo(a, b, else: x)` — the `else:` swallowed into the call.
@@ -50,6 +50,7 @@ defmodule Credence.Syntax.NoPostfixIfExpression do
 
   use Credence.Syntax.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # Line-anchored: <indent><var> = <expr> if <cond>. Group 3 is greedy, so the
   # split is taken at the *last* ` if ` on the line; gate 3 then throws the
@@ -97,27 +98,25 @@ defmodule Credence.Syntax.NoPostfixIfExpression do
   # `{line_number, rewritten_line}` for every line that clears all five gates.
   defp rewrites(source) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.reduce({[], false, MapSet.new()}, fn {line, line_no}, {acc, in_heredoc?, seen} ->
-      if in_heredoc? do
-        {acc, toggle_heredoc(in_heredoc?, line), seen}
-      else
-        acc =
-          case rewrite_line(line, seen) do
-            {:ok, fixed} -> [{line_no, fixed} | acc]
-            :error -> acc
-          end
+    |> Enum.reduce({[], MapSet.new()}, fn {{line, shadow}, line_no}, {acc, seen} ->
+      seen = if function_definition?(shadow), do: MapSet.new(), else: seen
 
-        {acc, toggle_heredoc(in_heredoc?, line), add_identifiers(seen, line)}
-      end
+      acc =
+        case rewrite_line(line, shadow, seen) do
+          {:ok, fixed} -> [{line_no, fixed} | acc]
+          :error -> acc
+        end
+
+      {acc, add_bindings(seen, shadow)}
     end)
     |> elem(0)
     |> Enum.reverse()
   end
 
-  defp rewrite_line(line, seen) do
-    with false <- comment_line?(line),
+  defp rewrite_line(line, shadow, seen) do
+    with true <- SourceMask.self_contained?(line, shadow),
          [indent, lhs, expr, cond_expr] <- captures(line),
          true <- MapSet.member?(seen, lhs),
          :error <- parse(line),
@@ -141,18 +140,30 @@ defmodule Credence.Syntax.NoPostfixIfExpression do
     end
   end
 
-  defp comment_line?(line), do: Regex.match?(~r/^\s*#/, line)
+  defp function_definition?(shadow), do: Regex.match?(~r/^\s*defp?\b/, shadow)
 
-  # A line carrying an odd number of `"""` opens or closes a heredoc.
-  defp toggle_heredoc(state, line) do
-    count = length(String.split(line, ~s("""))) - 1
-    if rem(count, 2) == 1, do: not state, else: state
-  end
+  defp add_bindings(seen, shadow) do
+    assignment_bindings =
+      Regex.scan(~r/\b([a-z_][A-Za-z0-9_]*)\s*=(?!=)/, shadow, capture: :all_but_first)
 
-  defp add_identifiers(seen, line) do
-    @identifier_pattern
-    |> Regex.scan(line, capture: :first)
-    |> Enum.reduce(seen, fn [id], acc -> MapSet.put(acc, id) end)
+    parameter_bindings =
+      Regex.scan(~r/(?:defp?\s+[a-z_][A-Za-z0-9_]*\s*\(|fn\s+)([^\n]*?)(?:\)|->)/, shadow,
+        capture: :all_but_first
+      )
+      |> Kernel.++(
+        Regex.scan(
+          ~r/defp?\s+[a-z_][A-Za-z0-9_]*\s+([^\n]*?)(?:\s+when\b|\s+do\b|,\s*do:)/,
+          shadow,
+          capture: :all_but_first
+        )
+      )
+      |> Enum.flat_map(fn [parameters] ->
+        Regex.scan(@identifier_pattern, parameters, capture: :first)
+      end)
+
+    Enum.reduce(assignment_bindings ++ parameter_bindings, seen, fn [id], acc ->
+      MapSet.put(acc, id)
+    end)
   end
 
   # `{:ok, ast}` when `code` parses as exactly one expression, `:error` otherwise.

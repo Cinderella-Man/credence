@@ -203,6 +203,42 @@ defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
     confirm_fix(fix(code), code)
   end
 
+  test "no-op: the variable appears earlier only in a comment" do
+    code = """
+    defmodule NoPostfixIfCommentBindingFixture do
+      def run(flag) do
+        # x was discussed here
+        x = foo() if flag
+        x
+      end
+
+      defp foo, do: 1
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "no-op: the variable is bound only in another function" do
+    code = """
+    defmodule NoPostfixIfOtherFunctionBindingFixture do
+      def first do
+        x = 1
+        x
+      end
+
+      def second(flag) do
+        x = foo() if flag
+        x
+      end
+
+      defp foo, do: 1
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
   test "no-op: a documentation example inside a heredoc" do
     code = """
     defmodule M do
@@ -216,6 +252,22 @@ defmodule Credence.Syntax.NoPostfixIfExpressionFixTest do
         \"\"\")
 
         x = [1, 2
+      end
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "no-op: postfix-looking text inside a charlist heredoc" do
+    code = """
+    defmodule NoPostfixIfCharlistHeredocFixture do
+      def run do
+        x = 0
+
+        ~c'''
+        x = foo() if flag
+        '''
       end
     end
     """
