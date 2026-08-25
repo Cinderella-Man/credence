@@ -250,6 +250,22 @@ defmodule Credence.Syntax.PreferCommaInTupleLiteralFixTest do
   end
 
   describe "the repaired file is well-formed" do
+    test "the whole syntax phase discovers and applies this rule" do
+      code = """
+      defmodule CredencePreferCommaPipelineFixture do
+        def handle_info(_msg, state), do: {:noreply state}
+      end
+      """
+
+      expected = """
+      defmodule CredencePreferCommaPipelineFixture do
+        def handle_info(_msg, state), do: {:noreply, state}
+      end
+      """
+
+      confirm_fix(Credence.Syntax.fix(code), expected)
+    end
+
     test "fixed output no longer flags" do
       assert analyze(fix("{:noreply state}")) == []
     end
