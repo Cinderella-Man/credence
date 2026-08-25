@@ -115,19 +115,22 @@ defmodule Credence.Syntax.NoFnWithCaptureFixTest do
       end
       '''
 
-      confirm_fix(fix(code), code)
+      fixed = fix(code)
+      confirm_fix(fixed, code)
     end
 
     test "leaves the malformed form inside a comment alone" do
       code = "# LLMs emit fn(&1 > 0) here"
 
-      confirm_fix(fix(code), code)
+      fixed = fix(code)
+      confirm_fix(fixed, code)
     end
 
     test "leaves the malformed form inside a string alone" do
       code = ~S'IO.puts("the bug looks like fn(&1 > 0)")'
 
-      confirm_fix(fix(code), code)
+      fixed = fix(code)
+      confirm_fix(fixed, code)
     end
 
     test "does not report a mention that only appears in prose" do
@@ -150,7 +153,8 @@ defmodule Credence.Syntax.NoFnWithCaptureFixTest do
     test "the rule does not rewrite its own source file" do
       source = File.read!("lib/syntax/no_fn_with_capture.ex")
 
-      confirm_fix(fix(source), source)
+      fixed = fix(source)
+      confirm_fix(fixed, source)
     end
   end
 end
