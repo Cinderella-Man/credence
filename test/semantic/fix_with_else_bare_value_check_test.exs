@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixWithElseBareValueCheckTest do
 
     test "the fixture parses but does not compile", %{source: source} do
       assert Credence.RuleCase.valid_syntax?(source)
-      refute Credence.RuleCase.compiles?(source)
+      assert {:error, _diagnostics} = RuleHelpers.compile_and_capture(source)
     end
 
     test "the rule matches it", %{diagnostics: diagnostics} do
@@ -80,9 +80,23 @@ defmodule Credence.Semantic.FixWithElseBareValueCheckTest do
     test "it is repaired end-to-end through real dispatch", %{source: source} do
       result = Credence.fix(source)
 
+      expected =
+        """
+        defmodule WithElseRealDiagnostic do
+          def run(x) do
+            with {:ok, val} <- x do
+              val
+            else
+              _ -> :error
+            end
+          end
+        end
+        """
+        |> String.trim_trailing()
+
       assert {FixWithElseBareValue, 1} in result.applied_rules
-      assert result.code =~ "_ -> :error"
-      assert Credence.RuleCase.compiles?(result.code)
+      assert result.code == expected
+      assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(result.code)
     end
   end
 
