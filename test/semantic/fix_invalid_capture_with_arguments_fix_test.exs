@@ -89,6 +89,49 @@ defmodule Credence.Semantic.FixInvalidCaptureWithArgumentsFixTest do
     confirm_fix(fix(input, 3), expected)
   end
 
+  test "fixes an invalid capture without rewriting quoted capture data" do
+    input = """
+    defmodule InvalidCaptureQuoteDataFixture do
+      def real, do: &System.monotonic_time(:millisecond)/0
+      def quoted, do: quote(do: &foo(:x)/0)
+    end
+    """
+
+    expected = """
+    defmodule InvalidCaptureQuoteDataFixture do
+      def real, do: fn -> System.monotonic_time(:millisecond) end
+      def quoted, do: quote(do: &foo(:x)/0)
+    end
+    """
+
+    confirm_fix(fix(input, 2), expected)
+  end
+
+  test "compiler diagnostic selects and repairs the rule through Semantic dispatch" do
+    input = """
+    defmodule InvalidCaptureDispatchFixture do
+      def start do
+        clock = &System.monotonic_time(:millisecond)/0
+        clock.()
+      end
+    end
+    """
+
+    expected = """
+    defmodule InvalidCaptureDispatchFixture do
+      def start do
+        clock = fn -> System.monotonic_time(:millisecond) end
+        clock.()
+      end
+    end
+    """
+
+    assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &FixInvalidCaptureWithArguments.match?/1)
+    confirm_fix(Credence.Semantic.fix(input), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "fixed output is well-formed (parses)" do
     input = """
     defmodule Example do

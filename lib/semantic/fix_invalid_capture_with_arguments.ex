@@ -91,20 +91,39 @@ defmodule Credence.Semantic.FixInvalidCaptureWithArguments do
   def fix(source, _diagnostic) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
-        {new_ast, changed?} =
-          Macro.prewalk(ast, false, fn
-            {:&, meta, [{:/, _, [call, arity]}]} = node, acc ->
-              if literal_zero?(arity) and fixable_call?(call) do
-                {{:fn, meta, [{:->, [], [[], call]}]}, true}
-              else
+        {_ast, {patches, _quote_depth}} =
+          Macro.traverse(
+            ast,
+            {[], 0},
+            fn
+              {:quote, _, _} = node, {patches, depth} ->
+                {node, {patches, depth + 1}}
+
+              node, {patches, depth} when depth > 0 ->
+                {node, {patches, depth}}
+
+              {:&, meta, [{:/, _, [call, arity]}]} = node, {patches, 0} ->
+                if literal_zero?(arity) and fixable_call?(call) do
+                  replacement = Sourceror.to_string({:fn, meta, [{:->, [], [[], call]}]})
+                  patch = Sourceror.Patch.replace(node, replacement)
+                  {node, {[patch | patches], 0}}
+                else
+                  {node, {patches, 0}}
+                end
+
+              node, acc ->
                 {node, acc}
-              end
+            end,
+            fn
+              {:quote, _, _} = node, {patches, depth} ->
+                {node, {patches, depth - 1}}
 
-            node, acc ->
-              {node, acc}
-          end)
+              node, acc ->
+                {node, acc}
+            end
+          )
 
-        if changed?, do: Sourceror.to_string(new_ast), else: source
+        if patches == [], do: source, else: Sourceror.patch_string(source, patches)
 
       _ ->
         source
