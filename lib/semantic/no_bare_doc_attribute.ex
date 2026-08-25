@@ -3,11 +3,11 @@ defmodule Credence.Semantic.NoBareDocAttribute do
   Removes bare `@doc` attributes (no arguments) before `def` declarations.
 
   LLMs sometimes generate `@doc` with no arguments before a `def`, which
-  assigns `nil` to the doc attribute — a no-op that triggers the compiler
+  reads the unset doc attribute as `nil` — a no-op that triggers the compiler
   diagnostic "module attribute @doc in code block has no effect".
 
-  The fix strips the bare `@doc` line, which is safe since it assigns `nil`
-  (meaningless before a `def`).
+  The fix strips the bare `@doc` line, which is safe because reading the unset
+  attribute has no effect.
 
   ## Bad
 
@@ -71,10 +71,10 @@ defmodule Credence.Semantic.NoBareDocAttribute do
   end
 
   # Matches a line that is ONLY `@doc` with no arguments (possibly with
-  # surrounding whitespace).  Does NOT match `@doc false`, `@doc "…"`,
+  # surrounding whitespace or a comment). Does NOT match `@doc false`, `@doc "…"`,
   # `@doc """`, etc. — those carry real arguments.
   defp bare_doc_line?(line) do
-    String.match?(line, ~r/^\s*@doc\s*$/)
+    String.match?(line, ~r/^\s*@doc\s*(?:#.*)?$/)
   end
 
   defp line(%{position: {line, _col}}), do: line

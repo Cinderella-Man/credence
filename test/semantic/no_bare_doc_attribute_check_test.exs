@@ -43,4 +43,21 @@ defmodule Credence.Semantic.NoBareDocAttributeCheckTest do
   test "attributes the issue to this rule" do
     assert NoBareDocAttribute.to_issue(@bare_doc_diag).rule == :no_bare_doc_attribute
   end
+
+  test "documents that bare @doc reads an unset module attribute" do
+    source = File.read!("lib/semantic/no_bare_doc_attribute.ex")
+
+    explanation =
+      source
+      |> String.split("\n")
+      |> Enum.slice(4, 6)
+      |> Enum.join("\n")
+
+    assert explanation ==
+             "  LLMs sometimes generate `@doc` with no arguments before a `def`, which\n" <>
+               "  reads the unset doc attribute as `nil` — a no-op that triggers the compiler\n" <>
+               "  diagnostic \"module attribute @doc in code block has no effect\".\n\n" <>
+               "  The fix strips the bare `@doc` line, which is safe because reading the unset\n" <>
+               "  attribute has no effect."
+  end
 end

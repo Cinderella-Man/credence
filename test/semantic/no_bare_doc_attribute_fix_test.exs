@@ -32,6 +32,27 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "removes bare @doc followed by a comment using the emitted diagnostic" do
+    input = """
+    defmodule NoBareDocAttributeCommentFixture do
+      @doc # TODO
+      def example, do: :ok
+    end
+    """
+
+    expected = """
+    defmodule NoBareDocAttributeCommentFixture do
+      def example, do: :ok
+    end
+    """
+
+    {_status, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    diagnostic = Enum.find(diagnostics, &NoBareDocAttribute.match?/1)
+
+    assert diagnostic
+    confirm_fix(NoBareDocAttribute.fix(input, diagnostic), expected)
+  end
+
   test "does not remove @doc with a string argument" do
     input = """
     defmodule Solution do
