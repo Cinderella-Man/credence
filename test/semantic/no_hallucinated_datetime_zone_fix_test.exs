@@ -151,7 +151,14 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZoneFixTest do
 
       result = Credence.fix(source)
       assert {NoHallucinatedDatetimeZone, 1} in result.applied_rules
-      assert result.code =~ "dt.time_zone"
+
+      expected = """
+      defmodule DatetimeZoneWitness do
+        def f(%DateTime{} = dt), do: dt.time_zone
+      end
+      """
+
+      assert result.code == expected
       assert Credence.RuleCase.compiles?(result.code)
     end
 
