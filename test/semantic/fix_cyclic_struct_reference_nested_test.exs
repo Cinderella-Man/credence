@@ -1,8 +1,9 @@
 defmodule Credence.Semantic.FixCyclicStructReferenceNestedTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [compiles?: 1, confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.FixCyclicStructReference
 
   # The NESTED scope. The rule shipped handling only top-level siblings, and on a nested
@@ -21,6 +22,8 @@ defmodule Credence.Semantic.FixCyclicStructReferenceNestedTest do
       diagnostic("#{name}.__struct__/1 is undefined, cannot expand struct #{name}")
     )
   end
+
+  defp compiles?(source), do: match?({:ok, _diagnostics}, RuleHelpers.compile_and_capture(source))
 
   describe "hoists a struct-defining nested module above its first use" do
     test "the bare-alias spelling" do
@@ -84,7 +87,22 @@ defmodule Credence.Semantic.FixCyclicStructReferenceNestedTest do
 
       fixed = fix(input, "NestedOrderU")
 
+      expected = """
+      defmodule NestedOrder do
+        @answer 42
+
+        defmodule NestedOrderU do
+          defstruct [:name]
+        end
+
+        def answer, do: @answer
+
+        def build, do: %NestedOrderU{name: "x"}
+      end
+      """
+
       assert compiles?(fixed)
+      confirm_fix(fixed, expected)
       assert :binary.match(fixed, "@answer 42") < :binary.match(fixed, "defmodule NestedOrderU")
 
       assert :binary.match(fixed, "defmodule NestedOrderU") <
