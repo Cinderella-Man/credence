@@ -43,7 +43,7 @@ defmodule Credence.Syntax.NoFnWithCapture do
 
   # `fn(` (standalone — not the tail of an identifier like `myfn(`) immediately
   # followed by a capture variable (`&1`, `&2`, …).
-  @fn_capture_pattern ~r/\bfn\(&\d/
+  @fn_capture_pattern ~r/\bfn\(&[1-9]/
 
   @impl true
   def analyze(source) do

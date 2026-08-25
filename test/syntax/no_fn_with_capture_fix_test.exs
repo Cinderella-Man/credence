@@ -44,6 +44,13 @@ defmodule Credence.Syntax.NoFnWithCaptureFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "does not consume an invalid zero capture argument" do
+    source = "fn(&0 > 0)"
+
+    confirm_fix(fix(source), source)
+    assert analyze(source) == []
+  end
+
   test "leaves valid parenthesised fn parameters untouched" do
     source = "Enum.filter(list, fn(x) -> x > 0 end)"
 
