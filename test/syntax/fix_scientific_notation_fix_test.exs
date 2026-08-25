@@ -87,6 +87,16 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
   end
 
   describe "leaves non-numeric content unchanged" do
+    test "hexadecimal literals and identifiers containing exponent-like text" do
+      code = """
+      hex = 0x1e5
+      value1e5 = :unchanged
+      """
+
+      confirm_fix(fix(code), code)
+      assert FixScientificNotation.analyze(code) == []
+    end
+
     test "comments" do
       code = "# tolerance is 1e-10"
 

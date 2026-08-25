@@ -33,10 +33,9 @@ defmodule Credence.Syntax.FixScientificNotation do
   use Credence.Syntax.Rule
   alias Credence.Issue
 
-  # Matches bare integer followed by e/E and exponent, but NOT preceded by a dot
-  # (which would mean it already has a decimal part like 1.5e-10) or a digit
-  # (which would mean the match is a suffix of a larger number like 123.456e7).
-  @pattern ~r/(?<![.\d])(\d+)[eE]([+-]?\d+)/
+  # Matches bare integer followed by e/E and exponent, but not when it is part
+  # of another token, such as a decimal, hexadecimal literal, or identifier.
+  @pattern ~r/(?<![.\p{L}\p{N}_])(\d+)[eE]([+-]?\d+)(?![\p{L}\p{N}_])/u
 
   @impl true
   def analyze(source) do
