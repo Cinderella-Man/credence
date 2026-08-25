@@ -129,8 +129,14 @@ defmodule Credence.Semantic.FixMalformedSpecTest do
       end
       """
 
-      assert FixMalformedSpec.fix(source, only_diagnostic(source)) =~
-               "@spec save!(map()) :: {:ok, map()}"
+      expected = """
+      defmodule MalformedSpecFixC do
+        @spec save!(map()) :: {:ok, map()}
+        def save!(m), do: {:ok, m}
+      end
+      """
+
+      confirm_fix(FixMalformedSpec.fix(source, only_diagnostic(source)), expected)
     end
 
     test "the output compiles, which the input did not" do
@@ -256,8 +262,14 @@ defmodule Credence.Semantic.FixMalformedSpecTest do
       end
       """
 
-      assert FixMalformedSpec.fix(source, %{message: "m", position: {2, 3}}) =~
-               "@spec f(integer()) :: atom()"
+      expected = """
+      defmodule MalformedSpecTuplePos do
+        @spec f(integer()) :: atom()
+        def f(x), do: x
+      end
+      """
+
+      confirm_fix(FixMalformedSpec.fix(source, %{message: "m", position: {2, 3}}), expected)
     end
   end
 
@@ -277,8 +289,15 @@ defmodule Credence.Semantic.FixMalformedSpecTest do
 
       result = Credence.fix(source)
 
+      expected = """
+      defmodule MalformedSpecInteg do
+        @spec max_product(list(integer())) :: integer()
+        def max_product(l), do: Enum.max(l)
+      end
+      """
+
       assert {FixMalformedSpec, 1} in result.applied_rules
-      assert result.code =~ "@spec max_product(list(integer())) :: integer()"
+      assert result.code == expected
       assert compiles?(result.code)
     end
 
