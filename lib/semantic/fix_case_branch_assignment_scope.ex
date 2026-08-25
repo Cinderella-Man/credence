@@ -240,8 +240,15 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScope do
   defp uses_var?(ast, var_atom) do
     {_ast, found} =
       Macro.prewalk(ast, false, fn
-        {^var_atom, _, nil} = node, _acc -> {node, true}
-        node, acc -> {node, acc}
+        {kind, _, _}, acc
+        when kind in [:def, :defp, :defmacro, :defmacrop, :defmodule, :defprotocol, :defimpl] ->
+          {nil, acc}
+
+        {^var_atom, _, nil} = node, _acc ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
       end)
 
     found

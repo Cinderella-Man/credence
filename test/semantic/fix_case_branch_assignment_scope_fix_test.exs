@@ -199,6 +199,26 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScopeFixTest do
     confirm_fix(fix(input, @message, {3, 5}), input)
   end
 
+  test "does not treat a variable use inside a following function as a use in module scope" do
+    input = ~S"""
+    defmodule CaseBranchScopeFunctionBoundary do
+      case :ok do
+        :ok -> label = "success"
+        _ -> label = "unknown"
+      end
+
+      def f, do: label
+    end
+    """
+
+    fixed = fix(input, @message, {7, 14})
+
+    confirm_fix(fixed, input)
+    assert {:error, input_diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert {:error, fixed_diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert fixed_diagnostics == input_diagnostics
+  end
+
   test "returns source unchanged when the diagnostic line is not on the use after the case" do
     # A valid function whose `label` is bound before the case (so its use
     # after the case compiles fine and refers to "init") must NOT be rewritten
