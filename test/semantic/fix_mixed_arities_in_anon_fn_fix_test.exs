@@ -1,8 +1,10 @@
 defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
+  alias Credence.Semantic
   alias Credence.Semantic.FixMixedAritiesInAnonFn
 
   @real_diag_msg "cannot mix clauses with different arities in anonymous functions"
@@ -63,7 +65,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     """
 
     confirm_fix(fix(input), expected)
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "does not reuse a padding candidate already bound by the shorter clause" do
@@ -78,7 +80,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fixed)
   end
 
   test "reuses a padding candidate referenced by the shorter clause's guard" do
@@ -93,7 +95,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
 
     fixed = fix(input)
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fixed)
   end
 
   test "counts a guarded clause's real arity through its when node" do
@@ -109,7 +111,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     """
 
     confirm_fix(fix(input), expected)
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "pads a guarded shorter clause before its guard" do
@@ -125,7 +127,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     """
 
     confirm_fix(fix(input), expected)
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "pads a zero-arity clause" do
@@ -165,7 +167,7 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     """
 
     confirm_fix(fix(input), expected)
-    assert compiles?(fix(input))
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fix(input))
   end
 
   test "does not alter fn clauses that already have equal arity" do
@@ -202,5 +204,37 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     diag = %{severity: :error, message: @real_diag_msg, position: {1, 1}}
 
     assert FixMixedAritiesInAnonFn.should_report?(diag, input)
+  end
+
+  test "the Semantic dispatcher repairs the compiler's mixed-arity diagnostic" do
+    input = ~S"""
+    defmodule MixedArityFnDispatcherFixture do
+      def build do
+        fn x, y -> x + y; _ -> 0 end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule MixedArityFnDispatcherFixture do
+      def build do
+        fn
+          x, y -> x + y
+          _, _ -> 0
+        end
+      end
+    end
+    """
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(diagnostics, fn diagnostic ->
+             diagnostic.severity == :error and diagnostic.message == @real_diag_msg
+           end)
+
+    assert {fixed, [{FixMixedAritiesInAnonFn, 1}]} = Semantic.fix_with_trace(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fixed)
   end
 end
