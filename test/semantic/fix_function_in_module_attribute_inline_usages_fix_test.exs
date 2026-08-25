@@ -15,6 +15,20 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
     })
   end
 
+  defp stable_compile_result(source) do
+    case Credence.RuleHelpers.compile_and_capture(source) do
+      {status, diagnostics} ->
+        {status,
+         Enum.map(diagnostics, fn diagnostic ->
+           Map.update!(
+             diagnostic,
+             :message,
+             &Regex.replace(~r/#Function<[^>]+>/, &1, "#Function")
+           )
+         end)}
+    end
+  end
+
   test "replaces @attr fn definition with defp and @attr refs with captures" do
     input = """
     defmodule M do
@@ -229,6 +243,54 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsagesFixTest do
     """
 
     confirm_fix(fix(source), source)
+  end
+
+  test "leaves an attribute whose helper would collide with a module function unchanged" do
+    source = """
+    defmodule CredenceFnAttrLocalCollision do
+      @foo fn -> :attribute end
+
+      def foo, do: :existing
+      def run, do: @foo.()
+    end
+    """
+
+    emitted = fix(source)
+
+    confirm_fix(emitted, source)
+
+    assert stable_compile_result(emitted) == stable_compile_result(source)
+  end
+
+  test "leaves an attribute referenced in a guard unchanged" do
+    source = """
+    defmodule CredenceFnAttrGuardReference do
+      @check fn x -> is_integer(x) end
+
+      def run(x) when @check.(x), do: x
+    end
+    """
+
+    emitted = fix(source)
+
+    confirm_fix(emitted, source)
+
+    assert stable_compile_result(emitted) == stable_compile_result(source)
+  end
+
+  test "leaves an attribute referenced in a function pattern unchanged" do
+    source = """
+    defmodule CredenceFnAttrPatternReference do
+      @check fn -> :ok end
+
+      def run(@check), do: :matched
+    end
+    """
+
+    emitted = fix(source)
+
+    confirm_fix(emitted, source)
+    assert stable_compile_result(emitted) == stable_compile_result(source)
   end
 
   test "leaves a file with two modules unchanged (deliberately skipped)" do

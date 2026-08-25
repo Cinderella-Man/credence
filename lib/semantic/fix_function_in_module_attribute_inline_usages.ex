@@ -30,7 +30,8 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
     * the attribute is assigned exactly once, and the value is a
       single-clause `fn` without guards (guards cannot move inside a def-head
       paren list, and multi-clause fns have no single-`defp` equivalent here);
-    * the generated `defp name/arity` does not collide with a `Kernel` /
+    * the generated `defp name/arity` does not collide with a function or
+      macro already defined by the module, or with a `Kernel` /
       `Kernel.SpecialForms` auto-import (e.g. `@node fn -> ... end` would
       produce "imported Kernel.node/0 conflicts with local function");
     * every reference to the attribute sits inside a `def`-like body and
@@ -124,11 +125,13 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
   # rewrite (see the moduledoc for the eligibility conditions).
   defp safe_fn_attributes(ast) do
     {candidates, assign_counts} = candidate_attrs(ast)
+    defined_callables = defined_callables(ast)
 
     candidates =
       candidates
       |> Enum.reject(fn {name, {_fn_ast, arity}} ->
-        Map.get(assign_counts, name, 0) != 1 or conflicts_with_builtin?(name, arity)
+        Map.get(assign_counts, name, 0) != 1 or conflicts_with_builtin?(name, arity) or
+          MapSet.member?(defined_callables, {name, arity})
       end)
       |> Map.new()
 
@@ -186,16 +189,64 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
       {name, arity} in Kernel.SpecialForms.__info__(:macros)
   end
 
-  # All def/defp/defmacro/defmacrop subtrees (nested defs stay inside their
-  # enclosing subtree — the walk does not descend past a collected node).
+  defp defined_callables(ast) do
+    {_ast, callables} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {d, _, [head | _]} = node, acc when d in @def_like ->
+          {node, Enum.reduce(head_arities(head), acc, &MapSet.put(&2, &1))}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    callables
+  end
+
+  defp head_arities({:when, _, [head | _guards]}), do: head_arities(head)
+
+  defp head_arities({name, _, args}) when is_atom(name) and is_list(args) do
+    max_arity = length(args)
+    defaults = Enum.count(args, &match?({:\\, _, _}, &1))
+    for arity <- (max_arity - defaults)..max_arity, do: {name, arity}
+  end
+
+  defp head_arities({name, _, context}) when is_atom(name) and is_atom(context), do: [{name, 0}]
+  defp head_arities(_head), do: []
+
+  # Runtime bodies and default-value expressions from def-like forms. Patterns
+  # and guards are deliberately excluded because local calls and captures are
+  # not legal in those contexts.
   defp def_bodies(ast) do
     {_ast, defs} =
       Macro.prewalk(ast, [], fn
-        {d, _, _} = node, acc when d in @def_like -> {nil, [node | acc]}
-        node, acc -> {node, acc}
+        {d, _, [head, body]}, acc when d in @def_like and is_list(body) ->
+          expressions = default_expressions(head) ++ def_body_expressions(body)
+          {nil, expressions ++ acc}
+
+        node, acc ->
+          {node, acc}
       end)
 
     defs
+  end
+
+  defp default_expressions({:when, _, [head | _guards]}), do: default_expressions(head)
+
+  defp default_expressions({_name, _, args}) when is_list(args) do
+    Enum.flat_map(args, fn
+      {:\\, _, [_pattern, default]} -> [default]
+      _arg -> []
+    end)
+  end
+
+  defp default_expressions(_head), do: []
+
+  defp def_body_expressions(body) do
+    Enum.flat_map(body, fn
+      {:do, expression} -> [expression]
+      {{:__block__, _, [:do]}, expression} -> [expression]
+      _clause -> []
+    end)
   end
 
   # Count references to candidate attributes: `refs` covers value references
