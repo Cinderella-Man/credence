@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.FixJasonDecodeErrorMessageFieldCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.FixJasonDecodeErrorMessageField
 
   @real_message "unknown key :message for struct Jason.DecodeError"
@@ -14,6 +16,42 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageFieldCheckTest do
     }
 
     assert FixJasonDecodeErrorMessageField.match?(diag)
+  end
+
+  test "dispatches the compiler diagnostic through the semantic pipeline" do
+    input = ~S"""
+    defmodule JasonDecodeErrorMessageFieldSemanticPipelineFixture do
+      def message(error) do
+        case error do
+          %Jason.DecodeError{message: msg} -> msg
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule JasonDecodeErrorMessageFieldSemanticPipelineFixture do
+      def message(error) do
+        case error do
+          %Jason.DecodeError{} = error -> Exception.message(error)
+        end
+      end
+    end
+    """
+
+    {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(
+             diagnostics,
+             &(&1.severity == :error and &1.message == @real_message and
+                 FixJasonDecodeErrorMessageField.match?(&1))
+           )
+
+    fixed = Credence.Semantic.fix(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "ignores unrelated diagnostics" do
