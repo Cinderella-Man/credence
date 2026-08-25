@@ -1,13 +1,46 @@
 defmodule Credence.Semantic.NoDefineMatchFnCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.NoDefineMatchFn
+  alias Credence.RuleHelpers
 
   @real_message "imported Kernel.match?/2 conflicts with local function"
 
   test "matches the diagnostic" do
     diag = %{severity: :error, message: @real_message, position: {2, 8}, file: "nofile"}
     assert NoDefineMatchFn.match?(diag)
+  end
+
+  test "detects and repairs a real match?/2 conflict through the Semantic pipeline" do
+    source = """
+    defmodule NoDefineMatchFnCheckPipelineFixture do
+      def same?(left, right), do: match?(left, right)
+      defp match?(left, right), do: left == right
+    end
+    """
+
+    expected = """
+    defmodule NoDefineMatchFnCheckPipelineFixture do
+      def same?(left, right), do: match_pattern?(left, right)
+      defp match_pattern?(left, right), do: left == right
+    end
+    """
+
+    control = """
+    defmodule NoDefineMatchFnCheckPipelineControl do
+      def same?(left, right), do: match_pattern?(left, right)
+      defp match_pattern?(left, right), do: left == right
+    end
+    """
+
+    assert [%Credence.Issue{rule: :no_define_match_fn}] = Credence.Semantic.analyze(source)
+
+    fixed = Credence.Semantic.fix(source)
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(control)
   end
 
   test "ignores unrelated diagnostics" do
