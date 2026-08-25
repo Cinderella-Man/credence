@@ -40,6 +40,38 @@ defmodule Credence.Syntax.NoCatchAfterAnonFnFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "syntax pipeline discovers and applies the rule" do
+    input = """
+    defmodule NoCatchAfterAnonFnPipelineFixture do
+      def run do
+        Enum.map([1], fn x -> x end)
+        catch
+          value -> value
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoCatchAfterAnonFnPipelineFixture do
+      def run do
+        try do
+          Enum.map([1], fn x -> x end)
+        catch
+          value -> value
+        end
+      end
+    end
+    """
+
+    {actual, applied} = Credence.Syntax.fix_with_trace(input)
+
+    assert actual == expected
+    assert {NoCatchAfterAnonFn, 1} in applied
+    confirm_fix(actual, fix(input))
+    assert valid_syntax?(actual)
+  end
+
   test "fixes after after fn end" do
     input = """
     defmodule AfterAnonFn do
