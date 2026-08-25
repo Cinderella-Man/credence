@@ -13,7 +13,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
 
     * a literal atom pattern (`:error`, `:exit`, `:throw`) is passed as the
       same literal;
-    * a plain variable pattern is reused as-is;
+    * a plain variable pattern is snapshotted at clause entry so later
+      rebinding cannot change the value being re-raised;
     * a single-pattern clause (`catch value ->`, shorthand for
       `catch :throw, value ->`) re-raises with kind `:throw`.
 
@@ -53,7 +54,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
             :ok
           catch
             :error, reason ->
-              :erlang.raise(:error, reason, __STACKTRACE__)
+              credence_caught_reason_1 = reason
+              :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -148,10 +150,14 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
       {:->, arrow_meta, [patterns, body]} = clause, acc ->
         case clause_raise_args(patterns) do
           {:ok, kind_arg, reason_arg} ->
-            {new_body, changed?} = replace_reraise(body, kind_arg, reason_arg)
+            {raise_kind, kind_capture} = capture_arg(kind_arg, :kind, clause)
+            {raise_reason, reason_capture} = capture_arg(reason_arg, :reason, clause)
+            {new_body, changed?} = replace_reraise(body, raise_kind, raise_reason)
 
             if changed? do
-              {{:->, arrow_meta, [patterns, new_body]}, true}
+              captures = Enum.reject([kind_capture, reason_capture], &is_nil/1)
+              captured_body = prepend_expressions(new_body, captures)
+              {{:->, arrow_meta, [patterns, captured_body]}, true}
             else
               {clause, acc}
             end
@@ -215,6 +221,9 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
 
   defp replace_reraise({:try, _, _} = node, _kind_arg, _reason_arg), do: {node, false}
 
+  # Quoted code is data, not an executable part of the catch body.
+  defp replace_reraise({:quote, _, _} = node, _kind_arg, _reason_arg), do: {node, false}
+
   defp replace_reraise({form, meta, args}, kind_arg, reason_arg) when is_list(args) do
     {new_form, form_changed?} = replace_reraise(form, kind_arg, reason_arg)
     {new_args, args_changed?} = replace_in_list(args, kind_arg, reason_arg)
@@ -238,6 +247,40 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
       {new_element, acc or changed?}
     end)
   end
+
+  defp capture_arg({name, _meta, ctx} = arg, role, clause)
+       when is_atom(name) and (ctx == nil or ctx == Elixir) do
+    capture = unused_capture_var(role, clause)
+    {capture, {:=, [], [capture, arg]}}
+  end
+
+  defp capture_arg(arg, _role, _clause), do: {arg, nil}
+
+  defp unused_capture_var(role, clause) do
+    used_names =
+      Macro.prewalk(clause, MapSet.new(), fn
+        {name, _meta, ctx} = node, names
+        when is_atom(name) and (ctx == nil or ctx == Elixir) ->
+          {node, MapSet.put(names, name)}
+
+        node, names ->
+          {node, names}
+      end)
+      |> elem(1)
+
+    Stream.iterate(1, &(&1 + 1))
+    |> Enum.find_value(fn suffix ->
+      name = String.to_atom("credence_caught_#{role}_#{suffix}")
+      if MapSet.member?(used_names, name), do: nil, else: {name, [], nil}
+    end)
+  end
+
+  defp prepend_expressions(body, []), do: body
+
+  defp prepend_expressions({:__block__, meta, expressions}, captures),
+    do: {:__block__, meta, captures ++ expressions}
+
+  defp prepend_expressions(body, captures), do: {:__block__, [], captures ++ [body]}
 
   defp build_erlang_raise(kind_arg, reason_arg) do
     {

@@ -36,7 +36,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             :error, reason ->
-              :erlang.raise(:error, reason, __STACKTRACE__)
+              credence_caught_reason_1 = reason
+              :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -71,11 +72,13 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             :error, reason ->
+              credence_caught_reason_1 = reason
               Process.delete(:key)
-              :erlang.raise(:error, reason, __STACKTRACE__)
+              :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
 
             :exit, reason ->
-              :erlang.raise(:exit, reason, __STACKTRACE__)
+              credence_caught_reason_1 = reason
+              :erlang.raise(:exit, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -107,7 +110,9 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             kind, reason ->
-              :erlang.raise(kind, reason, __STACKTRACE__)
+              credence_caught_kind_1 = kind
+              credence_caught_reason_1 = reason
+              :erlang.raise(credence_caught_kind_1, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -139,7 +144,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             value ->
-              :erlang.raise(:throw, value, __STACKTRACE__)
+              credence_caught_reason_1 = value
+              :erlang.raise(:throw, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -207,11 +213,86 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             :error, reason ->
+              credence_caught_reason_1 = reason
+
               if x do
                 :swallowed
               else
-                :erlang.raise(:error, reason, __STACKTRACE__)
+                :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
               end
+          end
+        end
+      end
+      """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "does not rewrite a quoted reraise while fixing a real one in the same clause" do
+    input =
+      """
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            :error, reason ->
+              quoted = quote do: reraise
+              reraise
+          end
+        end
+      end
+      """
+
+    expected =
+      """
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            :error, reason ->
+              credence_caught_reason_1 = reason
+              quoted = quote do: reraise
+              :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
+          end
+        end
+      end
+      """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "re-raises the caught values when clause variables are rebound" do
+    input =
+      """
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            kind, reason ->
+              kind = :exit
+              reason = :wrong
+              reraise
+          end
+        end
+      end
+      """
+
+    expected =
+      """
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            kind, reason ->
+              credence_caught_kind_1 = kind
+              credence_caught_reason_1 = reason
+              kind = :exit
+              reason = :wrong
+              :erlang.raise(credence_caught_kind_1, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
@@ -252,7 +333,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
                 cleanup(outer)
               catch
                 :exit, inner ->
-                  :erlang.raise(:exit, inner, __STACKTRACE__)
+                  credence_caught_reason_1 = inner
+                  :erlang.raise(:exit, credence_caught_reason_1, __STACKTRACE__)
               end
           end
         end
@@ -406,7 +488,8 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatchFixTest do
             :ok
           catch
             :error, reason ->
-              :erlang.raise(:error, reason, __STACKTRACE__)
+              credence_caught_reason_1 = reason
+              :erlang.raise(:error, credence_caught_reason_1, __STACKTRACE__)
           end
         end
       end
