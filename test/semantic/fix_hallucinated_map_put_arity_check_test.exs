@@ -102,6 +102,13 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArityCheckTest do
     assert FixHallucinatedMapPutArity.to_issue(diag).meta.line == 42
   end
 
+  test "sets a nil line when an admitted diagnostic has no position" do
+    diag = %{severity: :warning, message: @put5_message}
+
+    assert FixHallucinatedMapPutArity.match?(diag)
+    assert FixHallucinatedMapPutArity.to_issue(diag).meta.line == nil
+  end
+
   test "should_report? is true when the fix would rewrite the source" do
     source = """
     defmodule HallucinatedMapPut do

@@ -192,4 +192,5 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+  defp line(_), do: nil
 end
