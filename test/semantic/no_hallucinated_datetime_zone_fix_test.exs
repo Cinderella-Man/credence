@@ -67,6 +67,13 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZoneFixTest do
     confirm_fix(fix(input, @real_message, 3), expected)
   end
 
+  test "rewrites only code on the flagged line" do
+    input = ~S'dt.zone <> "dt.zone" # dt.zone'
+    expected = ~S'dt.time_zone <> "dt.zone" # dt.zone'
+
+    confirm_fix(fix(input, @real_message, 1), expected)
+  end
+
   test "only rewrites the flagged line, leaving a valid .zone on another line alone" do
     # Line 3 is the flagged DateTime hallucination. Line 7's `dt` is a different
     # struct that really has a :zone field — valid code the fix must not touch.

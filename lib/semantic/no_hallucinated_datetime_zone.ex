@@ -29,6 +29,7 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZone do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @match_msg "unknown key .zone in expression:"
 
@@ -61,11 +62,14 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZone do
       replacement = "#{var}.time_zone"
 
       source
-      |> String.split("\n")
+      |> SourceMask.lines()
       |> Enum.with_index(1)
       |> Enum.map_join("\n", fn
-        {text, ^line_no} -> Regex.replace(pattern, text, replacement)
-        {text, _} -> text
+        {{text, shadow}, ^line_no} ->
+          SourceMask.replace_code(text, shadow, pattern, replacement)
+
+        {{text, _shadow}, _} ->
+          text
       end)
     else
       _ -> source
