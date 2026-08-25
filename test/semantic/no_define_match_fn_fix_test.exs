@@ -168,4 +168,60 @@ defmodule Credence.Semantic.NoDefineMatchFnFixTest do
 
     confirm_fix(fix(input, @real_message), input)
   end
+
+  test "leaves a public match?/2 definition unchanged" do
+    input = """
+    defmodule PublicMatchApi do
+      def match?(a, b), do: a == b
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), input)
+  end
+
+  test "a nested match?/2 definition does not rewrite its enclosing module" do
+    input = """
+    defmodule MatchOuter do
+      def check(x), do: match?({:ok, _}, x)
+
+      defmodule MatchInner do
+        defp match?(a, b), do: a == b
+      end
+    end
+    """
+
+    expected = """
+    defmodule MatchOuter do
+      def check(x), do: match?({:ok, _}, x)
+
+      defmodule MatchInner do
+        defp match_pattern?(a, b), do: a == b
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "leaves match? definitions and references at other arities unchanged" do
+    input = """
+    defmodule MatchArityApi do
+      def match?(x), do: {:one, x}
+      defp match?(a, b), do: a == b
+      def one(x), do: match?(x)
+      def two(a, b), do: match?(a, b)
+    end
+    """
+
+    expected = """
+    defmodule MatchArityApi do
+      def match?(x), do: {:one, x}
+      defp match_pattern?(a, b), do: a == b
+      def one(x), do: match?(x)
+      def two(a, b), do: match_pattern?(a, b)
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
 end
