@@ -111,6 +111,25 @@ defmodule Credence.Syntax.FixCaptureOperatorSyntaxFixTest do
     assert valid_syntax?(fix(input))
   end
 
+  test "the syntax round discovers and retains the repair" do
+    input = """
+    defmodule CaptureOperatorPipelineTestSubject do
+      def picker, do: &>
+    end
+    """
+
+    expected = """
+    defmodule CaptureOperatorPipelineTestSubject do
+      def picker, do: &Kernel.>/2
+    end
+    """
+
+    {fixed, applied} = Credence.Syntax.fix_with_trace(input)
+
+    assert fixed == expected
+    assert applied == [{FixCaptureOperatorSyntax, 1}]
+  end
+
   test "does not modify valid Kernel captures" do
     source = ":gt -> &Kernel.>/2"
     confirm_fix(fix(source), source)
