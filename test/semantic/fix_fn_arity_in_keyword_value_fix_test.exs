@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.FixFnArityInKeywordValueFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixFnArityInKeywordValue
 
@@ -42,6 +42,35 @@ defmodule Credence.Semantic.FixFnArityInKeywordValueFixTest do
     """
 
     confirm_fix(fix(input, 4), expected)
+  end
+
+  test "dispatches the compiler's diagnostic through the semantic pipeline" do
+    input = """
+    defmodule FixFnAritySemanticPipelineFixture do
+      def push(_value) do
+        raise FunctionClauseError, function: :push/4
+      end
+    end
+    """
+
+    expected = """
+    defmodule FixFnAritySemanticPipelineFixture do
+      def push(_value) do
+        raise FunctionClauseError, function: :push, arity: 4
+      end
+    end
+    """
+
+    {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(
+             diagnostics,
+             &(&1.severity == :warning and &1.message == @real_diag_msg and
+                 FixFnArityInKeywordValue.match?(&1))
+           )
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "fixes UndefinedFunctionError the same way" do
@@ -196,6 +225,6 @@ defmodule Credence.Semantic.FixFnArityInKeywordValueFixTest do
     """
 
     assert valid_syntax?(fix(input, 3))
-    assert compiles?(fix(input, 3))
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fix(input, 3))
   end
 end
