@@ -75,6 +75,68 @@ defmodule Credence.Syntax.NoAfterInAnonFnFixTest do
     assert valid_syntax?(fix(input))
   end
 
+  test "ignores end tokens inside strings in the after body" do
+    input = """
+    foo(fn ->
+      work()
+    after
+      IO.puts("end")
+      cleanup()
+    end)
+    """
+
+    expected = """
+    foo(fn ->
+      work()
+    end)
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  test "ignores block tokens inside comments and heredocs in the after body" do
+    input = ~S'''
+    foo(fn ->
+      work()
+    after
+      # do fn end
+      IO.puts("""
+      do fn end
+      """)
+      cleanup()
+    end)
+    '''
+
+    expected = """
+    foo(fn ->
+      work()
+    end)
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
+  test "does not count keyword do syntax as a block opener" do
+    input = """
+    foo(fn ->
+      work()
+    after
+      if condition, do: cleanup()
+    end)
+    """
+
+    expected = """
+    foo(fn ->
+      work()
+    end)
+    """
+
+    confirm_fix(fix(input), expected)
+    assert valid_syntax?(fix(input))
+  end
+
   test "removes every after clause when several anon fns are affected" do
     input = """
     a(fn -> x

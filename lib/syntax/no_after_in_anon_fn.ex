@@ -26,7 +26,7 @@ defmodule Credence.Syntax.NoAfterInAnonFn do
   """
   use Credence.Syntax.Rule
 
-  alias Credence.Issue
+  alias Credence.{Issue, SourceMask}
 
   @impl true
   def analyze(source) do
@@ -58,26 +58,47 @@ defmodule Credence.Syntax.NoAfterInAnonFn do
     end
   end
 
-  # Ask the parser where (if anywhere) `after` is unexpected.  The token
-  # "'after'" in the error tuple is the definitive signal — in every other
-  # context (`try`, `receive`, `if`, `case`, …) the keyword is accepted.
+  # Ask the parser where (if anywhere) `after` is unexpected, then confirm the
+  # innermost open block at that location is an anonymous function.
   defp find_after_in_fn(source) do
     case Code.string_to_quoted(source, columns: true) do
       {:error, {meta, _msg, "'after'"}} when is_list(meta) ->
-        {:ok, Keyword.get(meta, :line)}
+        line = Keyword.get(meta, :line)
+
+        if inside_fn?(source, line), do: {:ok, line}, else: :none
 
       _ ->
         :none
     end
   end
 
+  defp inside_fn?(source, after_line) do
+    source
+    |> SourceMask.lines()
+    |> Enum.take(after_line - 1)
+    |> Enum.reduce([], fn {_line, shadow}, stack -> update_block_stack(shadow, stack) end)
+    |> List.first()
+    |> Kernel.==(:fn)
+  end
+
+  defp update_block_stack(line, stack) do
+    Regex.scan(~r/\b(?:fn|do|end)\b(?!\s*:)/, line)
+    |> Enum.reduce(stack, fn
+      ["fn"], acc -> [:fn | acc]
+      ["do"], acc -> [:do | acc]
+      ["end"], [_ | rest] -> rest
+      ["end"], [] -> []
+    end)
+  end
+
   # Remove lines from `after` (inclusive) up to the `end` that closes the
   # enclosing `fn` (exclusive — the `end` line is kept).
   defp remove_after_clause(source, after_line_no) do
     lines = String.split(source, "\n")
+    shadow_lines = source |> SourceMask.mask() |> String.split("\n")
     after_idx = after_line_no - 1
 
-    case find_closing_end(lines, after_idx + 1) do
+    case find_closing_end(shadow_lines, after_idx + 1) do
       nil ->
         source
 
@@ -107,14 +128,11 @@ defmodule Credence.Syntax.NoAfterInAnonFn do
     end
   end
 
-  # Count block-opening tokens (`do`, `fn`) and closing tokens (`end`) on a
-  # line.  Word-boundary anchors prevent matching inside identifiers like
-  # `send` or `render`.
+  # Count block-form tokens on a masked line. The negative lookahead excludes
+  # keyword syntax such as `do: cleanup()`.
   defp count_block_tokens(line) do
-    opens =
-      length(Regex.scan(~r/\bdo\b/, line)) + length(Regex.scan(~r/\bfn\b/, line))
-
-    closes = length(Regex.scan(~r/\bend\b/, line))
+    opens = length(Regex.scan(~r/\b(?:do|fn)\b(?!\s*:)/, line))
+    closes = length(Regex.scan(~r/\bend\b(?!\s*:)/, line))
     {opens, closes}
   end
 end

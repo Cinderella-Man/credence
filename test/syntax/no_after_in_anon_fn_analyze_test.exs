@@ -41,4 +41,41 @@ defmodule Credence.Syntax.NoAfterInAnonFnAnalyzeTest do
            end
            """) == []
   end
+
+  test "does not report invalid after clauses outside anonymous functions" do
+    invalid_if = """
+    if condition do
+      work()
+    after
+      cleanup()
+    end
+    """
+
+    invalid_case = """
+    case value do
+      _ -> work()
+    after
+      cleanup()
+    end
+    """
+
+    invalid_def = """
+    def work do
+      step()
+    after
+      cleanup()
+    end
+    """
+
+    bare_after = """
+    work()
+    after
+      cleanup()
+    """
+
+    assert analyze(invalid_if) == []
+    assert analyze(invalid_case) == []
+    assert analyze(invalid_def) == []
+    assert analyze(bare_after) == []
+  end
 end
