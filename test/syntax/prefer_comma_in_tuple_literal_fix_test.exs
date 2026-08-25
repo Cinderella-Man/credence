@@ -116,6 +116,13 @@ defmodule Credence.Syntax.PreferCommaInTupleLiteralFixTest do
 
       confirm_fix(fix(code), expected)
     end
+
+    test "more than one hundred missing commas" do
+      code = Enum.map_join(1..101, "\n", fn n -> "value#{n} = {:ok result#{n}}" end)
+      expected = String.replace(code, "{:ok result", "{:ok, result")
+
+      confirm_fix(fix(code), expected)
+    end
   end
 
   describe "leaves source that parses byte-identical" do

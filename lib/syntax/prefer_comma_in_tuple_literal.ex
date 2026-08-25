@@ -82,11 +82,6 @@ defmodule Credence.Syntax.PreferCommaInTupleLiteral do
 
   @name_start ~r/[a-z_]/
 
-  # Every accepted insertion moves the parser's first error strictly forward, so
-  # this only bounds a pathological file; it is not a cap on how many commas a
-  # normal file may be missing.
-  @max_repairs 100
-
   @impl true
   def analyze(source) do
     case locate(source) do
@@ -117,7 +112,10 @@ defmodule Credence.Syntax.PreferCommaInTupleLiteral do
   # Single source of truth for both callbacks: either there is a gap to fill —
   # and the file is known to parse once every such gap is filled — or there is
   # nothing to report. Never returns a half-repaired source.
-  defp locate(source), do: repair(source, nil, @max_repairs)
+  # Every accepted insertion consumes a distinct gap from the original source.
+  # A source cannot contain more gaps than bytes, so this keeps a finite guard
+  # without imposing a fixed cap on valid repairs.
+  defp locate(source), do: repair(source, nil, byte_size(source))
 
   defp repair(_source, _first_line, 0), do: :none
 
