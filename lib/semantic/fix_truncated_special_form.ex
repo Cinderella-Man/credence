@@ -75,6 +75,7 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @dunder_names ~w(__MODULE __ENV __DIR __CALLER __STACKTRACE)
 
@@ -110,13 +111,18 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
   def fix(source, %{message: msg, position: {line_num, col}})
       when is_integer(line_num) and line_num > 0 and is_integer(col) and col > 0 do
     lines = String.split(source, "\n")
+    shadow_lines = source |> SourceMask.mask() |> String.split("\n")
 
     # Compiler columns are grapheme-aligned (verified against combining
     # accents and multi-codepoint emoji), so String.slice indexes match.
     with target when is_binary(target) <- truncated_name(msg),
          line_str when is_binary(line_str) <- Enum.at(lines, line_num - 1),
+         shadow_line when is_binary(shadow_line) <- Enum.at(shadow_lines, line_num - 1),
          width = String.length(target),
          ^target <- String.slice(line_str, col - 1, width),
+         byte_offset = line_str |> String.slice(0, col - 1) |> byte_size(),
+         ^target <- binary_part(shadow_line, byte_offset, byte_size(target)),
+         false <- atom_prefix?(shadow_line, byte_offset),
          false <- identifier_continues?(line_str, col - 1 + width) do
       before_tok = String.slice(line_str, 0, col - 1)
       after_tok = String.slice(line_str, col - 1 + width, String.length(line_str))
@@ -147,6 +153,9 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
   defp identifier_continues?(line_str, idx) do
     String.match?(String.slice(line_str, idx, 1), ~r/^[A-Za-z0-9_?!]$/)
   end
+
+  defp atom_prefix?(_line, 0), do: false
+  defp atom_prefix?(line, byte_offset), do: binary_part(line, byte_offset - 1, 1) == ":"
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

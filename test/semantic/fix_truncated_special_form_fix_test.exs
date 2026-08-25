@@ -190,6 +190,14 @@ defmodule Credence.Semantic.FixTruncatedSpecialFormFixTest do
     confirm_fix(fix(input, @module_msg, {2, 19}), expected)
   end
 
+  test "no-ops when a stale position points at truncated text in data" do
+    string_input = "defmodule StaleString do\n  def note, do: \"__MODULE\"\nend\n"
+    atom_input = "defmodule StaleAtom do\n  def tag, do: :__MODULE\nend\n"
+
+    confirm_fix(fix(string_input, @module_msg, {2, 18}), string_input)
+    confirm_fix(fix(atom_input, @module_msg, {2, 17}), atom_input)
+  end
+
   test "no-ops when the column does not sit on the truncated name" do
     input = """
     defmodule Mixed do
