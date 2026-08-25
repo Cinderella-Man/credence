@@ -1,17 +1,17 @@
 defmodule Credence.Semantic.FixErlangBitwiseBif do
   @moduledoc """
   Fixes undefined bare Erlang bitwise BIF calls (band, bor, bsl, bsr, bxor,
-  bnot) by prefixing them with `Bitwise.`, and fixes unimported Bitwise infix
+  bnot) by prefixing them with `Elixir.Bitwise.`, and fixes unimported Bitwise infix
   operator forms (|||, &&&, <<<, >>>, ~~~, ^^^) by replacing them with the
-  equivalent `Bitwise.xxx()` function calls.
+  equivalent `Elixir.Bitwise.xxx()` function calls.
 
   LLMs frequently write Erlang-style bare bitwise BIF calls or operator forms
   that fail to compile in Elixir with "undefined function" when `Bitwise` is
   not imported. The deterministic fix rewrites the flagged call — e.g.
-  `bsl(value, n)` becomes `Bitwise.bsl(value, n)` and `a ||| b` becomes
-  `Bitwise.bor(a, b)`. `Bitwise` module calls need no import and stay
-  guard-safe, so the rewrite computes the exact same value the author asked
-  the Erlang BIF for.
+  `bsl(value, n)` becomes `Elixir.Bitwise.bsl(value, n)` and `a ||| b` becomes
+  `Elixir.Bitwise.bor(a, b)`. Root-qualified `Bitwise` module calls cannot be
+  redirected by a local alias, need no import, and stay guard-safe, so the
+  rewrite computes the exact same value the author asked the Erlang BIF for.
 
   The rule only claims the exact BIF arities (`band/2`, …, `bnot/1`); a
   wrong-arity call like `bsl/3` has no same-answer rewrite (prefixing would
@@ -34,7 +34,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
 
       defmodule FixErlangBitwiseBifCheckE2EFEBB do
         def left_shift(value, n) do
-          Bitwise.bsl(value, n)
+          Elixir.Bitwise.bsl(value, n)
         end
       end
   """
@@ -85,24 +85,38 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
          {:ok, ast} <- Sourceror.parse_string(source) do
       target = String.to_atom(name)
 
-      result =
-        Macro.prewalk(ast, fn
-          {^target, meta, args} = node when is_list(args) ->
-            if meta[:line] == line_no do
-              {{:., [], [{:__aliases__, [], [:Bitwise]}, fn_name]}, meta, args}
-            else
-              node
-            end
-
-          node ->
-            node
-        end)
+      result = rewrite(ast, target, fn_name, line_no)
 
       if result == ast, do: source, else: Sourceror.to_string(result)
     else
       _ -> source
     end
   end
+
+  # Quoted expressions are data, not calls executed at this source location.
+  defp rewrite({:quote, _meta, _args} = node, _target, _fn_name, _line_no), do: node
+
+  defp rewrite({target, meta, args}, target, fn_name, line_no) when is_list(args) do
+    args = Enum.map(args, &rewrite(&1, target, fn_name, line_no))
+
+    if meta[:line] == line_no do
+      {{:., [], [{:__aliases__, [], [:"Elixir", :Bitwise]}, fn_name]}, meta, args}
+    else
+      {target, meta, args}
+    end
+  end
+
+  defp rewrite(node, target, fn_name, line_no) when is_tuple(node) do
+    node
+    |> Tuple.to_list()
+    |> Enum.map(&rewrite(&1, target, fn_name, line_no))
+    |> List.to_tuple()
+  end
+
+  defp rewrite(node, target, fn_name, line_no) when is_list(node),
+    do: Enum.map(node, &rewrite(&1, target, fn_name, line_no))
+
+  defp rewrite(node, _target, _fn_name, _line_no), do: node
 
   defp lookup_replacement(msg) do
     with [_, name, arity] <- Regex.run(~r/undefined function ([^\s()]+)\/(\d+)/, msg),

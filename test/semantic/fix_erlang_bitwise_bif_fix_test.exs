@@ -20,7 +20,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
   @bsl_expected """
   defmodule Test do
     def left_shift(value, n) do
-      Bitwise.bsl(value, n)
+      Elixir.Bitwise.bsl(value, n)
     end
   end
   """
@@ -36,7 +36,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
   @band_expected """
   defmodule Test do
     def mask(value, n) do
-      Bitwise.band(value, n)
+      Elixir.Bitwise.band(value, n)
     end
   end
   """
@@ -52,7 +52,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
   @or_expected """
   defmodule Test do
     def combine(a, b) do
-      Bitwise.bor(a, b)
+      Elixir.Bitwise.bor(a, b)
     end
   end
   """
@@ -68,17 +68,17 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
   @xor_expected """
   defmodule Test do
     def diff(a, b) do
-      Bitwise.bxor(a, b)
+      Elixir.Bitwise.bxor(a, b)
     end
   end
   """
 
-  test "fixes bsl to Bitwise.bsl" do
+  test "fixes bsl to Elixir.Bitwise.bsl" do
     message = "undefined function bsl/2"
     confirm_fix(fix(@bsl_input, message), @bsl_expected)
   end
 
-  test "fixes band to Bitwise.band" do
+  test "fixes band to Elixir.Bitwise.band" do
     message = "undefined function band/2"
     confirm_fix(fix(@band_input, message, 3), @band_expected)
   end
@@ -127,7 +127,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def low_bit(value) do
-        value |> Bitwise.band(1)
+        value |> Elixir.Bitwise.band(1)
       end
     end
     """
@@ -148,13 +148,70 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def left_shift(value, n) do
-        IO.puts("bsl(value, n) shifts") && Bitwise.bsl(value, n)
+        IO.puts("bsl(value, n) shifts") && Elixir.Bitwise.bsl(value, n)
       end
     end
     """
 
     message = "undefined function bsl/2"
     confirm_fix(fix(input, message), expected)
+  end
+
+  test "uses the fully qualified Bitwise module when a local alias shadows Bitwise" do
+    input = """
+    defmodule FixErlangBitwiseBifShadowedImplementation do
+      def bsl(_value, _n), do: :wrong
+    end
+
+    defmodule FixErlangBitwiseBifShadowedAliasFixture do
+      alias FixErlangBitwiseBifShadowedImplementation, as: Bitwise
+      def left_shift(value, n), do: bsl(value, n)
+    end
+
+    unless FixErlangBitwiseBifShadowedAliasFixture.left_shift(2, 3) == 16, do: raise("wrong shift")
+    """
+
+    expected = """
+    defmodule FixErlangBitwiseBifShadowedImplementation do
+      def bsl(_value, _n), do: :wrong
+    end
+
+    defmodule FixErlangBitwiseBifShadowedAliasFixture do
+      alias FixErlangBitwiseBifShadowedImplementation, as: Bitwise
+      def left_shift(value, n), do: Elixir.Bitwise.bsl(value, n)
+    end
+
+    unless FixErlangBitwiseBifShadowedAliasFixture.left_shift(2, 3) == 16, do: raise("wrong shift")
+    """
+
+    control = """
+    defmodule FixErlangBitwiseBifShadowedAliasControl do
+      def left_shift(value, n), do: Elixir.Bitwise.bsl(value, n)
+    end
+
+    unless FixErlangBitwiseBifShadowedAliasControl.left_shift(2, 3) == 16, do: raise("wrong shift")
+    """
+
+    fixed = fix(input, "undefined function bsl/2", 7)
+    confirm_fix(fixed, expected)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(control)
+  end
+
+  test "leaves quoted bsl data on the diagnostic line untouched" do
+    input = """
+    defmodule FixErlangBitwiseBifQuotedDataFixture do
+      def left_shift(value, n), do: {bsl(value, n), quote(do: bsl(1, 2))}
+    end
+    """
+
+    expected = """
+    defmodule FixErlangBitwiseBifQuotedDataFixture do
+      def left_shift(value, n), do: {Elixir.Bitwise.bsl(value, n), quote(do: bsl(1, 2))}
+    end
+    """
+
+    confirm_fix(fix(input, "undefined function bsl/2", 2), expected)
   end
 
   test "leaves bare bsl calls on other lines untouched" do
@@ -173,7 +230,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def double_shift(value, n) do
-        a = Bitwise.bsl(value, n)
+        a = Elixir.Bitwise.bsl(value, n)
         b = bsl(a, n)
         a + b
       end
@@ -184,17 +241,17 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     confirm_fix(fix(input, message, 3), expected)
   end
 
-  test "fixes ||| to Bitwise.bor" do
+  test "fixes ||| to Elixir.Bitwise.bor" do
     message = "undefined function |||/2"
     confirm_fix(fix(@or_input, message, 3), @or_expected)
   end
 
-  test "fixes ^^^ to Bitwise.bxor" do
+  test "fixes ^^^ to Elixir.Bitwise.bxor" do
     message = "undefined function ^^^/2"
     confirm_fix(fix(@xor_input, message, 3), @xor_expected)
   end
 
-  test "fixes >>> to Bitwise.bsr" do
+  test "fixes >>> to Elixir.Bitwise.bsr" do
     input = """
     defmodule Test do
       def shift_right(a, b) do
@@ -206,7 +263,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def shift_right(a, b) do
-        Bitwise.bsr(a, b)
+        Elixir.Bitwise.bsr(a, b)
       end
     end
     """
@@ -215,7 +272,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     confirm_fix(fix(input, message, 3), expected)
   end
 
-  test "fixes unary ~~~ to Bitwise.bnot" do
+  test "fixes unary ~~~ to Elixir.Bitwise.bnot" do
     input = """
     defmodule Test do
       def invert(a) do
@@ -227,7 +284,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def invert(a) do
-        Bitwise.bnot(a)
+        Elixir.Bitwise.bnot(a)
       end
     end
     """
@@ -254,7 +311,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule Test do
       def combine(a, b, c) do
-        Enum.reduce([], 0, fn {x, y}, acc -> Bitwise.bor(acc, x ^^^ y) end)
+        Enum.reduce([], 0, fn {x, y}, acc -> Elixir.Bitwise.bor(acc, x ^^^ y) end)
       end
     end
     """
@@ -286,7 +343,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
 
     defmodule Test do
       def combine(x, y) do
-        Bitwise.bor(x, y)
+        Elixir.Bitwise.bor(x, y)
       end
     end
     """
@@ -316,11 +373,11 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     expected = """
     defmodule FixErlangBitwiseBifFixE2E do
       def left_shift(value, n) do
-        Bitwise.bsl(value, n)
+        Elixir.Bitwise.bsl(value, n)
       end
 
       def combine(a, b) do
-        Bitwise.bor(a, b)
+        Elixir.Bitwise.bor(a, b)
       end
     end
     """
