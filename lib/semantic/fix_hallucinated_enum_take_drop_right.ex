@@ -22,14 +22,10 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
   Only messages that start with `Enum.take_right/2 is undefined or private`
   (or the `drop_right` twin) are claimed: a user module whose path merely
   ends in `Enum` (`MyEnum.take_right/2 …`) and other arities stay with the
-  generic `UndefinedFunction` rule. Shapes that emit the same message but
-  admit no in-place rewrite — `&Enum.take_right/2` captures, the piped
-  `x |> Enum.take_right(n)`, `Elixir.Enum.take_right(a, b)`, and a spelling
-  that resolves to another module through `alias …, as: Enum` — are
-  deliberately left unfixed: the anchor only accepts a direct two-argument
-  call of the function the message names, sitting exactly at the flagged
-  column, and the fix no-ops rather than risk a wrong edit (same policy as
-  `FixHallucinatedEnumRange`).
+  generic `UndefinedFunction` rule. Direct, piped, captured, and
+  `Elixir.Enum`-prefixed calls are rewritten when the function name sits
+  exactly at the flagged column. A spelling that resolves to another module
+  through `alias …, as: Enum` is deliberately left unfixed.
 
   ## Bad
 
@@ -56,10 +52,6 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
 
   @replacements %{take_right: :take, drop_right: :drop}
 
-  # `Enum.` — the diagnostic column points at the function name, five
-  # characters after the start of the qualified call.
-  @prefix_width 5
-
   @impl true
   def match?(%{severity: :warning, message: msg}) when is_binary(msg) do
     target_fn(msg) != nil
@@ -81,11 +73,7 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
     with fn_name when fn_name != nil <- target_fn(msg),
          {:ok, ast} <- Sourceror.parse_string(source),
          {:ok, node, range} <- flagged_call(ast, fn_name, position(diagnostic)) do
-      {_, _, [enumerable, count]} = node
-
-      replacement =
-        {{:., [], [{:__aliases__, [], [:Enum]}, Map.fetch!(@replacements, fn_name)]}, [],
-         [enumerable, negate(count)]}
+      replacement = replacement(node, fn_name)
 
       change = Sourceror.to_string(replacement)
       Sourceror.patch_string(source, [%{range: range, change: change}])
@@ -117,8 +105,8 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
     candidates = candidates_on_line(ast, fn_name, line_no)
 
     if is_integer(col) do
-      case Enum.filter(candidates, fn {_, range} ->
-             range.start[:column] + @prefix_width == col
+      case Enum.filter(candidates, fn {node, _range} ->
+             function_column(node) == col
            end) do
         [{node, range}] -> {:ok, node, range}
         _ -> :error
@@ -131,27 +119,73 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
     end
   end
 
-  # A candidate is a direct call of the function the message names — exact
-  # `[:Enum]` alias, exactly two arguments — starting on the flagged line.
-  # The capture (`&Enum.take_right/2`, zero args in the dot call) and piped
-  # (`x |> Enum.take_right(n)`, one arg) forms never qualify.
   defp candidates_on_line(ast, fn_name, line_no) do
     {_, found} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Enum]}, ^fn_name]}, _, [_, _]} = node, acc ->
-          case Sourceror.get_range(node) do
-            %{start: start} = range ->
-              if start[:line] == line_no, do: {node, [{node, range} | acc]}, else: {node, acc}
-
-            nil ->
-              {node, acc}
-          end
-
         node, acc ->
-          {node, acc}
+          if candidate?(node, fn_name) do
+            case Sourceror.get_range(node) do
+              %{start: start} = range ->
+                if start[:line] == line_no, do: {node, [{node, range} | acc]}, else: {node, acc}
+
+              nil ->
+                {node, acc}
+            end
+          else
+            {node, acc}
+          end
       end)
 
     Enum.reverse(found)
+  end
+
+  defp candidate?({{:., _, [{:__aliases__, _, path}, fn_name]}, _, [_, _]}, fn_name),
+    do: enum_path?(path)
+
+  defp candidate?(
+         {:|>, _, [_, {{:., _, [{:__aliases__, _, path}, fn_name]}, _, [_]}]},
+         fn_name
+       ),
+       do: enum_path?(path)
+
+  defp candidate?(
+         {:&, _, [{:/, _, [{{:., _, [{:__aliases__, _, path}, fn_name]}, _, []}, arity]}]},
+         fn_name
+       ),
+       do: enum_path?(path) and literal_two?(arity)
+
+  defp candidate?(_, _), do: false
+
+  defp enum_path?(path), do: path in [[:Enum], [Elixir, :Enum]]
+  defp literal_two?({:__block__, _, [2]}), do: true
+  defp literal_two?(_), do: false
+
+  defp function_column({{:., meta, _}, _, _}), do: meta[:column] + 1
+  defp function_column({:|>, _, [_, {{:., meta, _}, _, [_]}]}), do: meta[:column] + 1
+
+  defp function_column({:&, _, [{:/, _, [{{:., meta, _}, _, []}, _]}]}),
+    do: meta[:column] + 1
+
+  defp replacement({{:., _, [{:__aliases__, _, path}, _]}, _, [enumerable, count]}, fn_name) do
+    enum_call(path, fn_name, enumerable, count)
+  end
+
+  defp replacement(
+         {:|>, _, [enumerable, {{:., _, [{:__aliases__, _, path}, _]}, _, [count]}]},
+         fn_name
+       ) do
+    enum_call(path, fn_name, enumerable, count)
+  end
+
+  defp replacement({:&, _, _}, fn_name) do
+    enumerable = {:enumerable, [], nil}
+    count = {:count, [], nil}
+    {:fn, [], [{:->, [], [[enumerable, count], enum_call([:Enum], fn_name, enumerable, count)]}]}
+  end
+
+  defp enum_call(path, fn_name, enumerable, count) do
+    {{:., [], [{:__aliases__, [], path}, Map.fetch!(@replacements, fn_name)]}, [],
+     [enumerable, negate(count)]}
   end
 
   defp position(%{position: {line, col}}) when is_integer(line), do: {line, col}

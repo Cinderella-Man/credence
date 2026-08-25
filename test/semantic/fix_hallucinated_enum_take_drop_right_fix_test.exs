@@ -188,34 +188,52 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRightFixTest do
     confirm_fix(fix(input, @take_message, {2, 22}), input)
   end
 
-  test "returns source unchanged for the capture form (&Enum.take_right/2 admits no rewrite)" do
+  test "rewrites the capture form as an anonymous function that negates the count" do
     input = """
     defmodule CredenceTakeRightCaptureUnit do
       def a, do: &Enum.take_right/2
     end
     """
 
-    confirm_fix(fix(input, @take_message, {2, 20}), input)
+    expected = """
+    defmodule CredenceTakeRightCaptureUnit do
+      def a, do: fn enumerable, count -> Enum.take(enumerable, -count) end
+    end
+    """
+
+    confirm_fix(fix(input, @take_message, {2, 20}), expected)
   end
 
-  test "returns source unchanged for the piped form" do
+  test "rewrites the piped form" do
     input = """
     defmodule CredenceTakeRightPipeUnit do
       def a(l), do: l |> Enum.take_right(2)
     end
     """
 
-    confirm_fix(fix(input, @take_message, {2, 27}), input)
+    expected = """
+    defmodule CredenceTakeRightPipeUnit do
+      def a(l), do: Enum.take(l, -2)
+    end
+    """
+
+    confirm_fix(fix(input, @take_message, {2, 27}), expected)
   end
 
-  test "returns source unchanged for the Elixir.-prefixed spelling" do
+  test "rewrites the Elixir.-prefixed spelling" do
     input = """
     defmodule CredenceTakeRightElixirPrefixUnit do
       def a(l), do: Elixir.Enum.take_right(l, 5)
     end
     """
 
-    confirm_fix(fix(input, @take_message, {2, 29}), input)
+    expected = """
+    defmodule CredenceTakeRightElixirPrefixUnit do
+      def a(l), do: Elixir.Enum.take(l, -5)
+    end
+    """
+
+    confirm_fix(fix(input, @take_message, {2, 29}), expected)
   end
 
   test "returns source unchanged when no hallucinated call is present" do
@@ -335,23 +353,39 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRightFixTest do
     confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
-  test "end-to-end: the capture form is deliberately left unfixed" do
+  test "end-to-end: the capture form is fixed" do
     input = """
     defmodule CredenceTakeRightCaptureE2E do
       def a, do: &Enum.take_right/2
     end
     """
 
-    confirm_fix(Credence.Semantic.fix(input), input)
+    expected = """
+    defmodule CredenceTakeRightCaptureE2E do
+      def a, do: fn enumerable, count -> Enum.take(enumerable, -count) end
+    end
+    """
+
+    confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
-  test "end-to-end: the piped form is deliberately left unfixed" do
+  test "end-to-end: the piped form is fixed" do
     input = """
     defmodule CredenceTakeRightPipeE2E do
       def a(l), do: l |> Enum.take_right(2)
     end
     """
 
-    confirm_fix(Credence.Semantic.fix(input), input)
+    expected = """
+    defmodule CredenceTakeRightPipeE2E do
+      def a(l), do: Enum.take(l, -2)
+    end
+    """
+
+    fixed = Credence.Semantic.fix(input)
+
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
   end
 end
