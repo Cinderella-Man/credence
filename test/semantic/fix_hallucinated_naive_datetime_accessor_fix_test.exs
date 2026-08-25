@@ -174,68 +174,43 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessorFixTest do
     confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
-  test "end-to-end: an aliased call is deliberately left unfixed (anchor requires NaiveDateTime.)" do
+  test "end-to-end: repairs aliased, piped, captured, computed, multiline, and Unicode calls" do
     input = """
-    defmodule CredenceNaiveDtAliasAsE2E do
+    defmodule CredenceNaiveDtCallShapesE2E do
       alias NaiveDateTime, as: NDT
 
-      def extract(dt) do
-        minute = NDT.minute(dt)
-        minute
-      end
+      def alias_call(dt), do: NDT.minute(dt)
+      def prefixed(dt), do: Elixir.NaiveDateTime.minute(dt)
+      def piped(dt), do: dt |> NaiveDateTime.hour()
+      def captured(dts), do: Enum.map(dts, &NaiveDateTime.day/1)
+      def computed, do: NaiveDateTime.month(NaiveDateTime.utc_now())
+      def literal, do: NaiveDateTime.minute(~N[2026-08-25 12:34:56])
+      def multiline(dt), do: NaiveDateTime.minute(
+        dt
+      )
+      def unicode(δτ), do: NaiveDateTime.hour(δτ)
     end
     """
 
-    confirm_fix(Credence.Semantic.fix(input), input)
-  end
+    expected = """
+    defmodule CredenceNaiveDtCallShapesE2E do
+      alias NaiveDateTime, as: NDT
 
-  test "end-to-end: an Elixir.-prefixed call is deliberately left unfixed" do
-    input = """
-    defmodule CredenceNaiveDtElixirPrefixE2E do
-      def extract(dt) do
-        minute = Elixir.NaiveDateTime.minute(dt)
-        minute
-      end
+      def alias_call(dt), do: dt.minute
+      def prefixed(dt), do: dt.minute
+      def piped(dt), do: dt.hour
+      def captured(dts), do: Enum.map(dts, fn value -> value.day end)
+      def computed, do: NaiveDateTime.utc_now().month
+      def literal, do: ~N[2026-08-25 12:34:56].minute
+      def multiline(dt), do: dt.minute
+      def unicode(δτ), do: δτ.hour
     end
     """
 
-    confirm_fix(Credence.Semantic.fix(input), input)
-  end
-
-  test "end-to-end: the piped form is deliberately left unfixed (no variable argument)" do
-    input = """
-    defmodule CredenceNaiveDtPipedE2E do
-      def extract(dt) do
-        dt |> NaiveDateTime.minute()
-      end
-    end
-    """
-
-    confirm_fix(Credence.Semantic.fix(input), input)
-  end
-
-  test "end-to-end: the capture form is deliberately left unfixed" do
-    input = """
-    defmodule CredenceNaiveDtCaptureE2E do
-      def extract(dts) do
-        Enum.map(dts, &NaiveDateTime.minute/1)
-      end
-    end
-    """
-
-    confirm_fix(Credence.Semantic.fix(input), input)
-  end
-
-  test "end-to-end: a computed argument is deliberately left unfixed" do
-    input = """
-    defmodule CredenceNaiveDtComputedArgE2E do
-      def extract do
-        NaiveDateTime.minute(NaiveDateTime.utc_now())
-      end
-    end
-    """
-
-    confirm_fix(Credence.Semantic.fix(input), input)
+    fixed = Credence.Semantic.fix(input)
+    confirm_fix(fixed, expected)
+    confirm_fix(Credence.Semantic.fix(fixed), expected)
+    assert compiles?(fixed)
   end
 
   test "a nil argument is left unfixed (nil.minute is not a field access)" do

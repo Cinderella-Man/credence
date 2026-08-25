@@ -22,12 +22,11 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
   (`Date.day_of_week/2` takes a `starting_on`) cannot be read off the call
   site.
 
-  Only a call whose argument is a single plain variable is rewritten. Any
-  other shape — an aliased spelling (`NDT.minute(dt)`), an `Elixir.`-prefixed
-  spelling, a piped or captured form, a computed or literal argument — fails
-  the anchor and no-ops rather than risk a wrong edit. (The compiler reports
-  the expanded module path, so a user's own `MyApp.NaiveDateTime` is never
-  claimed.)
+  The compiler's diagnostic position anchors the accessor token, while a
+  Sourceror range supplies the complete call. This lets the rule repair alias,
+  pipe, capture, computed-argument, multiline, and Unicode spellings without
+  searching strings or comments. (The compiler reports the expanded module
+  path, so a user's own `MyApp.NaiveDateTime` is never claimed.)
 
   `UndefinedFunction` claims every "… is undefined or private", this warning
   included, and declares `priority: 501` against this rule's default 500, so
@@ -68,6 +67,8 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
 
   def match?(_), do: false
 
+  def should_report?(diagnostic, source), do: fix(source, diagnostic) != source
+
   @impl true
   def to_issue(diagnostic) do
     %Issue{
@@ -80,9 +81,13 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
   @impl true
   def fix(source, %{message: msg, position: {line_no, col}})
       when is_integer(line_no) and is_integer(col) do
-    case accessor(msg) do
-      nil -> source
-      accessor -> rewrite_at(source, line_no, col, accessor)
+    with accessor when accessor != nil <- accessor(msg),
+         {:ok, ast} <- Sourceror.parse_string(source),
+         {:ok, node, range} <- flagged_call(ast, line_no, col, String.to_atom(accessor)) do
+      change = node |> replacement(String.to_atom(accessor)) |> Sourceror.to_string()
+      Sourceror.patch_string(source, [%{range: range, change: change}])
+    else
+      _ -> source
     end
   end
 
@@ -98,36 +103,70 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
     end)
   end
 
-  # The diagnostic column points at the accessor name of the flagged call. The
-  # rewrite fires only when `NaiveDateTime.` immediately precedes that column,
-  # is not itself preceded by a `.` (`Elixir.NaiveDateTime.minute(dt)` must
-  # not become `Elixir.dt.minute`), and the text at the column is exactly
-  # `accessor(<variable>)`. The `nil`/`true`/`false` literals and the bare
-  # underscore parse like variable names but are not fields to access, so they
-  # fail the anchor too. Anything else — an alias, a piped or captured form, a
-  # computed argument, column drift — returns the source unchanged instead of
-  # risking a wrong edit.
-  defp rewrite_at(source, line_no, col, accessor) do
-    lines = String.split(source, "\n")
+  defp flagged_call(ast, line_no, col, accessor) do
+    {_, candidates} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        if candidate?(node, accessor) and function_position(node) == {line_no, col} do
+          case Sourceror.get_range(node) do
+            nil -> {node, acc}
+            range -> {node, [{node, range} | acc]}
+          end
+        else
+          {node, acc}
+        end
+      end)
 
-    with line when is_binary(line) <- Enum.at(lines, line_no - 1),
-         prefix = String.slice(line, 0, col - 1),
-         rest = String.slice(line, col - 1, String.length(line)),
-         true <- String.ends_with?(prefix, @module_prefix),
-         kept_prefix =
-           String.slice(prefix, 0, String.length(prefix) - String.length(@module_prefix)),
-         false <- String.ends_with?(kept_prefix, "."),
-         [call, var] <- Regex.run(~r/\A#{accessor}\(([a-z_][a-zA-Z0-9_]*[?!]?)\)/, rest),
-         true <- var not in ~w(_ nil true false) do
-      kept_rest = String.slice(rest, String.length(call), String.length(rest))
-
-      lines
-      |> List.replace_at(line_no - 1, kept_prefix <> var <> "." <> accessor <> kept_rest)
-      |> Enum.join("\n")
-    else
-      _ -> source
+    case candidates do
+      [{node, range}] -> {:ok, node, range}
+      _ -> :error
     end
   end
+
+  defp candidate?({{:., _, [{:__aliases__, _, _}, accessor]}, _, [argument]}, accessor),
+    do: safe_argument?(argument)
+
+  defp candidate?(
+         {:|>, _, [_, {{:., _, [{:__aliases__, _, _}, accessor]}, _, []}]},
+         accessor
+       ),
+       do: true
+
+  defp candidate?(
+         {:&, _, [{:/, _, [{{:., _, [{:__aliases__, _, _}, accessor]}, _, []}, arity]}]},
+         accessor
+       ),
+       do: literal_one?(arity)
+
+  defp candidate?(_, _), do: false
+
+  defp function_position({{:., meta, _}, _, _}), do: {meta[:line], meta[:column] + 1}
+
+  defp function_position({:|>, _, [_, {{:., meta, _}, _, []}]}),
+    do: {meta[:line], meta[:column] + 1}
+
+  defp function_position({:&, _, [{:/, _, [{{:., meta, _}, _, []}, _]}]}),
+    do: {meta[:line], meta[:column] + 1}
+
+  defp function_position(_), do: nil
+
+  defp replacement({{:., _, _}, _, [argument]}, accessor), do: field_access(argument, accessor)
+
+  defp replacement({:|>, _, [argument, _]}, accessor), do: field_access(argument, accessor)
+
+  defp replacement({:&, _, _}, accessor) do
+    value = {:value, [], nil}
+    {:fn, [], [{:->, [], [[value], field_access(value, accessor)]}]}
+  end
+
+  defp field_access(argument, accessor),
+    do: {{:., [], [argument, accessor]}, [no_parens: true], []}
+
+  defp safe_argument?({:__block__, _, [value]}) when value in [nil, true, false], do: false
+  defp safe_argument?({:_, _, context}) when is_atom(context) or is_nil(context), do: false
+  defp safe_argument?(_), do: true
+
+  defp literal_one?({:__block__, _, [1]}), do: true
+  defp literal_one?(_), do: false
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
