@@ -32,6 +32,34 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "syntax pipeline discovers, accepts, and commits the flagship repair" do
+    input = """
+    defmodule BareCommaMultiReturnPipeline do
+      def validate_create(nil, plan_name) do
+        event = %{type: :subscription_created, plan: plan_name}
+        new_state = %{plan: plan_name, status: :pending, reason: nil}
+        {:ok, new_state}, [event]
+      end
+    end
+    """
+
+    expected = """
+    defmodule BareCommaMultiReturnPipeline do
+      def validate_create(nil, plan_name) do
+        event = %{type: :subscription_created, plan: plan_name}
+        new_state = %{plan: plan_name, status: :pending, reason: nil}
+        {{:ok, new_state}, [event]}
+      end
+    end
+    """
+
+    {emitted, applied} = Credence.Syntax.fix_with_trace(input)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
+    assert {NoPythonMultiReturn, 1} in applied
+  end
+
   test "fixes an operator expression followed by another return value" do
     input = """
     defmodule NoPythonMultiReturnOperatorExpression do
