@@ -121,6 +121,46 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntaxFixTest do
     assert compiles?(fix(input, 2))
   end
 
+  test "fixes a list([...]) occurrence split across lines" do
+    input = """
+    defmodule SolutionFFILTSMultiline do
+      @spec f(list([
+        integer(), atom()
+      ])) :: boolean()
+      def f(_items), do: true
+    end
+    """
+
+    expected = """
+    defmodule SolutionFFILTSMultiline do
+      @spec f(list([integer() | atom()])) :: boolean()
+      def f(_items), do: true
+    end
+    """
+
+    confirm_fix(fix(input, 2), expected)
+    assert compiles?(fix(input, 2))
+  end
+
+  test "does not rewrite list([...]) text in a trailing comment" do
+    input = """
+    defmodule SolutionFFILTSTrailingComment do
+      @spec f(list([integer(), atom()])) :: boolean() # list([foo(), bar()])
+      def f(_items), do: true
+    end
+    """
+
+    expected = """
+    defmodule SolutionFFILTSTrailingComment do
+      @spec f(list([integer() | atom()])) :: boolean() # list([foo(), bar()])
+      def f(_items), do: true
+    end
+    """
+
+    confirm_fix(fix(input, 2), expected)
+    assert compiles?(fix(input, 2))
+  end
+
   test "fixes a list([...]) nested inside another list([...])" do
     input = """
     defmodule SolutionF do

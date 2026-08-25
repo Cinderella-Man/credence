@@ -52,6 +52,7 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
@@ -74,13 +75,14 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
     line_no = line(diagnostic)
 
     if line_no do
-      source
-      |> String.split("\n")
-      |> Enum.with_index(1)
-      |> Enum.map_join("\n", fn
-        {text, ^line_no} -> rewrite_line(text)
-        {text, _} -> text
-      end)
+      with {:ok, line_start} <- SourceMask.byte_offset(source, line_no, 1) do
+        line_size =
+          source |> binary_part(line_start, byte_size(source) - line_start) |> line_size()
+
+        scan(source, SourceMask.mask(source), line_start, line_start + line_size)
+      else
+        :error -> source
+      end
     else
       source
     end
@@ -90,41 +92,46 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
   defp line(%{position: line}) when is_integer(line), do: line
   defp line(_), do: nil
 
-  # -- line rewriting ---------------------------------------------------------
-
-  defp rewrite_line(line), do: scan(line, 0)
+  defp line_size(rest) do
+    case :binary.match(rest, "\n") do
+      :nomatch -> byte_size(rest)
+      {size, 1} -> size
+    end
+  end
 
   # Scan left-to-right from `offset` for standalone `list([...])` occurrences.
   # After handling one (rewritten or skipped), continue just past its `list([`
   # opener so nested occurrences are still visited; the offset strictly grows,
   # so the scan terminates.
-  defp scan(line, offset) when offset >= byte_size(line), do: line
+  defp scan(source, _shadow, offset, limit) when offset >= limit, do: source
 
-  defp scan(line, offset) do
-    case :binary.match(line, "list([", scope: {offset, byte_size(line) - offset}) do
+  defp scan(source, shadow, offset, limit) do
+    case :binary.match(shadow, "list([", scope: {offset, limit - offset}) do
       :nomatch ->
-        line
+        source
 
       {start, _len} ->
-        if standalone?(line, start) do
-          rewrite_occurrence(line, start)
+        if standalone?(shadow, start) do
+          rewrite_occurrence(source, shadow, start, limit)
         else
-          scan(line, start + 1)
+          scan(source, shadow, start + 1, limit)
         end
     end
   end
 
-  defp rewrite_occurrence(line, start) do
+  defp rewrite_occurrence(source, shadow, start, limit) do
     inner_start = start + byte_size("list([")
 
-    with close_pos when is_integer(close_pos) <- find_matching_close(line, inner_start),
-         inner = binary_part(line, inner_start, close_pos - inner_start),
+    with close_pos when is_integer(close_pos) <- find_matching_close(shadow, inner_start),
+         inner = binary_part(source, inner_start, close_pos - inner_start),
          new_inner when is_binary(new_inner) <- rewrite_inner(inner) do
-      before = binary_part(line, 0, inner_start)
-      rest = binary_part(line, close_pos, byte_size(line) - close_pos)
-      scan(before <> new_inner <> rest, inner_start)
+      before = binary_part(source, 0, inner_start)
+      rest = binary_part(source, close_pos, byte_size(source) - close_pos)
+      rewritten = before <> new_inner <> rest
+      delta = byte_size(new_inner) - byte_size(inner)
+      scan(rewritten, SourceMask.mask(rewritten), inner_start, limit + delta)
     else
-      _ -> scan(line, inner_start)
+      _ -> scan(source, shadow, inner_start, limit)
     end
   end
 
