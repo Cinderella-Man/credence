@@ -70,10 +70,6 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
   # `<-` itself.
   @nested_fragment "Parentheses are required to solve ambiguity in nested calls"
 
-  # One `with` header can hold several of these. Each rewrite is re-detected
-  # from scratch, so the cap is only a backstop against an unforeseen loop.
-  @max_rewrites 50
-
   @impl true
   def analyze(source) do
     case locate(source) do
@@ -94,11 +90,9 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
   end
 
   @impl true
-  def fix(source), do: rewrite(source, @max_rewrites)
+  def fix(source), do: rewrite(source)
 
-  defp rewrite(source, 0), do: source
-
-  defp rewrite(source, budget) do
+  defp rewrite(source) do
     case locate(source) do
       {:ok, line, start_col, end_col} ->
         # `)` first: it is never before `(`, so inserting it cannot shift the
@@ -106,7 +100,7 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClause do
         source
         |> insert_at(line, end_col, ")")
         |> insert_at(line, start_col, "(")
-        |> rewrite(budget - 1)
+        |> rewrite()
 
       :none ->
         source

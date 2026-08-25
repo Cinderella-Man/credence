@@ -275,6 +275,41 @@ defmodule Credence.Syntax.FixInlineKeywordIfInWithClauseFixTest do
       assert valid_syntax?(fix(code))
     end
 
+    test "more than fifty offending bindings are all repaired" do
+      bare_bindings =
+        Enum.map_join(1..51, "\n", fn i ->
+          "       value#{i} <- if flag, do: #{i}, else: 0,"
+        end)
+
+      wrapped_bindings =
+        Enum.map_join(1..51, "\n", fn i ->
+          "       value#{i} <- (if flag, do: #{i}, else: 0),"
+        end)
+
+      values = Enum.map_join(1..51, ", ", &"value#{&1}")
+
+      code =
+        "defmodule Credence.Syntax.FixInlineKeywordIfOverFiftyFixture do\n" <>
+          "  def run(flag) do\n    with " <>
+          bare_bindings <>
+          "\n       done <- List.wrap(flag) do\n      {[" <>
+          values <> "], done}\n    end\n  end\nend\n"
+
+      expected =
+        "defmodule Credence.Syntax.FixInlineKeywordIfOverFiftyFixture do\n" <>
+          "  def run(flag) do\n    with " <>
+          wrapped_bindings <>
+          "\n       done <- List.wrap(flag) do\n      {[" <>
+          values <> "], done}\n    end\n  end\nend\n"
+
+      emitted = fix(code)
+
+      confirm_fix(emitted, expected)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+      assert analyze(emitted) == []
+      confirm_fix(fix(emitted), emitted)
+    end
+
     test "is idempotent — a second pass changes nothing" do
       code = """
       defmodule M do
