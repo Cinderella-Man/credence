@@ -66,10 +66,6 @@ defmodule Credence.Syntax.FixKeywordBlockAsFunctionArg do
 
   @error_fragment "in nested calls"
 
-  # One rewrite repairs one call; a file with more broken calls needs more
-  # passes. The bound is a backstop — a pass that changes nothing stops the loop.
-  @max_passes 20
-
   @closers [")", "]", "}"]
 
   @impl true
@@ -90,15 +86,13 @@ defmodule Credence.Syntax.FixKeywordBlockAsFunctionArg do
   end
 
   @impl true
-  def fix(source), do: fix_pass(source, @max_passes)
+  def fix(source), do: fix_pass(source)
 
-  defp fix_pass(source, 0), do: source
-
-  defp fix_pass(source, passes_left) do
+  defp fix_pass(source) do
     case locate(source) do
       {:ok, loc} ->
         fixed = wrap(source, loc)
-        if fixed == source, do: source, else: fix_pass(fixed, passes_left - 1)
+        if fixed == source, do: source, else: fix_pass(fixed)
 
       :error ->
         source

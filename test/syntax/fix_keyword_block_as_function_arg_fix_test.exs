@@ -146,6 +146,39 @@ defmodule Credence.Syntax.FixKeywordBlockAsFunctionArgFixTest do
       confirm_fix(fix(input), expected)
       assert valid_syntax?(fix(input))
     end
+
+    test "more than twenty broken calls" do
+      calls = Enum.map_join(1..21, "\n", fn n -> "f(a#{n}, if c#{n}, do: 1, else: 2)" end)
+
+      expected_calls =
+        Enum.map_join(1..21, "\n", fn n -> "f(a#{n}, (if c#{n}, do: 1, else: 2))" end)
+
+      input = """
+      defmodule KeywordBlockTwentyOneCallsEmitted do
+        def run(#{Enum.map_join(1..21, ", ", &"a#{&1}")}, #{Enum.map_join(1..21, ", ", &"c#{&1}")}) do
+      #{calls}
+        end
+
+        defp f(value, direction), do: {value, direction}
+      end
+      """
+
+      expected = String.replace(input, calls, expected_calls)
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+      assert analyze(emitted) == []
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+
+      control =
+        String.replace(
+          expected,
+          "KeywordBlockTwentyOneCallsEmitted",
+          "KeywordBlockTwentyOneCallsControl"
+        )
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(control)
+    end
   end
 
   describe "columns are counted in graphemes" do
