@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.FixSpawnMonitorPatternMatchCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.FixSpawnMonitorPatternMatch
 
   # Verbatim compiler output for `{:ok, pid} = spawn_monitor(fn -> :ok end)`.
@@ -32,6 +34,45 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchCheckTest do
   test "matches the diagnostic" do
     diag = %{severity: :warning, message: @real_message, position: {3, 16}}
     assert FixSpawnMonitorPatternMatch.match?(diag)
+  end
+
+  test "dispatches the compiler diagnostic through the semantic pipeline" do
+    input =
+      """
+      defmodule SpawnMonitorPatternMatchSemanticPipelineFixture do
+        def run do
+          {:ok, pid} = spawn_monitor(fn -> :ok end)
+          {pid, :done}
+        end
+      end
+      """
+      |> String.trim_trailing()
+
+    expected =
+      """
+      defmodule SpawnMonitorPatternMatchSemanticPipelineFixture do
+        def run do
+          {pid, _} = spawn_monitor(fn -> :ok end)
+          {pid, :done}
+        end
+      end
+      """
+      |> String.trim_trailing()
+
+    assert {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(
+             diagnostics,
+             &(&1.severity == :warning and &1.message == @real_message and
+                 FixSpawnMonitorPatternMatch.match?(&1))
+           )
+
+    fixed = Credence.Semantic.fix(input)
+
+    confirm_fix(fixed, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(fixed) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
   end
 
   test "matches when the compiler prints the pattern across multiple lines" do
