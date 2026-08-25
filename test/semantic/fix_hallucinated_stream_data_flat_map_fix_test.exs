@@ -1,11 +1,17 @@
 defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMapFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixHallucinatedStreamDataFlatMap
 
   @message "StreamData.flat_map/2 is undefined or private"
+
+  test "fixture compilation uses the bounded compiler" do
+    source = File.read!(__ENV__.file)
+
+    refute "    assert compiles?(fix(input, {3, 16}))" in String.split(source, "\n")
+  end
 
   defp fix(source, position) do
     FixHallucinatedStreamDataFlatMap.fix(source, %{
@@ -256,7 +262,8 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMapFixTest do
     end
     """
 
-    assert compiles?(fix(input, {3, 16}))
+    assert {:ok, _diagnostics} =
+             Credence.RuleHelpers.compile_and_capture(fix(input, {3, 16}))
   end
 
   test "end-to-end: the semantic phase fixes the flagship input and touches nothing else" do
