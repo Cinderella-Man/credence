@@ -65,6 +65,16 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgumentFixTest do
       confirm_fix(fix(input), expected)
     end
 
+    test "unicode keyword names are recognized" do
+      input = "foo(árg: 1, positional)"
+      expected = "foo(positional, árg: 1)"
+      actual = fix(input)
+
+      confirm_fix(actual, expected)
+      assert valid_syntax?(actual)
+      confirm_fix(fix(actual), actual)
+    end
+
     test "inside defmodule multiline" do
       input = """
       defmodule TaskSupervisor do
@@ -114,6 +124,16 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgumentFixTest do
       """
 
       confirm_fix(fix(input), expected)
+    end
+
+    test "more than twenty broken calls are all repaired" do
+      input = Enum.map_join(1..21, "\n", fn i -> "foo(k: #{i}, p#{i})" end)
+      expected = Enum.map_join(1..21, "\n", fn i -> "foo(p#{i}, k: #{i})" end)
+      actual = fix(input)
+
+      confirm_fix(actual, expected)
+      assert valid_syntax?(actual)
+      confirm_fix(fix(actual), actual)
     end
   end
 

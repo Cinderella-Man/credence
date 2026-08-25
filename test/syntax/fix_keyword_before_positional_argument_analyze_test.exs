@@ -37,6 +37,11 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgumentAnalyzeTest do
                analyze("foo(a: ärg_ünicode, brg)")
     end
 
+    test "unicode keyword name" do
+      assert [%Issue{rule: :fix_keyword_before_positional_argument}] =
+               analyze("foo(árg: 1, positional)")
+    end
+
     test "inside defmodule" do
       input = """
       defmodule TaskSupervisor do

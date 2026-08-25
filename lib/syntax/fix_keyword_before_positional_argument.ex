@@ -58,10 +58,6 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
   # Characters/tokens that can hide a comma or bracket from a textual split.
   @unsafe_in_args ["\"", "'", "#", "~", "?", "\\", "->"]
 
-  # One rewrite repairs one call; a file with more broken calls needs more
-  # passes. The cap is a belt-and-braces guard against a rewrite loop.
-  @max_passes 20
-
   @impl true
   def analyze(source) do
     case rewrite(source) do
@@ -80,13 +76,11 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
   end
 
   @impl true
-  def fix(source), do: run(source, @max_passes)
+  def fix(source), do: run(source)
 
-  defp run(source, 0), do: source
-
-  defp run(source, budget) do
+  defp run(source) do
     case rewrite(source) do
-      {:ok, _line, _message, fixed} when fixed != source -> run(fixed, budget - 1)
+      {:ok, _line, _message, fixed} when fixed != source -> run(fixed)
       _ -> source
     end
   end
@@ -194,7 +188,7 @@ defmodule Credence.Syntax.FixKeywordBeforePositionalArgument do
 
   # A keyword argument has the form `key: value` — it starts with a lowercase
   # identifier or underscore-prefixed name followed immediately by `:`.
-  @keyword_start ~r/^[a-z_][a-zA-Z0-9_?!]*:/
+  @keyword_start ~r/^[\p{Ll}_][\p{L}\p{N}_?!]*:/u
 
   defp keyword_arg?(arg), do: Regex.match?(@keyword_start, String.trim(arg))
 
