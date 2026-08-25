@@ -3,6 +3,7 @@ defmodule Credence.Semantic.FixTaskIdFieldAccessFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.FixTaskIdFieldAccess
 
   @real_message "unknown key .id in expression:\n\n    task.id\n\nthe given type does not have the given key:\n\n    dynamic(%Task{mfa: {atom(), atom(), integer()}, owner: pid(), pid: pid(), ref: term()})\n"
@@ -39,6 +40,34 @@ defmodule Credence.Semantic.FixTaskIdFieldAccessFixTest do
     """
 
     confirm_fix(fix(input, {4, 10}), expected)
+  end
+
+  test "real compiler diagnostic is dispatched and repaired by the Semantic pipeline" do
+    input = """
+    defmodule TaskIdFieldAccessPipelineFixture do
+      def get_ref do
+        task = Task.async(fn -> 42 end)
+        task.id
+      end
+    end
+    """
+
+    expected = """
+    defmodule TaskIdFieldAccessPipelineFixture do
+      def get_ref do
+        task = Task.async(fn -> 42 end)
+        task.ref
+      end
+    end
+    """
+
+    assert {:ok, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &FixTaskIdFieldAccess.match?/1)
+
+    {emitted, applied} = Credence.Semantic.fix_with_trace(input)
+    confirm_fix(emitted, String.trim_trailing(expected))
+    assert applied == [{FixTaskIdFieldAccess, 1}]
+    assert {:ok, []} = RuleHelpers.compile_and_capture(emitted)
   end
 
   test "fixed output is well-formed (parses)" do
