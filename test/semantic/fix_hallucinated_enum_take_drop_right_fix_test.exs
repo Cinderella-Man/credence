@@ -1,7 +1,8 @@
 defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRightFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
+  import Credence.RuleHelpers, only: [compiles?: 1]
 
   alias Credence.Semantic.FixHallucinatedEnumTakeDropRight
 
@@ -268,6 +269,25 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRightFixTest do
     """
 
     assert compiles?(fix(input, @take_message, {3, 10}))
+  end
+
+  test "the compilation assertion respects the fixture heap ceiling" do
+    previous = Application.get_env(:credence, :compile_max_heap_words)
+    Application.put_env(:credence, :compile_max_heap_words, 1_000)
+
+    on_exit(fn ->
+      if previous == nil,
+        do: Application.delete_env(:credence, :compile_max_heap_words),
+        else: Application.put_env(:credence, :compile_max_heap_words, previous)
+    end)
+
+    source = """
+    defmodule CredenceTakeRightCompileCeiling do
+      def example(list, n), do: Enum.take(list, -n)
+    end
+    """
+
+    refute compiles?(source)
   end
 
   test "end-to-end: the semantic phase fixes both functions and touches nothing else" do
