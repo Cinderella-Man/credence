@@ -64,9 +64,8 @@ defmodule Credence.Syntax.FixElsifInIfChain do
       after `do`) — guessing a condition would silently change which branch runs;
     * a chain with no `else`/`end` at the header's own indentation — without a
       terminator the rewrite would swallow whatever follows;
-    * a branch body holding a multi-line string literal (a heredoc, or a `"`
-      string spanning lines), whose *value* would change when the body is
-      re-indented;
+    * a branch body holding a multi-line string literal (including sigils and
+      charlists), whose *value* would change when the body is re-indented;
     * an `else if` chain carrying more than one terminator at the header's
       indentation — that is valid nested code, not the Python transplant.
 
@@ -112,12 +111,21 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   def fix(source) do
     lines = String.split(source, "\n")
 
+    lines
+    |> rewrite_all()
+    |> Enum.join("\n")
+  end
+
+  defp rewrite_all(lines) do
     case find_elsif(lines) do
       {:ok, idx} ->
-        lines |> rewrite_block(idx) |> Enum.join("\n")
+        case rewrite_block(lines, idx) do
+          ^lines -> lines
+          rewritten -> rewrite_all(rewritten)
+        end
 
       :not_found ->
-        source
+        lines
     end
   end
 
@@ -315,7 +323,8 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   end
 
   defp multiline_string_risk?(line) do
-    String.contains?(line, ~s(""")) or String.contains?(line, "'''") or odd_quotes?(line)
+    String.contains?(line, ~s(""")) or String.contains?(line, "'''") or odd_quotes?(line) or
+      odd_single_quotes?(line) or multiline_sigil_opener?(line)
   end
 
   defp odd_quotes?(line) do
@@ -325,6 +334,38 @@ defmodule Credence.Syntax.FixElsifInIfChain do
     |> String.graphemes()
     |> Enum.count(&(&1 == "\""))
     |> rem(2) == 1
+  end
+
+  defp odd_single_quotes?(line) do
+    line
+    |> String.replace(~r/\\./, "")
+    |> String.replace(~r/\?'/, "")
+    |> String.graphemes()
+    |> Enum.count(&(&1 == "'"))
+    |> rem(2) == 1
+  end
+
+  defp multiline_sigil_opener?(line) do
+    delimiters = [
+      {"(", ")"},
+      {"[", "]"},
+      {"{", "}"},
+      {"<", ">"},
+      {"/", "/"},
+      {"|", "|"}
+    ]
+
+    Enum.any?(delimiters, fn {open, close} ->
+      case Regex.run(~r/~[A-Za-z]*#{Regex.escape(open)}/, line, return: :index) do
+        [{start, length}] ->
+          line
+          |> binary_part(start + length, byte_size(line) - start - length)
+          |> String.contains?(close) == false
+
+        nil ->
+          false
+      end
+    end)
   end
 
   defp build_cond(branches, else_branches, base_indent) do

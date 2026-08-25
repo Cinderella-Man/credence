@@ -251,6 +251,40 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "rewrites every independent elsif chain in one invocation" do
+    input = ~S"""
+    if a do
+      1
+    elsif b do
+      2
+    end
+
+    if c do
+      3
+    elsif d do
+      4
+    end
+    """
+
+    expected = ~S"""
+    cond do
+      a -> 1
+      b -> 2
+      true -> nil
+    end
+
+    cond do
+      c -> 3
+      d -> 4
+      true -> nil
+    end
+    """
+
+    emitted = fix(input)
+    confirm_fix(emitted, expected)
+    assert valid_syntax?(emitted)
+  end
+
   # Everything below is a shape the fix refuses (see the rule's moduledoc): the
   # source comes back byte-identical, and `analyze/1` stays quiet about it.
 
@@ -360,6 +394,38 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
     if a do
       x = "hello
     world"
+      x
+    elsif b do
+      2
+    else
+      3
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "leaves a branch body holding a multiline sigil string untouched" do
+    code = ~S"""
+    if a do
+      x = ~S(hello
+    world)
+      x
+    elsif b do
+      2
+    else
+      3
+    end
+    """
+
+    confirm_fix(fix(code), code)
+  end
+
+  test "leaves a branch body holding a charlist spanning lines untouched" do
+    code = ~S"""
+    if a do
+      x = 'hello
+    world'
       x
     elsif b do
       2
