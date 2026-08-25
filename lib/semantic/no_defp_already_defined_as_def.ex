@@ -65,16 +65,18 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
   end
 
   @impl true
-  def fix(source, %{message: msg}) do
+  def fix(source, %{message: msg} = diagnostic) do
     with {name, arity} <- extract_fn_name_arity(msg),
-         {:ok, ast} <- Sourceror.parse_string(source) do
-      if same_patterns?(ast, name, arity) do
-        case find_defp_range(ast, name, arity) do
+         {:ok, ast} <- Sourceror.parse_string(source),
+         line when is_integer(line) <- line(diagnostic),
+         {:ok, module} <- find_target_module(ast, name, arity, line) do
+      if duplicate_clause?(module, name, arity, line) do
+        case find_defp_range(module, name, arity, line) do
           %Sourceror.Range{} = range -> delete_range(source, range)
           _ -> source
         end
       else
-        rename_defp_to_do(source, ast, name, arity)
+        rename_defp_to_do(ast, module, name, arity)
       end
     else
       _ -> source
@@ -91,81 +93,111 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
 
-  # --- Pattern comparison --------------------------------------------------
+  # --- Target and duplicate detection -------------------------------------
 
-  defp same_patterns?(ast, name, arity) do
-    case {find_def_args(ast, name, arity), find_defp_args(ast, name, arity)} do
-      {{:ok, d}, {:ok, p}} -> normalize_pattern(d) == normalize_pattern(p)
-      _ -> false
-    end
-  end
+  defp find_target_module(ast, name, arity, line) do
+    {_ast, modules} =
+      Macro.prewalk(ast, [], fn
+        {:defmodule, _, _} = node, acc ->
+          range = Sourceror.get_range(node)
 
-  defp find_def_args(ast, name, arity) do
-    {_ast, result} =
-      Macro.prewalk(ast, nil, fn
-        {:def, _, _} = node, nil ->
-          if def_fn_name_arity(node) == {name, arity},
-            do: {node, {:ok, clause_args(node)}},
-            else: {node, nil}
+          if line_in_range?(line, range) and has_direct_defp?(node, name, arity),
+            do: {node, [node | acc]},
+            else: {node, acc}
 
         node, acc ->
           {node, acc}
       end)
 
-    result || :error
-  end
-
-  defp find_defp_args(ast, name, arity) do
-    {_ast, result} =
-      Macro.prewalk(ast, nil, fn
-        {:defp, _, _} = node, nil ->
-          if defp_fn_name_arity(node) == {name, arity},
-            do: {node, {:ok, clause_args(node)}},
-            else: {node, nil}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    result || :error
-  end
-
-  defp clause_args({_, _, [head | _]}) do
-    head =
-      case head do
-        {:when, _, [h | _]} -> h
-        _ -> head
-      end
-
-    case head do
-      {_, _, args} when is_list(args) -> args
-      {_, _, nil} -> []
-      _ -> []
+    case Enum.min_by(modules, &module_line_span/1, fn -> nil end) do
+      nil -> :error
+      module -> {:ok, module}
     end
   end
 
-  defp normalize_pattern(args) do
-    Enum.map(args, fn arg ->
-      arg
-      |> Macro.prewalk(fn
-        {form, _meta, children} -> {form, [], children}
-        other -> other
-      end)
-      |> Macro.to_string()
+  defp duplicate_clause?(module, name, arity, line) do
+    clauses = direct_clauses(module)
+
+    private =
+      clauses
+      |> Enum.filter(&(defp_fn_name_arity(&1) == {name, arity}))
+      |> Enum.min_by(&abs(node_line(&1) - line), fn -> nil end)
+
+    public = Enum.filter(clauses, &(def_fn_name_arity(&1) == {name, arity}))
+
+    private != nil and Enum.any?(public, &(normalized_clause(&1) == normalized_clause(private)))
+  end
+
+  defp normalized_clause({kind, _, parts}) when kind in [:def, :defp] do
+    {:def, [], strip_meta(parts)}
+  end
+
+  defp strip_meta(term) do
+    Macro.prewalk(term, fn
+      {form, meta, children} when is_list(meta) -> {form, [], children}
+      other -> other
     end)
   end
 
+  defp direct_clauses({:defmodule, _, [_name, body_kw]}) do
+    case keyword_value(body_kw, :do) do
+      {:__block__, _, clauses} -> clauses
+      nil -> []
+      clause -> [clause]
+    end
+  end
+
+  defp direct_clauses(_), do: []
+
+  defp keyword_value(keyword, key) do
+    Enum.find_value(keyword, fn
+      {{:__block__, _, [^key]}, value} -> value
+      {^key, value} -> value
+      _ -> nil
+    end)
+  end
+
+  defp has_direct_defp?(module, name, arity) do
+    Enum.any?(direct_clauses(module), &(defp_fn_name_arity(&1) == {name, arity}))
+  end
+
+  defp line_in_range?(line, %Sourceror.Range{start: s, end: e}),
+    do: line >= s[:line] and line <= e[:line]
+
+  defp module_line_span(node) do
+    %Sourceror.Range{start: s, end: e} = Sourceror.get_range(node)
+    e[:line] - s[:line]
+  end
+
+  defp node_line({_form, meta, _children}), do: Keyword.get(meta, :line, 0)
+
   # --- Rename path ---------------------------------------------------------
 
-  defp rename_defp_to_do(_source, ast, name, arity) do
+  defp rename_defp_to_do(ast, target_module, name, arity) do
     new_name = :"do_#{name}"
-    new_ast = walk_and_rename(ast, name, arity, new_name)
+    target_start = node_line(target_module)
+
+    new_ast =
+      Macro.prewalk(ast, fn
+        {:defmodule, _, _} = node ->
+          if node_line(node) == target_start,
+            do: rename_target_module(node, name, arity, new_name),
+            else: node
+
+        node ->
+          node
+      end)
+
     Sourceror.to_string(new_ast)
+  end
+
+  defp rename_target_module({:defmodule, meta, [module_name, body_kw]}, name, arity, new_name) do
+    {:defmodule, meta, [module_name, walk_body_kw(body_kw, name, arity, new_name)]}
   end
 
   # defp with matching name: rename head, walk body
   defp walk_and_rename({:defp, meta, [{n, fmeta, args}, body_kw]}, name, arity, new_name)
-       when is_atom(n) and n == name do
+       when is_atom(n) and n == name and is_list(args) and length(args) == arity do
     {:defp, meta, [{new_name, fmeta, args}, walk_body_kw(body_kw, name, arity, new_name)]}
   end
 
@@ -176,7 +208,7 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
          arity,
          new_name
        )
-       when is_atom(n) and n == name do
+       when is_atom(n) and n == name and is_list(args) and length(args) == arity do
     {:defp, meta,
      [
        {:when, wmeta, [{new_name, fmeta, args} | guards]},
@@ -186,8 +218,14 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
 
   # def: walk body only, skip head
   defp walk_and_rename({:def, meta, [head, body_kw]}, name, arity, new_name) do
-    {:def, meta, [head, walk_body_kw(body_kw, name, arity, new_name)]}
+    node = {:def, meta, [head, body_kw]}
+
+    if def_fn_name_arity(node) == {name, arity},
+      do: node,
+      else: {:def, meta, [head, walk_body_kw(body_kw, name, arity, new_name)]}
   end
+
+  defp walk_and_rename({:defmodule, _, _} = node, _name, _arity, _new_name), do: node
 
   # defp with different name: walk body only, skip head
   defp walk_and_rename({:defp, meta, [head, body_kw]}, name, arity, new_name) do
@@ -227,21 +265,15 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
 
   # --- Deletion path -------------------------------------------------------
 
-  defp find_defp_range(ast, name, arity) do
-    {_ast, result} =
-      Macro.prewalk(ast, nil, fn
-        {:defp, _, _} = node, nil ->
-          if defp_fn_name_arity(node) == {name, arity} do
-            {node, Sourceror.get_range(node)}
-          else
-            {node, nil}
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    result
+  defp find_defp_range(module, name, arity, line) do
+    module
+    |> direct_clauses()
+    |> Enum.filter(&(defp_fn_name_arity(&1) == {name, arity}))
+    |> Enum.min_by(&abs(node_line(&1) - line), fn -> nil end)
+    |> case do
+      nil -> nil
+      node -> Sourceror.get_range(node)
+    end
   end
 
   defp defp_fn_name_arity({:defp, _meta, [_head | _]} = node) do

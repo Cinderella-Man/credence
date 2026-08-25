@@ -62,7 +62,7 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefFixTest do
     confirm_fix(fix(input, "defp stab_count/2 already defined as def", 15), expected)
   end
 
-  test "removes defp when argument patterns are identical to def (no guard)" do
+  test "renames defp when its body differs from the public clause" do
     input = """
     defmodule Example do
       def greet(name) do
@@ -80,13 +80,17 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefFixTest do
       def greet(name) do
         "Hello, " <> name
       end
+
+      defp do_greet(name) do
+        "Hi, " <> name
+      end
     end
     """
 
     confirm_fix(fix(input, "defp greet/1 already defined as def", 6), expected)
   end
 
-  test "removes defp with guard when argument patterns are identical" do
+  test "renames defp when its guard and body differ from the public clause" do
     input = """
     defmodule Example do
       def sequence(name, formatter_fn) do
@@ -108,6 +112,10 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefFixTest do
       end
 
       # ... other code ...
+
+      defp do_sequence(name, formatter_fn) when is_function(formatter_fn, 1) do
+        formatter_fn.(name + 1)
+      end
     end
     """
 
@@ -130,6 +138,23 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefFixTest do
     assert valid_syntax?(fix(input, "defp greet/1 already defined as def", 6))
   end
 
+  test "removes a genuinely identical private clause" do
+    input = """
+    defmodule IdenticalClauseFixture do
+      def greet(name), do: "Hello, " <> name
+      defp greet(name), do: "Hello, " <> name
+    end
+    """
+
+    expected = """
+    defmodule IdenticalClauseFixture do
+      def greet(name), do: "Hello, " <> name
+    end
+    """
+
+    confirm_fix(fix(input, "defp greet/1 already defined as def", 3), expected)
+  end
+
   test "returns source unchanged when no matching defp found" do
     input = """
     defmodule Example do
@@ -150,5 +175,90 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefFixTest do
     """
 
     confirm_fix(fix(input, @real_message), input)
+  end
+
+  test "renames only private clauses with the diagnostic arity" do
+    input = """
+    defmodule ArityFixture do
+      def foo(x), do: x
+      defp foo(0), do: foo(1)
+      defp foo(x, y), do: foo(x, y - 1)
+    end
+    """
+
+    expected = """
+    defmodule ArityFixture do
+      def foo(x), do: x
+      defp do_foo(0), do: do_foo(1)
+      defp foo(x, y), do: foo(x, y - 1)
+    end
+    """
+
+    confirm_fix(fix(input, "defp foo/1 already defined as def", 3), expected)
+  end
+
+  test "limits call rewriting to the diagnostic module and preserves public recursion" do
+    input = """
+    defmodule ScopeFixtureA do
+      def foo(x), do: foo(x - 1)
+      def run(x), do: foo(x)
+      defp foo(0), do: 0
+    end
+
+    defmodule ScopeFixtureB do
+      def run(x), do: foo(x)
+    end
+    """
+
+    expected = """
+    defmodule ScopeFixtureA do
+      def foo(x), do: foo(x - 1)
+      def run(x), do: do_foo(x)
+      defp do_foo(0), do: 0
+    end
+
+    defmodule ScopeFixtureB do
+      def run(x), do: foo(x)
+    end
+    """
+
+    confirm_fix(fix(input, "defp foo/1 already defined as def", 4), expected)
+  end
+
+  test "stale diagnostic does not rewrite calls without a matching private definition" do
+    input = """
+    defmodule StaleDiagnosticFixture do
+      def foo(x), do: x
+      def run(x), do: foo(x)
+    end
+    """
+
+    confirm_fix(fix(input, "defp foo/1 already defined as def", 2), input)
+  end
+
+  test "dispatches a compiler diagnostic through the semantic pipeline" do
+    input = """
+    defmodule NoDefpPipelineFixture do
+      def foo(x), do: x
+      defp foo(0), do: 0
+    end
+    """
+
+    expected = """
+    defmodule NoDefpPipelineFixture do
+      def foo(x), do: x
+      defp do_foo(0), do: 0
+    end
+    """
+
+    {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+    assert Enum.any?(diagnostics, &NoDefpAlreadyDefinedAsDef.match?/1)
+    fixed = Credence.Semantic.fix(input)
+    confirm_fix(fixed, expected)
+    assert {:ok, fixed_diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    refute Enum.any?(fixed_diagnostics, &(&1.severity == :error))
+    assert {:ok, expected_diagnostics} = Credence.RuleHelpers.compile_and_capture(expected)
+    refute Enum.any?(expected_diagnostics, &(&1.severity == :error))
   end
 end
