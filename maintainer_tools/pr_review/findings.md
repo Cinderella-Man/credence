@@ -2152,3 +2152,18 @@ Everything else checked out. Verified by reading against lib/syntax/fix_assignme
 ## docs/research/prior-art.md — 2026-08-25 (added, docs)
 - blocker: docs/research/prior-art.md:166 — The recommendation permits fixes to change “undefined/edge behavior,” contradicting Credence’s governing rule that every admitted input must produce exactly the same answer; following it could admit behavior-changing rewrites without a declared safety assumption.
 - concern: docs/research/prior-art.md:15 — The corpus is described as “zero-over-fire,” but it accepts thousands of snapshotted findings and enforces drift against that budget rather than zero findings; this overstates what corpus validation proves.
+## docs/research/rule-quality-audit.md — 2026-08-25 (added, docs)
+- blocker: docs/research/rule-quality-audit.md:45 — The headline, §2B, §5.1, §5.3, rating tally, and final severity ranking repeatedly call `no_sort_then_reverse` and `no_double_sort_same_list` defective and recommend changing them, although the document’s own correction at line 7 says execution refuted both claims; this contradictory audit can send maintainers toward unnecessary or harmful rule changes.
+- nit: docs/research/rule-quality-audit.md:107 — The document says 14 rules declare non-default `unsafe_in_dsl/0`, but the category list immediately below names only 12, so the inventory is incomplete and cannot substantiate the stated count.
+## CHANGELOG.md — 2026-08-25 (modified, other)
+- nit: CHANGELOG.md:65 — The stated corpus totals are stale: the committed budget reports 6,360 accepted findings across 88 rules, not 6,366 across 87.
+- concern: CHANGELOG.md:156 — The claim that Kamil Skowron is the sole author contradicts the repository history, which also contains commits authored by Marcio Ikematsu and Arno Dirlam; confirm the intended copyright attribution before publishing.
+## CONTEXT.md — 2026-08-25 (modified, other)
+- nit: CONTEXT.md:36 — The stated counts are stale: `Code.string_to_quoted` currently appears in 29 files under `lib/` and 18 under `test/`, not 28 and 16.
+- nit: CONTEXT.md:79 — The rollback description says every trace entry becomes `:rolled_back`, but `commit_or_roll_back/4` rewrites only integer entries; existing `:reverted` entries remain `:reverted`, so maintainers are told to expect the wrong trace.
+## README.md — 2026-08-25 (modified, other)
+- nit: README.md:423 — The sample default-run log says the Pattern pipeline starts with 155 rules, but this revision ships 160 Pattern rule modules and enables all of them by default, so the actual log reports 160; the updated count is already stale.
+## STATUS.md — 2026-08-25 (added, other)
+- blocker: STATUS.md:46 — The release procedure edits `CHANGELOG.md` and immediately tags and pushes without committing that edit. `v0.8.1` would therefore point to the pre-release commit whose changelog still says `Unreleased`, while the dated changelog remains only in the maintainer’s working tree.
+## priv/mutation_runner.exs — 2026-08-25 (added, other)
+- blocker: priv/mutation_runner.exs:29 — `Code.compile_string/2` executes mutant top-level code without a heap ceiling. A mutant that allocates indefinitely can exhaust the machine before the outer wall-clock timeout kills its BEAM, despite the file explicitly admitting heap-blowing mutants; compile through the bounded `Credence.RuleHelpers.compile_and_capture/1` mechanism or launch this BEAM with an equivalent per-process heap limit.
