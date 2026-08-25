@@ -3,6 +3,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoConflictingDefaultArgs
 
   defp fix(source, message, line) do
@@ -112,5 +113,67 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsFixTest do
 
     result = fix(input, "something unrelated", 2)
     confirm_fix(result, input)
+  end
+
+  test "does not delete a lower-arity clause with different behavior" do
+    input = """
+    defmodule ConflictingBehavior do
+      def foo(x, y \\\\ 0), do: {:default, x, y}
+      def foo(x), do: {:special, x}
+    end
+    """
+
+    emitted = fix(input, conflict_msg("foo", 1, 2), 3)
+
+    confirm_fix(emitted, input)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(input)
+  end
+
+  test "removes an equivalent clause when the module has a top-level sibling" do
+    input = """
+    :top_level
+
+    defmodule TopLevelSibling do
+      def foo(x, y \\\\ 0), do: {x, y}
+      def foo(x), do: foo(x, 0)
+    end
+    """
+
+    expected = """
+    :top_level
+
+    defmodule TopLevelSibling do
+      def foo(x, y \\\\ 0), do: {x, y}
+    end
+    """
+
+    emitted = fix(input, conflict_msg("foo", 1, 2), 5)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "removes an equivalent clause from a nested module" do
+    input = """
+    defmodule OuterDefaultArgs do
+      defmodule InnerDefaultArgs do
+        def foo(x, y \\\\ 0), do: {x, y}
+        def foo(x), do: foo(x, 0)
+      end
+    end
+    """
+
+    expected = """
+    defmodule OuterDefaultArgs do
+      defmodule InnerDefaultArgs do
+        def foo(x, y \\\\ 0), do: {x, y}
+      end
+    end
+    """
+
+    emitted = fix(input, conflict_msg("foo", 1, 2), 4)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
   end
 end

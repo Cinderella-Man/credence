@@ -36,4 +36,17 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsCheckTest do
     diag = %{severity: :error, message: @real_message, position: {6, 3}}
     assert NoConflictingDefaultArgs.to_issue(diag).meta.line == 6
   end
+
+  test "parses predicate function names accepted by the diagnostic matcher" do
+    diag = %{
+      severity: :error,
+      message: "def ready?/1 conflicts with defaults from ready?/2",
+      position: {4, 2}
+    }
+
+    assert NoConflictingDefaultArgs.match?(diag)
+
+    assert NoConflictingDefaultArgs.to_issue(diag).message ==
+             "def ready?/1 conflicts with defaults"
+  end
 end
