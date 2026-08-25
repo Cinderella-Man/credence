@@ -34,6 +34,51 @@ defmodule Credence.Syntax.PreferCondDoKeywordFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "fixes two real `cond ->` errors in one pass" do
+    input = """
+    defmodule Credence.PreferCondDoKeywordTwoErrorsFixture do
+      def first(x) do
+        cond ->
+          x -> :x
+          true -> :no
+        end
+      end
+
+      def second(y) do
+        cond ->
+          y -> :y
+          true -> :no
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Credence.PreferCondDoKeywordTwoErrorsFixture do
+      def first(x) do
+        cond do
+          x -> :x
+          true -> :no
+        end
+      end
+
+      def second(y) do
+        cond do
+          y -> :y
+          true -> :no
+        end
+      end
+    end
+    """
+
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "fixed output no longer flags" do
     assert analyze(
              fix("""
