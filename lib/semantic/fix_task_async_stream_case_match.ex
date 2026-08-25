@@ -19,8 +19,9 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
 
           dynamic(({:cont or :halt or :suspend, term()}, term() -> term()))
 
-  The fix removes the `case` wrapper, binds the stream to the variable from
-  the `{:ok, var}` pattern, and drops the dead tuple clauses.
+  The fix removes dead tuple clauses beside live clauses. When every clause is
+  dead, it replaces the `case` with an explicit `CaseClauseError` after
+  evaluating the stream once, preserving the original runtime behaviour.
 
   Safety: the rewrite is applied only when **every** clause of the `case` is a
   plain tagged 2-tuple pattern (no guard, no catch-all, no other shapes). The
@@ -50,10 +51,10 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
       defmodule ExampleFTASCM do
         def run(elements, fun) do
           total =
-            (
-              results = Task.async_stream(elements, fun)
-              Enum.count(results)
-            )
+            case Task.async_stream(elements, fun) do
+              unmatched_stream ->
+                raise CaseClauseError, term: unmatched_stream
+            end
 
           total + 1
         end
@@ -87,17 +88,24 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
+  def fix(source, diagnostic) do
+    with {:ok, ast} <- Sourceror.parse_string(source),
+         target_line when is_integer(target_line) <- line(diagnostic),
+         {:ok, target_tag} <- diagnostic_tag(diagnostic) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           {:case, _case_meta, [subject, clauses_kw]} = node, false ->
             with true <- async_stream_call?(subject),
                  {:ok, clauses} <- clause_list(clauses_kw),
-                 true <- Enum.all?(clauses, &dead_tuple_clause?/1),
-                 {:ok, var_ref, body} <- extract_ok_body(clauses) do
-              bind = {:=, [], [var_ref, subject]}
-              {{:__block__, [], [bind | body_exprs(body)]}, true}
+                 {:ok, target} <- clause_at_line(clauses, target_line),
+                 true <- dead_tuple_clause?(target),
+                 true <- clause_tag(target) |> Atom.to_string() == target_tag do
+              if Enum.all?(clauses, &dead_tuple_clause?/1) do
+                {raise_case_clause(subject), true}
+              else
+                remaining = List.delete(clauses, target)
+                {{:case, elem(node, 1), [subject, put_clauses(clauses_kw, remaining)]}, true}
+              end
             else
               _ -> {node, false}
             end
@@ -130,25 +138,42 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
   defp tagged_pair?({:__block__, _, [{{:__block__, _, [tag]}, _sub}]}) when is_atom(tag), do: true
   defp tagged_pair?(_), do: false
 
-  # Extract the {:ok, var} clause's variable reference and body.
-  defp extract_ok_body(clauses) do
-    Enum.find_value(clauses, :error, fn
-      {:->, _arrow_meta,
-       [[{:__block__, _, [{{:__block__, _, [:ok]}, {var, var_meta, nil}}]}], body]}
-      when is_atom(var) ->
-        {:ok, {var, var_meta, nil}, body}
+  defp clause_tag({:->, _, [[{:__block__, _, [{{:__block__, _, [tag]}, _sub}]}], _body]}),
+    do: tag
 
-      _ ->
-        nil
-    end)
+  defp clause_tag(_), do: nil
+
+  defp diagnostic_tag(%{message: message}) do
+    case Regex.run(~r/the following clause will never match:\s+\{:([a-z_]\w*),/s, message) do
+      [_, tag] -> {:ok, tag}
+      _ -> :error
+    end
   end
 
-  # Splice a multi-expression clause body into the surrounding block so the
-  # rewrite doesn't print as a parenthesized nested block. Single-expression
-  # bodies (including Sourceror's literal-wrapping blocks) stay as-is.
-  defp body_exprs({:__block__, _, [_, _ | _] = exprs}), do: exprs
-  defp body_exprs(other), do: [other]
+  defp diagnostic_tag(_), do: :error
+
+  defp clause_at_line(clauses, target_line) do
+    case Enum.find(clauses, fn
+           {:->, meta, _} -> meta[:line] == target_line
+           _ -> false
+         end) do
+      nil -> :error
+      clause -> {:ok, clause}
+    end
+  end
+
+  defp put_clauses([{{:__block__, do_meta, [:do]}, _clauses}], clauses),
+    do: [{{:__block__, do_meta, [:do]}, clauses}]
+
+  defp raise_case_clause(subject) do
+    quote generated: true do
+      case unquote(subject) do
+        unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+      end
+    end
+  end
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+  defp line(_), do: nil
 end

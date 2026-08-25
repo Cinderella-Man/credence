@@ -19,7 +19,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
       dynamic(({:cont or :halt or :suspend, term()}, term() -> term()))
   """
 
-  defp fix(source, message \\ @message, line \\ 3) do
+  defp fix(source, message \\ @message, line \\ 4) do
     FixTaskAsyncStreamCaseMatch.fix(source, %{
       severity: :warning,
       message: message,
@@ -27,7 +27,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     })
   end
 
-  test "removes case wrapper and binds stream directly" do
+  test "replaces an all-dead case with the equivalent explicit failure" do
     input = ~S"""
     defmodule FixAsyncStreamCase do
       def run(elements, fun) do
@@ -44,8 +44,9 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     expected = ~S"""
     defmodule FixAsyncStreamCase do
       def run(elements, fun) do
-        results = Task.async_stream(elements, fun, max_concurrency: 4)
-        Enum.map(results, fn {:ok, val} -> val end)
+        case Task.async_stream(elements, fun, max_concurrency: 4) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
       end
     end
     """
@@ -53,7 +54,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     confirm_fix(fix(input), expected)
   end
 
-  test "flattens a multi-expression ok body" do
+  test "does not execute a multi-expression ok body" do
     input = ~S"""
     defmodule FixAsyncStreamCase do
       def run(elements, fun) do
@@ -71,9 +72,9 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     expected = ~S"""
     defmodule FixAsyncStreamCase do
       def run(elements, fun) do
-        results = Task.async_stream(elements, fun)
-        list = Enum.to_list(results)
-        Enum.map(list, fn {:ok, val} -> val end)
+        case Task.async_stream(elements, fun) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
       end
     end
     """
@@ -98,7 +99,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     assert valid_syntax?(fix(input))
   end
 
-  test "fixes a case used as an expression value" do
+  test "preserves failure when the case is used as an expression value" do
     input = ~S"""
     defmodule Example do
       def run(elements, fun) do
@@ -117,17 +118,16 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     defmodule Example do
       def run(elements, fun) do
         total =
-          (
-            results = Task.async_stream(elements, fun)
-            Enum.count(results)
-          )
+          case Task.async_stream(elements, fun) do
+            unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+          end
 
         total + 1
       end
     end
     """
 
-    confirm_fix(fix(input), expected)
+    confirm_fix(fix(input, @message, 5), expected)
   end
 
   test "returns source unchanged when no Task.async_stream case" do
@@ -159,9 +159,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     confirm_fix(fix(input), input)
   end
 
-  test "returns source unchanged when a catch-all clause makes the case live" do
-    # The dead {:ok, results} clause still warns, but `stream ->` is the real
-    # runtime path — rewriting would delete the code that actually runs.
+  test "removes only the dead clause when a catch-all makes the case live" do
     input = ~S"""
     defmodule Example do
       def run(elements, fun) do
@@ -173,7 +171,17 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     end
     """
 
-    confirm_fix(fix(input), input)
+    expected = ~S"""
+    defmodule Example do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          stream -> Enum.to_list(stream)
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
   end
 
   test "returns source unchanged when a clause carries a guard" do
@@ -191,7 +199,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     confirm_fix(fix(input), input)
   end
 
-  test "returns source unchanged when the {:ok, _} clause destructures" do
+  test "preserves failure when the diagnosed tuple clause destructures" do
     input = ~S"""
     defmodule Example do
       def run(elements, fun) do
@@ -203,10 +211,20 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     end
     """
 
-    confirm_fix(fix(input), input)
+    expected = ~S"""
+    defmodule Example do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
   end
 
-  test "returns source unchanged when a clause is a 3-tuple" do
+  test "removes the diagnosed dead pair beside a differently shaped clause" do
     input = ~S"""
     defmodule Example do
       def run(elements, fun) do
@@ -218,6 +236,130 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatchFixTest do
     end
     """
 
-    confirm_fix(fix(input), input)
+    expected = ~S"""
+    defmodule Example do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          {:error, reason, extra} -> {reason, extra}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "preserves the all-dead case failure instead of running the ok body" do
+    input = ~S"""
+    defmodule AsyncStreamCaseFailureRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          {:ok, results} -> {:incorrectly_ran, results}
+          {:error, reason} -> {:incorrectly_ran, reason}
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule AsyncStreamCaseFailureRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
+      end
+    end
+    """
+
+    fixed = fix(input, @message, 4)
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+
+    witness = ~S"""
+
+    unless match?(
+             {:error, %CaseClauseError{}},
+             try do
+               {:ok, AsyncStreamCaseFailureRegression.run([], fn value -> value end)}
+             rescue
+               error -> {:error, error}
+             end
+           ) do
+      raise "case no longer fails with CaseClauseError"
+    end
+    """
+
+    assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(input <> witness)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed <> witness)
+  end
+
+  test "uses the diagnostic line instead of rewriting an earlier quoted case" do
+    input = ~S"""
+    defmodule AsyncStreamCasePositionRegression do
+      def quoted(elements, fun) do
+        quote do
+          case Task.async_stream(unquote(elements), unquote(fun)) do
+            {:ok, results} -> results
+            {:error, reason} -> reason
+          end
+        end
+      end
+
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          {:ok, results} -> Enum.to_list(results)
+          {:error, reason} -> reason
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule AsyncStreamCasePositionRegression do
+      def quoted(elements, fun) do
+        quote do
+          case Task.async_stream(unquote(elements), unquote(fun)) do
+            {:ok, results} -> results
+            {:error, reason} -> reason
+          end
+        end
+      end
+
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          unmatched_stream -> raise CaseClauseError, term: unmatched_stream
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @message, 13), expected)
+  end
+
+  test "removes the diagnosed dead clause when the case has a live catch-all" do
+    input = ~S"""
+    defmodule AsyncStreamCaseCatchAllRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          {:ok, results} -> {:incorrectly_ran, results}
+          stream -> Enum.to_list(stream)
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule AsyncStreamCaseCatchAllRegression do
+      def run(elements, fun) do
+        case Task.async_stream(elements, fun) do
+          stream -> Enum.to_list(stream)
+        end
+      end
+    end
+    """
+
+    fixed = fix(input, @message, 4)
+    confirm_fix(fixed, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
   end
 end
