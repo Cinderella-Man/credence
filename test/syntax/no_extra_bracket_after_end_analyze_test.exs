@@ -6,6 +6,24 @@ defmodule Credence.Syntax.NoExtraBracketAfterEndAnalyzeTest do
 
   defp analyze(code), do: NoExtraBracketAfterEnd.analyze(code)
 
+  test "syntax phase discovers the rule" do
+    code = ~S"""
+    def f do
+      case y do
+        _ -> 1
+      end]
+    end
+    """
+
+    assert [
+             %Issue{
+               rule: :no_extra_bracket_after_end,
+               message: "Stray `]` after block-closing `end` — remove the extraneous bracket.",
+               meta: %{line: 4}
+             }
+           ] == Credence.Syntax.analyze(code)
+  end
+
   test "flags the unparseable code" do
     code = ~S"""
     defmodule M do
