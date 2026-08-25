@@ -105,6 +105,11 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
 
       confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(2, 19)), expected)
     end
+
+    test "does not rewrite another safe match when the diagnostic column is not repairable" do
+      source = "x & 1; foo(&2)"
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(1, 12)), source)
+    end
   end
 
   describe "fix/2 — bare integer position (fallback)" do

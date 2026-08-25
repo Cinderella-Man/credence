@@ -159,18 +159,12 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
     case col do
       nil -> List.first(matches)
-      _ -> Enum.find(matches, &owns_column?(shadow, &1, col)) || List.first(matches)
+      _ -> Enum.find(matches, &owns_column?(shadow, &1, col))
     end
   end
 
-  defp owns_column?(shadow, [{ms, ml}, _lhs, _rhs], col) do
-    amp = ms + (ml - 1)
-
-    case :binary.match(binary_part(shadow, ms, ml), "&") do
-      {offset, _} -> ms + offset == col - 1
-      :nomatch -> amp == col - 1
-    end
-  end
+  defp owns_column?(_shadow, [{ms, ml}, _lhs, _rhs], col),
+    do: (col - 1) in ms..(ms + ml - 1)
 
   defp safe?(shadow, [{ms, ml}, {ls, _ll}, {rs, rl}]) do
     left_boundary_safe?(shadow, ls) and right_boundary_safe?(shadow, rs + rl) and
