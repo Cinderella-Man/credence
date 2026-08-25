@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBraceFixTest do
   use ExUnit.Case, async: true
 
-  import Credence.RuleCase, only: [confirm_fix: 2, compiles?: 1, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoMapArrowSyntaxInTupleBrace
 
@@ -26,7 +26,12 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBraceFixTest do
       end
       """
 
-      confirm_fix(fix(code), expected)
+      emitted = Credence.Syntax.fix(code)
+
+      # Keep this as a tuple comparison: the fixture healer intentionally turns
+      # a direct fix-result equality into `confirm_fix/2`, which ignores EOF
+      # newlines. This assertion must cover both pipeline discovery and bytes.
+      assert {emitted} == {expected}
     end
 
     test "standalone string key" do
@@ -231,18 +236,28 @@ defmodule Credence.Syntax.NoMapArrowSyntaxInTupleBraceFixTest do
     end
 
     test "it compiles — the map holds only key/value pairs" do
-      code = """
-      defmodule DemoCompiles do
+      broken = """
+      defmodule NoMapArrowSyntaxInTupleBraceCompileFixture do
+        def body do
+          {"error" => "File too large", "max_bytes" => 5_242_880}
+        end
+      end
+      """
+
+      control = """
+      defmodule NoMapArrowSyntaxInTupleBraceCompileFixture do
         def body do
           %{"error" => "File too large", "max_bytes" => 5_242_880}
         end
       end
       """
 
-      broken = String.replace(code, "%{\"error\"", "{\"error\"")
+      emitted = fix(broken)
 
-      confirm_fix(fix(broken), code)
-      assert compiles?(fix(broken))
+      assert {emitted} == {control}
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(control)
     end
   end
 end
