@@ -39,7 +39,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgs do
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    String.contains?(msg, "conflicts with defaults from")
+    parse_conflict(msg) != nil
   end
 
   def match?(_), do: false

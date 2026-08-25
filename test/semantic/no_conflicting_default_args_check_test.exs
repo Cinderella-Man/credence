@@ -15,6 +15,16 @@ defmodule Credence.Semantic.NoConflictingDefaultArgsCheckTest do
     refute NoConflictingDefaultArgs.match?(diag)
   end
 
+  test "ignores malformed conflict diagnostics" do
+    diag = %{
+      severity: :error,
+      message: "malformed conflicts with defaults from diagnostic",
+      position: {1, 1}
+    }
+
+    refute NoConflictingDefaultArgs.match?(diag)
+  end
+
   test "ignores warning severity" do
     diag = %{severity: :warning, message: @real_message, position: {6, 3}}
     refute NoConflictingDefaultArgs.match?(diag)
