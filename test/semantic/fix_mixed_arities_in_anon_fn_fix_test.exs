@@ -66,6 +66,36 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFnFixTest do
     assert compiles?(fix(input))
   end
 
+  test "does not reuse a padding candidate already bound by the shorter clause" do
+    input = "f = fn x, y -> x; y -> y end"
+
+    expected = ~S"""
+    f = fn
+      x, y -> x
+      y, _ -> y
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert compiles?(fixed)
+  end
+
+  test "reuses a padding candidate referenced by the shorter clause's guard" do
+    input = "f = fn x, y -> x; x when y > 0 -> x end"
+
+    expected = ~S"""
+    f = fn
+      x, y -> x
+      x, y when y > 0 -> x
+    end
+    """
+
+    fixed = fix(input)
+    confirm_fix(fixed, expected)
+    assert compiles?(fixed)
+  end
+
   test "counts a guarded clause's real arity through its when node" do
     input = ~S"""
     f = fn a, b when a > 0 -> a + b; x -> x end

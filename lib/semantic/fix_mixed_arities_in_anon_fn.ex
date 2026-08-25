@@ -171,9 +171,10 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFn do
   end
 
   # Pad a clause's parameter list to the target arity.  A candidate name is
-  # only reused when the clause's body references it (binding it resolves the
-  # companion "undefined variable" error); otherwise `_` keeps the fix free of
-  # unused-variable warnings.
+  # only reused when the clause's body or guard references it (binding it
+  # resolves the companion "undefined variable" error) and it is not already a
+  # parameter; otherwise `_` keeps the fix free of unused-variable warnings and
+  # avoids turning a catch-all into a repeated-variable match.
   defp pad_clause({:->, meta, [head, body]} = clause, target, padding_map) do
     params = clause_params(clause)
     current = length(params)
@@ -183,7 +184,8 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFn do
         Enum.map(current..(target - 1), fn pos ->
           name = Map.fetch!(padding_map, pos)
 
-          if name && var_used?(body, name) do
+          if name && not parameter_named?(params, name) &&
+               var_used?([body, clause_guard(clause)], name) do
             {name, [line: 0], nil}
           else
             {:_, [line: 0], nil}
@@ -208,10 +210,20 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFn do
 
   defp pad_clause(clause, _target, _padding_map), do: clause
 
-  # True when `name` occurs as a variable anywhere in `body`.
-  defp var_used?(body, name) do
+  defp clause_guard({:->, _, [[{:when, _, when_args}], _]}) do
+    List.last(when_args)
+  end
+
+  defp clause_guard(_clause), do: nil
+
+  defp parameter_named?(params, name) do
+    Enum.any?(params, &match?({^name, _, ctx} when is_atom(ctx), &1))
+  end
+
+  # True when `name` occurs as a variable anywhere in `ast`.
+  defp var_used?(ast, name) do
     {_, used?} =
-      Macro.prewalk(body, false, fn
+      Macro.prewalk(ast, false, fn
         {^name, _, ctx} = node, _acc when is_atom(ctx) -> {node, true}
         node, acc -> {node, acc}
       end)
