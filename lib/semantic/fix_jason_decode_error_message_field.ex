@@ -82,10 +82,12 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
   @impl true
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
+      decode_error_alias? = uses_decode_error_alias?(ast)
+
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           {:->, clause_meta, [patterns, body]}, acc ->
-            case find_and_fix_clause(patterns, body) do
+            case find_and_fix_clause(patterns, body, decode_error_alias?) do
               {:ok, new_patterns, new_body} ->
                 {{:->, clause_meta, [new_patterns, new_body]}, true}
 
@@ -103,13 +105,13 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
     end
   end
 
-  defp find_and_fix_clause(patterns, body) do
+  defp find_and_fix_clause(patterns, body, decode_error_alias?) do
     {pats, guard} = split_guard(patterns)
 
-    with [{:var, var_name}] <- message_struct_vars(pats),
+    with [{:var, var_name}] <- message_struct_vars(pats, decode_error_alias?),
          true <- safe_to_rewrite?(pats, guard, body, var_name) do
       bind? = count_var(body, var_name) > 0
-      new_pats = rewrite_struct(pats, bind?)
+      new_pats = rewrite_struct(pats, bind?, decode_error_alias?)
       new_patterns = rejoin_guard(patterns, new_pats, guard)
       new_body = if bind?, do: replace_var_in_body(body, var_name), else: body
       {:ok, new_patterns, new_body}
@@ -145,10 +147,12 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
   # for structs whose ONLY entry is `message:`. Structs with extra entries or
   # a non-var message value yield `:unsafe`, poisoning the match in
   # `find_and_fix_clause` (it requires exactly `[{:var, var_name}]`).
-  defp message_struct_vars(pats) do
+  defp message_struct_vars(pats, decode_error_alias?) do
     {_, found} =
       Macro.prewalk(pats, [], fn
-        {:%, _, [{:__aliases__, _, [:Jason, :DecodeError]}, {:%{}, _, entries}]} = node, acc ->
+        {:%, _, [{:__aliases__, _, parts}, {:%{}, _, entries}]} = node, acc
+        when parts == [:Jason, :DecodeError] or
+               (decode_error_alias? and parts == [:DecodeError]) ->
           case classify_entries(entries) do
             nil -> {node, acc}
             result -> {node, [result | acc]}
@@ -159,6 +163,19 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
       end)
 
     found
+  end
+
+  defp uses_decode_error_alias?(ast) do
+    {_, found?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, [:Jason, :DecodeError]}]} = node, _acc ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found?
   end
 
   defp classify_entries(entries) do
@@ -186,14 +203,21 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
   defp find_message_entry(_), do: nil
 
   defp count_var(ast, var_name) do
-    {_, count} =
-      Macro.prewalk(ast, 0, fn
-        {^var_name, _, nil} = node, acc -> {node, acc + 1}
-        node, acc -> {node, acc}
-      end)
-
-    count
+    count_var_in_code(ast, var_name)
   end
+
+  defp count_var_in_code({:quote, _, _}, _var_name), do: 0
+  defp count_var_in_code({var_name, _, nil}, var_name), do: 1
+
+  defp count_var_in_code(tuple, var_name) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> count_var_in_code(var_name)
+  end
+
+  defp count_var_in_code(list, var_name) when is_list(list) do
+    Enum.reduce(list, 0, &(&2 + count_var_in_code(&1, var_name)))
+  end
+
+  defp count_var_in_code(_other, _var_name), do: 0
 
   # True when the var appears in any binding position inside the body:
   # `=` left side, `->` clause patterns (incl. their guards), `<-` left side.
@@ -211,10 +235,11 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
     found
   end
 
-  defp rewrite_struct(pats, bind?) do
+  defp rewrite_struct(pats, bind?, decode_error_alias?) do
     Macro.prewalk(pats, fn
-      {:%, meta,
-       [{:__aliases__, _, [:Jason, :DecodeError]} = alias_node, {:%{}, map_meta, entries}]} = node ->
+      {:%, meta, [{:__aliases__, _, parts} = alias_node, {:%{}, map_meta, entries}]} = node
+      when parts == [:Jason, :DecodeError] or
+             (decode_error_alias? and parts == [:DecodeError]) ->
         if find_message_entry(entries) do
           bare = {:%, meta, [alias_node, {:%{}, map_meta, []}]}
           if bind?, do: {:=, [], [bare, {@new_var, [], nil}]}, else: bare
@@ -231,7 +256,7 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
   # var, so a prewalk would re-match it forever when the message var is
   # already named `error`.
   defp replace_var_in_body(body, var_name) do
-    Macro.postwalk(body, fn
+    postwalk_code(body, fn
       {^var_name, meta, nil} ->
         {{:., [], [{:__aliases__, [], [:Exception]}, :message]}, [], [{@new_var, meta, nil}]}
 
@@ -239,6 +264,22 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
         node
     end)
   end
+
+  defp postwalk_code({:quote, _, _} = quoted, _fun), do: quoted
+
+  defp postwalk_code(tuple, fun) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&postwalk_code(&1, fun))
+    |> List.to_tuple()
+    |> fun.()
+  end
+
+  defp postwalk_code(list, fun) when is_list(list) do
+    list |> Enum.map(&postwalk_code(&1, fun)) |> fun.()
+  end
+
+  defp postwalk_code(other, fun), do: fun.(other)
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

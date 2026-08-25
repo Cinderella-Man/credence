@@ -3,6 +3,7 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageFieldFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.FixJasonDecodeErrorMessageField
 
   @real_message "unknown key :message for struct Jason.DecodeError"
@@ -83,6 +84,66 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageFieldFixTest do
     """
 
     confirm_fix(fix(input), expected)
+  end
+
+  test "fixes a pattern using an alias for Jason.DecodeError" do
+    input = ~S"""
+    defmodule AliasedJasonDecodeError do
+      alias Jason.DecodeError
+
+      def f(x) do
+        case x do
+          %DecodeError{message: msg} -> msg
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule AliasedJasonDecodeError do
+      alias Jason.DecodeError
+
+      def f(x) do
+        case x do
+          %DecodeError{} = error -> Exception.message(error)
+        end
+      end
+    end
+    """
+
+    actual = fix(input)
+
+    confirm_fix(actual, expected)
+    assert {:ok, _} = RuleHelpers.compile_and_capture(actual)
+    assert {:ok, _} = RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "does not replace the message variable inside quoted code" do
+    input = ~S"""
+    defmodule QuotedJasonDecodeErrorMessage do
+      def f(x) do
+        case x do
+          %Jason.DecodeError{message: msg} -> quote(do: msg)
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule QuotedJasonDecodeErrorMessage do
+      def f(x) do
+        case x do
+          %Jason.DecodeError{} -> quote(do: msg)
+        end
+      end
+    end
+    """
+
+    actual = fix(input)
+
+    confirm_fix(actual, expected)
+    assert {:ok, _} = RuleHelpers.compile_and_capture(actual)
+    assert {:ok, _} = RuleHelpers.compile_and_capture(expected)
   end
 
   test "fixes a clause whose guard does not use the message var" do
