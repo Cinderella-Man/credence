@@ -117,4 +117,14 @@ defmodule Credence.Syntax.NoHashQuantifierInRegexSigilAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "reports the interior line of a multiline slash-delimited sigil" do
+    code = """
+    ~r/abc
+    \#{1,6}
+    def/
+    """
+
+    assert [%Issue{meta: %{line: 2}}] = analyze(code)
+  end
 end

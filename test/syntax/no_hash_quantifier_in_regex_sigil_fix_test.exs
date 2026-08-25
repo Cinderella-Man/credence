@@ -177,4 +177,54 @@ defmodule Credence.Syntax.NoHashQuantifierInRegexSigilFixTest do
 
     confirm_fix(fix(code), code)
   end
+
+  test "leaves regex-looking text in non-code bytes unchanged" do
+    code = ~S'''
+    defmodule CredenceNoHashQuantifierNonCodeFixture do
+      @moduledoc """
+      example: ~r/#{1,2}/
+      """
+
+      # example: ~r/#{1,2}/
+      @text "example: ~r/#{1,2}/"
+      @heredoc """
+      example: ~r/#{1,2}/
+      """
+      @regex ~r/#{1,2}/
+    end
+    '''
+
+    expected = ~S'''
+    defmodule CredenceNoHashQuantifierNonCodeFixture do
+      @moduledoc """
+      example: ~r/#{1,2}/
+      """
+
+      # example: ~r/#{1,2}/
+      @text "example: ~r/#{1,2}/"
+      @heredoc """
+      example: ~r/#{1,2}/
+      """
+      @regex ~r/[#]{1,2}/
+    end
+    '''
+
+    confirm_fix(fix(code), expected)
+  end
+
+  test "rewrites a hash quantifier in a multiline slash-delimited sigil" do
+    code = """
+    ~r/abc
+    \#{1,6}
+    def/
+    """
+
+    expected = """
+    ~r/abc
+    [#]{1,6}
+    def/
+    """
+
+    confirm_fix(fix(code), expected)
+  end
 end

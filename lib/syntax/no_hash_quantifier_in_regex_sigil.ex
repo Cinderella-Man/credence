@@ -33,7 +33,7 @@ defmodule Credence.Syntax.NoHashQuantifierInRegexSigil do
   """
   use Credence.Syntax.Rule
 
-  alias Credence.Issue
+  alias Credence.{Issue, SourceMask}
 
   # A `/`-delimited regex sigil, capturing its body. `\\.` keeps escaped
   # characters (notably `\/` and `\#`) inside the body.
@@ -48,38 +48,59 @@ defmodule Credence.Syntax.NoHashQuantifierInRegexSigil do
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      if hash_quantifier_in_sigil?(line) do
-        [
-          %Issue{
-            rule: :no_hash_quantifier_in_regex_sigil,
-            message:
-              "`\#{n,m}` inside a regex sigil starts interpolation and will not parse. " <>
-                "Use `[#]{n,m}` for a literal `#` with a quantifier.",
-            meta: %{line: line_no}
-          }
-        ]
-      else
-        []
-      end
+    |> quantifier_matches()
+    |> Enum.map(fn {start, _length, _replacement} -> line_number(source, start) end)
+    |> Enum.uniq()
+    |> Enum.map(fn line_no ->
+      %Issue{
+        rule: :no_hash_quantifier_in_regex_sigil,
+        message:
+          "`\#{n,m}` inside a regex sigil starts interpolation and will not parse. " <>
+            "Use `[#]{n,m}` for a literal `#` with a quantifier.",
+        meta: %{line: line_no}
+      }
     end)
   end
 
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> quantifier_matches()
+    |> Enum.reverse()
+    |> Enum.reduce(source, fn {start, length, replacement}, acc ->
+      <<head::binary-size(^start), _::binary-size(^length), tail::binary>> = acc
+      head <> replacement <> tail
+    end)
   end
 
-  defp hash_quantifier_in_sigil?(line), do: fix_line(line) != line
-
-  # Replace `#{n,m}` with `[#]{n,m}`, but only inside `~r/.../` sigil bodies.
-  defp fix_line(line) do
-    Regex.replace(@sigil_re, line, fn _full, body ->
-      "~r/" <> Regex.replace(@quantifier_re, body, "[#]{\\1}") <> "/"
+  defp quantifier_matches(source) do
+    @sigil_re
+    |> Regex.scan(source, return: :index)
+    |> Enum.filter(fn [{sigil_start, _sigil_length}, _body] ->
+      code_sigil_opener?(source, sigil_start)
     end)
+    |> Enum.flat_map(fn [_sigil, {body_start, body_length}] ->
+      body = binary_part(source, body_start, body_length)
+
+      Regex.scan(@quantifier_re, body, return: :index)
+      |> Enum.map(fn [{start, length}, {range_start, range_length}] ->
+        range = binary_part(body, range_start, range_length)
+        {body_start + start, length, "[#]{" <> range <> "}"}
+      end)
+    end)
+  end
+
+  # Masking the source only through `~r` leaves a real opener visible as code,
+  # while the same bytes inside a comment or literal are already blanked.
+  defp code_sigil_opener?(source, start) do
+    prefix = binary_part(source, 0, start + 2)
+    String.ends_with?(SourceMask.mask(prefix), "~r")
+  end
+
+  defp line_number(source, offset) do
+    source
+    |> binary_part(0, offset)
+    |> String.split("\n")
+    |> length()
   end
 end
