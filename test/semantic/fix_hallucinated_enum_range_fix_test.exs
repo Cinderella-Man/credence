@@ -1,9 +1,11 @@
 defmodule Credence.Semantic.FixHallucinatedEnumRangeFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.FixHallucinatedEnumRange
+
+  defp compiles?(source), do: Credence.RuleHelpers.compiles?(source)
 
   @message "Enum.range/2 is undefined or private"
 
@@ -211,6 +213,10 @@ defmodule Credence.Semantic.FixHallucinatedEnumRangeFixTest do
     """
 
     assert compiles?(fix(input, {3, 10}))
+  end
+
+  test "compile checks contain top-level exits in fixtures" do
+    refute compiles?("exit(:boom)")
   end
 
   test "end-to-end: the semantic phase fixes the flagship input and touches nothing else" do
