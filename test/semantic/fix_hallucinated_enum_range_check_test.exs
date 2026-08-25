@@ -12,6 +12,19 @@ defmodule Credence.Semantic.FixHallucinatedEnumRangeCheckTest do
     assert FixHallucinatedEnumRange.match?(@diag)
   end
 
+  test "does not report a capture that the fix deliberately leaves unchanged" do
+    source = """
+    defmodule CredenceEnumRangeCaptureCheck do
+      def a, do: &Enum.range/2
+    end
+    """
+
+    diag = %{severity: :warning, message: @message, position: {2, 20}}
+
+    refute FixHallucinatedEnumRange.should_report?(diag, source)
+    assert Credence.analyze(source).issues == []
+  end
+
   test "the semantic phase dispatches this rule for the diagnostic" do
     winner =
       Credence.Semantic.Rule

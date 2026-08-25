@@ -62,6 +62,8 @@ defmodule Credence.Semantic.FixHallucinatedEnumRange do
 
   def match?(_), do: false
 
+  def should_report?(diagnostic, source), do: fix(source, diagnostic) != source
+
   @impl true
   def to_issue(diagnostic) do
     %Issue{
