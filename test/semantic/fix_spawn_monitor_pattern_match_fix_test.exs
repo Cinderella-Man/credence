@@ -24,7 +24,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     })
   end
 
-  test "replaces {:ok, pid} with {pid, _ref} in spawn_monitor pattern" do
+  test "replaces {:ok, pid} with {pid, _} in spawn_monitor pattern" do
     input = ~S"""
     defmodule SpawnMonitorPattern do
       def run do
@@ -37,7 +37,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     expected = ~S"""
     defmodule SpawnMonitorPattern do
       def run do
-        {pid, _ref} = spawn_monitor(fn -> :ok end)
+        {pid, _} = spawn_monitor(fn -> :ok end)
         {pid, :done}
       end
     end
@@ -59,7 +59,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     expected = ~S"""
     defmodule SpawnMonitorMfa do
       def run do
-        {pid, _ref} = spawn_monitor(Worker, :run, [1])
+        {pid, _} = spawn_monitor(Worker, :run, [1])
         pid
       end
     end
@@ -68,7 +68,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     confirm_fix(fix(input, @real_message, 3), expected)
   end
 
-  test "rewrites every offending occurrence in the file" do
+  test "rewrites only the occurrence at the diagnostic line" do
     input = ~S"""
     defmodule TwoSpawns do
       def run do
@@ -82,8 +82,8 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     expected = ~S"""
     defmodule TwoSpawns do
       def run do
-        {first, _ref} = spawn_monitor(fn -> :a end)
-        {second, _ref} = spawn_monitor(fn -> :b end)
+        {first, _} = spawn_monitor(fn -> :a end)
+        {:ok, second} = spawn_monitor(fn -> :b end)
         {first, second}
       end
     end
@@ -92,21 +92,21 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatchFixTest do
     confirm_fix(fix(input, @real_message, 3), expected)
   end
 
-  test "picks a non-colliding name when the bound variable is _ref" do
+  test "discards the monitor reference without rebinding an existing _ref" do
     input = ~S"""
     defmodule RefCollision do
-      def run do
-        {:ok, _ref} = spawn_monitor(fn -> :ok end)
-        :ok
+      def run(_ref) do
+        {:ok, pid} = spawn_monitor(fn -> :ok end)
+        {pid, _ref}
       end
     end
     """
 
     expected = ~S"""
     defmodule RefCollision do
-      def run do
-        {_ref, _monitor_ref} = spawn_monitor(fn -> :ok end)
-        :ok
+      def run(_ref) do
+        {pid, _} = spawn_monitor(fn -> :ok end)
+        {pid, _ref}
       end
     end
     """

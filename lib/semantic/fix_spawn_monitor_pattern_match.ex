@@ -13,7 +13,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
   The fix keeps the pid binding in the pid position and discards the monitor
   reference:
 
-      {:ok, pid} = spawn_monitor(...)  →  {pid, _ref} = spawn_monitor(...)
+      {:ok, pid} = spawn_monitor(...)  →  {pid, _} = spawn_monitor(...)
 
   ## Bad
 
@@ -28,7 +28,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
 
       defmodule SpawnMonitorPatternFSMPM do
         def run do
-          {pid, _ref} = spawn_monitor(fn -> :ok end)
+          {pid, _} = spawn_monitor(fn -> :ok end)
           {pid, :done}
         end
       end
@@ -59,8 +59,9 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
+  def fix(source, diagnostic) do
+    with diagnostic_line when is_integer(diagnostic_line) <- line(diagnostic),
+         {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           {:=, assign_meta,
@@ -68,16 +69,18 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
              {:__block__, block_meta,
               [{{:__block__, ok_meta, [:ok]}, {var_name, var_meta, nil}}]},
              {:spawn_monitor, call_meta, call_args}
-           ]} = _node,
-          _acc
+           ]} = node,
+          acc
           when is_atom(var_name) and is_list(call_args) ->
-            # {:ok, pid} = spawn_monitor(...)  →  {pid, _ref} = spawn_monitor(...)
-            ref_name = if var_name == :_ref, do: :_monitor_ref, else: :_ref
+            if Keyword.get(assign_meta, :line) == diagnostic_line do
+              # {:ok, pid} = spawn_monitor(...)  →  {pid, _} = spawn_monitor(...)
+              new_lhs =
+                {:__block__, block_meta, [{{var_name, var_meta, nil}, {:_, ok_meta, nil}}]}
 
-            new_lhs =
-              {:__block__, block_meta, [{{var_name, var_meta, nil}, {ref_name, ok_meta, nil}}]}
-
-            {{:=, assign_meta, [new_lhs, {:spawn_monitor, call_meta, call_args}]}, true}
+              {{:=, assign_meta, [new_lhs, {:spawn_monitor, call_meta, call_args}]}, true}
+            else
+              {node, acc}
+            end
 
           node, acc ->
             {node, acc}
@@ -91,4 +94,5 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+  defp line(_diagnostic), do: nil
 end
