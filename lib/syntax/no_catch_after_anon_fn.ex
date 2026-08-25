@@ -43,6 +43,7 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
   use Credence.Syntax.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @impl true
   def analyze(source) do
@@ -89,9 +90,10 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
   defp repair(source) do
     with {:error, _} <- Sourceror.parse_string(source),
          lines = String.split(source, "\n"),
-         [{catch_idx, keyword}] <- candidates(lines),
-         {:ok, end_idx} <- find_preceding_end_paren(lines, catch_idx - 1),
-         expr_start_idx = find_expr_start(lines, end_idx),
+         shadow_lines = source |> SourceMask.mask() |> String.split("\n"),
+         [{catch_idx, keyword}] <- candidates(lines, shadow_lines),
+         {:ok, end_idx} <- find_preceding_end_paren(lines, shadow_lines, catch_idx - 1),
+         expr_start_idx = find_expr_start(shadow_lines, end_idx),
          fixed = Enum.join(apply_try_wrap(lines, expr_start_idx, end_idx), "\n"),
          {:ok, _} <- Sourceror.parse_string(fixed) do
       {:ok, fixed, catch_idx + 1, keyword}
@@ -101,14 +103,14 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
   end
 
   # Every `catch`/`after` line that follows an `end)` line, as `{index, keyword}`.
-  defp candidates(lines) do
+  defp candidates(lines, shadow_lines) do
     lines
     |> Enum.with_index()
     |> Enum.flat_map(fn {line, idx} ->
       trimmed = String.trim_leading(line)
 
       with true <- Regex.match?(~r/^(catch|after)\b/, trimmed),
-           {:ok, _end_idx} <- find_preceding_end_paren(lines, idx - 1) do
+           {:ok, _end_idx} <- find_preceding_end_paren(lines, shadow_lines, idx - 1) do
         keyword = if String.starts_with?(trimmed, "catch"), do: "catch", else: "after"
         [{idx, keyword}]
       else
@@ -118,17 +120,17 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
   end
 
   # Walk backwards from `idx`, skipping blank lines, looking for `end)`.
-  defp find_preceding_end_paren(_lines, idx) when idx < 0, do: :none
+  defp find_preceding_end_paren(_lines, _shadow_lines, idx) when idx < 0, do: :none
 
-  defp find_preceding_end_paren(lines, idx) do
+  defp find_preceding_end_paren(lines, shadow_lines, idx) do
     line = Enum.at(lines, idx)
-    trimmed = String.trim(line)
+    shadow = shadow_lines |> Enum.at(idx) |> String.trim()
 
     cond do
-      trimmed == "" ->
-        find_preceding_end_paren(lines, idx - 1)
+      String.trim(line) == "" ->
+        find_preceding_end_paren(lines, shadow_lines, idx - 1)
 
-      Regex.match?(~r/\bend\)/, trimmed) ->
+      Regex.match?(~r/\bend\)/, shadow) ->
         {:ok, idx}
 
       true ->
@@ -138,8 +140,8 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
 
   # Find where the expression containing `end)` starts, by walking backwards
   # from the `end)` line and tracking parenthesis balance.
-  defp find_expr_start(lines, end_idx) do
-    line = Enum.at(lines, end_idx)
+  defp find_expr_start(shadow_lines, end_idx) do
+    line = Enum.at(shadow_lines, end_idx)
     opens = length(Regex.scan(~r/\(/, line))
     closes = length(Regex.scan(~r/\)/, line))
     net = opens - closes
@@ -150,7 +152,7 @@ defmodule Credence.Syntax.NoCatchAfterAnonFn do
     else
       # Walk backwards to find the matching open paren
       need = -net
-      find_expr_start_backward(lines, end_idx - 1, need)
+      find_expr_start_backward(shadow_lines, end_idx - 1, need)
     end
   end
 

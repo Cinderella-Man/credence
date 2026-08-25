@@ -4,6 +4,7 @@ defmodule Credence.Syntax.NoCatchAfterAnonFnFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoCatchAfterAnonFn
+  alias Credence.RuleHelpers
 
   defp analyze(code), do: NoCatchAfterAnonFn.analyze(code)
   defp fix(code), do: NoCatchAfterAnonFn.fix(code)
@@ -185,6 +186,27 @@ defmodule Credence.Syntax.NoCatchAfterAnonFnFixTest do
     """
 
     confirm_fix(fix(code), code)
+  end
+
+  test "leaves an end-paren inside a trailing comment alone" do
+    input = """
+    defmodule CatchAfterCommentClosing do
+      def run do
+        dangerous_call(); # end)
+        catch
+          :thrown -> :caught
+        end
+      end
+
+      def dangerous_call, do: throw(:thrown)
+    end
+    """
+
+    emitted = fix(input)
+
+    confirm_fix(emitted, input)
+    assert analyze(input) == []
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(input)
   end
 
   test "leaves the file alone when an unrelated parse error remains" do
