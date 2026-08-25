@@ -50,20 +50,22 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfo do
     with {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
+          {:|>, _pipe_meta,
+           [
+             arg,
+             {{:., dot_meta, [{:__aliases__, _alias_meta, [:DateTime]}, :info?]}, _call_meta, []}
+           ]},
+          _acc ->
+            {match_call(arg, dot_meta[:line]), true}
+
           {{:., dot_meta, [{:__aliases__, _alias_meta, [:DateTime]}, :info?]}, _call_meta, [arg]},
           _acc ->
-            new_call =
-              {:match?, [line: dot_meta[:line]],
-               [
-                 {:%, [line: dot_meta[:line]],
-                  [
-                    {:__aliases__, [line: dot_meta[:line]], [:DateTime]},
-                    {:%{}, [], []}
-                  ]},
-                 arg
-               ]}
+            {match_call(arg, dot_meta[:line]), true}
 
-            {new_call, true}
+          {{:., dot_meta, [{:__aliases__, _alias_meta, [:"Elixir", :DateTime]}, :info?]},
+           _call_meta, [arg]},
+          _acc ->
+            {match_call(arg, dot_meta[:line]), true}
 
           node, acc ->
             {node, acc}
@@ -73,6 +75,18 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfo do
     else
       _ -> source
     end
+  end
+
+  defp match_call(arg, line) do
+    {:match?, [line: line],
+     [
+       {:%, [line: line],
+        [
+          {:__aliases__, [line: line], [:DateTime]},
+          {:%{}, [], []}
+        ]},
+       arg
+     ]}
   end
 
   defp line(%{position: {line, _col}}), do: line

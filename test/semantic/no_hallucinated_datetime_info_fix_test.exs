@@ -128,4 +128,43 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfoFixTest do
 
     confirm_fix(fix(input, @real_message, 2), expected)
   end
+
+  test "rewrites piped and fully qualified DateTime.info? calls" do
+    input = """
+    defmodule CredenceDateTimeInfoForms do
+      def piped(x), do: x |> DateTime.info?()
+      def qualified(x), do: Elixir.DateTime.info?(x)
+    end
+    """
+
+    expected = """
+    defmodule CredenceDateTimeInfoForms do
+      def piped(x), do: match?(%DateTime{}, x)
+      def qualified(x), do: match?(%DateTime{}, x)
+    end
+    """
+
+    confirm_fix(fix(input, @real_message, 2), expected)
+  end
+
+  test "end-to-end: the semantic phase discovers and repairs a piped call" do
+    input = """
+    defmodule CredenceDateTimeInfoPipeline do
+      def valid?(x), do: x |> DateTime.info?()
+    end
+    """
+
+    expected = """
+    defmodule CredenceDateTimeInfoPipeline do
+      def valid?(x), do: match?(%DateTime{}, x)
+    end
+    """
+
+    fixed = Credence.Semantic.fix(input)
+
+    confirm_fix(fixed, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(fixed) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
 end
