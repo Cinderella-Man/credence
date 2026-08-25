@@ -447,6 +447,20 @@ defmodule Credence.SyntaxRoundSafetyTest do
       assert ProgressGuard.verdict("a", state, "b", {:parse_error, 1, 1}) == :keep
       assert ProgressGuard.verdict("a", {:parse_error, 1, 1}, "b", state) == :keep
     end
+
+    test "a real error on the final line is not mistaken for an EOF stop" do
+      before_source = "x = 1\nf(name: 1, [])"
+      after_source = "f(name: 1, [])\nf(name: 1, [])"
+
+      before_state = ProgressGuard.measure(before_source)
+      after_state = ProgressGuard.measure(after_source)
+
+      assert {:parse_error, 2, _} = before_state
+      assert {:parse_error, 1, _} = after_state
+
+      assert ProgressGuard.verdict(before_source, before_state, after_source, after_state) ==
+               :revert
+    end
   end
 
   describe "analyze/2" do

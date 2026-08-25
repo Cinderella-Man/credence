@@ -223,7 +223,7 @@ defmodule Credence.Syntax.ProgressGuard do
     old_total = length(old_lines)
     new_total = length(new_lines)
 
-    if eof_stop?(before_pos, old_total) or eof_stop?(after_pos, new_total) do
+    if eof_stop?(before_pos, old_lines) or eof_stop?(after_pos, new_lines) do
       # A front end that consumed the whole file and only then gave up has said
       # nothing about *where* the damage is, so its position must not be compared
       # with one that points at a token. Every unclosed delimiter stops at EOF,
@@ -244,7 +244,12 @@ defmodule Credence.Syntax.ProgressGuard do
     end
   end
 
-  defp eof_stop?({line, _column}, total_lines), do: line >= total_lines
+  defp eof_stop?({line, column}, lines) do
+    total_lines = length(lines)
+
+    line > total_lines or
+      (line == total_lines and column > String.length(List.last(lines)))
+  end
 
   # Bigger key = the front end got further. `{0, ...} < {1, ...} < {2, ...}`
   # orders prefix < span < suffix, which is their order in the file.
