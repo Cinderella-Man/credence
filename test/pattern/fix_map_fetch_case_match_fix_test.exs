@@ -57,6 +57,24 @@ defmodule Credence.Pattern.FixMapFetchCaseMatchFixTest do
 
       confirm_fix(fix(FixMapFetchCaseMatch, input), expected)
     end
+
+    test "guarded bare map pattern" do
+      input = """
+      case Map.fetch(m, k) do
+        :error -> nil
+        %{y: y} when is_integer(y) -> y
+      end
+      """
+
+      expected = """
+      case Map.fetch(m, k) do
+        :error -> nil
+        {:ok, %{y: y}} when is_integer(y) -> y
+      end
+      """
+
+      confirm_fix(fix(FixMapFetchCaseMatch, input), expected)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════

@@ -101,6 +101,9 @@ defmodule Credence.Pattern.FixMapFetchCaseMatch do
 
   # True when a case clause has a bare map or map-match pattern (not wrapped
   # in `{:ok, ...}` or any other tuple/atom).
+  defp bare_map_clause?({:->, _, [[{:when, _, [pattern | _]}], _body]}),
+    do: bare_map_pattern?(pattern)
+
   defp bare_map_clause?({:->, _, [[pattern], _body]}), do: bare_map_pattern?(pattern)
   defp bare_map_clause?(_), do: false
 
@@ -154,6 +157,17 @@ defmodule Credence.Pattern.FixMapFetchCaseMatch do
   defp cannot_match_two_tuple?(_), do: false
 
   # Wrap a bare-map-pattern clause in `{:ok, pattern}`.
+  defp maybe_wrap_pattern(
+         {:->, clause_meta, [[{:when, when_meta, [pattern | guards]}], body]} = clause
+       ) do
+    if bare_map_pattern?(pattern) do
+      wrapped = {:__block__, [], [{{:__block__, [], [:ok]}, strip_meta(pattern)}]}
+      {:->, clause_meta, [[{:when, when_meta, [wrapped | guards]}], body]}
+    else
+      clause
+    end
+  end
+
   defp maybe_wrap_pattern({:->, clause_meta, [[pattern], body]} = clause) do
     if bare_map_pattern?(pattern) do
       wrapped = {:__block__, [], [{{:__block__, [], [:ok]}, strip_meta(pattern)}]}

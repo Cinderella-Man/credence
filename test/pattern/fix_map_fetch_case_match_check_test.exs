@@ -206,12 +206,11 @@ defmodule Credence.Pattern.FixMapFetchCaseMatchCheckTest do
              """)
     end
 
-    test "guarded bare map clause elsewhere in the case" do
+    test "guarded bare map clause" do
       assert flagged?(FixMapFetchCaseMatch, """
              case Map.fetch(m, k) do
                :error -> nil
                %{y: y} when is_integer(y) -> y
-               %{x: x} -> x
              end
              """)
     end
