@@ -88,6 +88,112 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallbackFixTest do
     confirm_fix(result, @input)
   end
 
+  test "removes @impl true from the affected module in a multi-module file" do
+    input = """
+    defmodule UnaffectedNITFUC do
+      def ok, do: :ok
+    end
+
+    defmodule AffectedNITFUC do
+      use Supervisor
+
+      @impl true
+      def run, do: :ok
+    end
+    """
+
+    expected = """
+    defmodule UnaffectedNITFUC do
+      def ok, do: :ok
+    end
+
+    defmodule AffectedNITFUC do
+      use Supervisor
+
+      def run, do: :ok
+    end
+    """
+
+    {result, trace} = Credence.Semantic.fix_with_trace(input)
+    assert trace == [{NoImplTrueForUndeclaredCallback, 1}]
+    confirm_fix(result, expected)
+  end
+
+  test "removes @impl true from an affected nested module" do
+    input = """
+    defmodule OuterNITFUC do
+      defmodule InnerNITFUC do
+        use Supervisor
+
+        @impl true
+        def run, do: :ok
+      end
+    end
+    """
+
+    expected = """
+    defmodule OuterNITFUC do
+      defmodule InnerNITFUC do
+        use Supervisor
+
+        def run, do: :ok
+      end
+    end
+    """
+
+    {result, trace} = Credence.Semantic.fix_with_trace(input)
+    assert trace == [{NoImplTrueForUndeclaredCallback, 1}]
+    confirm_fix(result, expected)
+  end
+
+  test "removes @impl true across an intervening function attribute" do
+    input = """
+    defmodule DocumentedNITFUC do
+      use Supervisor
+
+      @impl true
+      @doc false
+      def run, do: :ok
+    end
+    """
+
+    expected = """
+    defmodule DocumentedNITFUC do
+      use Supervisor
+
+      @doc false
+      def run, do: :ok
+    end
+    """
+
+    {result, trace} = Credence.Semantic.fix_with_trace(input)
+    assert trace == [{NoImplTrueForUndeclaredCallback, 1}]
+    confirm_fix(result, expected)
+  end
+
+  test "repairs the compiler diagnostic for a punctuated function name" do
+    input = """
+    defmodule PunctuatedNITFUC do
+      use Supervisor
+
+      @impl true
+      def valid?(_value), do: true
+    end
+    """
+
+    expected = """
+    defmodule PunctuatedNITFUC do
+      use Supervisor
+
+      def valid?(_value), do: true
+    end
+    """
+
+    {result, trace} = Credence.Semantic.fix_with_trace(input)
+    assert trace == [{NoImplTrueForUndeclaredCallback, 1}]
+    confirm_fix(result, expected)
+  end
+
   @with_comments """
   defmodule MisusedImpl do
     @moduledoc "A supervisor."

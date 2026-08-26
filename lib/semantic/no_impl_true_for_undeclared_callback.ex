@@ -39,12 +39,11 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
 
   alias Credence.Issue
 
-  @impl_pattern ~r/got "@impl true" for function (\w+)\/(\d+) but no behaviour specifies such callback/
+  @impl_pattern ~r/got "@impl true" for function (\w+[!?]?)\/(\d+) but no behaviour specifies such callback/
 
   @impl true
   def match?(%{severity: :warning, message: msg}) when is_binary(msg) do
-    String.contains?(msg, "got \"@impl true\" for function") and
-      String.contains?(msg, "but no behaviour specifies such callback")
+    Regex.match?(@impl_pattern, msg)
   end
 
   def match?(_), do: false
@@ -65,19 +64,12 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
     with {fun, arity} <- parse_undeclared(msg),
          line_no when is_integer(line_no) <- line(position),
          {:ok, ast} <- Sourceror.parse_string(source),
-         {:ok, body} <- module_body(ast),
-         clauses <- body_clauses(body),
-         {:ok, impl_idx} <- find_impl_before(clauses, fun, arity, line_no) do
-      remaining = List.delete_at(clauses, impl_idx)
-
-      new_body =
-        case remaining do
-          [single] -> single
-          multiple -> {:__block__, [], multiple}
-        end
-
-      new_ast = replace_body(ast, new_body)
-      Sourceror.to_string(new_ast)
+         {:ok, impl} <- find_impl_before(ast, fun, arity, line_no),
+         impl_line when is_integer(impl_line) <- clause_line(impl) do
+      source
+      |> String.split("\n", trim: false)
+      |> List.delete_at(impl_line - 1)
+      |> Enum.join("\n")
     else
       _ -> source
     end
@@ -94,43 +86,34 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
     end
   end
 
-  defp module_body({:defmodule, _meta, [_alias, body_kw]}) do
-    case body_kw do
-      [{{:__block__, _, [:do]}, body}] -> {:ok, body}
-      _ -> :error
-    end
-  end
+  defp find_impl_before(ast, fun, arity, line_no) do
+    {_ast, impl} =
+      Macro.prewalk(ast, nil, fn
+        {:__block__, _, clauses} = node, nil when is_list(clauses) ->
+          {node, impl_before_def(clauses, fun, arity, line_no)}
 
-  defp module_body(_), do: :error
-
-  defp body_clauses({:__block__, _, clauses}), do: clauses
-  defp body_clauses(clause), do: [clause]
-
-  # Walk the module's top-level clauses looking for `@impl true` immediately
-  # preceding the `def` at `line_no` with matching `{fun, arity}`.
-  defp find_impl_before(clauses, fun, arity, line_no) do
-    def_idx =
-      Enum.find_index(clauses, fn clause ->
-        clause_fun_arity(clause) == {fun, arity} and clause_line(clause) == line_no
+        node, found ->
+          {node, found}
       end)
 
-    case def_idx do
-      nil ->
-        :error
+    if impl, do: {:ok, impl}, else: :error
+  end
 
-      idx when idx > 0 ->
-        prev = Enum.at(clauses, idx - 1)
-
-        if impl_attribute?(prev) do
-          {:ok, idx - 1}
-        else
-          :error
-        end
-
-      _ ->
-        :error
+  defp impl_before_def(clauses, fun, arity, line_no) do
+    with idx when is_integer(idx) <-
+           Enum.find_index(clauses, fn clause ->
+             clause_fun_arity(clause) == {fun, arity} and clause_line(clause) == line_no
+           end) do
+      clauses
+      |> Enum.take(idx)
+      |> Enum.reverse()
+      |> Enum.take_while(&module_attribute?/1)
+      |> Enum.find(&impl_attribute?/1)
     end
   end
+
+  defp module_attribute?({:@, _, _}), do: true
+  defp module_attribute?(_), do: false
 
   defp impl_attribute?({:@, _, [{:impl, _, [{:__block__, _, [true]}]}]}), do: true
   defp impl_attribute?(_), do: false
@@ -149,14 +132,13 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
   defp clause_fun_arity({:defp, _meta, [{name, _, args} | _]}) when is_list(args),
     do: {to_string(name), length(args)}
 
+  defp clause_fun_arity({kind, _meta, [{name, _, nil} | _]}) when kind in [:def, :defp],
+    do: {to_string(name), 0}
+
   defp clause_fun_arity(_), do: nil
 
   defp clause_line({_, meta, _}) when is_list(meta), do: Keyword.get(meta, :line)
   defp clause_line(_), do: nil
-
-  defp replace_body({:defmodule, meta, [alias, _body_kw]}, new_body) do
-    {:defmodule, meta, [alias, [{{:__block__, [], [:do]}, new_body}]]}
-  end
 
   defp line({l, _col}) when is_integer(l), do: l
   defp line(l) when is_integer(l), do: l

@@ -34,6 +34,18 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallbackCheckTest do
              "@impl true for handle_call/3 but no behaviour specifies such callback"
   end
 
+  test "extracts a punctuated function name accepted by match?/1" do
+    message =
+      "got \"@impl true\" for function valid?/1 but no behaviour specifies such callback"
+
+    diag = %{severity: :warning, message: message, position: {3, 1}}
+
+    assert NoImplTrueForUndeclaredCallback.match?(diag)
+
+    assert NoImplTrueForUndeclaredCallback.to_issue(diag).message ==
+             "@impl true for valid?/1 but no behaviour specifies such callback"
+  end
+
   test "sets the line in issue meta" do
     diag = %{severity: :warning, message: @real_message, position: {10, 1}}
     assert NoImplTrueForUndeclaredCallback.to_issue(diag).meta.line == 10
