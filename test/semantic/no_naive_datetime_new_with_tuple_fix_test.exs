@@ -43,6 +43,30 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleFixTest do
     assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> witness)
   end
 
+  test "semantic pipeline dispatches the tuple repair" do
+    input = """
+    defmodule NNDNWTSemanticDispatchRegression do
+      def go(year, month, day, hour, minute) do
+        NaiveDateTime.new!(Date.new!(year, month, day), {hour, minute, 0, 0})
+      end
+    end
+    """
+
+    expected = """
+    defmodule NNDNWTSemanticDispatchRegression do
+      def go(year, month, day, hour, minute) do
+        NaiveDateTime.new!(Date.new!(year, month, day), Elixir.Time.new!(hour, minute, 0, {0, 6}))
+      end
+    end
+    """
+
+    emitted = Credence.Semantic.fix(input)
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "preserves a non-zero microsecond value" do
     input = """
     defmodule Example do
