@@ -35,21 +35,24 @@ defmodule Credence.Semantic.NoPipeIntoUnaryArithmeticFixTest do
     end
 
     test "works at the end of a longer pipe" do
-      fixed =
+      confirm_fix(
         NoPipeIntoUnaryArithmetic.fix(
           "defmodule NpuC do\n  def f(l), do: l |> Enum.sum() |> + 10\nend\n",
           @diag
-        )
-
-      assert fixed =~ "l |> Enum.sum() |> Kernel.+(10)"
-      assert valid_syntax?(fixed)
+        ),
+        """
+        defmodule NpuC do
+          def f(l), do: l |> Enum.sum() |> Kernel.+(10)
+        end
+        """
+      )
     end
 
     # The rule ignores the diagnostic's line because there is none, so it repairs
     # every occurrence in one pass rather than relying on the round's three
     # passes to catch up.
     test "repairs every occurrence in one pass" do
-      fixed =
+      confirm_fix(
         NoPipeIntoUnaryArithmetic.fix(
           """
           defmodule NpuD do
@@ -59,13 +62,15 @@ defmodule Credence.Semantic.NoPipeIntoUnaryArithmeticFixTest do
           end
           """,
           @diag
-        )
-
-      assert fixed =~ "Kernel.+(1)"
-      assert fixed =~ "Kernel.-(2)"
-      assert fixed =~ "Kernel.+(3)"
-      refute fixed =~ "|> + "
-      refute fixed =~ "|> - "
+        ),
+        """
+        defmodule NpuD do
+          def a(x), do: x |> Kernel.+(1)
+          def b(x), do: x |> Kernel.-(2)
+          def c(x), do: x |> Kernel.+(3)
+        end
+        """
+      )
     end
 
     test "the fix output is well-formed" do
@@ -155,22 +160,32 @@ defmodule Credence.Semantic.NoPipeIntoUnaryArithmeticFixTest do
 
       fixed = NoPipeIntoUnaryArithmetic.fix(before_src, @diag)
 
-      refute Credence.RuleHelpers.compiles?(before_src),
-             "precondition: the input must NOT compile"
+      assert {:error, _diagnostics} = Credence.RuleHelpers.compile_and_capture(before_src)
 
-      assert Credence.RuleHelpers.compiles?(fixed)
+      verification =
+        fixed <>
+          """
 
-      for n <- [0, 1, 7, -3] do
-        assert call_fixed(fixed, NpuEquiv, :bump, [n]) == n + 1
-        assert call_fixed(fixed, NpuEquiv, :drop, [n]) == n - 2
-      end
+          for n <- [0, 1, 7, -3] do
+            unless NpuEquiv.bump(n) == n + 1, do: raise("wrong bump result")
+            unless NpuEquiv.drop(n) == n - 2, do: raise("wrong drop result")
+          end
+          """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(verification)
     end
   end
 
   describe "integration through Credence.Semantic" do
     test "fixes end-to-end" do
-      assert Credence.Semantic.fix("defmodule NpuInteg do\n  def f(x), do: x |> + 1\nend\n") =~
-               "Kernel.+(1)"
+      confirm_fix(
+        Credence.Semantic.fix("defmodule NpuInteg do\n  def f(x), do: x |> + 1\nend\n"),
+        """
+        defmodule NpuInteg do
+          def f(x), do: x |> Kernel.+(1)
+        end
+        """
+      )
     end
   end
 end
