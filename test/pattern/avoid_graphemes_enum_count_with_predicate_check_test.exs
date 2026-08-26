@@ -135,6 +135,12 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
   end
 
   describe "does NOT flag" do
+    test "String.graphemes/0 piped to Enum.count/2" do
+      code = ~S'String.graphemes() |> Enum.count(&(&1 == "a"))'
+
+      assert check(AvoidGraphemesEnumCountWithPredicate, code) == []
+    end
+
     test "Enum.count/2 with predicate on non-graphemes" do
       assert check(AvoidGraphemesEnumCountWithPredicate, ~S'Enum.count(list, &(&1 == "1"))') == []
     end
