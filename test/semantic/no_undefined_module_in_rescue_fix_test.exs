@@ -16,7 +16,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
   end
 
   describe "rewrites it repairs" do
-    test "removes the undefined module from a two-module rescue list" do
+    test "quotes the undefined module in a two-module rescue list" do
       input = """
       defmodule M do
         def run do
@@ -36,7 +36,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           try do
             {:ok, 1}
           rescue
-            e in [RuntimeError] ->
+            e in [:"Elixir.NotImplementedError", RuntimeError] ->
               {:error, :exception}
           end
         end
@@ -66,7 +66,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           try do
             :ok
           rescue
-            e in [ArgumentError, RuntimeError] -> e
+            e in [ArgumentError, :"Elixir.NotImplementedError", RuntimeError] -> e
           end
         end
       end
@@ -95,7 +95,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
         def run do
           do_work()
         rescue
-          e in [RuntimeError] ->
+          e in [:"Elixir.NotImplementedError", RuntimeError] ->
             {:error, e}
 
           e in [NotImplementedError] ->
@@ -130,7 +130,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           try do
             :ok
           rescue
-            e in [RuntimeError] -> {:a, e}
+            e in [:"Elixir.NotImplementedError", RuntimeError] -> {:a, e}
             e in [ArgumentError] -> {:b, e}
             e -> {:c, e}
           after
@@ -162,7 +162,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           try do
             :ok
           rescue
-            e in [RuntimeError] -> e
+            e in [:"Elixir.NotImplementedError", RuntimeError] -> e
           end
         end
       end
@@ -194,7 +194,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           try do
             {:ok, 1}
           rescue
-            e in [ArgumentError] ->
+            e in [:"Elixir.BadStructError", ArgumentError] ->
               {:error, :exception}
           end
         end
@@ -204,7 +204,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
       confirm_fix(fix(input, msg), expected)
     end
 
-    test "carries a comment written on the dropped module over to the survivor" do
+    test "keeps a comment written on the quoted module" do
       input = """
       defmodule M do
         def run do
@@ -230,6 +230,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
           rescue
             e in [
               # not a real module
+              :"Elixir.NotImplementedError",
               RuntimeError
             ] ->
               e
@@ -239,6 +240,82 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescueFixTest do
       """
 
       confirm_fix(fix(input), expected)
+    end
+
+    test "keeps catching the exception when its module is defined after compilation" do
+      input = """
+      defmodule NoUndefinedRescueLateLoadFixture do
+        def run do
+          try do
+            raise NoUndefinedRescueLateError, message: "late"
+          rescue
+            e in [NoUndefinedRescueLateError, RuntimeError] -> {:caught, e.__struct__}
+          end
+        end
+      end
+      """
+
+      {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+      diagnostic =
+        Enum.find(diagnostics, &NoUndefinedModuleInRescue.match?/1)
+
+      emitted = NoUndefinedModuleInRescue.fix(input, diagnostic)
+
+      runtime_witness = """
+
+      Module.create(
+        String.to_atom("Elixir.NoUndefinedRescueLateError"),
+        quote do
+          defexception [:message]
+        end,
+        Macro.Env.location(__ENV__)
+      )
+
+      unless NoUndefinedRescueLateLoadFixture.run() ==
+               {:caught, NoUndefinedRescueLateError} do
+        raise "late-defined exception was not caught"
+      end
+      """
+
+      assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(input <> runtime_witness)
+      assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(emitted <> runtime_witness)
+    end
+
+    test "repairs a real compiler diagnostic through the semantic pipeline" do
+      input = """
+      defmodule NoUndefinedRescuePipelineFixture do
+        def run do
+          try do
+            :ok
+          rescue
+            e in [NoUndefinedRescuePipelineError, RuntimeError] -> e
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule NoUndefinedRescuePipelineFixture do
+        def run do
+          try do
+            :ok
+          rescue
+            e in [:"Elixir.NoUndefinedRescuePipelineError", RuntimeError] -> e
+          end
+        end
+      end
+      """
+
+      assert {:ok, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+      assert Enum.any?(diagnostics, &NoUndefinedModuleInRescue.match?/1)
+
+      emitted = Credence.Semantic.fix(input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
     end
   end
 
