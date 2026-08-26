@@ -37,7 +37,7 @@ defmodule Credence.Semantic.UnusedVariable do
   rewriting `ref` to `_ref` would produce `{_ref, _ref}`, and an
   underscored name repeated in a pattern still *binds*: the clause then
   only matches when both elements are equal (`f({1, 2})` stops matching).
-  So when `_<var_name>` already occurs on the line as a standalone
+  So when `_<var_name>` already occurs in the source as a standalone
   identifier, the fix picks the first free `_<var_name>_<n>` instead.
   Renaming is safe precisely because the binding is unused — nothing
   reads it.
@@ -113,7 +113,7 @@ defmodule Credence.Semantic.UnusedVariable do
       offset = col - 1
 
       if at_standalone_token?(line, offset, var_name) do
-        new_name = unique_underscore_name(line, var_name)
+        new_name = unique_underscore_name(source, var_name)
         replace_token_at(line, offset, var_name, new_name)
       else
         line
@@ -139,7 +139,7 @@ defmodule Credence.Semantic.UnusedVariable do
     rewrite_line(source, line_no, fn line ->
       case standalone_offsets(line, var_name) do
         [single] ->
-          new_name = unique_underscore_name(line, var_name)
+          new_name = unique_underscore_name(source, var_name)
           replace_token_at(line, single, var_name, new_name)
 
         _ ->
@@ -181,22 +181,22 @@ defmodule Credence.Semantic.UnusedVariable do
   end
 
   # Build a unique underscore-prefixed name that doesn't collide with
-  # existing bindings on the line.
-  defp unique_underscore_name(line, var_name) do
+  # existing bindings, including bindings on another line of the same pattern.
+  defp unique_underscore_name(source, var_name) do
     target = "_" <> var_name
 
-    if has_standalone_occurrence?(line, target) do
-      next_available_name(line, var_name, 1)
+    if has_standalone_occurrence?(source, target) do
+      next_available_name(source, var_name, 1)
     else
       target
     end
   end
 
-  defp next_available_name(line, base, n) do
+  defp next_available_name(source, base, n) do
     candidate = "_#{base}_#{n}"
 
-    if has_standalone_occurrence?(line, candidate) do
-      next_available_name(line, base, n + 1)
+    if has_standalone_occurrence?(source, candidate) do
+      next_available_name(source, base, n + 1)
     else
       candidate
     end

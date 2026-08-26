@@ -116,6 +116,39 @@ defmodule Credence.Semantic.UnusedVariableFixTest do
       confirm_fix(UnusedVariable.fix(source, diag), expected)
     end
 
+    test "collision: _var on another line of the function-head pattern → appends numeric suffix" do
+      source = """
+      defmodule MultilineCollisionUnusedVariableFix do
+        def f(
+          _ref,
+          ref
+        ), do: :ok
+      end
+      """
+
+      diag = %{
+        severity: :warning,
+        message: ~S(variable "ref" is unused),
+        position: {4, 5}
+      }
+
+      expected = """
+      defmodule MultilineCollisionUnusedVariableFix do
+        def f(
+          _ref,
+          _ref_1
+        ), do: :ok
+      end
+      """
+
+      emitted = UnusedVariable.fix(source, diag)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
     test "collision: _var_1 already on line → appends _var_2" do
       source = "fn {_ref, {_ref_1, ref}} -> :ok end"
 
