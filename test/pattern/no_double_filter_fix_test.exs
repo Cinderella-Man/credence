@@ -60,9 +60,65 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
 
       confirm_fix(fix(NoDoubleFilter, code), expected)
     end
+
+    test "multiline capture" do
+      code = """
+      def split(numbers) do
+        non_neg = Enum.filter(numbers, &(
+          &1 >= 0
+        ))
+        neg = Enum.filter(numbers, &(
+          &1 < 0
+        ))
+        {non_neg, neg}
+      end
+      """
+
+      expected = """
+      def split(numbers) do
+        {non_neg, neg} = Enum.split_with(numbers, &(
+          &1 >= 0
+        ))
+        {non_neg, neg}
+      end
+      """
+
+      confirm_fix(fix(NoDoubleFilter, code), expected)
+    end
+
+    test "non-ASCII text before the source and predicate ranges" do
+      code = """
+      def split(numbers, café) do
+        non_neg = Enum.filter(numbers, &(&1 >= café))
+        neg = Enum.filter(numbers, &(&1 < café))
+        {non_neg, neg}
+      end
+      """
+
+      expected = """
+      def split(numbers, café) do
+        {non_neg, neg} = Enum.split_with(numbers, &(&1 >= café))
+        {non_neg, neg}
+      end
+      """
+
+      confirm_fix(fix(NoDoubleFilter, code), expected)
+    end
   end
 
   describe "leaves out-of-core shapes unchanged" do
+    test "first assignment rebinds the source used by the second filter" do
+      code = """
+      def split(numbers) do
+        numbers = Enum.filter(numbers, &(&1 >= 0))
+        neg = Enum.filter(numbers, &(&1 < 0))
+        {numbers, neg}
+      end
+      """
+
+      confirm_fix(fix(NoDoubleFilter, code), code)
+    end
+
     test "non-complementary gt / lt is a no-op" do
       code = """
       def split(list) do
