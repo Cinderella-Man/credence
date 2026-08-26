@@ -7,7 +7,7 @@ defmodule Credence.Pattern.FixEtsNewStringName do
 
       :ets.new("cache", [:set])   # ** (ArgumentError) errors were found at the
                                   #    given arguments
-      :ets.new(:cache, [:set])    # #Reference<...>
+      :ets.new(:erlang.binary_to_atom("cache"), [:set])    # #Reference<...>
 
   It is a natural mistake in generated code, because almost every other
   "name this thing" API in Elixir takes a string or is happy with either, and
@@ -36,13 +36,12 @@ defmodule Credence.Pattern.FixEtsNewStringName do
   ## Good
 
       defmodule CacheFENSN do
-        def start, do: :ets.new(:cache, [:set, :named_table])
+        def start, do: :ets.new(:erlang.binary_to_atom("cache"), [:set, :named_table])
       end
   """
   use Credence.Pattern.Rule
 
   alias Credence.Issue
-  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -59,7 +58,15 @@ defmodule Credence.Pattern.FixEtsNewStringName do
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, &fix_node/1)
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case fix_patch(node) do
+          {:ok, patch} -> {node, [patch | acc]}
+          :error -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
   end
 
   # `:ets.new("name", opts)` — the erlang module is an atom literal in the AST,
@@ -79,9 +86,9 @@ defmodule Credence.Pattern.FixEtsNewStringName do
 
   defp string_name(_node), do: :error
 
-  defp fix_node(
-         {{:., _, [{:__block__, _, [:ets]}, :new]} = target, meta,
-          [{:__block__, name_meta, [name]}, opts]}
+  defp fix_patch(
+         {{:., _, [{:__block__, _, [:ets]}, :new]}, _,
+          [{:__block__, _, [name]} = name_node, _opts]}
        )
        when is_binary(name) do
     # Declining a name that cannot be written as a bare atom (`"my table"`,
@@ -90,14 +97,14 @@ defmodule Credence.Pattern.FixEtsNewStringName do
     # warrant is that the atom form is what the author obviously meant.
     # `check/2` declines the same names, so nothing is reported here unfixed.
     if valid_atom_name?(name) do
-      atom_meta = Keyword.drop(name_meta, [:delimiter, :token])
-      {target, meta, [{:__block__, atom_meta, [String.to_atom(name)]}, opts]}
+      replacement = ":erlang.binary_to_atom(" <> inspect(name) <> ")"
+      {:ok, %{range: Sourceror.get_range(name_node), change: replacement}}
     else
-      {target, meta, [{:__block__, name_meta, [name]}, opts]}
+      :error
     end
   end
 
-  defp fix_node(node), do: node
+  defp fix_patch(_node), do: :error
 
   # A name that renders as a bare atom: `:cache`, `:my_cache`, `:cache?`.
   @bare_atom ~r/^[a-z_][A-Za-z0-9_]*[?!]?$/
@@ -109,7 +116,7 @@ defmodule Credence.Pattern.FixEtsNewStringName do
       rule: :fix_ets_new_string_name,
       message:
         "`:ets.new/2` requires an atom table name and raises ArgumentError on a " <>
-          "string. Use `:#{name}` instead of `\"#{name}\"`.",
+          "string. Convert `\"#{name}\"` to `:#{name}` at runtime.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

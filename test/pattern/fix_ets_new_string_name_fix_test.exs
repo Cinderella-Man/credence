@@ -1,9 +1,26 @@
 defmodule Credence.Pattern.FixEtsNewStringNameFixTest do
-  use Credence.RuleCase, async: true
+  use Credence.RuleCase, async: false
 
   alias Credence.Pattern.FixEtsNewStringName
 
   describe "fix_patches/2" do
+    test "does not intern source-controlled table names" do
+      # Warm the parser and fixer before measuring their atom footprint.
+      fix(FixEtsNewStringName, ~S':ets.new("atom_count_warmup", [])')
+      before_count = :erlang.system_info(:atom_count)
+
+      outputs =
+        for i <- 1..100 do
+          name = "ets_review_unique_name_#{i}"
+          fix(FixEtsNewStringName, ":ets.new(\"#{name}\", [])")
+        end
+
+      assert Enum.at(outputs, 42) ==
+               ~S|:ets.new(:erlang.binary_to_atom("ets_review_unique_name_43"), [])|
+
+      assert :erlang.system_info(:atom_count) == before_count
+    end
+
     test "converts the string to the atom" do
       confirm_fix(
         fix(FixEtsNewStringName, """
@@ -13,7 +30,7 @@ defmodule Credence.Pattern.FixEtsNewStringNameFixTest do
         """),
         """
         defmodule EtsFixA do
-          def start, do: :ets.new(:cache, [:set])
+          def start, do: :ets.new(:erlang.binary_to_atom("cache"), [:set])
         end
         """
       )
@@ -28,7 +45,7 @@ defmodule Credence.Pattern.FixEtsNewStringNameFixTest do
         """),
         """
         defmodule EtsFixB do
-          def start, do: :ets.new(:my_cache, [:set, :named_table, {:keypos, 2}])
+          def start, do: :ets.new(:erlang.binary_to_atom("my_cache"), [:set, :named_table, {:keypos, 2}])
         end
         """
       )
@@ -44,8 +61,8 @@ defmodule Credence.Pattern.FixEtsNewStringNameFixTest do
         """),
         """
         defmodule EtsFixC do
-          def a, do: :ets.new(:one, [:set])
-          def b, do: :ets.new(:two, [:bag])
+          def a, do: :ets.new(:erlang.binary_to_atom("one"), [:set])
+          def b, do: :ets.new(:erlang.binary_to_atom("two"), [:bag])
         end
         """
       )
