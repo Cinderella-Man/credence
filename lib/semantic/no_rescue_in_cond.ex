@@ -58,27 +58,7 @@ defmodule Credence.Semantic.NoRescueInCond do
   @impl true
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
-      result =
-        Macro.prewalk(ast, fn
-          {:cond, meta, [opts]} = node when is_list(opts) ->
-            {bad, good} = extract_bad_opts(opts)
-
-            if Enum.any?(bad, &trigger_opt?/1) do
-              new_cond = {:cond, meta, [good]}
-
-              {:try, meta,
-               [
-                 [
-                   {{:__block__, [], [:do]}, new_cond} | bad
-                 ]
-               ]}
-            else
-              node
-            end
-
-          node ->
-            node
-        end)
+      {result, 0} = Macro.traverse(ast, 0, &rewrite_cond/2, &leave_quote/2)
 
       if result == ast do
         source
@@ -89,6 +69,30 @@ defmodule Credence.Semantic.NoRescueInCond do
       _ -> source
     end
   end
+
+  defp rewrite_cond({:quote, _, _} = node, quote_depth), do: {node, quote_depth + 1}
+
+  defp rewrite_cond({:cond, meta, [opts]} = node, 0) when is_list(opts) do
+    {bad, good} = extract_bad_opts(opts)
+
+    if Enum.any?(bad, &trigger_opt?/1) do
+      new_cond = {:cond, meta, [good]}
+
+      {{:try, meta,
+        [
+          [
+            {{:__block__, [], [:do]}, new_cond} | bad
+          ]
+        ]}, 0}
+    else
+      {node, 0}
+    end
+  end
+
+  defp rewrite_cond(node, quote_depth), do: {node, quote_depth}
+
+  defp leave_quote({:quote, _, _} = node, quote_depth), do: {node, quote_depth - 1}
+  defp leave_quote(node, quote_depth), do: {node, quote_depth}
 
   # `after` and `else` are also invalid in `cond` but valid in `try`; they ride
   # along into the `try` so the rewrite compiles. A `cond` whose only invalid

@@ -4,12 +4,102 @@ defmodule Credence.Semantic.NoRescueInCondFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoRescueInCond
+  alias Credence.RuleHelpers
 
   @message_rescue "unexpected option :rescue in \"cond\""
   @message_catch "unexpected option :catch in \"cond\""
 
   defp fix(source, message, line \\ 1) do
     NoRescueInCond.fix(source, %{severity: :error, message: message, position: {line, 1}})
+  end
+
+  test "repairs a real compiler diagnostic through the Semantic pipeline" do
+    input = ~S"""
+    defmodule NoRescueInCondPipelineFixture do
+      def run do
+        cond do
+          true -> :ok
+        rescue
+          _ -> :error
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule NoRescueInCondPipelineFixture do
+      def run do
+        try do
+          cond do
+            true -> :ok
+          end
+        rescue
+          _ -> :error
+        end
+      end
+    end
+    """
+
+    control = String.replace(expected, "PipelineFixture", "PipelineControl")
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoRescueInCond.match?/1)
+
+    {emitted, applied} = Credence.Semantic.fix_with_trace(input)
+
+    confirm_fix(emitted, expected)
+    assert applied == [{NoRescueInCond, 1}]
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(control)
+  end
+
+  test "does not rewrite cond syntax stored inside quote" do
+    input = ~S"""
+    defmodule NoRescueInCondQuotedData do
+      def broken do
+        cond do
+          true -> :ok
+        rescue
+          _ -> :error
+        end
+      end
+
+      def data do
+        quote do
+          cond do
+            true -> :quoted_ok
+          rescue
+            _ -> :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule NoRescueInCondQuotedData do
+      def broken do
+        try do
+          cond do
+            true -> :ok
+          end
+        rescue
+          _ -> :error
+        end
+      end
+
+      def data do
+        quote do
+          cond do
+            true -> :quoted_ok
+          rescue
+            _ -> :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @message_rescue), expected)
   end
 
   test "wraps cond-rescue in try" do
