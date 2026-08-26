@@ -3,7 +3,8 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructCheckTest do
 
   alias Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct
 
-  @real_message "Task.TimeoutError.__struct__/1 is undefined, cannot expand struct Task.TimeoutError. Make sure the struct name is correct. If the struct name exists and is correct but it still cannot be found, you likely have cyclic module usage in your code"
+  @real_message "struct Task.TimeoutError is undefined (module Task.TimeoutError is not available or is yet to be defined)"
+  @expression_message "Task.TimeoutError.__struct__/1 is undefined, cannot expand struct Task.TimeoutError"
 
   test "matches the diagnostic" do
     diag = %{
@@ -14,6 +15,17 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructCheckTest do
     }
 
     assert NoHallucinatedTaskTimeoutErrorStruct.match?(diag)
+  end
+
+  test "ignores the expression-position diagnostic that this pattern fix cannot repair" do
+    diag = %{
+      severity: :error,
+      message: @expression_message,
+      position: {2, 16},
+      file: "credence_check.ex"
+    }
+
+    refute NoHallucinatedTaskTimeoutErrorStruct.match?(diag)
   end
 
   test "ignores unrelated diagnostics" do

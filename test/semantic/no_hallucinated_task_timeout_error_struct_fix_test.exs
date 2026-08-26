@@ -5,13 +5,13 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
 
   alias Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct
 
-  @real_message "Task.TimeoutError.__struct__/1 is undefined, cannot expand struct Task.TimeoutError"
+  @real_message "struct Task.TimeoutError is undefined (module Task.TimeoutError is not available or is yet to be defined)"
 
-  defp fix(source, message, line \\ 1) do
+  defp fix(source, message, line \\ 12) do
     NoHallucinatedTaskTimeoutErrorStruct.fix(source, %{
       severity: :error,
       message: message,
-      position: {line, 1}
+      position: {line, 16}
     })
   end
 
@@ -112,18 +112,59 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
     confirm_fix(fix(input, @real_message), input)
   end
 
+  test "replaces only the pattern at the diagnostic position" do
+    input = """
+    defmodule TaskTimeoutTargetedNHTTES do
+      def quoted, do: quote(do: {:exit, {%Task.TimeoutError{}, quoted_stacktrace}})
+      def handle({:exit, {%Task.TimeoutError{}, _stacktrace}}), do: :timeout
+      def data, do: {:exit, {%Task.TimeoutError{}, Runtime.stacktrace()}}
+    end
+    """
+
+    expected = """
+    defmodule TaskTimeoutTargetedNHTTES do
+      def quoted, do: quote(do: {:exit, {%Task.TimeoutError{}, quoted_stacktrace}})
+      def handle({:exit, :timeout}), do: :timeout
+      def data, do: {:exit, {%Task.TimeoutError{}, Runtime.stacktrace()}}
+    end
+    """
+
+    actual =
+      NoHallucinatedTaskTimeoutErrorStruct.fix(input, %{
+        severity: :error,
+        message: "struct Task.TimeoutError is undefined",
+        position: {3, 23}
+      })
+
+    confirm_fix(actual, expected)
+  end
+
+  test "expression-position diagnostics are not dispatched to this pattern fix" do
+    input = """
+    defmodule TaskTimeoutExpressionNHTTES do
+      def value, do: %Task.TimeoutError{}
+    end
+    """
+
+    result = Credence.fix(input)
+
+    assert result.code == input
+
+    refute Enum.any?(result.applied_rules, fn
+             {NoHallucinatedTaskTimeoutErrorStruct, _status} -> true
+             _ -> false
+           end)
+  end
+
   # ═══════════════════════════════════════════════════════════════════
-  # THE WITNESS — this rule was ledgered `:no_fixture` under T1, and the
-  # reason was not that nobody had written one. `match?/1` accepted the
-  # EXPRESSION-position message while `fix/2` repairs a PATTERN, which
-  # emits a different message — so the rule could match or be applicable,
-  # never both. Both messages are matched now. docs/22 T5.9.
+  # THE WITNESS — the compiler's pattern-position diagnostic is the only
+  # diagnostic this pattern-specific rule admits and repairs. docs/22 T5.9.
   # ═══════════════════════════════════════════════════════════════════
 
   describe "witnesses its own failure mode through the real pipeline" do
     setup do
       source = """
-      defmodule TaskTimeoutWitnessCase do
+      defmodule TaskTimeoutWitnessCaseNHTTES do
         def run(stream) do
           Enum.map(stream, fn
             {:ok, v} -> v
@@ -147,22 +188,31 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
 
       assert Enum.any?(diagnostics, &NoHallucinatedTaskTimeoutErrorStruct.match?/1)
 
-      assert Enum.any?(diagnostics, &(&1.message =~ "struct Task.TimeoutError is undefined")),
-             "the documented shape is a PATTERN; it never emits the __struct__/1 wording " <>
-               "this rule used to key on exclusively"
+      assert Enum.map(diagnostics, & &1.message) == [@real_message]
     end
 
     test "it is repaired end-to-end through real dispatch", %{source: source} do
       result = Credence.fix(source)
 
+      expected = """
+      defmodule TaskTimeoutWitnessCaseNHTTES do
+        def run(stream) do
+          Enum.map(stream, fn
+            {:ok, v} -> v
+            {:exit, :timeout} -> :timeout
+          end)
+        end
+      end
+      """
+
       assert {NoHallucinatedTaskTimeoutErrorStruct, 1} in result.applied_rules
-      assert result.code =~ "{:exit, :timeout} ->"
+      confirm_fix(result.code, expected)
       assert Credence.RuleCase.compiles?(result.code)
     end
 
     test "the same shape in a function head also witnesses" do
       source = """
-      defmodule TaskTimeoutWitnessHead do
+      defmodule TaskTimeoutWitnessHeadNHTTES do
         def handle({:exit, {%Task.TimeoutError{}, _stacktrace}}), do: :timeout
         def handle({:ok, v}), do: v
       end
@@ -170,8 +220,15 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
 
       result = Credence.fix(source)
 
+      expected = """
+      defmodule TaskTimeoutWitnessHeadNHTTES do
+        def handle({:exit, :timeout}), do: :timeout
+        def handle({:ok, v}), do: v
+      end
+      """
+
       assert {NoHallucinatedTaskTimeoutErrorStruct, 1} in result.applied_rules
-      assert result.code =~ "def handle({:exit, :timeout})"
+      confirm_fix(result.code, expected)
       assert Credence.RuleCase.compiles?(result.code)
     end
   end

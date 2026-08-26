@@ -12,24 +12,18 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
 
       {:exit, {%Task.TimeoutError{}, _stacktrace}}  →  {:exit, :timeout}
 
-  ## Two messages, because there are two positions
+  ## The pattern-position diagnostic
 
-  Elixir describes an undefined struct differently depending on where it sits,
-  and this rule needs **both** — it used to match only the first:
+  Elixir describes an undefined struct differently depending on where it sits:
 
       # expression position
       Task.TimeoutError.__struct__/1 is undefined, cannot expand struct Task.TimeoutError
       # pattern position
       struct Task.TimeoutError is undefined (module Task.TimeoutError is not available…)
 
-  The shape it repairs — `{:exit, {%Task.TimeoutError{}, _stacktrace}}` in a
-  `case`/`fn` clause or a function head — is a **pattern**, so it only ever emits
-  the second. Matching only the first meant `match?/1` and `fix/2` were keyed to
-  disjoint situations: the rule could match (in expression position, where its
-  AST rewrite finds nothing and no-ops) or it could be applicable (in pattern
-  position, where it never matched), but never both. It was ledgered
-  `:no_fixture` under T1 for exactly that reason — no fixture could witness it,
-  because none exists. docs/22 T5.9.
+  The shape this rule repairs is a **pattern**, so it accepts only the second
+  message. Accepting the expression-position message would claim an error whose
+  source shape this rule cannot safely repair.
 
   ## Bad
 
@@ -49,17 +43,14 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
 
   alias Credence.Issue
 
-  @match_msgs [
-    "Task.TimeoutError.__struct__/1 is undefined",
-    "struct Task.TimeoutError is undefined"
-  ]
+  @match_msg "struct Task.TimeoutError is undefined"
 
   @impl true
   def priority, do: 100
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    Enum.any?(@match_msgs, &String.contains?(msg, &1))
+    String.contains?(msg, @match_msg)
   end
 
   def match?(_), do: false
@@ -74,32 +65,61 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
+  def fix(source, diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
-      {new_ast, changed} =
-        Macro.prewalk(ast, false, fn
-          # Match {:exit, {%Task.TimeoutError{}, _stacktrace}} pattern
-          {{:__block__, exit_meta, [:exit]},
-           {:__block__, val_meta,
-            [
-              {{:%, _,
-                [
-                  {:__aliases__, _, [:Task, :TimeoutError]},
-                  {:%{}, _, _}
-                ]}, {_, _, _}}
-            ]}},
-          _acc ->
-            {{{:__block__, exit_meta, [:exit]}, {:__block__, val_meta, [:timeout]}}, true}
+      case find_target(ast, position(diagnostic)) do
+        nil ->
+          source
 
-          node, acc ->
-            {node, acc}
-        end)
-
-      if changed, do: Sourceror.to_string(new_ast), else: source
+        node ->
+          Sourceror.patch_string(source, [
+            %{range: Sourceror.get_range(node), change: ":exit, :timeout"}
+          ])
+      end
     else
       _ -> source
     end
   end
+
+  defp find_target(ast, position) do
+    {_ast, targets} =
+      Macro.prewalk(ast, [], fn
+        {{:__block__, _, [:exit]},
+         {:__block__, _,
+          [
+            {{:%, _, [{:__aliases__, _, [:Task, :TimeoutError]}, {:%{}, _, _}]}, {_, _, _}}
+          ]}} = node,
+        acc ->
+          {node, if(at_position?(node, position), do: [node | acc], else: acc)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    List.first(targets)
+  end
+
+  defp at_position?(node, {line, column}) do
+    case Sourceror.get_range(node) do
+      %{start: start_pos, end: end_pos} ->
+        start = {start_pos[:line], start_pos[:column]}
+        finish = {end_pos[:line], end_pos[:column]}
+        start <= {line, column} and {line, column} <= finish
+
+      _ ->
+        false
+    end
+  end
+
+  defp at_position?(node, line) when is_integer(line) do
+    case Sourceror.get_range(node) do
+      %{start: [{:line, ^line} | _]} -> true
+      _ -> false
+    end
+  end
+
+  defp position(%{position: {line, column}}), do: {line, column}
+  defp position(%{position: line}) when is_integer(line), do: line
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
