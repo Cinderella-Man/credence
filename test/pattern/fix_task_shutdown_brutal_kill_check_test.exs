@@ -19,8 +19,21 @@ defmodule Credence.Pattern.FixTaskShutdownBrutalKillCheckTest do
     assert clean?(FixTaskShutdownBrutalKill, "Task.shutdown(task, 5000)")
   end
 
-  test "leaves the piped form alone (arity-1 call in AST; fix skips it too)" do
-    assert clean?(FixTaskShutdownBrutalKill, "task |> Task.shutdown(:brutal)")
+  test "flags the piped form" do
+    assert flagged?(FixTaskShutdownBrutalKill, "task |> Task.shutdown(:brutal)")
+  end
+
+  test "flags the fully qualified form" do
+    assert flagged?(FixTaskShutdownBrutalKill, "Elixir.Task.shutdown(task, :brutal)")
+  end
+
+  test "leaves a custom module aliased as Task alone" do
+    code = """
+    alias MyApp.Task, as: Task
+    Task.shutdown(task, :brutal)
+    """
+
+    assert clean?(FixTaskShutdownBrutalKill, code)
   end
 
   test "leaves :brutal outside the second-argument slot alone" do
