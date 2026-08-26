@@ -36,9 +36,9 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
       `@re "text"` disqualifies the name everywhere — `@re =~ s` is then valid
       substring code at some use sites, and swapping it would change the
       answer);
-    * any `Module.put_attribute`/`Module.register_attribute` call in the file
-      disqualifies **all** attributes (values become invisible to this
-      analysis);
+    * any `Module.put_attribute`/`Module.register_attribute` call or `use` in
+      the file disqualifies **all** attributes (values set dynamically or by a
+      `__using__/1` macro are invisible to this analysis);
     * `=~` occurrences inside `quote` blocks are never flagged via attributes —
       the attribute resolves in whatever module the quoted code is injected
       into, not this one.
@@ -111,6 +111,10 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
   defp attr_mutation?({{:., _, [{:__aliases__, _, [:Module]}, fun]}, _, _})
        when fun in [:put_attribute, :register_attribute],
        do: true
+
+  # `use Provider` expands Provider.__using__/1, which can set an attribute;
+  # that expansion is not present in the source AST inspected here.
+  defp attr_mutation?({:use, _, args}) when is_list(args), do: true
 
   # Bare calls after `import Module` — over-matches unrelated local functions
   # of the same name, which only makes the rule more conservative.
