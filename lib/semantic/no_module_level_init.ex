@@ -77,12 +77,11 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   alias Credence.Issue
   alias Credence.SourceMask
 
-  @match_prefix "undefined function"
-  @match_fn "init/0"
+  @match_message "undefined function init/0"
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_prefix) and String.contains?(msg, @match_fn)
+    String.contains?(msg, @match_message)
   end
 
   def match?(_), do: false
