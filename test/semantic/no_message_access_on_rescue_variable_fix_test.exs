@@ -15,6 +15,41 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
     })
   end
 
+  test "semantic dispatch repairs the compiler's bare-rescue diagnostic" do
+    input = """
+    defmodule NMAORVSemanticDispatch do
+      def run do
+        try do
+          :ok
+        rescue
+          e -> {:error, e.message}
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule NMAORVSemanticDispatch do
+      def run do
+        try do
+          :ok
+        rescue
+          e -> {:error, Map.fetch!(e, :message)}
+        end
+      end
+    end
+    """
+
+    assert {:ok, [diagnostic]} = Credence.RuleHelpers.compile_and_capture(input)
+    assert NoMessageAccessOnRescueVariable.match?(diagnostic)
+
+    emitted = Credence.Semantic.fix(input)
+
+    confirm_fix(emitted, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
   test "only rewrites the bare-rescue var, not a real .message field elsewhere" do
     input = """
     defmodule M do
