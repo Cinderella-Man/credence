@@ -140,8 +140,19 @@ defmodule Credence.Semantic.NoPipeIntoUnaryArithmetic do
   defp patch({op, _meta, [operand]} = node) do
     %{
       range: Sourceror.get_range(node),
-      change: "Kernel.#{op}(#{Sourceror.to_string(operand)})"
+      change: "Kernel.#{op}(#{operand |> qualify_nested() |> Sourceror.to_string()})"
     }
+  end
+
+  defp qualify_nested(operand) do
+    Macro.postwalk(operand, fn
+      {:|>, pipe_meta, [lhs, {op, _op_meta, [rhs]}]} when op in @unary_arithmetic ->
+        qualified = {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, op]}, [], [rhs]}
+        {:|>, pipe_meta, [lhs, qualified]}
+
+      node ->
+        node
+    end)
   end
 
   defp line(%{position: {line, _col}}), do: line

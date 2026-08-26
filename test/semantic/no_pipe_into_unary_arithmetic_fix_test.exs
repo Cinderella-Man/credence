@@ -76,6 +76,25 @@ defmodule Credence.Semantic.NoPipeIntoUnaryArithmeticFixTest do
                )
              )
     end
+
+    test "repairs nested piped unary operators in one pass" do
+      source = """
+      defmodule NpuNested do
+        def f(x, y), do: x |> +(y |> +1)
+      end
+      """
+
+      fixed = NoPipeIntoUnaryArithmetic.fix(source, @diag)
+
+      confirm_fix(fixed, """
+      defmodule NpuNested do
+        def f(x, y), do: x |> Kernel.+(y |> Kernel.+(1))
+      end
+      """)
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+      confirm_fix(NoPipeIntoUnaryArithmetic.fix(fixed, @diag), fixed)
+    end
   end
 
   describe "declines" do
