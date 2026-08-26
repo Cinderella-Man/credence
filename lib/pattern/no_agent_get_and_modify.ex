@@ -32,16 +32,20 @@ defmodule Credence.Pattern.NoAgentGetAndModify do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {{:., meta, [{:__aliases__, _, [:Agent]}, :get_and_modify]}, _, _args} = node, acc ->
-          {node, [build_issue(meta) | acc]}
+    if agent_aliased?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn
+          {{:., meta, [{:__aliases__, _, [:Agent]}, :get_and_modify]}, _, _args} = node, acc ->
+            {node, [build_issue(meta) | acc]}
 
-        node, acc ->
-          {node, acc}
-      end)
+          node, acc ->
+            {node, acc}
+        end)
 
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   # The patch covers only the `get_and_modify` identifier (whose position is the
@@ -50,16 +54,47 @@ defmodule Credence.Pattern.NoAgentGetAndModify do
   # captures.
   @impl true
   def fix_patches(ast, _opts) do
-    {_ast, patches} =
-      Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Agent]}, :get_and_modify]}, cmeta, _args} = node, acc ->
-          {node, rename_patch(cmeta) ++ acc}
+    if agent_aliased?(ast) do
+      []
+    else
+      {_ast, patches} =
+        Macro.prewalk(ast, [], fn
+          {{:., _, [{:__aliases__, _, [:Agent]}, :get_and_modify]}, cmeta, _args} = node, acc ->
+            {node, rename_patch(cmeta) ++ acc}
 
-        node, acc ->
-          {node, acc}
+          node, acc ->
+            {node, acc}
+        end)
+
+      Enum.reverse(patches)
+    end
+  end
+
+  defp agent_aliased?(ast) do
+    {_ast, aliased?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, module}, opts]} = node, aliased? when is_list(opts) ->
+          as = alias_as(opts)
+          implicit_agent? = as == nil and List.last(module) == :Agent
+          explicit_agent? = match?({:__aliases__, _, [:Agent]}, as)
+          {node, aliased? or implicit_agent? or explicit_agent?}
+
+        {:alias, _, [{:__aliases__, _, module}]} = node, aliased? ->
+          {node, aliased? or List.last(module) == :Agent}
+
+        node, aliased? ->
+          {node, aliased?}
       end)
 
-    Enum.reverse(patches)
+    aliased?
+  end
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {{:__block__, _, [:as]}, value} -> value
+      {:as, value} -> value
+      _other -> nil
+    end)
   end
 
   defp rename_patch(cmeta) do
