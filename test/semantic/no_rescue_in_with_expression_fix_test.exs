@@ -3,6 +3,7 @@ defmodule Credence.Semantic.NoRescueInWithExpressionFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoRescueInWithExpression
 
   @message_rescue ~S(unexpected option :rescue in "with")
@@ -14,6 +15,45 @@ defmodule Credence.Semantic.NoRescueInWithExpressionFixTest do
       message: message,
       position: {line, 1}
     })
+  end
+
+  test "compiler diagnostic is repaired through Semantic dispatch" do
+    input = ~S"""
+    defmodule NoRescueInWithDispatchFixture do
+      def run do
+        with {:ok, value} <- {:ok, 1} do
+          value
+        rescue
+          _ -> :error
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule NoRescueInWithDispatchFixture do
+      def run do
+        try do
+          with {:ok, value} <- {:ok, 1} do
+            value
+          end
+        rescue
+          _ -> :error
+        end
+      end
+    end
+    """
+
+    control = String.replace(expected, "DispatchFixture", "DispatchControl")
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoRescueInWithExpression.match?/1)
+
+    {emitted, applied} = Credence.Semantic.fix_with_trace(input)
+
+    confirm_fix(emitted, expected)
+    assert applied == [{NoRescueInWithExpression, 1}]
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(control)
   end
 
   test "wraps with-rescue in try" do
