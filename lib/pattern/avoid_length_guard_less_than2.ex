@@ -190,12 +190,17 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2 do
   # reference an unbound variable and fail to compile (the reverted bug). Fresh,
   # position-free pattern AST so each clause renders cleanly.
   defp replace_param_with_patterns({func_name, _func_meta, params}, var, bind?) do
-    if Enum.any?(params, &same_var?(&1, var)) do
-      empty = pattern_for([], var, bind?)
-      single = pattern_for([{:_, [], nil}], var, bind?)
+    occurrences = count_var_occurrences(params, var)
 
-      empty_params = Enum.map(params, &if(same_var?(&1, var), do: empty, else: &1))
-      single_params = Enum.map(params, &if(same_var?(&1, var), do: single, else: &1))
+    if occurrences > 0 do
+      # A repeated head variable carries an equality constraint. Bind the first
+      # replacement and leave later occurrences as that variable instead of
+      # independently replacing every occurrence with an unrelated pattern.
+      bind? = bind? or occurrences > 1
+      empty_params = replace_first_var(params, var, pattern_for([], var, bind?))
+
+      single_params =
+        replace_first_var(params, var, pattern_for([{:_, [], nil}], var, bind?))
 
       {:ok, {func_name, [], empty_params}, {func_name, [], single_params}}
     else
@@ -205,6 +210,27 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2 do
 
   defp pattern_for(pattern, _var, false), do: pattern
   defp pattern_for(pattern, {name, _, _}, true), do: {:=, [], [pattern, {name, [], nil}]}
+
+  defp count_var_occurrences(params, var) do
+    {_, count} =
+      Macro.prewalk(params, 0, fn node, count ->
+        if same_var?(node, var), do: {node, count + 1}, else: {node, count}
+      end)
+
+    count
+  end
+
+  # Postwalk visits the original variable leaves before inserting the new
+  # pattern, so the variable inside a binding is not mistaken for another head
+  # occurrence.
+  defp replace_first_var(params, var, replacement) do
+    {params, _seen} =
+      Macro.postwalk(params, false, fn node, seen ->
+        if not seen and same_var?(node, var), do: {replacement, true}, else: {node, seen}
+      end)
+
+    params
+  end
 
   # Does `body` reference the variable named like `var`?
   defp var_used?(body, {name, _, _}) do

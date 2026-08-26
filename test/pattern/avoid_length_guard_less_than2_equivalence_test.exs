@@ -46,4 +46,30 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2EquivalenceTest do
       ]
     )
   end
+
+  test "nested parameter pattern preserves behaviour" do
+    assert_equivalent_module(
+      """
+      defmodule AvoidLengthNestedEquivalence do
+        def f({list}) when length(list) < 2, do: {:accepted, list}
+      end
+      """,
+      rule: AvoidLengthGuardLessThan2,
+      call: {:f, 1},
+      inputs: [{[]}, {[1]}, {[1, 2]}]
+    )
+  end
+
+  test "repeated guarded variable preserves head equality" do
+    assert_equivalent_module(
+      """
+      defmodule AvoidLengthRepeatedEquivalence do
+        def f(list, list) when length(list) < 2, do: {:accepted, list}
+      end
+      """,
+      rule: AvoidLengthGuardLessThan2,
+      call: {:f, 2},
+      inputs: [{[], []}, {[1], [1]}, {[1], [2]}, {[], [1]}, {[1, 2], [1, 2]}]
+    )
+  end
 end
