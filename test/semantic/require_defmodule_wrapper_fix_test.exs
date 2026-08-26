@@ -170,6 +170,50 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
   end
 
+  test "keeps an orphaned spec when the module specifies a different function" do
+    input = """
+    @spec first() :: :first
+    defmodule RequireDefmoduleDistinctSpecTest do
+      @spec second() :: :second
+      def first, do: :first
+      def second, do: :second
+    end
+    """
+
+    expected = """
+    defmodule RequireDefmoduleDistinctSpecTest do
+      @spec first() :: :first
+      @spec second() :: :second
+      def first, do: :first
+      def second, do: :second
+    end
+    """
+
+    result = fix(input, "cannot invoke @/1 outside module")
+    confirm_fix(result, expected)
+    assert compiles?(result)
+  end
+
+  test "keeps an orphaned type when the module declares a different type" do
+    input = """
+    @type first() :: :first
+    defmodule RequireDefmoduleDistinctTypeTest do
+      @type second() :: :second
+    end
+    """
+
+    expected = """
+    defmodule RequireDefmoduleDistinctTypeTest do
+      @type first() :: :first
+      @type second() :: :second
+    end
+    """
+
+    result = fix(input, "cannot invoke @/1 outside module")
+    confirm_fix(result, expected)
+    assert compiles?(result)
+  end
+
   test "declines (no-op) when a module exists but nothing movable precedes it" do
     input = """
     defmodule Greeter do

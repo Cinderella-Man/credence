@@ -18,17 +18,17 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperCheckTest do
     assert RequireDefmoduleWrapper.to_issue(diag).rule == :require_defmodule_wrapper
   end
 
-  test "matches the redefining @moduledoc diagnostic" do
+  test "ignores an in-module redefining @moduledoc diagnostic" do
     diag = %{
       severity: :warning,
       message: "redefining @moduledoc attribute previously set at line 2",
       position: {6, 1}
     }
 
-    assert RequireDefmoduleWrapper.match?(diag)
+    refute RequireDefmoduleWrapper.match?(diag)
   end
 
-  test "matches the redefining @doc diagnostic" do
+  test "ignores an in-module redefining @doc diagnostic" do
     diag = %{
       severity: :warning,
       message: "redefining @doc attribute previously set at line 2",
@@ -39,6 +39,6 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperCheckTest do
       span: nil
     }
 
-    assert RequireDefmoduleWrapper.match?(diag)
+    refute RequireDefmoduleWrapper.match?(diag)
   end
 end
