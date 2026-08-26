@@ -30,33 +30,41 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        # Pipe form: ... |> Enum.count()
-        {:|>, meta, [lhs, rhs]} = node, issues ->
-          if enum_count_no_pred?(rhs) and immediate_graphemes?(lhs) do
-            {node, [build_issue(meta) | issues]}
-          else
+    if string_alias_shadowed?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn
+          # Pipe form: ... |> Enum.count()
+          {:|>, meta, [lhs, rhs]} = node, issues ->
+            if enum_count_no_pred?(rhs) and immediate_graphemes?(lhs) do
+              {node, [build_issue(meta) | issues]}
+            else
+              {node, issues}
+            end
+
+          # Direct: Enum.count(String.graphemes(...))
+          {{:., meta, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node, issues ->
+            if direct_graphemes_call?(arg) do
+              {node, [build_issue(meta) | issues]}
+            else
+              {node, issues}
+            end
+
+          node, issues ->
             {node, issues}
-          end
+        end)
 
-        # Direct: Enum.count(String.graphemes(...))
-        {{:., meta, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node, issues ->
-          if graphemes_call?(arg) do
-            {node, [build_issue(meta) | issues]}
-          else
-            {node, issues}
-          end
-
-        node, issues ->
-          {node, issues}
-      end)
-
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
+    if string_alias_shadowed?(ast), do: [], else: fix_unshadowed(ast)
+  end
+
+  defp fix_unshadowed(ast) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipe: ... |> String.graphemes() |> Enum.count()
       {:|>, _, [lhs, rhs]} = node when is_tuple(rhs) ->
@@ -85,7 +93,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
 
   # x |> String.graphemes() |> Enum.count()
   defp fix_pipe(
-         {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}]}
+         {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, []}]}
        ) do
     case deeper do
       {:|>, _, _} ->
@@ -110,14 +118,49 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
   defp enum_count_no_pred?({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}), do: true
   defp enum_count_no_pred?(_), do: false
 
-  defp immediate_graphemes?({:|>, _, [_, rhs]}), do: graphemes_call?(rhs)
-  defp immediate_graphemes?(other), do: graphemes_call?(other)
+  defp immediate_graphemes?({:|>, _, [_, rhs]}), do: piped_graphemes_call?(rhs)
+  defp immediate_graphemes?(other), do: direct_graphemes_call?(other)
 
-  defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, args})
-       when is_list(args),
+  defp direct_graphemes_call?(
+         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [_subject]}
+       ),
        do: true
 
-  defp graphemes_call?(_), do: false
+  defp direct_graphemes_call?(_), do: false
+
+  defp piped_graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, []}),
+    do: true
+
+  defp piped_graphemes_call?(_), do: false
+
+  defp string_alias_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
+        when is_list(target) and is_list(opts) ->
+          {node, shadowed? or shadows_string?(target, alias_as(opts))}
+
+        {:alias, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
+          {node, shadowed? or shadows_string?(target, nil)}
+
+        node, shadowed? ->
+          {node, shadowed?}
+      end)
+
+    shadowed?
+  end
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _other -> nil
+    end)
+  end
+
+  defp shadows_string?(target, {:__aliases__, _, [:String]}), do: target != [:String]
+  defp shadows_string?(target, nil), do: List.last(target) == :String and target != [:String]
+  defp shadows_string?(_target, _as), do: false
 
   defp build_issue(meta) do
     %Issue{
