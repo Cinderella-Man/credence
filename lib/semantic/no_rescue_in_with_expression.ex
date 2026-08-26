@@ -80,14 +80,7 @@ defmodule Credence.Semantic.NoRescueInWithExpression do
   @impl true
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
-      result =
-        Macro.prewalk(ast, fn
-          {:with, meta, args} = node when is_list(args) ->
-            rewrite_with(meta, args, node)
-
-          node ->
-            node
-        end)
+      {result, _quote_depth} = Macro.traverse(ast, 0, &rewrite_node/2, &leave_node/2)
 
       if result == ast do
         source
@@ -98,6 +91,17 @@ defmodule Credence.Semantic.NoRescueInWithExpression do
       _ -> source
     end
   end
+
+  defp rewrite_node({:quote, _, _} = node, quote_depth), do: {node, quote_depth + 1}
+
+  defp rewrite_node({:with, meta, args} = node, 0) when is_list(args) do
+    {rewrite_with(meta, args, node), 0}
+  end
+
+  defp rewrite_node(node, quote_depth), do: {node, quote_depth}
+
+  defp leave_node({:quote, _, _} = node, quote_depth), do: {node, quote_depth - 1}
+  defp leave_node(node, quote_depth), do: {node, quote_depth}
 
   # The block options are the only bare list among a `with`'s arguments — every
   # `<-` clause is a 3-tuple and every literal list is wrapped in a `:__block__`.

@@ -274,6 +274,56 @@ defmodule Credence.Semantic.NoRescueInWithExpressionFixTest do
     confirm_fix(fix(input), input)
   end
 
+  test "does not rewrite with-rescue syntax inside quote" do
+    input = ~S"""
+    defmodule Sample do
+      def run do
+        with {:ok, value} <- {:ok, 1} do
+          value
+        rescue
+          _ -> :error
+        end
+      end
+
+      def ast do
+        quote do
+          with {:ok, value} <- fetch() do
+            value
+          rescue
+            _ -> :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule Sample do
+      def run do
+        try do
+          with {:ok, value} <- {:ok, 1} do
+            value
+          end
+        rescue
+          _ -> :error
+        end
+      end
+
+      def ast do
+        quote do
+          with {:ok, value} <- fetch() do
+            value
+          rescue
+            _ -> :quoted_error
+          end
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
   test "leaves unparseable source alone" do
     input = ~S"""
     defmodule Sample do
