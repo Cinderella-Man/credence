@@ -38,6 +38,9 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
       only one of them is dead, so the rule declines rather than guess.
     * a `case` may not be emptied. Deleting the last remaining clause would
       produce `case x do end`, which does not compile.
+    * the dead body may not contain a local or remote call. Such a call can be
+      a macro, and macros are expanded during compilation even when their
+      clause can never match; deleting one could remove compile-time effects.
 
   `should_report?/2` re-runs `fix/2`, so a diagnostic the rewrite declines is
   not reported as an issue either — the check and the fix always agree.
@@ -162,12 +165,35 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
   end
 
   # A clause whose whole pattern is the flagged bare atom, on the flagged line.
-  defp dead_clause?({:->, _meta, [[{:__block__, pattern_meta, [atom]}], _body]}, target, line)
+  defp dead_clause?({:->, _meta, [[{:__block__, pattern_meta, [atom]}], body]}, target, line)
        when is_atom(atom) do
-    atom == target and Keyword.get(pattern_meta, :line) == line
+    atom == target and Keyword.get(pattern_meta, :line) == line and not contains_call?(body)
   end
 
   defp dead_clause?(_clause, _target, _line), do: false
+
+  # Local calls and remote calls have the same AST whether they resolve to a
+  # function or a macro. Only language special forms/operators can be ruled
+  # out without expansion, so any other call makes deletion unsafe.
+  defp contains_call?(ast) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        node, true ->
+          {node, true}
+
+        {name, _meta, args} = node, false when is_atom(name) and is_list(args) ->
+          arity = length(args)
+          {node, not (Macro.special_form?(name, arity) or Macro.operator?(name, arity))}
+
+        {{:., _dot_meta, _target}, _meta, args} = node, false when is_list(args) ->
+          {node, true}
+
+        node, false ->
+          {node, false}
+      end)
+
+    found?
+  end
 
   defp line(%{position: {line, _col}}) when is_integer(line), do: line
   defp line(%{position: line}) when is_integer(line), do: line

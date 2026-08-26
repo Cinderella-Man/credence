@@ -139,6 +139,30 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByTypeFixTest do
     confirm_fix(fix(input, 5), expected)
   end
 
+  test "does not delete a dead clause whose body expands a macro" do
+    input = """
+    defmodule CredenceUnreachableCaseCompileEffect do
+      defmacrop explode do
+        raise "unreachable macro expanded"
+      end
+
+      def sort_order(a, b) do
+        case DateTime.compare(a, b) do
+          :eq -> :same
+          :dt -> explode()
+        end
+      end
+    end
+    """
+
+    emitted = fix(input, 9)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(input)
+
+    confirm_fix(emitted, input)
+  end
+
   test "keeps a live clause with the same atom in another case" do
     input = """
     defmodule CredenceUnreachableCaseOtherCase do
