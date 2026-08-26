@@ -586,6 +586,13 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   end
 
   describe "Enum.length → length" do
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"Enum.length(x)", Enum.length(xs)}', "Enum.length/1 is undefined or private"),
+        ~S'{"Enum.length(x)", length(xs)}'
+      )
+    end
+
     test "direct call" do
       confirm_fix(
         fix(

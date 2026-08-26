@@ -488,27 +488,7 @@ defmodule Credence.Semantic.UndefinedFunction do
   end
 
   defp replace_drop_module(source, line_no, mod, fun, new_fun) do
-    # Replace Module.fun with new_fun — preserves args, strips module prefix
-    # Match both Module.fun(...) and Module.fun forms
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} ->
-        line
-        |> String.replace("#{mod}.#{fun}(", "#{new_fun}(", global: false)
-        |> then(fn result ->
-          if result == line do
-            # Try without parens (e.g. piped Enum.length())
-            String.replace(line, "#{mod}.#{fun}", new_fun, global: false)
-          else
-            result
-          end
-        end)
-
-      {line, _} ->
-        line
-    end)
+    replace_first_on_line(source, line_no, "#{mod}.#{fun}", new_fun)
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do
@@ -624,39 +604,13 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp rename_add_arg_on_line(source, line_no, old_call, new_call, extra_arg) do
     edit_line(source, line_no, fn line, shadow ->
-      # The shadow decides only WHETHER this line has a code-position call;
-      # `do_rename_add_arg/4` rebuilds from the real bytes.
-      if :binary.match(shadow, "#{old_call}(") == :nomatch,
-        do: line,
-        else: do_rename_add_arg(line, old_call, new_call, extra_arg)
+      pattern = Regex.compile!(Regex.escape(old_call) <> "\\(")
+
+      rewrite_parenthesized(line, shadow, pattern, false, fn inner, _shadow_inner ->
+        args = if String.trim(inner) == "", do: extra_arg, else: "#{inner}, #{extra_arg}"
+        "#{new_call}(#{args})"
+      end)
     end)
-  end
-
-  defp do_rename_add_arg(line, old_call, new_call, extra_arg) do
-    case :binary.match(line, "#{old_call}(") do
-      {match_start, match_len} ->
-        paren_pos = match_start + match_len - 1
-        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
-
-        case find_matching_close(String.to_charlist(after_paren)) do
-          {:ok, inner, rest_after} ->
-            before = String.slice(line, 0, match_start)
-            trimmed_inner = String.trim(inner)
-
-            args_str =
-              if trimmed_inner == "",
-                do: extra_arg,
-                else: "#{inner}, #{extra_arg}"
-
-            "#{before}#{new_call}(#{args_str})#{rest_after}"
-
-          :unbalanced ->
-            line
-        end
-
-      :nomatch ->
-        line
-    end
   end
 
   #
@@ -664,47 +618,24 @@ defmodule Credence.Semantic.UndefinedFunction do
   # Finds the call, extracts + splits args, negates the one at arg_index.
 
   defp rename_negate_arg_on_line(source, line_no, old_call, new_call, arg_index) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> do_rename_negate_arg(line, old_call, new_call, arg_index)
-      {line, _} -> line
+    edit_line(source, line_no, fn line, shadow ->
+      pattern = Regex.compile!(Regex.escape(old_call) <> "\\(")
+
+      rewrite_parenthesized(line, shadow, pattern, false, fn inner, _shadow_inner ->
+        args = split_args(inner)
+        adjusted_index = if arg_index >= length(args), do: length(args) - 1, else: arg_index
+
+        negated_args =
+          args
+          |> Enum.with_index()
+          |> Enum.map(fn
+            {arg, ^adjusted_index} -> negate_expr(arg)
+            {arg, _} -> arg
+          end)
+
+        "#{new_call}(#{Enum.join(negated_args, ", ")})"
+      end)
     end)
-  end
-
-  defp do_rename_negate_arg(line, old_call, new_call, arg_index) do
-    case :binary.match(line, "#{old_call}(") do
-      {match_start, match_len} ->
-        paren_pos = match_start + match_len - 1
-        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
-
-        case find_matching_close(String.to_charlist(after_paren)) do
-          {:ok, inner, rest_after} ->
-            before = String.slice(line, 0, match_start)
-            args = split_args(inner)
-
-            # In piped form, the first arg is implicit — adjust index
-            adjusted_index =
-              if arg_index >= length(args), do: length(args) - 1, else: arg_index
-
-            negated_args =
-              args
-              |> Enum.with_index()
-              |> Enum.map(fn
-                {arg, ^adjusted_index} -> negate_expr(arg)
-                {arg, _} -> arg
-              end)
-
-            "#{before}#{new_call}(#{Enum.join(negated_args, ", ")})#{rest_after}"
-
-          :unbalanced ->
-            line
-        end
-
-      :nomatch ->
-        line
-    end
   end
 
   defp negate_expr(expr) do
@@ -773,69 +704,66 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp wrap_args_on_line(source, line_no, old_name, new_qualified) do
     edit_line(source, line_no, fn line, shadow ->
-      # `do_wrap_args/3` scans for the call and rebuilds the argument list, so it
-      # needs the real bytes; the shadow decides only WHETHER this line has a
-      # code-position call to act on.
-      if SourceMask.replace_code(shadow, shadow, old_name <> "(", "", global: false) == shadow,
-        do: line,
-        else: do_wrap_args(line, old_name, new_qualified)
+      pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
+
+      rewrite_parenthesized(line, shadow, pattern, true, fn inner, _shadow_inner ->
+        "#{new_qualified}([#{inner}])"
+      end)
     end)
-  end
-
-  defp do_wrap_args(line, old_name, new_qualified) do
-    pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
-
-    case Regex.run(pattern, line, return: :index) do
-      [{match_start, match_len}] ->
-        paren_pos = match_start + match_len - 1
-        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
-
-        case find_matching_close(String.to_charlist(after_paren)) do
-          {:ok, inner, rest_after} ->
-            before = String.slice(line, 0, match_start)
-            rest_wrapped = do_wrap_args(rest_after, old_name, new_qualified)
-            "#{before}#{new_qualified}([#{inner}])#{rest_wrapped}"
-
-          :unbalanced ->
-            line
-        end
-
-      _ ->
-        line
-    end
   end
 
   @range_pattern Regex.compile!("(?<![.a-zA-Z0-9_])range\\(")
 
   defp to_range_on_line(source, line_no, arity) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> do_to_range(line, arity)
-      {line, _} -> line
+    edit_line(source, line_no, fn line, shadow ->
+      rewrite_parenthesized(line, shadow, @range_pattern, true, fn inner, _shadow_inner ->
+        case build_range(arity, split_args(inner)) do
+          {:ok, range_expr} -> range_expr
+          :error -> :keep
+        end
+      end)
     end)
   end
 
-  defp do_to_range(line, arity) do
-    case Regex.run(@range_pattern, line, return: :index) do
-      [{match_start, match_len}] ->
-        paren_pos = match_start + match_len - 1
-        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+  defp build_range(1, [n]), do: {:ok, "0..#{n} - 1"}
+  defp build_range(2, [a, b]), do: {:ok, "#{a}..#{b} - 1"}
 
-        case find_matching_close(String.to_charlist(after_paren)) do
-          {:ok, inner, rest_after} ->
-            before = String.slice(line, 0, match_start)
-            args = split_args(inner)
+  defp build_range(3, [a, b, c]),
+    do: {:ok, "#{a}..(#{b} - div(#{c}, abs(#{c})))//#{c}"}
 
-            case build_range(arity, args) do
-              {:ok, range_expr} ->
-                rest_fixed = do_to_range(rest_after, arity)
-                "#{before}#{range_expr}#{rest_fixed}"
+  defp build_range(_, _), do: :error
 
-              :error ->
-                line
-            end
+  # Match positions come from the byte-preserving shadow, so every splice uses
+  # binary_part/3 as well. This keeps literals/comments invisible and avoids
+  # mixing byte offsets with String.slice/2's grapheme offsets.
+  defp rewrite_parenthesized(line, shadow, pattern, global, rewrite) do
+    case Regex.run(pattern, shadow, return: :index) do
+      [{start, len}] ->
+        open = start + len - 1
+
+        case matching_close(shadow, open) do
+          {:ok, close} ->
+            inner_start = open + 1
+            inner = binary_part(line, inner_start, close - inner_start)
+            shadow_inner = binary_part(shadow, inner_start, close - inner_start)
+            before = binary_part(line, 0, start)
+            matched = binary_part(line, start, close - start + 1)
+            rest_start = close + 1
+            rest = binary_part(line, rest_start, byte_size(line) - rest_start)
+            shadow_rest = binary_part(shadow, rest_start, byte_size(shadow) - rest_start)
+
+            replacement =
+              case rewrite.(inner, shadow_inner) do
+                :keep -> matched
+                replacement -> replacement
+              end
+
+            fixed_rest =
+              if global,
+                do: rewrite_parenthesized(rest, shadow_rest, pattern, true, rewrite),
+                else: rest
+
+            before <> replacement <> fixed_rest
 
           :unbalanced ->
             line
@@ -845,11 +773,6 @@ defmodule Credence.Semantic.UndefinedFunction do
         line
     end
   end
-
-  defp build_range(1, [n]), do: {:ok, "0..#{n} - 1"}
-  defp build_range(2, [a, b]), do: {:ok, "#{a}..#{b} - 1"}
-  defp build_range(3, [a, b, c]), do: {:ok, "#{a}..#{b}//#{c}"}
-  defp build_range(_, _), do: :error
 
   defp split_args(content) do
     content
@@ -876,22 +799,4 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp do_split_args([c | rest], depth, current, args),
     do: do_split_args(rest, depth, [c | current], args)
-
-  defp find_matching_close(chars), do: do_find_close(chars, 0, [])
-
-  defp do_find_close([], _depth, _acc), do: :unbalanced
-
-  defp do_find_close([?) | rest], 0, acc) do
-    inner = acc |> Enum.reverse() |> List.to_string()
-    {:ok, inner, List.to_string(rest)}
-  end
-
-  defp do_find_close([?) | rest], depth, acc),
-    do: do_find_close(rest, depth - 1, [?) | acc])
-
-  defp do_find_close([?( | rest], depth, acc),
-    do: do_find_close(rest, depth + 1, [?( | acc])
-
-  defp do_find_close([c | rest], depth, acc),
-    do: do_find_close(rest, depth, [c | acc])
 end

@@ -138,6 +138,20 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
   # ── max/3,4,5 wrap-args ────────────────────────────────────────
 
   describe "max/3 → Enum.max([a, b, c])" do
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"max(a, b, c)", max(a, b, c)}', msg("max", 3)),
+        ~S'{"max(a, b, c)", Enum.max([a, b, c])}'
+      )
+    end
+
+    test "uses byte offsets when non-ASCII text precedes the call" do
+      confirm_fix(
+        fix(~S'{"é", max(a, b, c)}', msg("max", 3)),
+        ~S'{"é", Enum.max([a, b, c])}'
+      )
+    end
+
     test "three simple args" do
       confirm_fix(
         fix(
