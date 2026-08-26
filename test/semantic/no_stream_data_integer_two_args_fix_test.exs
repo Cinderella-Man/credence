@@ -1,8 +1,9 @@
 defmodule Credence.Semantic.NoStreamDataIntegerTwoArgsFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoStreamDataIntegerTwoArgs
 
   @message "undefined function integer/2 (expected M to define such a function or for it to be imported, but none are available)"
@@ -13,6 +14,20 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgsFixTest do
       message: @message,
       position: position
     })
+  end
+
+  defp compile_fixture(source), do: RuleHelpers.compile_and_capture(source)
+
+  test "fixture compilation is isolated from top-level exits" do
+    parent = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        send(parent, {:compile_result, compile_fixture("exit(:fixture_exit)")})
+      end)
+
+    assert_receive {:compile_result, {:error, [_diagnostic]}}
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
   end
 
   test "rewrites the flagged call's comma into a range" do
@@ -80,7 +95,7 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgsFixTest do
 
     fixed = Credence.Semantic.fix(input)
     confirm_fix(fixed, expected)
-    assert compiles?(fixed)
+    assert {:ok, _diagnostics} = compile_fixture(fixed)
   end
 
   test "rewrites a negated integer literal" do
@@ -101,7 +116,7 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgsFixTest do
     """
 
     confirm_fix(fix(input, {4, 20}), expected)
-    assert compiles?(fix(input, {4, 20}))
+    assert {:ok, _diagnostics} = compile_fixture(fix(input, {4, 20}))
   end
 
   test "rewrites a call whose arguments straddle lines" do
