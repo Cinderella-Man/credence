@@ -24,6 +24,7 @@ defmodule Credence.Semantic.NoMapHas do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # Match the target MFA only when the module is exactly the stdlib `Map`:
   # a leading boundary (start-of-string or a non-word, non-dot char) keeps
@@ -52,21 +53,47 @@ defmodule Credence.Semantic.NoMapHas do
   @impl true
   def fix(source, diagnostic) do
     line_no = line(diagnostic)
+    column = column(diagnostic)
 
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
     |> Enum.map_join("\n", fn
-      # Rewrite only a real `Map.has?` token — the boundary capture keeps a
-      # `SomeMap.has?` sharing the flagged line untouched (check/fix agree).
-      {l, ^line_no} ->
-        Regex.replace(~r/(^|[^\w.])Map\.has\?/, l, "\\1Map.has_key?", global: false)
+      {{line, shadow}, ^line_no} ->
+        replace_diagnosed_call(line, shadow, column)
 
-      {l, _} ->
-        l
+      {{line, _shadow}, _} ->
+        line
     end)
+  end
+
+  defp replace_diagnosed_call(line, shadow, column) when is_integer(column) do
+    with {:ok, offset} <- SourceMask.byte_offset(shadow, 1, column),
+         "has?" <- binary_part(shadow, offset, min(4, byte_size(shadow) - offset)) do
+      <<before::binary-size(^offset), "has?", after_call::binary>> = line
+      before <> "has_key?" <> after_call
+    else
+      _ -> replace_literal_map_call(line, shadow)
+    end
+  end
+
+  defp replace_diagnosed_call(line, shadow, _column), do: replace_literal_map_call(line, shadow)
+
+  # Line-only diagnostics predate compiler columns. Keep their established,
+  # conservative behavior while ensuring the match is in code, not prose.
+  defp replace_literal_map_call(line, shadow) do
+    SourceMask.replace_code(
+      line,
+      shadow,
+      ~r/(?:^|[^\w.])\KMap\.has\?/,
+      "Map.has_key?",
+      global: false
+    )
   end
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+
+  defp column(%{position: {_line, column}}) when is_integer(column), do: column
+  defp column(_diagnostic), do: nil
 end

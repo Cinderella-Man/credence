@@ -4,6 +4,7 @@ defmodule Credence.Semantic.NoMapHasFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoMapHas
+  alias Credence.RuleHelpers
 
   @matching_msg "Map.has?/2 is undefined or private"
 
@@ -61,5 +62,45 @@ defmodule Credence.Semantic.NoMapHasFixTest do
     """
 
     assert valid_syntax?(fix(input, 3))
+  end
+
+  test "leaves a same-line string alone and repairs the diagnosed call" do
+    input = """
+    defmodule NoMapHasStringRegression do
+      def check(map, key), do: {"Map.has?", Map.has?(map, key)}
+    end
+    """
+
+    expected = """
+    defmodule NoMapHasStringRegression do
+      def check(map, key), do: {"Map.has?", Map.has_key?(map, key)}
+    end
+    """
+
+    assert {:ok, diagnostics} = RuleHelpers.compile_and_capture(input)
+    diagnostic = Enum.find(diagnostics, &NoMapHas.match?/1)
+    assert diagnostic
+    confirm_fix(NoMapHas.fix(input, diagnostic), expected)
+  end
+
+  test "repairs an aliased Map call identified by the compiler" do
+    input = """
+    defmodule NoMapHasAliasRegression do
+      alias Map, as: M
+      def check(map, key), do: M.has?(map, key)
+    end
+    """
+
+    expected = """
+    defmodule NoMapHasAliasRegression do
+      alias Map, as: M
+      def check(map, key), do: M.has_key?(map, key)
+    end
+    """
+
+    assert {:ok, diagnostics} = RuleHelpers.compile_and_capture(input)
+    diagnostic = Enum.find(diagnostics, &NoMapHas.match?/1)
+    assert diagnostic
+    confirm_fix(NoMapHas.fix(input, diagnostic), expected)
   end
 end
