@@ -4,6 +4,7 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouterFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoMatchWithMethodStringInPlugRouter
+  alias Credence.RuleHelpers
 
   @matching_msg "no function clause matching in Access.get/3"
 
@@ -13,6 +14,56 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouterFixTest do
       message: @matching_msg,
       position: {line, 1}
     })
+  end
+
+  test "real Plug.Router diagnostic is dispatched and repaired by the Semantic pipeline" do
+    input = """
+    defmodule NoMatchWithMethodStringPipelineFixture do
+      use Plug.Router
+
+      plug :match
+      plug :dispatch
+
+      match "POST", "/api/webhooks/stripe" do
+        send_resp(conn, 200, "ok")
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoMatchWithMethodStringPipelineFixture do
+      use Plug.Router
+
+      plug(:match)
+      plug(:dispatch)
+
+      post "/api/webhooks/stripe" do
+        send_resp(conn, 200, "ok")
+      end
+    end
+    """
+
+    control = """
+    defmodule NoMatchWithMethodStringPipelineControl do
+      use Plug.Router
+
+      plug(:match)
+      plug(:dispatch)
+
+      post "/api/webhooks/stripe" do
+        send_resp(conn, 200, "ok")
+      end
+    end
+    """
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoMatchWithMethodStringInPlugRouter.match?/1)
+
+    {emitted, applied} = Credence.Semantic.fix_with_trace(input)
+    confirm_fix(emitted, String.trim_trailing(expected))
+    assert applied == [{NoMatchWithMethodStringInPlugRouter, 1}]
+    assert {:ok, []} = RuleHelpers.compile_and_capture(emitted)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(control)
   end
 
   test "fixes match POST to post macro" do
