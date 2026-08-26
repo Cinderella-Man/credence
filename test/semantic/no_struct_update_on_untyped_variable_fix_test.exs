@@ -15,7 +15,41 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
   end
 
   describe "rewrites" do
-    test "adds the struct pattern to the parameter, leaving every other byte alone" do
+    test "preserves plain-map returns and the original exception classes" do
+      source = """
+      defmodule SagaRuntimeEquivalenceNSUOUV do
+        defstruct steps: []
+
+        def execute(context, action_fn) do
+          %__MODULE__{context | steps: [action_fn]}
+        end
+
+        def outcome(value) do
+          try do
+            {:ok, execute(value, :action)}
+          rescue
+            error -> {:raise, error.__struct__}
+          end
+        end
+      end
+
+      outcomes = Enum.map([%{steps: []}, %{}, nil, 7], &SagaRuntimeEquivalenceNSUOUV.outcome/1)
+
+      unless outcomes == [
+               {:ok, %{steps: [:action]}},
+               {:raise, KeyError},
+               {:raise, BadMapError},
+               {:raise, BadMapError}
+             ], do: raise("unexpected outcomes: \#{inspect(outcomes)}")
+      """
+
+      assert {:ok, [diagnostic]} = Credence.RuleHelpers.compile_and_capture(source)
+      fixed = Rule.fix(source, diagnostic)
+      refute fixed == source
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+    end
+
+    test "removes the struct qualifier, leaving every other byte alone" do
       input = """
       defmodule Saga do
         defstruct steps: []
@@ -34,9 +68,9 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule Saga do
         defstruct steps: []
 
-        def execute(%__MODULE__{} = context, action_fn)
+        def execute(context, action_fn)
             when is_function(action_fn, 1) do
-          %__MODULE__{
+          %{
             context
             | steps: context.steps ++ [%{type: :compensable, action: action_fn}]
           }
@@ -63,8 +97,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule Saga do
         defstruct steps: []
 
-        def execute(%__MODULE__{} = context, action_fn) do
-          %__MODULE__{context | steps: context.steps ++ [action_fn]}
+        def execute(context, action_fn) do
+          %{context | steps: context.steps ++ [action_fn]}
         end
       end
       """
@@ -95,8 +129,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
           do_execute(context, action_fn)
         end
 
-        defp do_execute(%__MODULE__{} = context, action_fn) do
-          %__MODULE__{context | steps: context.steps ++ [action_fn]}
+        defp do_execute(context, action_fn) do
+          %{context | steps: context.steps ++ [action_fn]}
         end
       end
       """
@@ -119,8 +153,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule Saga do
         defstruct steps: []
 
-        def step(name, %__MODULE__{} = saga, action_fn) do
-          %__MODULE__{saga | steps: [{name, action_fn}]}
+        def step(name, saga, action_fn) do
+          %{saga | steps: [{name, action_fn}]}
         end
       end
       """
@@ -143,8 +177,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule Saga do
         defstruct steps: []
 
-        def execute(%Saga{} = context, action_fn) do
-          %Saga{context | steps: [action_fn]}
+        def execute(context, action_fn) do
+          %{context | steps: [action_fn]}
         end
       end
       """
@@ -167,8 +201,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule My.Saga do
         defstruct steps: []
 
-        def execute(%My.Saga{} = context, action_fn) do
-          %My.Saga{context | steps: [action_fn]}
+        def execute(context, action_fn) do
+          %{context | steps: [action_fn]}
         end
       end
       """
@@ -195,12 +229,12 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
       defmodule Saga do
         defstruct steps: []
 
-        def one(%__MODULE__{} = context, action_fn) do
-          %__MODULE__{context | steps: [action_fn]}
+        def one(context, action_fn) do
+          %{context | steps: [action_fn]}
         end
 
-        def two(%__MODULE__{} = context) do
-          %__MODULE__{context | steps: []}
+        def two(context) do
+          %{context | steps: []}
         end
       end
       """
@@ -227,8 +261,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableFixTest do
         defstruct steps: []
 
         # keep me
-        def execute(%__MODULE__{} = context, action_fn) do
-          %__MODULE__{context | steps: context.steps ++ [   action_fn]}
+        def execute(context, action_fn) do
+          %{context | steps: context.steps ++ [   action_fn]}
         end
 
         def untouched, do:    :ok

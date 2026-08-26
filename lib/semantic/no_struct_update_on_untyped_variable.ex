@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
   @moduledoc """
-  Adds the missing `%Struct{} =` pattern to a function parameter that is used
-  as the source of a struct update in that clause's body.
+  Removes the misleading struct qualifier from an update whose source is an
+  untyped variable.
 
   LLMs commonly write:
 
@@ -34,42 +34,31 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
   from disk. `should_report?/2` re-runs `fix/2` to keep `analyze` from flagging a
   shape the fix declines.
 
-  The fix pattern-matches the struct in the head, exactly as the compiler asks:
+  The fix keeps the update's runtime semantics while dropping the assertion the
+  compiler cannot prove:
 
-      def execute(%__MODULE__{} = context, action_fn) when is_function(action_fn, 1) do
+      def execute(context, action_fn) when is_function(action_fn, 1) do
+        %{context | steps: context.steps ++ [action_fn]}
 
-  It is applied as a `Sourceror` patch over the parameter's own range, so every
-  other byte of the file (layout, comments, unrelated lines) survives verbatim.
+  It is applied as a `Sourceror` patch over the struct name alone, so every other
+  byte of the file (layout, comments, unrelated lines) survives verbatim.
 
   ## What is deliberately left alone
 
-  Adding a pattern to a head *narrows what the clause accepts*, so the rule only
-  fires where that provably cannot turn a returned value into a raise, or a raise
-  into a value. All three conditions must hold:
+  The rule remains deliberately narrow. All three conditions must hold:
 
-    * **The clause body is exactly the struct update** — nothing before it, no
-      `__block__`, no `rescue`/`after`. A struct update nested in a branch
-      (`if valid?(context), do: %__MODULE__{context | ...}, else: :error`) is
-      skipped: there, a non-struct argument returns `:error` today and would
-      raise `FunctionClauseError` after the fix. A body with earlier statements
-      is skipped too, since their side effects would stop running for arguments
-      that reach the update and crash.
-    * **The name/arity has exactly one clause in the file** — otherwise a
-      non-struct argument that raises `BadStructError` today could instead fall
-      through to a later clause and quietly return a value.
+    * **The clause body is exactly the struct update** — nested updates and
+      clauses with preceding statements remain outside this rule's established
+      matching envelope.
+    * **The name/arity has exactly one clause in the file.**
     * **The variable appears exactly once as a bare parameter**, and the struct
-      being updated is spelled `__MODULE__` or a plain alias, so the pattern the
-      fix writes is the same struct the body already demands.
+      being updated is spelled `__MODULE__` or a plain alias.
 
-  Under those conditions the rewrite is answer-preserving. Verified by running
-  both versions over `%Saga{}`, a plain map with the right keys, an empty map,
-  another struct, `nil`, `7`, `"7"`, a charlist, combining-accent and emoji
-  strings, `[]` and an atom: an argument that *is* the struct returns an
-  identical value, and every argument that is not already raised on the
-  (unconditional, first) struct update — `FunctionClauseError`, `KeyError` or
-  `BadMapError` depending on the value — and now raises `FunctionClauseError` on
-  the head instead. A raise either way: no returned value changes, nothing that
-  raised starts returning, and no side effect is skipped.
+  `%Struct{value | fields}` and `%{value | fields}` perform the same map-update
+  operation at runtime; the struct name supplies compile-time field validation
+  and the warning, but does not coerce or validate `value`. Removing only that
+  qualifier therefore preserves returned values and the original `KeyError` or
+  `BadMapError` for invalid maps and non-maps.
 
   ## Bad
 
@@ -86,8 +75,8 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
       defmodule SagaNSUOUV do
         defstruct steps: []
 
-        def execute(%__MODULE__{} = other, action_fn) do
-          %__MODULE__{other | steps: [action_fn]}
+        def execute(other, action_fn) do
+          %{other | steps: [action_fn]}
         end
       end
   """
@@ -165,10 +154,9 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
   defp prepend_patch(acc, head, body, var_atom, counts) do
     with {name, _, params} when is_atom(name) and is_list(params) <- unwrap_when(head),
          true <- Map.get(counts, {name, length(params)}) == 1,
-         {:ok, struct_name} <- sole_struct_update(body, var_atom),
-         {:ok, var_node} <- sole_bare_param(params, var_atom) do
-      change = "%#{struct_name}{} = #{var_atom}"
-      [%{range: Sourceror.get_range(var_node), change: change} | acc]
+         {:ok, prefix_range} <- sole_struct_update(body, var_atom),
+         {:ok, _var_node} <- sole_bare_param(params, var_atom) do
+      [%{range: prefix_range, change: ""} | acc]
     else
       _ -> acc
     end
@@ -178,26 +166,29 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
   defp unwrap_when(head), do: head
 
   # The body must BE `%Struct{var | ...}` — see "What is deliberately left
-  # alone". Returns the struct's printed name.
+  # alone". Returns the range covering `%Struct`, immediately before the map.
   defp sole_struct_update(
-         {:%, _, [struct_expr, {:%{}, _, [{:|, _, [{var_atom, _, nil} | _]}]}]},
+         {:%, _, [struct_expr, {:%{}, _, [{:|, _, [{var_atom, _, nil} | _]}]}]} = update,
          var_atom
        ),
-       do: struct_name(struct_expr)
+       do: struct_prefix_range(update, struct_expr)
 
   defp sole_struct_update(_, _), do: :error
 
-  defp struct_name({:__MODULE__, _, ctx}) when is_atom(ctx), do: {:ok, "__MODULE__"}
+  defp struct_prefix_range(update, {:__MODULE__, _, ctx} = struct_expr) when is_atom(ctx),
+    do: prefix_range(update, struct_expr)
 
-  defp struct_name({:__aliases__, _, segments}) do
+  defp struct_prefix_range(update, {:__aliases__, _, segments} = struct_expr) do
     if segments != [] and Enum.all?(segments, &is_atom/1) do
-      {:ok, Enum.map_join(segments, ".", &Atom.to_string/1)}
+      prefix_range(update, struct_expr)
     else
       :error
     end
   end
 
-  defp struct_name(_), do: :error
+  defp struct_prefix_range(_, _), do: :error
+
+  defp prefix_range(_update, struct_expr), do: {:ok, Sourceror.get_range(struct_expr)}
 
   defp sole_bare_param(params, var_atom) do
     case Enum.filter(params, &match?({^var_atom, _, nil}, &1)) do
