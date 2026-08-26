@@ -8,7 +8,7 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
   existing keys — missing keys cause "expected a map with key :X in map update
   syntax".
 
-  The fix adds the missing key with a `nil` default to the original map literal.
+  The fix changes the failing update to `Map.put/3`, which can add a missing key.
   For example:
 
       state = %{counter: 0, data: []}
@@ -16,8 +16,8 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
   becomes:
 
-      state = %{counter: 0, data: [], timer_ref: nil}
-      {:ok, %{state | timer_ref: timer_ref}}
+      state = %{counter: 0, data: []}
+      {:ok, Map.put(state, :timer_ref, timer_ref)}
 
   ## Bad
 
@@ -33,8 +33,8 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
       defmodule ExampleNMUMK do
         def setup do
-          state = %{counter: 0, data: [], timer_ref: nil}
-          state = %{state | timer_ref: nil}
+          state = %{counter: 0, data: []}
+          state = Map.put(state, :timer_ref, nil)
           state
         end
       end
@@ -66,32 +66,38 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
   end
 
   @impl true
-  def fix(source, %{message: msg}) do
+  def fix(source, %{message: msg} = diagnostic) do
     with {:ok, key} <- extract_key(msg),
          {:ok, var} <- extract_var(msg),
          {:ok, ast} <- Sourceror.parse_string(source) do
       key_atom = String.to_atom(key)
       var_atom = String.to_atom(var)
+      diagnostic_line = line(diagnostic)
+
+      candidates =
+        Macro.prewalk(ast, [], fn node, acc ->
+          if matching_update?(node, var_atom, key_atom),
+            do: {node, [node | acc]},
+            else: {node, acc}
+        end)
+        |> elem(1)
+
+      has_missing_literal? =
+        Macro.prewalk(ast, false, fn node, found ->
+          {node, found or missing_literal_assignment?(node, var_atom, key_atom)}
+        end)
+        |> elem(1)
+
+      target =
+        if has_missing_literal? do
+          Enum.find(candidates, &(node_line(&1) == diagnostic_line)) ||
+            if(length(candidates) == 1, do: hd(candidates))
+        end
 
       {result, changed} =
         Macro.prewalk(ast, false, fn
-          {:=, meta, [{^var_atom, vmeta, nil}, {:%{}, map_meta, pairs}]} = node, acc ->
-            cond do
-              # Skip `var = %{var | ...}` update-reassignments: their pairs are a
-              # single `:|` node, not literal key/value pairs. Appending a pair
-              # there mangles the update into `%{var | [k: nil], k: nil}`.
-              update_map?(pairs) ->
-                {node, acc}
-
-              key_exists?(pairs, key_atom) ->
-                {node, acc}
-
-              true ->
-                new_pair = build_keyword_pair(key_atom)
-
-                {{:=, meta, [{var_atom, vmeta, nil}, {:%{}, map_meta, pairs ++ [new_pair]}]},
-                 true}
-            end
+          ^target = node, false when not is_nil(target) ->
+            {replace_update(node, key_atom), true}
 
           node, acc ->
             {node, acc}
@@ -124,22 +130,45 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
     end
   end
 
-  defp update_map?([{:|, _, _}]), do: true
-  defp update_map?(_), do: false
-
-  defp key_exists?(pairs, key_atom) do
-    Enum.any?(pairs, fn
-      {{:__block__, _, [^key_atom]}, _} -> true
-      _ -> false
-    end)
+  defp matching_update?(
+         {:%{}, _, [{:|, _, [{var_atom, _, nil}, pairs]}]},
+         var_atom,
+         key_atom
+       ) do
+    Enum.any?(pairs, &match?({{:__block__, _, [^key_atom]}, _}, &1))
   end
 
-  defp build_keyword_pair(key_atom) do
-    {
-      {:__block__, [format: :keyword, trailing_comments: [], leading_comments: []], [key_atom]},
-      {:__block__, [trailing_comments: [], leading_comments: []], [nil]}
-    }
+  defp matching_update?(_node, _var_atom, _key_atom), do: false
+
+  defp missing_literal_assignment?(
+         {:=, _, [{var_atom, _, nil}, {:%{}, _, pairs}]},
+         var_atom,
+         key_atom
+       ) do
+    not match?([{:|, _, _}], pairs) and
+      not Enum.any?(pairs, &match?({{:__block__, _, [^key_atom]}, _}, &1))
   end
+
+  defp missing_literal_assignment?(_node, _var_atom, _key_atom), do: false
+
+  defp replace_update({:%{}, map_meta, [{:|, pipe_meta, [var, pairs]}]}, key_atom) do
+    {missing, remaining} =
+      Enum.split_with(pairs, &match?({{:__block__, _, [^key_atom]}, _}, &1))
+
+    [{_key, value}] = missing
+
+    base =
+      if remaining == [], do: var, else: {:%{}, map_meta, [{:|, pipe_meta, [var, remaining]}]}
+
+    key = {:__block__, [], [key_atom]}
+
+    quote do
+      Map.put(unquote(base), unquote(key), unquote(value))
+    end
+  end
+
+  defp node_line({_, meta, _}) when is_list(meta), do: meta[:line]
+  defp node_line(_), do: nil
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

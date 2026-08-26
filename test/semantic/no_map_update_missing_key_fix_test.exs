@@ -26,8 +26,8 @@ defmodule Credence.Semantic.NoMapUpdateMissingKeyFixTest do
     defmodule Example do
       def setup do
         timer_ref = Process.send_after(self(), :tick, 1000)
-        state = %{counter: 0, data: [], timer_ref: nil}
-        {:ok, %{state | timer_ref: timer_ref}}
+        state = %{counter: 0, data: []}
+        {:ok, Map.put(state, :timer_ref, timer_ref)}
       end
     end
     """
@@ -92,8 +92,8 @@ defmodule Credence.Semantic.NoMapUpdateMissingKeyFixTest do
     expected = """
     defmodule Example do
       def setup do
-        state = %{counter: 0, data: [], timer_ref: nil}
-        state = %{state | timer_ref: nil}
+        state = %{counter: 0, data: []}
+        state = Map.put(state, :timer_ref, nil)
         state
       end
     end
@@ -169,15 +169,117 @@ defmodule Credence.Semantic.NoMapUpdateMissingKeyFixTest do
           clock: clock,
           ttl_ms: ttl_ms,
           cleanup_interval_ms: cleanup_interval_ms,
-          processor: processor,
-          timer_ref: nil
+          processor: processor
         }
 
-        {:ok, %{state | timer_ref: timer_ref}}
+        {:ok, Map.put(state, :timer_ref, timer_ref)}
       end
     end
     """
 
     confirm_fix(fix(input, real_message, 50), expected)
+  end
+
+  test "repairs only the diagnosed update when another function binds the same variable" do
+    input = """
+    defmodule NoMapUpdateMissingKeyLexicalScopeFixture do
+      def unrelated do
+        state = %{counter: 0}
+        state
+      end
+
+      def diagnosed do
+        state = %{counter: 0}
+        %{state | timer_ref: :set}
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoMapUpdateMissingKeyLexicalScopeFixture do
+      def unrelated do
+        state = %{counter: 0}
+        state
+      end
+
+      def diagnosed do
+        state = %{counter: 0}
+        Map.put(state, :timer_ref, :set)
+      end
+    end
+    """
+
+    emitted = fix(input, @message, 9)
+
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "does not rewrite a map literal used as a pattern" do
+    input = """
+    defmodule NoMapUpdateMissingKeyPatternFixture do
+      def run(input) do
+        matched =
+          case input do
+            state = %{counter: 0} -> state
+            _ -> :no_match
+          end
+
+        state = %{counter: 1}
+        {matched, %{state | timer_ref: :set}}
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoMapUpdateMissingKeyPatternFixture do
+      def run(input) do
+        matched =
+          case input do
+            state = %{counter: 0} -> state
+            _ -> :no_match
+          end
+
+        state = %{counter: 1}
+        {matched, Map.put(state, :timer_ref, :set)}
+      end
+    end
+    """
+
+    emitted = fix(input, @message, 11)
+
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "does not change the map on a path before the diagnosed update" do
+    input = """
+    defmodule NoMapUpdateMissingKeyEarlyReturnFixture do
+      def run(stop) do
+        state = %{counter: 0}
+        if stop, do: state, else: %{state | timer_ref: :set}
+      end
+    end
+    """
+
+    expected = """
+    defmodule NoMapUpdateMissingKeyEarlyReturnFixture do
+      def run(stop) do
+        state = %{counter: 0}
+        if stop, do: state, else: Map.put(state, :timer_ref, :set)
+      end
+    end
+    """
+
+    emitted = fix(input, @message, 4)
+
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
   end
 end
