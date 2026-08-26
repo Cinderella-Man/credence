@@ -1,8 +1,9 @@
 defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, compiles?: 1, valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoStringReplaceArityMismatch
 
   @real_message "no function clause matching in String.replace/4"
@@ -59,7 +60,9 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
       """
 
       confirm_fix(fix(input, @real_message, 3), expected)
-      assert compiles?(fix(input, @real_message, 3))
+
+      assert {:ok, _diagnostics} =
+               RuleHelpers.compile_and_capture(fix(input, @real_message, 3))
     end
 
     test "multi-arity callback over a regex literal" do
@@ -214,6 +217,14 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
     end
     """
 
+    test "fixture compilation is bounded when top-level code exits" do
+      assert {:error, [diagnostic]} =
+               RuleHelpers.compile_and_capture("exit(:fixture_compile_exit)")
+
+      assert diagnostic.message ==
+               "credence: compilation aborted — the source exited during compilation (:fixture_compile_exit)"
+    end
+
     test "rewrites a String.replace evaluated in a module attribute" do
       expected = """
       defmodule CompileTimeReplace do
@@ -226,8 +237,30 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
     end
 
     test "turns source that does not compile into source that does" do
-      refute compiles?(@compile_time_input)
-      assert compiles?(fix(@compile_time_input))
+      assert {:error, _diagnostics} = RuleHelpers.compile_and_capture(@compile_time_input)
+      assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fix(@compile_time_input))
+    end
+
+    test "real compiler diagnostic dispatches to this rule and repairs the source" do
+      expected = """
+      defmodule CompileTimeReplace do
+        @masked Elixir.Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
+        def masked, do: @masked
+      end
+      """
+
+      control = String.replace(expected, "CompileTimeReplace", "CompileTimeReplaceControl")
+
+      assert {:error, diagnostics} = RuleHelpers.compile_and_capture(@compile_time_input)
+      assert Enum.any?(diagnostics, &NoStringReplaceArityMismatch.match?/1)
+
+      {emitted, applied} = Credence.Semantic.fix_with_trace(@compile_time_input)
+
+      confirm_fix(emitted, expected)
+      assert applied == [{NoStringReplaceArityMismatch, 1}]
+
+      assert RuleHelpers.compile_and_capture(emitted) ==
+               RuleHelpers.compile_and_capture(control)
     end
   end
 
