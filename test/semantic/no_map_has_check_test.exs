@@ -41,4 +41,15 @@ defmodule Credence.Semantic.NoMapHasCheckTest do
     diag = %{severity: :warning, message: @matching_msg, position: {1, 1}}
     assert NoMapHas.to_issue(diag).rule == :no_map_has
   end
+
+  test "detects Map.has?/2 through the Semantic coordinator" do
+    source = """
+    defmodule NoMapHasCheckPipelineFixture do
+      def has_key?(map, key), do: Map.has?(map, key)
+    end
+    """
+
+    assert [%Credence.Issue{rule: :no_map_has, message: @matching_msg}] =
+             Credence.Semantic.analyze(source)
+  end
 end
