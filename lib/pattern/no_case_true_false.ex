@@ -110,12 +110,12 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
 
   # Only a *provably boolean* subject is safe to rewrite to `if`: a `case` on a
   # boolean literal raises `CaseClauseError` on a non-boolean, whereas `if`
-  # treats any truthy value as `true`. Comparisons, boolean operators, `is_*`
-  # guards, `?`-suffixed predicate calls (local or remote), and known boolean
-  # stdlib calls qualify; plain variables, `Access` (`opts[:flag]`), and opaque
-  # calls (`fun.(x)`, non-`?` functions) do not.
+  # treats any truthy value as `true`. Comparisons, boolean-only operators,
+  # `is_*` guards, and known boolean stdlib calls qualify; plain variables,
+  # `Access` (`opts[:flag]`), and opaque calls do not.
   @comparison_ops [:==, :!=, :===, :!==, :<, :>, :<=, :>=, :=~]
-  @boolean_ops [:and, :or, :not, :!, :in]
+  @boolean_ops [:not, :!, :in]
+  @boolean_remote_calls [{Enum, :empty?}, {Map, :has_key?}, {String, :contains?}]
   @type_guards [
     :is_atom,
     :is_binary,
@@ -140,20 +140,15 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp provably_boolean?({op, _, args}) when op in @boolean_ops and is_list(args), do: true
   defp provably_boolean?({op, _, args}) when op in @type_guards and is_list(args), do: true
 
-  # A pipe takes the type of its right-most step: `x |> f() |> valid?()`.
+  # A pipe takes the type of its right-most step: `x |> f() |> Enum.empty?()`.
   defp provably_boolean?({:|>, _, [_left, right]}), do: provably_boolean?(right)
 
-  # Remote predicate call `Mod.fun?(...)`
-  defp provably_boolean?({{:., _, [_mod, fun]}, _, args}) when is_atom(fun) and is_list(args),
-    do: predicate_name?(fun)
-
-  # Local predicate call `fun?(...)` (operator/guard atoms are handled above)
-  defp provably_boolean?({fun, _, args}) when is_atom(fun) and is_list(args),
-    do: predicate_name?(fun)
+  # Calls whose contracts guarantee a boolean result.
+  defp provably_boolean?({{:., _, [{:__aliases__, _, parts}, fun]}, _, args})
+       when is_atom(fun) and is_list(args),
+       do: {Module.concat(parts), fun} in @boolean_remote_calls
 
   defp provably_boolean?(_), do: false
-
-  defp predicate_name?(name), do: name |> Atom.to_string() |> String.ends_with?("?")
 
   # Extracts the clause list from a case node's keyword block.
   defp extract_do_clauses([{{:__block__, _, [:do]}, clauses}]) when is_list(clauses),

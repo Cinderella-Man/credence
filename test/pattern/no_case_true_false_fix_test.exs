@@ -2,6 +2,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseTrueFalse
+  alias Credence.RuleHelpers
 
   # ═══════════════════════════════════════════════════════════════════
   # TRUE / FALSE — standard rewrite
@@ -228,7 +229,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
   describe "rewrites piped case true/false to if/else" do
     test "simple pipe into case true/false" do
       input = """
-      valid_digits?()
+      is_list([])
       |> case do
         true -> :ok
         false -> :error
@@ -236,7 +237,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       """
 
       expected = """
-      if valid_digits?() do
+      if is_list([]) do
         :ok
       else
         :error
@@ -250,7 +251,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       input = """
       number
       |> Integer.digits()
-      |> valid_digits?()
+      |> Enum.empty?()
       |> case do
         true -> rotated_number != number
         false -> false
@@ -260,7 +261,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       expected = """
       if number
          |> Integer.digits()
-         |> valid_digits?() do
+         |> Enum.empty?() do
         rotated_number != number
       else
         false
@@ -272,7 +273,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
 
     test "pipe into case with flipped false/true" do
       input = """
-      valid?(x)
+      is_list(x)
       |> case do
         false -> :error
         true -> :ok
@@ -280,7 +281,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       """
 
       expected = """
-      if valid?(x) do
+      if is_list(x) do
         :ok
       else
         :error
@@ -296,6 +297,41 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "does not modify legitimate case statements" do
+    test "case on and/or expressions that can return non-booleans" do
+      for input <- [
+            "case true and :unknown do\n  true -> :yes\n  false -> :no\nend\n",
+            "case false or :unknown do\n  true -> :yes\n  false -> :no\nend\n"
+          ] do
+        confirm_fix(fix(NoCaseTrueFalse, input), input)
+      end
+    end
+
+    test "preserves the failing semantics of a non-boolean and result" do
+      input = """
+      case true and :unknown do
+        true -> :yes
+        false -> :no
+      end
+      """
+
+      emitted = fix(NoCaseTrueFalse, input)
+
+      confirm_fix(emitted, input)
+      assert {:error, _diagnostics} = RuleHelpers.compile_and_capture(input)
+      assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(input)
+    end
+
+    test "case on conventionally named predicate that can return a non-boolean" do
+      input = """
+      case ready?() do
+        true -> :yes
+        false -> :no
+      end
+      """
+
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
+    end
+
     test "case on atoms" do
       input = """
       case result do
