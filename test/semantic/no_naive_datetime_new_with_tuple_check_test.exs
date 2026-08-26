@@ -25,6 +25,19 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleCheckTest do
     refute NoNaiveDatetimeNewWithTuple.match?(diag)
   end
 
+  test "ignores incompatible new!/2 diagnostics the fixer cannot repair" do
+    for bad_argument <- ["binary()", "map()", "{integer(), integer()}"] do
+      diag = %{
+        severity: :warning,
+        message:
+          "incompatible types given to NaiveDateTime.new!/2\n\ngiven types:\n\n    dynamic(%Date{}), dynamic(#{bad_argument})",
+        position: {1, 1}
+      }
+
+      refute NoNaiveDatetimeNewWithTuple.match?(diag)
+    end
+  end
+
   test "attributes the issue to this rule" do
     diag = %{severity: :warning, message: @real_message, position: {3, 19}}
     assert NoNaiveDatetimeNewWithTuple.to_issue(diag).rule == :no_naive_datetime_new_with_tuple

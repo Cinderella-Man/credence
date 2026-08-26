@@ -15,9 +15,9 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleFixTest do
     })
   end
 
-  test "replaces a 4-element tuple with Time.new!/4, preserving the microsecond" do
+  test "replaces an integer microsecond with the tuple Time.new!/4 requires" do
     input = """
-    defmodule Example do
+    defmodule NNDNWTIntegerMicrosecondRegression do
       def make_ndt(year, month, day, hour, minute) do
         NaiveDateTime.new!(Date.new!(year, month, day), {hour, minute, 0, 0})
       end
@@ -25,14 +25,22 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleFixTest do
     """
 
     expected = """
-    defmodule Example do
+    defmodule NNDNWTIntegerMicrosecondRegression do
       def make_ndt(year, month, day, hour, minute) do
-        NaiveDateTime.new!(Date.new!(year, month, day), Time.new!(hour, minute, 0, 0))
+        NaiveDateTime.new!(Date.new!(year, month, day), Elixir.Time.new!(hour, minute, 0, {0, 6}))
       end
     end
     """
 
-    confirm_fix(fix(input, @real_message, 3), expected)
+    emitted = fix(input, @real_message, 3)
+    confirm_fix(emitted, expected)
+
+    witness = """
+    unless NNDNWTIntegerMicrosecondRegression.make_ndt(2024, 1, 2, 12, 30) ==
+             ~N[2024-01-02 12:30:00.000000], do: raise("wrong datetime")
+    """
+
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> witness)
   end
 
   test "preserves a non-zero microsecond value" do
@@ -47,7 +55,7 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleFixTest do
     expected = """
     defmodule Example do
       def go(date) do
-        NaiveDateTime.new!(date, Time.new!(12, 30, 45, 123_456))
+        NaiveDateTime.new!(date, Elixir.Time.new!(12, 30, 45, {123_456, 6}))
       end
     end
     """
@@ -67,12 +75,44 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTupleFixTest do
     expected = """
     defmodule Example do
       def make_ndt(date, h, m, s) do
-        NaiveDateTime.new!(date, Time.new!(h, m, s))
+        NaiveDateTime.new!(date, Elixir.Time.new!(h, m, s))
       end
     end
     """
 
     confirm_fix(fix(input, @real_message, 3), expected)
+  end
+
+  test "uses Elixir.Time when the caller aliases another module as Time" do
+    input = """
+    defmodule NNDNWTAliasRegression do
+      alias String, as: Time
+      def go(date), do: NaiveDateTime.new!(date, {12, 30, 45})
+    end
+    """
+
+    expected = """
+    defmodule NNDNWTAliasRegression do
+      alias String, as: Time
+      def go(date), do: NaiveDateTime.new!(date, Elixir.Time.new!(12, 30, 45))
+    end
+    """
+
+    emitted = fix(input, @real_message, 3)
+    confirm_fix(emitted, expected)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "does not rewrite matching syntax inside quote" do
+    input = """
+    defmodule NNDNWTQuoteRegression do
+      def ast, do: quote(do: NaiveDateTime.new!(date, {1, 2, 3}))
+    end
+    """
+
+    confirm_fix(fix(input, @real_message, 2), input)
   end
 
   test "leaves a 5-element tuple untouched (no Time.new!/5 equivalent)" do
