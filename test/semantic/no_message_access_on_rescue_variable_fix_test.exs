@@ -46,13 +46,13 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
         try do
           :ok
         rescue
-          e -> {w().message, Exception.message(e)}
+          e -> {w().message, Map.fetch!(e, :message)}
         end
       end
     end
     """
 
-    confirm_fix(fix(input, @real_message, 13), expected)
+    confirm_fix(fix(input, @real_message, 12), expected)
   end
 
   test "rewrites every .message use of the rescue var" do
@@ -68,7 +68,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
     try do
       :ok
     rescue
-      e -> {Exception.message(e), Exception.message(e)}
+      e -> {Map.fetch!(e, :message), Map.fetch!(e, :message)}
     end
     """
 
@@ -101,7 +101,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
     confirm_fix(fix(input, @real_message, 6), input)
   end
 
-  test "replaces e.message with Exception.message(e)" do
+  test "replaces e.message with Map.fetch!(e, :message)" do
     input = """
     defmodule Simple do
       def run do
@@ -120,7 +120,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
         try do
           :ok
         rescue
-          e -> {:error, Exception.message(e)}
+          e -> {:error, Map.fetch!(e, :message)}
         end
       end
     end
@@ -155,7 +155,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
             File.close(file)
             {:ok, result}
           rescue
-            e -> {:error, Exception.message(e)}
+            e -> {:error, Map.fetch!(e, :message)}
           end
         end
       end
@@ -205,5 +205,88 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariableFixTest do
     """
 
     confirm_fix(fix(input, @real_message, 1), input)
+  end
+
+  test "preserves direct message-field semantics for custom exceptions" do
+    input = """
+    defmodule NMAORVCustomMessageError do
+      defexception [:message]
+      def message(_exception), do: "callback message"
+    end
+
+    defmodule NMAORVCustomMessageProbe do
+      def run do
+        try do
+          raise NMAORVCustomMessageError, message: "stored message"
+        rescue
+          e -> e.message
+        end
+      end
+    end
+
+    unless NMAORVCustomMessageProbe.run() == "stored message", do: raise("meaning changed")
+    """
+
+    expected = String.replace(input, "e -> e.message", "e -> Map.fetch!(e, :message)")
+    emitted = fix(input, @real_message, 11)
+
+    confirm_fix(emitted, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "rewrites the flagged access before a later rebinding" do
+    input = """
+    defmodule NMAORVLaterRebinding do
+      def run do
+        try do
+          raise "original"
+        rescue
+          e ->
+            value = e.message
+            e = RuntimeError.exception("normalized")
+            {value, e}
+        end
+      end
+    end
+    """
+
+    expected = String.replace(input, "value = e.message", "value = Map.fetch!(e, :message)")
+    emitted = fix(input, @real_message, 7)
+
+    confirm_fix(emitted, expected)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "uses the diagnostic position and leaves quoted rescue code unchanged" do
+    input = """
+    defmodule NMAORVQuotedRescue do
+      def quoted do
+        quote do
+          try do
+            :ok
+          rescue
+            e -> e.message
+          end
+        end
+      end
+
+      def run do
+        try do
+          raise "real warning"
+        rescue
+          e -> e.message
+        end
+      end
+    end
+    """
+
+    expected =
+      String.replace(
+        input,
+        "      e -> e.message\n    end\n  end\nend",
+        "      e -> Map.fetch!(e, :message)\n    end\n  end\nend"
+      )
+
+    confirm_fix(fix(input, @real_message, 16), expected)
   end
 end

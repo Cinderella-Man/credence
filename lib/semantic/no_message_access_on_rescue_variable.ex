@@ -7,10 +7,12 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
   that a bare-rescue variable has unknown struct fields; the `.message` access
   triggers "unknown key .message" which fails `--warnings-as-errors`.
 
-  The deterministic fix is `Exception.message(e)`:
+  The deterministic fix is `Map.fetch!(e, :message)`, which preserves the
+  direct field access's semantics even when a custom exception's `message/1`
+  callback differs from its stored `:message` field:
 
       rescue e -> {:error, e.message}                 # WRONG — warns
-      rescue e -> {:error, Exception.message(e)}      # correct
+      rescue e -> {:error, Map.fetch!(e, :message)}   # correct
 
   ## Bad
 
@@ -31,7 +33,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
           try do
             :ok
           rescue
-            e -> {:error, Exception.message(e)}
+            e -> {:error, Map.fetch!(e, :message)}
           end
         end
       end
@@ -59,37 +61,22 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
   def to_issue(diagnostic) do
     %Issue{
       rule: :no_message_access_on_rescue_variable,
-      message: "accessing .message on a bare-rescue variable is unsafe; use Exception.message/1",
+      message: "accessing .message on a bare-rescue variable is unsafe; use Map.fetch!/2",
       meta: %{line: line(diagnostic)}
     }
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source) do
-      result =
-        Macro.prewalk(ast, fn
-          # Only rewrite inside a `rescue` block's clauses. The compiler warns
-          # exclusively for the bare-rescue variable; rewriting every `.message`
-          # in the file would break valid access on a struct/map that really
-          # does have a `:message` field (turning `w.message` into
-          # `Exception.message(w)`, which raises on a non-exception).
-          {rescue_key, clauses} = node when is_list(clauses) ->
-            if rescue_key?(rescue_key) do
-              {rescue_key, Enum.map(clauses, &rewrite_clause/1)}
-            else
-              node
-            end
-
-          other ->
-            other
+  def fix(source, diagnostic) do
+    with {:ok, ast} <- Sourceror.parse_string(source),
+         line_no when is_integer(line_no) <- diagnostic_line(diagnostic),
+         [_ | _] = candidates <- candidates_on_line(ast, line_no) do
+      patches =
+        Enum.map(candidates, fn {var, range} ->
+          %{range: range, change: "Map.fetch!(#{var}, :message)"}
         end)
 
-      if result == ast do
-        source
-      else
-        Sourceror.to_string(result)
-      end
+      Sourceror.patch_string(source, patches)
     else
       _ -> source
     end
@@ -101,58 +88,72 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
   defp rescue_key?(:rescue), do: true
   defp rescue_key?(_), do: false
 
-  # A bare-rescue clause binds a single plain variable (`rescue e ->`). Only
-  # then is the variable guaranteed to be an exception, so `Exception.message/1`
-  # is a safe substitute for `e.message`. Typed (`e in RuntimeError`) and struct
-  # patterns don't warn and are left alone. If the variable is rebound in the
-  # body it may no longer be an exception, so the clause is left untouched.
-  defp rewrite_clause({:->, meta, [[{var, _, ctx}] = pattern, body]})
-       when is_atom(var) and is_atom(ctx) and var != :_ do
-    if var_rebound_in_body?(body, var) do
-      {:->, meta, [pattern, body]}
-    else
-      {:->, meta, [pattern, replace_message_access(body, var)]}
-    end
+  # Gather accesses only from bare-rescue clauses, then let the compiler's
+  # diagnostic line select the one access that actually warned. This avoids
+  # changing quoted rescue syntax or another real rescue elsewhere in the file.
+  defp candidates_on_line(ast, line_no) do
+    {_, candidates} =
+      Macro.prewalk(ast, [], fn
+        {rescue_key, clauses} = node, acc when is_list(clauses) ->
+          if rescue_key?(rescue_key) do
+            {node, clause_candidates(clauses, line_no) ++ acc}
+          else
+            {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    candidates
+    |> Enum.reverse()
+    |> Enum.uniq_by(fn {_var, range} -> range end)
   end
 
-  defp rewrite_clause(other), do: other
+  defp clause_candidates(clauses, line_no) do
+    Enum.flat_map(clauses, fn
+      {:->, _, [[{var, _, ctx}], body]} when is_atom(var) and is_atom(ctx) and var != :_ ->
+        {_, {found, _rebound?}} =
+          Macro.prewalk(body, {[], false}, fn
+            {:=, _, [lhs, _rhs]} = node, {acc, rebound?} ->
+              {node, {acc, rebound? or binds_var?(lhs, var)}}
 
-  defp replace_message_access(body, var) do
-    Macro.prewalk(body, fn
-      {{:., meta_dot, [{^var, var_meta, var_ctx}, :message]}, meta_call, []}
-      when is_atom(var_ctx) ->
-        {{:., meta_dot, [{:__aliases__, [line: meta_dot[:line] || 0], [:Exception]}, :message]},
-         meta_call, [{var, var_meta, var_ctx}]}
+            {{:., _, [{^var, _, var_ctx}, :message]}, _, []} = node, {acc, false}
+            when is_atom(var_ctx) ->
+              case Sourceror.get_range(node) do
+                %{start: start} = range ->
+                  if start[:line] == line_no,
+                    do: {node, {[{var, range} | acc], false}},
+                    else: {node, {acc, false}}
 
-      other ->
-        other
+                _ ->
+                  {node, {acc, false}}
+              end
+
+            node, acc ->
+              {node, acc}
+          end)
+
+        Enum.reverse(found)
+
+      _ ->
+        []
     end)
   end
 
-  # True when `var` appears in any binding position in the body (`=` LHS, `->`
-  # or `<-` patterns) — an over-approximation that only ever makes the fix a
-  # no-op, never wrong.
-  defp var_rebound_in_body?(body, var) do
-    {_, found} =
-      Macro.prewalk(body, false, fn
-        {:=, _, [lhs, _rhs]} = node, acc -> {node, acc or count_var(lhs, var) > 0}
-        {:->, _, [pats, _body]} = node, acc -> {node, acc or count_var(pats, var) > 0}
-        {:<-, _, [lhs, _rhs]} = node, acc -> {node, acc or count_var(lhs, var) > 0}
-        node, acc -> {node, acc}
+  defp binds_var?(ast, var) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {^var, _, ctx} = node, _found? when is_atom(ctx) -> {node, true}
+        node, found? -> {node, found?}
       end)
 
-    found
+    found?
   end
 
-  defp count_var(ast, var) do
-    {_, count} =
-      Macro.prewalk(ast, 0, fn
-        {^var, _, ctx} = node, acc when is_atom(ctx) -> {node, acc + 1}
-        node, acc -> {node, acc}
-      end)
-
-    count
-  end
+  defp diagnostic_line(%{position: {line_no, _col}}), do: line_no
+  defp diagnostic_line(%{position: line_no}) when is_integer(line_no), do: line_no
+  defp diagnostic_line(_), do: nil
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
