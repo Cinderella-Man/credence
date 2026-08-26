@@ -223,4 +223,69 @@ defmodule Credence.Semantic.NoRedefineBuiltinTypeFixTest do
       input
     )
   end
+
+  test "only renames references in the module containing the rejected definition" do
+    input = """
+    defmodule BadScopeA do
+      @type node :: atom()
+    end
+
+    defmodule GoodScopeB do
+      @type t :: node
+    end
+    """
+
+    expected = """
+    defmodule BadScopeA do
+      @type trie_node :: atom()
+    end
+
+    defmodule GoodScopeB do
+      @type t :: node
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "chooses an unused replacement when trie_node is already defined" do
+    input = """
+    defmodule Collision do
+      @type trie_node :: integer()
+      @type node :: atom()
+    end
+    """
+
+    emitted = fix(input, @real_message, 3)
+
+    expected = """
+    defmodule Collision do
+      @type trie_node :: integer()
+      @type trie_node_2 :: atom()
+    end
+    """
+
+    confirm_fix(emitted, expected)
+    assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "renames references in specs in the affected module" do
+    input = """
+    defmodule SpecCase do
+      @type node :: atom()
+      @spec f() :: node
+      def f, do: :ok
+    end
+    """
+
+    expected = """
+    defmodule SpecCase do
+      @type trie_node :: atom()
+      @spec f() :: trie_node
+      def f, do: :ok
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
 end
