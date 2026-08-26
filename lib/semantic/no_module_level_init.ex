@@ -17,11 +17,17 @@ defmodule Credence.Semantic.NoModuleLevelInit do
 
       ** (CompileError) ... undefined function init/0
 
-  The fix removes the bare `init()` call and adds `@on_load :init` as the
-  first expression in the module body — the idiomatic Elixir callback:
+  The fix removes the bare `init()` call and adds an `@on_load` wrapper as the
+  first expression in the module body. The wrapper preserves `init/0`'s return
+  value for ordinary callers while satisfying the callback's `:ok` contract:
 
       defmodule FactoryNMLI do
-        @on_load :init
+        @on_load :__credence_on_load__
+
+        def __credence_on_load__ do
+          init()
+          :ok
+        end
 
         def init do
           # initialization logic
@@ -53,7 +59,12 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   ## Good
 
       defmodule FactoryNMLI do
-        @on_load :init
+        @on_load :__credence_on_load__
+
+        def __credence_on_load__ do
+          init()
+          :ok
+        end
 
         def init do
           :ok
@@ -64,6 +75,7 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @match_prefix "undefined function"
   @match_fn "init/0"
@@ -88,20 +100,28 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source),
          {:ok, call_lines, dm_line} <- find_bare_init_info(ast) do
-      lines = String.split(source, "\n")
+      call_counts = Enum.frequencies(call_lines)
 
-      # Remove bare init() lines (descending to preserve indices)
       lines =
-        Enum.reduce(Enum.sort(call_lines, :desc), lines, fn line_no, acc ->
-          List.replace_at(acc, line_no - 1, nil)
+        source
+        |> SourceMask.lines()
+        |> Enum.with_index(1)
+        |> Enum.map(fn {{line, shadow}, line_no} ->
+          remove_bare_init_calls(line, shadow, Map.get(call_counts, line_no, 0))
         end)
         |> Enum.reject(&is_nil/1)
 
-      # Insert @on_load :init + blank line after defmodule ... do
-      lines =
-        lines
-        |> List.insert_at(dm_line, "  @on_load :init")
-        |> List.insert_at(dm_line + 1, "")
+      callback = [
+        "  @on_load :__credence_on_load__",
+        "",
+        "  def __credence_on_load__ do",
+        "    init()",
+        "    :ok",
+        "  end",
+        ""
+      ]
+
+      lines = List.insert_at(lines, dm_line, callback) |> List.flatten()
 
       Enum.join(lines, "\n")
     else
@@ -141,13 +161,27 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   # Check if def init exists in the module body
   defp has_def_init?(children) do
     Enum.any?(children, fn
-      {:def, _, [{:init, _, nil}, _]} -> true
+      {:def, _, [{:init, _, args}, _]} when args in [nil, []] -> true
       _ -> false
     end)
   end
 
   defp get_line({_, meta, _}) when is_list(meta), do: Keyword.get(meta, :line, 1)
   defp get_line(_), do: 1
+
+  defp remove_bare_init_calls(line, _shadow, 0), do: line
+
+  defp remove_bare_init_calls(line, _shadow, count) do
+    pattern = ~r/\binit[\t ]*\([\t ]*\)(?:[\t ]*;[\t ]*)?/
+
+    edited =
+      Enum.reduce(1..count, line, fn _, current ->
+        [{_, current_shadow}] = SourceMask.lines(current)
+        SourceMask.replace_code(current, current_shadow, pattern, "", global: false)
+      end)
+
+    if String.trim(edited) == "", do: nil, else: edited
+  end
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

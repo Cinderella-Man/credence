@@ -3,6 +3,7 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Semantic.NoModuleLevelInit
 
   @real_message "undefined function init/0 (there is no such import)"
@@ -24,7 +25,12 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
 
     expected = """
     defmodule Factory do
-      @on_load :init
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
 
       def init do
         :ok
@@ -33,7 +39,10 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
     end
     """
 
-    confirm_fix(fix(input), expected)
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
   end
 
   test "handles the spec example" do
@@ -67,7 +76,12 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
 
     expected = """
     defmodule Factory do
-      @on_load :init
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
 
       def start do
         case Process.whereis(__MODULE__) do
@@ -147,7 +161,12 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
 
     expected = """
     defmodule Factory do
-      @on_load :init
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
 
       def init do
         :ok
@@ -157,6 +176,96 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
     """
 
     confirm_fix(fix(input), expected)
+  end
+
+  test "preserves code and comments on the same physical line as init()" do
+    input = """
+    defmodule SameLineNMLI do
+      def init, do: :ok
+      init(); @mode :ready
+      init() # explanation
+    end
+    """
+
+    expected = """
+    defmodule SameLineNMLI do
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
+
+      def init, do: :ok
+      @mode :ready
+       # explanation
+    end
+    """
+
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
+  end
+
+  test "on-load wrapper succeeds when init returns a value other than :ok" do
+    input = """
+    defmodule NonOkInitNMLI do
+      def init, do: :not_ok
+      init()
+    end
+    """
+
+    emitted = fix(input)
+
+    load_assertion = """
+
+    unless Code.ensure_loaded?(NonOkInitNMLI), do: raise("module did not load")
+    """
+
+    control = """
+    defmodule NonOkInitControlNMLI do
+      @on_load :load
+      def load do
+        init()
+        :ok
+      end
+      def init, do: :not_ok
+    end
+
+    unless Code.ensure_loaded?(NonOkInitControlNMLI), do: raise("control did not load")
+    """
+
+    assert {:ok, []} = RuleHelpers.compile_and_capture(control)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(emitted <> load_assertion)
+  end
+
+  test "repairs init defined with explicit parentheses" do
+    input = """
+    defmodule ParenthesizedInitNMLI do
+      def init(), do: :ok
+      init()
+    end
+    """
+
+    expected = """
+    defmodule ParenthesizedInitNMLI do
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
+
+      def init(), do: :ok
+    end
+    """
+
+    emitted = fix(input)
+
+    confirm_fix(emitted, expected)
+    assert {:ok, []} = RuleHelpers.compile_and_capture(expected)
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
   end
 
   test "leaves nested-module bare init() unchanged (only top-level handled)" do
