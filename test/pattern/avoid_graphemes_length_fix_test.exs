@@ -54,6 +54,24 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
   end
 
   describe "no-ops" do
+    test "invalid String.graphemes arities are unchanged" do
+      for code <- [
+            "String.graphemes() |> length()",
+            "value |> String.graphemes(extra) |> length()"
+          ] do
+        confirm_fix(fix(AvoidGraphemesLength, code), code)
+      end
+    end
+
+    test "String alias that names a custom module is unchanged" do
+      code = """
+      alias CustomString, as: String
+      length(String.graphemes(value))
+      """
+
+      confirm_fix(fix(AvoidGraphemesLength, code), code)
+    end
+
     test "String.length unchanged" do
       confirm_fix(fix(AvoidGraphemesLength, "String.length(str)"), "String.length(str)")
     end
