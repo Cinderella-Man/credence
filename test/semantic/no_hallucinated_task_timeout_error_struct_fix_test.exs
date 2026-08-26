@@ -207,7 +207,7 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
 
       assert {NoHallucinatedTaskTimeoutErrorStruct, 1} in result.applied_rules
       confirm_fix(result.code, expected)
-      assert Credence.RuleCase.compiles?(result.code)
+      assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(result.code)
     end
 
     test "the same shape in a function head also witnesses" do
@@ -229,7 +229,7 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStructFixTest do
 
       assert {NoHallucinatedTaskTimeoutErrorStruct, 1} in result.applied_rules
       confirm_fix(result.code, expected)
-      assert Credence.RuleCase.compiles?(result.code)
+      assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(result.code)
     end
   end
 end
