@@ -177,6 +177,50 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouterFixTest do
     confirm_fix(fix(input), input)
   end
 
+  test "fixes only the diagnostic line in a Plug.Router module" do
+    input = """
+    defmodule TargetRouterNMWMSIPR do
+      use Plug.Router
+
+      match "POST", "/target" do
+        send_resp(conn, 200, "target")
+      end
+
+      match "GET", "/other" do
+        send_resp(conn, 200, "other")
+      end
+    end
+
+    defmodule UnrelatedMatchMacroNMWMSIPR do
+      match "DELETE", "/unrelated" do
+        :not_a_plug_route
+      end
+    end
+    """
+
+    expected = """
+    defmodule TargetRouterNMWMSIPR do
+      use Plug.Router
+
+      post "/target" do
+        send_resp(conn, 200, "target")
+      end
+
+      match "GET", "/other" do
+        send_resp(conn, 200, "other")
+      end
+    end
+
+    defmodule UnrelatedMatchMacroNMWMSIPR do
+      match "DELETE", "/unrelated" do
+        :not_a_plug_route
+      end
+    end
+    """
+
+    confirm_fix(fix(input, 4), expected)
+  end
+
   test "fixed output is well-formed (parses)" do
     input = """
     defmodule ExampleRouter do

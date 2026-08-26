@@ -56,6 +56,18 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
 
   def match?(_), do: false
 
+  @doc false
+  def should_report?(diagnostic, source) do
+    case Sourceror.parse_string(source) do
+      {:ok, ast} ->
+        {_ast, changed} = rewrite(ast, diagnostic)
+        changed
+
+      _ ->
+        false
+    end
+  end
+
   @impl true
   def to_issue(diagnostic) do
     %Issue{
@@ -66,26 +78,10 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
+  def fix(source, diagnostic) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
-        {new_ast, changed} =
-          Macro.prewalk(ast, false, fn
-            # match "METHOD", "/path" do ... end -> method "/path" do ... end
-            {:match, meta, [{:__block__, _, [method_str]}, path, do_block]}, acc
-            when is_binary(method_str) and is_list(do_block) ->
-              case Map.get(@method_mapping, method_str) do
-                nil ->
-                  # Unknown method, leave as match
-                  {{:match, meta, [{:__block__, [], [method_str]}, path, do_block]}, acc}
-
-                method_atom ->
-                  {{method_atom, meta, [path, do_block]}, true}
-              end
-
-            node, acc ->
-              {node, acc}
-          end)
+        {new_ast, changed} = rewrite(ast, diagnostic)
 
         if changed, do: Sourceror.to_string(new_ast), else: source
 
@@ -94,6 +90,67 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
     end
   end
 
+  defp rewrite(ast, diagnostic) do
+    target_line = diagnostic |> Map.get(:position) |> line()
+
+    {new_ast, {changed, _router_stack}} =
+      Macro.traverse(
+        ast,
+        {false, []},
+        fn
+          {:defmodule, _, [_name, clauses]} = node, {changed, stack} ->
+            {node, {changed, [clauses |> module_body() |> uses_plug_router?() | stack]}}
+
+          {:match, meta, [{:__block__, _, [method_str]}, path, do_block]} = node,
+          {changed, [true | _] = stack}
+          when is_binary(method_str) and is_list(do_block) ->
+            method_atom = Map.get(@method_mapping, method_str)
+
+            if method_atom && targeted_line?(target_line, meta[:line]) do
+              {{method_atom, meta, [path, do_block]}, {true, stack}}
+            else
+              {node, {changed, stack}}
+            end
+
+          node, acc ->
+            {node, acc}
+        end,
+        fn
+          {:defmodule, _, _} = node, {changed, [_current | stack]} ->
+            {node, {changed, stack}}
+
+          node, acc ->
+            {node, acc}
+        end
+      )
+
+    {new_ast, changed}
+  end
+
+  defp uses_plug_router?({:__block__, _, expressions}),
+    do: Enum.any?(expressions, &plug_router_use?/1)
+
+  defp uses_plug_router?(expression), do: plug_router_use?(expression)
+
+  defp module_body(clauses) do
+    Enum.find_value(clauses, fn
+      {{:__block__, _, [:do]}, body} -> body
+      {:do, body} -> body
+      _ -> nil
+    end)
+  end
+
+  defp plug_router_use?({:use, _, [{:__aliases__, _, [:Plug, :Router]} | _]}), do: true
+  defp plug_router_use?(_), do: false
+
+  defp targeted_line?(nil, _node_line), do: false
+  defp targeted_line?(line, _node_line) when line <= 0, do: true
+  defp targeted_line?(line, line), do: true
+  defp targeted_line?(_target_line, _node_line), do: false
+
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+  defp line({line, _col}) when is_integer(line), do: line
+  defp line(line) when is_integer(line), do: line
+  defp line(_), do: nil
 end
