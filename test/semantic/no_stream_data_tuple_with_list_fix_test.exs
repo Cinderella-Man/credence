@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoStreamDataTupleWithListFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1, compiles?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoStreamDataTupleWithList
 
@@ -26,6 +26,14 @@ defmodule Credence.Semantic.NoStreamDataTupleWithListFixTest do
       message: @message,
       position: position
     })
+  end
+
+  defp compiles?(source) do
+    match?({:ok, _diagnostics}, Credence.RuleHelpers.compile_and_capture(source))
+  end
+
+  test "compile checks contain top-level fixture exits" do
+    refute compiles?("exit(:fixture_compile_exit)")
   end
 
   test "swaps the brackets of the flagged list argument" do
