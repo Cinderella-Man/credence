@@ -29,7 +29,8 @@ defmodule Credence.Pattern.NoCaptureFnApply do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {{:., meta, [{:&, _, [capture_body]}]}, _, apply_args} = node, issues ->
-          if has_placeholders?(capture_body, length(apply_args)) and safe_args?(apply_args) do
+          if has_placeholders?(capture_body, length(apply_args)) and safe_args?(apply_args) and
+               capture_safe?(capture_body, apply_args) do
             issue = %Issue{
               rule: :no_capture_fn_apply,
               message:
@@ -62,6 +63,7 @@ defmodule Credence.Pattern.NoCaptureFnApply do
 
           if has_placeholders?(capture_body, length(apply_args)) and
                safe_args?(apply_args) and
+               capture_safe?(capture_body, apply_args) and
                not MapSet.member?(seen_lines, line) do
             inlined = inline_placeholders(capture_body, apply_args)
             replacement = Sourceror.to_string(inlined)
@@ -168,6 +170,55 @@ defmodule Credence.Pattern.NoCaptureFnApply do
   # A bare variable: {name, _, context} where context is an atom (calls carry a list here).
   defp pure_arg?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp pure_arg?(_), do: false
+
+  # Substituting an argument variable beneath a binding for the same name would capture it.
+  # Keep those applications intact rather than changing which value the placeholder denotes.
+  defp capture_safe?(body, apply_args) do
+    argument_names =
+      apply_args
+      |> Enum.flat_map(fn
+        {name, _, ctx} when is_atom(name) and is_atom(ctx) -> [name]
+        _ -> []
+      end)
+      |> MapSet.new()
+
+    MapSet.disjoint?(argument_names, bound_variable_names(body))
+  end
+
+  defp bound_variable_names(body) do
+    {_body, names} =
+      Macro.prewalk(body, MapSet.new(), fn
+        {operator, _, [pattern | _]} = node, names when operator in [:=, :<-] ->
+          {node, MapSet.union(names, pattern_variable_names(pattern))}
+
+        {:->, _, [patterns, _]} = node, names ->
+          bound =
+            Enum.reduce(patterns, MapSet.new(), &MapSet.union(&2, pattern_variable_names(&1)))
+
+          {node, MapSet.union(names, bound)}
+
+        node, names ->
+          {node, names}
+      end)
+
+    names
+  end
+
+  defp pattern_variable_names({:^, _, [_pinned]}), do: MapSet.new()
+
+  defp pattern_variable_names({name, _, ctx}) when is_atom(name) and is_atom(ctx),
+    do: MapSet.new([name])
+
+  defp pattern_variable_names(tuple) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.reduce(MapSet.new(), &MapSet.union(&2, pattern_variable_names(&1)))
+  end
+
+  defp pattern_variable_names(list) when is_list(list),
+    do: Enum.reduce(list, MapSet.new(), &MapSet.union(&2, pattern_variable_names(&1)))
+
+  defp pattern_variable_names(_other), do: MapSet.new()
 
   # Returns true if the capture body contains &N placeholders (not &Module.fun/arity refs).
   defp has_placeholders?(body, arity) do

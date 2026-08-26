@@ -79,6 +79,29 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     confirm_fix(fix(NoCaptureFnApply, code), code)
   end
 
+  test "leaves a capture whose body rebinds an argument variable untouched" do
+    code = """
+    defmodule NoCaptureFnApplyRebindingFixture do
+      def run(x), do: (&(case 1 do x -> &1 end)).(x)
+    end
+    """
+
+    emitted = fix(NoCaptureFnApply, code)
+
+    confirm_fix(emitted, code)
+    assert check(NoCaptureFnApply, code) == []
+
+    witness = """
+
+    unless NoCaptureFnApplyRebindingFixture.run(7) == 7 do
+      raise "capture argument was not preserved"
+    end
+    """
+
+    assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(code <> witness)
+    assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(emitted <> witness)
+  end
+
   test "leaves a plain anonymous-function application untouched" do
     code = """
     defmodule Good do
