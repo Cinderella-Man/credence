@@ -8,13 +8,13 @@ defmodule Credence.Semantic.NoRescueInException do
       struct Exception is undefined (there is such module but it does not define a struct)
 
   The clause is dead — `rescue e in Exception` can never match, because the
-  rescue lowers to a `%Exception{}` struct match and no such struct exists. The
-  intended "catch anything" spelling is a plain rescue:
+  rescue lowers to a `%Exception{}` struct match and no such struct exists.
+  Removing the dead clause preserves that behaviour:
 
       rescue e in Exception -> ...   # WRONG — warns, and never matches
-      rescue e -> ...                # correct
+      # clause removed; exceptions continue to propagate
 
-  Only a `rescue` clause head is rewritten, and only when it is spelled exactly
+  Only a `rescue` clause is removed, and only when its type is spelled exactly
   `Exception` or `Elixir.Exception`. Everything else that happens to parse as
   `_ in Exception` is left alone — see `fix/2`.
 
@@ -71,13 +71,13 @@ defmodule Credence.Semantic.NoRescueInException do
   def to_issue(diagnostic) do
     %Issue{
       rule: :no_rescue_in_exception,
-      message: "rescue e in Exception is not valid; use a plain rescue clause",
+      message: "rescue e in Exception is not valid; remove the dead rescue clause",
       meta: %{line: line(diagnostic)}
     }
   end
 
   @doc """
-  Drops the `in Exception` from every `rescue` clause head in `source`.
+  Removes every dead `rescue _ in Exception` clause in `source`.
 
   The diagnostic's position is deliberately *not* used to scope the rewrite:
   the compiler collapses repeated occurrences (two `rescue e in Exception`
@@ -106,12 +106,13 @@ defmodule Credence.Semantic.NoRescueInException do
       shadowed? = aliases_exception?(ast)
 
       {rewritten, changed?} =
-        Macro.prewalk(ast, false, fn
-          {{:__block__, _, [:rescue]} = key, clauses}, acc when is_list(clauses) ->
-            {fixed, touched?} =
-              Enum.map_reduce(clauses, acc, &drop_exception_head(&1, &2, shadowed?))
+        Macro.postwalk(ast, false, fn
+          {:try, _, [[{{:__block__, _, [:do]}, body}]]}, true ->
+            {body, true}
 
-            {{key, fixed}, touched?}
+          entries, acc when is_list(entries) ->
+            Enum.map_reduce(entries, acc, &remove_exception_clause(&1, &2, shadowed?))
+            |> then(fn {fixed, touched?} -> {Enum.reject(fixed, &is_nil/1), touched?} end)
 
           node, acc ->
             {node, acc}
@@ -127,24 +128,36 @@ defmodule Credence.Semantic.NoRescueInException do
     end
   end
 
-  # A rescue clause is `{:->, meta, [[head], body]}`; only a bare-variable head
-  # (`e in Exception`) is rewritten. `e in Exception when ...`, a pinned or
-  # destructured head, or a multi-element head all fall through untouched.
-  defp drop_exception_head(
-         {:->, meta,
-          [[{:in, in_meta, [{_name, _, nil} = var, {:__aliases__, _, segments}]}], body]} =
-           clause,
+  defp remove_exception_clause(
+         {{:__block__, _, [:rescue]} = key, clauses} = entry,
          acc,
          shadowed?
-       ) do
-    if rewritable?(segments, shadowed?) do
-      {{:->, meta, [[carry_comments(var, in_meta)], body]}, true}
-    else
-      {clause, acc}
+       )
+       when is_list(clauses) do
+    {kept, removed?} = Enum.map_reduce(clauses, false, &keep_clause(&1, &2, shadowed?))
+    kept = Enum.reject(kept, &is_nil/1)
+
+    cond do
+      not removed? -> {entry, acc}
+      kept == [] -> {nil, true}
+      true -> {{key, kept}, true}
     end
   end
 
-  defp drop_exception_head(clause, acc, _shadowed?), do: {clause, acc}
+  defp remove_exception_clause(entry, acc, _shadowed?), do: {entry, acc}
+
+  # A rescue clause is `{:->, meta, [[head], body]}`; only a bare-variable head
+  # (`e in Exception`) is removed. `e in Exception when ...`, a pinned or
+  # destructured head, or a multi-element head all fall through untouched.
+  defp keep_clause(
+         {:->, _, [[{:in, _, [{_name, _, nil}, {:__aliases__, _, segments}]}], _]} = clause,
+         removed?,
+         shadowed?
+       ) do
+    if rewritable?(segments, shadowed?), do: {nil, true}, else: {clause, removed?}
+  end
+
+  defp keep_clause(clause, removed?, _shadowed?), do: {clause, removed?}
 
   # `Elixir.Exception` is unambiguous — no alias can shadow a fully-qualified
   # name — so it stays fixable even in a file that aliases `Exception`.
@@ -184,25 +197,6 @@ defmodule Credence.Semantic.NoRescueInException do
 
   defp mentions_exception?(list) when is_list(list), do: Enum.any?(list, &mentions_exception?/1)
   defp mentions_exception?(_other), do: false
-
-  # The `in` node can own comments written around the operator. Dropping the
-  # node wholesale would delete them, so they move onto the variable that
-  # replaces it.
-  defp carry_comments({name, var_meta, ctx}, in_meta) do
-    merged =
-      var_meta
-      |> merge_comments(in_meta, :leading_comments)
-      |> merge_comments(in_meta, :trailing_comments)
-
-    {name, merged, ctx}
-  end
-
-  defp merge_comments(var_meta, in_meta, key) do
-    case Keyword.get(in_meta, key, []) do
-      [] -> var_meta
-      comments -> Keyword.put(var_meta, key, Keyword.get(var_meta, key, []) ++ comments)
-    end
-  end
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

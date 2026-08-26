@@ -15,7 +15,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     })
   end
 
-  test "fixes rescue e in Exception to rescue e" do
+  test "removes a dead rescue e in Exception clause" do
     input = """
     defmodule Example do
       def run do
@@ -32,12 +32,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     expected = """
     defmodule Example do
       def run do
-        try do
-          raise "boom"
-        rescue
-          e ->
-            {:error, e}
-        end
+        raise "boom"
       end
     end
     """
@@ -45,7 +40,52 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     confirm_fix(fix(input), expected)
   end
 
-  test "fixes an implicit def rescue, not just try/rescue" do
+  test "does not turn a dead rescue clause into a catch-all" do
+    input = """
+    defmodule NoRescueInExceptionDeadClause do
+      def run do
+        try do
+          raise "boom"
+        rescue
+          e in Exception -> {:caught, e}
+        end
+      end
+    end
+    """
+
+    control = """
+    defmodule NoRescueInExceptionPropagationControl do
+      def run do
+        raise "boom"
+      end
+    end
+    """
+
+    emitted = fix(input)
+
+    witness = """
+    emitted_result =
+      try do
+        NoRescueInExceptionDeadClause.run()
+      rescue
+        e -> {:raised, e.__struct__, Exception.message(e)}
+      end
+
+    control_result =
+      try do
+        NoRescueInExceptionPropagationControl.run()
+      rescue
+        e -> {:raised, e.__struct__, Exception.message(e)}
+      end
+
+    if emitted_result != control_result, do: raise("rescue behavior changed")
+    """
+
+    assert {:ok, []} =
+             Credence.RuleHelpers.compile_and_capture(emitted <> "\n" <> control <> witness)
+  end
+
+  test "removes an implicit def rescue, not just try/rescue" do
     input = """
     defmodule Example do
       def run do
@@ -61,9 +101,6 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     defmodule Example do
       def run do
         raise "boom"
-      rescue
-        e ->
-          {:error, e}
       end
     end
     """
@@ -99,19 +136,8 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     expected = """
     defmodule Multi do
       def run do
-        try do
-          raise "boom"
-        rescue
-          e ->
-            {:error, e}
-        end
-
-        try do
-          raise "bang"
-        rescue
-          err ->
-            {:error, err}
-        end
+        raise "boom"
+        raise "bang"
       end
     end
     """
@@ -119,7 +145,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     confirm_fix(fix(input), expected)
   end
 
-  test "fixes rescue e in Elixir.Exception to rescue e" do
+  test "removes rescue e in Elixir.Exception" do
     input = """
     defmodule Example do
       def run(func) do
@@ -135,11 +161,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     expected = """
     defmodule Example do
       def run(func) do
-        try do
-          func.()
-        rescue
-          e -> {:error, {:exception, e}}
-        end
+        func.()
       end
     end
     """
@@ -172,9 +194,6 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
         rescue
           e in ArgumentError ->
             {:arg, e}
-
-          e ->
-            {:error, e}
         end
       end
     end
@@ -183,7 +202,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     confirm_fix(fix(input, 9), expected)
   end
 
-  test "keeps a comment attached to the rewritten clause" do
+  test "removes comments owned by the dead clause" do
     input = """
     defmodule Example do
       def run do
@@ -201,13 +220,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     expected = """
     defmodule Example do
       def run do
-        try do
-          raise "boom"
-        rescue
-          # catch anything
-          e ->
-            {:error, e}
-        end
+        raise "boom"
       end
     end
     """
@@ -373,12 +386,7 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
       def run do
         alias MyApp.Exception
 
-        try do
-          raise "boom"
-        rescue
-          e ->
-            {:error, e}
-        end
+        raise "boom"
       end
     end
     """
