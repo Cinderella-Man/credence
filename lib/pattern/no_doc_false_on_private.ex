@@ -28,20 +28,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:__block__, _, stmts} = node, acc when is_list(stmts) ->
-          new_issues =
-            stmts
-            |> Enum.chunk_every(2, 1, :discard)
-            |> Enum.reduce(acc, fn
-              [doc_node, defp_node], found ->
-                if doc_node?(doc_node) and defp_node?(defp_node),
-                  do: [build_issue(elem(doc_node, 1)) | found],
-                  else: found
-
-              _, found ->
-                found
-            end)
-
-          {node, new_issues}
+          {node, find_redundant_docs(stmts, acc)}
 
         node, acc ->
           {node, acc}
@@ -67,21 +54,36 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
   defp doc_node?({:@, _, [{:doc, _, [_]}]}), do: true
   defp doc_node?(_), do: false
 
-  # All defp forms (with or without guards) match {:defp, _, _}.
-  defp defp_node?({:defp, _, _}), do: true
-  defp defp_node?(_), do: false
-  defp drop_redundant_doc([]), do: []
+  defp spec_node?({:@, _, [{:spec, _, [_]}]}), do: true
+  defp spec_node?(_), do: false
 
-  defp drop_redundant_doc([doc_node, defp_node | rest]) do
-    if doc_node?(doc_node) and defp_node?(defp_node) do
-      [defp_node | drop_redundant_doc(rest)]
+  defp redundant_private_doc?([doc_node | rest]) do
+    doc_node?(doc_node) and private_function_follows?(rest)
+  end
+
+  defp private_function_follows?([{:defp, _, _} | _]), do: true
+  defp private_function_follows?([spec_node, {:defp, _, _} | _]), do: spec_node?(spec_node)
+
+  defp private_function_follows?(_), do: false
+
+  defp find_redundant_docs([], found), do: found
+
+  defp find_redundant_docs([doc_node | rest] = nodes, found) do
+    if redundant_private_doc?(nodes) do
+      find_redundant_docs(rest, [build_issue(elem(doc_node, 1)) | found])
     else
-      [doc_node | drop_redundant_doc([defp_node | rest])]
+      find_redundant_docs(rest, found)
     end
   end
 
-  defp drop_redundant_doc([node | rest]) do
-    [node | drop_redundant_doc(rest)]
+  defp drop_redundant_doc([]), do: []
+
+  defp drop_redundant_doc([node | rest] = nodes) do
+    if redundant_private_doc?(nodes) do
+      drop_redundant_doc(rest)
+    else
+      [node | drop_redundant_doc(rest)]
+    end
   end
 
   defp build_issue(meta) do
