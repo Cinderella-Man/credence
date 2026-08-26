@@ -12,6 +12,48 @@ defmodule Credence.Semantic.NoModuleLevelInitFixTest do
     NoModuleLevelInit.fix(source, %{severity: :error, message: message, position: {line, 1}})
   end
 
+  test "repairs a real compiler diagnostic through the Semantic pipeline" do
+    input = """
+    defmodule NoModuleLevelInitFixPipelineFixture do
+      def init, do: :ok
+      init()
+    end
+    """
+
+    expected = """
+    defmodule NoModuleLevelInitFixPipelineFixture do
+      @on_load :__credence_on_load__
+
+      def __credence_on_load__ do
+        init()
+        :ok
+      end
+
+      def init, do: :ok
+    end
+    """
+
+    control = """
+    defmodule NoModuleLevelInitFixPipelineControl do
+      @on_load :load
+      def load do
+        init()
+        :ok
+      end
+      def init, do: :ok
+    end
+    """
+
+    assert {:error, diagnostics} = RuleHelpers.compile_and_capture(input)
+    assert Enum.any?(diagnostics, &NoModuleLevelInit.match?/1)
+
+    {emitted, applied} = Credence.Semantic.fix_with_trace(input)
+
+    confirm_fix(emitted, String.trim_trailing(expected))
+    assert applied == [{NoModuleLevelInit, 1}]
+    assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(control)
+  end
+
   test "replaces bare init() with @on_load :init" do
     input = """
     defmodule Factory do
