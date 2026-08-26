@@ -73,6 +73,17 @@ defmodule Credence.Pattern.HallucinatedGuardFixTest do
   # alone everywhere. Previously it rewrote the definition head into invalid
   # syntax (`defguardp is_integer(x) and x > 0 when ...`) and unrolled call sites.
   describe "leaves a module-defined guard untouched" do
+    test "regular local function definition and calls are not rewritten" do
+      code = """
+      defmodule HallucinatedGuardLocalFunctionFixture do
+        defp is_pos_integer(term), do: is_integer(term) and term > 0
+        def valid?(term), do: is_pos_integer(term)
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+
     test "defguardp definition head is not mangled" do
       code = """
       defmodule M do
@@ -222,6 +233,48 @@ defmodule Credence.Pattern.HallucinatedGuardFixTest do
       """
 
       confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+
+    test "an explicitly unrelated import does not hide a hallucinated call" do
+      input = """
+      defmodule HallucinatedGuardUnrelatedImportFixture do
+        import Enum, only: [map: 2]
+        def valid?(term), do: is_pos_integer(term)
+      end
+      """
+
+      expected = """
+      defmodule HallucinatedGuardUnrelatedImportFixture do
+        import Enum, only: [map: 2]
+        def valid?(term), do: is_integer(term) and term > 0
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, input), expected)
+    end
+
+    test "an import in a sibling module does not hide a hallucinated call" do
+      input = """
+      defmodule HallucinatedGuardImportingFixture do
+        import MyApp.Guards
+      end
+
+      defmodule HallucinatedGuardSiblingFixture do
+        def valid?(term), do: is_pos_integer(term)
+      end
+      """
+
+      expected = """
+      defmodule HallucinatedGuardImportingFixture do
+        import MyApp.Guards
+      end
+
+      defmodule HallucinatedGuardSiblingFixture do
+        def valid?(term), do: is_integer(term) and term > 0
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, input), expected)
     end
   end
 end
