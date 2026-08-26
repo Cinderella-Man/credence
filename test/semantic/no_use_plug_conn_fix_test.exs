@@ -76,6 +76,66 @@ defmodule Credence.Semantic.NoUsePlugConnFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "does not rewrite a quoted `use Plug.Conn` alongside an executable one" do
+    input = """
+    defmodule CredenceNoUsePlugConnQuotedFixProbe do
+      use Plug.Conn
+
+      def quoted do
+        quote do
+          use Plug.Conn
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule CredenceNoUsePlugConnQuotedFixProbe do
+      import Plug.Conn
+
+      def quoted do
+        quote do
+          use Plug.Conn
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "semantic pipeline repairs the compiler's real Plug.Conn exception" do
+    input = """
+    defmodule CredenceNoUsePlugConnSemanticPipelineProbe do
+      use Plug.Conn
+
+      def call(conn, _opts), do: send_resp(conn, 200, "ok")
+    end
+    """
+
+    expected = """
+    defmodule CredenceNoUsePlugConnSemanticPipelineProbe do
+      import Plug.Conn
+
+      def call(conn, _opts), do: send_resp(conn, 200, "ok")
+    end
+    """
+
+    assert {:error, [diagnostic]} = Credence.RuleHelpers.compile_and_capture(input)
+    assert diagnostic.message == "function Plug.Conn.__using__/1 is undefined or private"
+    assert NoUsePlugConn.match?(diagnostic)
+
+    emitted = Credence.Semantic.fix(input)
+
+    confirm_fix(emitted, expected)
+
+    emitted_result = Credence.RuleHelpers.compile_and_capture(emitted)
+    control_result = Credence.RuleHelpers.compile_and_capture(expected)
+
+    assert emitted_result == control_result
+    assert emitted_result == {:ok, []}
+  end
+
   test "leaves the rest of the module byte-identical" do
     input = """
     defmodule MyApp.Plug.Greeter do

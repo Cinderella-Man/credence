@@ -116,14 +116,28 @@ defmodule Credence.Semantic.NoUsePlugConn do
   defp use_plug_conn_lines(source) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
-        {_ast, lines} =
-          Macro.prewalk(ast, [], fn
-            {:use, meta, [{:__aliases__, _, [:Plug, :Conn]}]} = node, acc ->
-              {node, add_line(acc, meta[:line])}
+        {_ast, {lines, 0}} =
+          Macro.traverse(
+            ast,
+            {[], 0},
+            fn
+              {:quote, _, _} = node, {lines, depth} ->
+                {node, {lines, depth + 1}}
 
-            node, acc ->
-              {node, acc}
-          end)
+              {:use, meta, [{:__aliases__, _, [:Plug, :Conn]}]} = node, {lines, 0} ->
+                {node, {add_line(lines, meta[:line]), 0}}
+
+              node, acc ->
+                {node, acc}
+            end,
+            fn
+              {:quote, _, _} = node, {lines, depth} ->
+                {node, {lines, depth - 1}}
+
+              node, acc ->
+                {node, acc}
+            end
+          )
 
         lines
 
