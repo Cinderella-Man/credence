@@ -81,6 +81,19 @@ defmodule Credence.Pattern.NoCryptoHashPipeSwappedArgsFixTest do
     confirm_fix(fix(NoCryptoHashPipeSwappedArgs, input), input)
   end
 
+  test "leaves a pipe with an unsupported literal algorithm unchanged" do
+    input = """
+    defmodule UnsupportedAlgorithm do
+      def hash_data(data) do
+        data
+        |> :crypto.hash(:bogus)
+      end
+    end
+    """
+
+    confirm_fix(fix(NoCryptoHashPipeSwappedArgs, input), input)
+  end
+
   test "output parses" do
     input = """
     defmodule ParsesAfterFix do

@@ -98,14 +98,15 @@ defmodule Credence.Pattern.NoCryptoHashPipeSwappedArgs do
   end
 
   # The scope predicate `check/2` and `fix_patches/2` share: a `:crypto.hash`
-  # call carrying exactly one argument, an atom literal in the algorithm
-  # position. Returns the call's meta so the issue can be anchored to it.
+  # call carrying exactly one argument, a supported hash algorithm literal in
+  # the algorithm position. Returns the call's meta so the issue can be
+  # anchored to it.
   defp algorithm_only_call(
          {{:., _dot_meta, [{:__block__, _crypto_meta, [:crypto]}, :hash]}, call_meta,
           [{:__block__, _algo_meta, [algo_atom]}]}
        )
        when is_atom(algo_atom) do
-    {:ok, call_meta}
+    if algo_atom in :crypto.supports(:hashs), do: {:ok, call_meta}, else: :error
   end
 
   defp algorithm_only_call(_), do: :error
