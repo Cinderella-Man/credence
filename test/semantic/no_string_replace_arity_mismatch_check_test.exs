@@ -3,6 +3,8 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchCheckTest do
 
   alias Credence.Semantic.NoStringReplaceArityMismatch
 
+  import Credence.RuleHelpers, only: [compile_and_capture: 1]
+
   # Real Elixir 1.20.2 message: `String.replace/4` guards on
   # `is_function(replacement, 1)`, so a multi-arity callback raises
   # `FunctionClauseError`. When the call is evaluated at compile time (module
@@ -10,11 +12,27 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchCheckTest do
   # semantic round as an error diagnostic.
   @real_message "no function clause matching in String.replace/4"
 
-  defp diag(message \\ @real_message, position \\ {6, 7}) do
+  defp diag(message \\ @real_message, position \\ 0) do
     %{severity: :error, message: message, position: position}
   end
 
   describe "match?/1" do
+    test "the compiler's positionless exception reaches this rule through semantic dispatch" do
+      source = """
+      defmodule StringReplaceAritySemanticWitness do
+        @masked String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        def masked, do: @masked
+      end
+      """
+
+      assert {:error, [diagnostic]} = compile_and_capture(source)
+      assert diagnostic.message == @real_message
+      assert diagnostic.position == 0
+
+      assert [%Credence.Issue{rule: :no_string_replace_arity_mismatch}] =
+               Credence.Semantic.analyze(source)
+    end
+
     test "matches the diagnostic" do
       assert NoStringReplaceArityMismatch.match?(diag())
     end

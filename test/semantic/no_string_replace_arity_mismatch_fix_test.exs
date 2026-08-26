@@ -7,7 +7,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
 
   @real_message "no function clause matching in String.replace/4"
 
-  defp fix(source, message \\ @real_message, line \\ 1) do
+  defp fix(source, message \\ @real_message, line \\ 0) do
     NoStringReplaceArityMismatch.fix(source, %{
       severity: :error,
       message: message,
@@ -16,6 +16,52 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
   end
 
   describe "rewrites String.replace/3 to Regex.replace/3" do
+    test "rewrites only the call on a positive diagnostic line and leaves quoted code alone" do
+      input = """
+      defmodule PositionScopedStringReplace do
+        @broken String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        def unrelated(s), do: String.replace(s, ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        @quoted quote do
+          String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule PositionScopedStringReplace do
+        @broken Elixir.Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
+        def unrelated(s), do: String.replace(s, ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+
+        @quoted quote do
+          String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, @real_message, 2), expected)
+    end
+
+    test "uses the absolute Regex name when a local alias shadows Regex" do
+      input = """
+      defmodule AliasSafeStringReplace do
+        alias String, as: Regex
+        @broken String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        def broken, do: @broken
+      end
+      """
+
+      expected = """
+      defmodule AliasSafeStringReplace do
+        alias String, as: Regex
+        @broken Elixir.Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
+        def broken, do: @broken
+      end
+      """
+
+      confirm_fix(fix(input, @real_message, 3), expected)
+      assert compiles?(fix(input, @real_message, 3))
+    end
+
     test "multi-arity callback over a regex literal" do
       input = """
       defmodule EmailMasker do
@@ -40,7 +86,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
       expected = """
       defmodule EmailMasker do
         def mask_email(str) do
-          Regex.replace(
+          Elixir.Regex.replace(
             ~r/([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/,
             str,
             fn full, local, domain ->
@@ -72,7 +118,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
       expected = """
       defmodule A do
         def f(s) do
-          Regex.replace(~r/(a)(b)/, s, fn full, a, b when a != "" -> full <> b end)
+          Elixir.Regex.replace(~r/(a)(b)/, s, fn full, a, b when a != "" -> full <> b end)
         end
       end
       """
@@ -94,7 +140,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
       expected = """
       defmodule A do
         def f(s) do
-          Regex.replace(~r/(a)(b)/, s, fn
+          Elixir.Regex.replace(~r/(a)(b)/, s, fn
             "x", a, b -> a <> b
             full, _a, _b -> full
           end)
@@ -114,7 +160,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
 
       expected = """
       defmodule A do
-        def f(s), do: Regex.replace(~R/(a)(b)/, s, fn full, a, b -> full <> a <> b end)
+        def f(s), do: Elixir.Regex.replace(~R/(a)(b)/, s, fn full, a, b -> full <> a <> b end)
       end
       """
 
@@ -150,7 +196,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
       defmodule A do
         def one(s), do: String.replace(s, "x", "y")
 
-        def two(s), do: Regex.replace(~r/(a)/, s, fn full, a -> full <> a end)
+        def two(s), do: Elixir.Regex.replace(~r/(a)/, s, fn full, a -> full <> a end)
 
         def three(s), do: String.replace(s, ~r/b/, fn m -> m end)
       end
@@ -171,7 +217,7 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatchFixTest do
     test "rewrites a String.replace evaluated in a module attribute" do
       expected = """
       defmodule CompileTimeReplace do
-        @masked Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
+        @masked Elixir.Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
         def masked, do: @masked
       end
       """

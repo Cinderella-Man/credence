@@ -80,25 +80,42 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatch do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
+  def fix(source, diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
-      {new_ast, changed} =
-        Macro.prewalk(ast, false, fn
-          # String.replace(str, ~r/…/, fn a, b, c -> ... end)
-          # → Regex.replace(~r/…/, str, fn a, b, c -> ... end)
-          {{:., dot_meta, [{:__aliases__, alias_meta, [:String]}, :replace]}, call_meta,
-           [str, pattern, {:fn, _, _} = replacement]} = node,
-          acc ->
-            if regex_literal?(pattern) and multi_arity_fn?(replacement) do
-              {{{:., dot_meta, [{:__aliases__, alias_meta, [:Regex]}, :replace]}, call_meta,
-                [pattern, str, replacement]}, true}
-            else
-              {node, acc}
-            end
+      target_line = line(diagnostic)
 
-          node, acc ->
-            {node, acc}
-        end)
+      {new_ast, {changed, _quote_depth}} =
+        Macro.traverse(
+          ast,
+          {false, 0},
+          fn
+            {:quote, _, _} = node, {changed, quote_depth} ->
+              {node, {changed, quote_depth + 1}}
+
+            # String.replace(str, ~r/…/, fn a, b, c -> ... end)
+            # → Elixir.Regex.replace(~r/…/, str, fn a, b, c -> ... end)
+            {{:., dot_meta, [{:__aliases__, alias_meta, [:String]}, :replace]}, call_meta,
+             [str, pattern, {:fn, _, _} = replacement]} = node,
+            {changed, 0} ->
+              if on_diagnostic_line?(call_meta, target_line) and regex_literal?(pattern) and
+                   multi_arity_fn?(replacement) do
+                {{{:., dot_meta, [{:__aliases__, alias_meta, [:"Elixir", :Regex]}, :replace]},
+                  call_meta, [pattern, str, replacement]}, {true, 0}}
+              else
+                {node, {changed, 0}}
+              end
+
+            node, acc ->
+              {node, acc}
+          end,
+          fn
+            {:quote, _, _} = node, {changed, quote_depth} ->
+              {node, {changed, quote_depth - 1}}
+
+            node, acc ->
+              {node, acc}
+          end
+        )
 
       if changed, do: Sourceror.to_string(new_ast), else: source
     else
@@ -123,6 +140,12 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatch do
   end
 
   defp multi_arity_fn?(_), do: false
+
+  # Raised compile exceptions do not always carry a source line. The bounded
+  # compiler represents that case as line 0, where matching by position is
+  # impossible; quoted code is still excluded by the traversal above.
+  defp on_diagnostic_line?(_meta, line) when line <= 0, do: true
+  defp on_diagnostic_line?(meta, line), do: Keyword.get(meta, :line) == line
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
