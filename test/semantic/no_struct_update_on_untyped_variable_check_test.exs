@@ -6,9 +6,9 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableCheckTest do
   # Verbatim `Code.with_diagnostics/1` output on Elixir 1.20.2 for the module in
   # `@source` below (severity `:warning`, position `{5, 5}`).
   @real_message """
-  a struct for Saga is expected on struct update:
+  a struct for SagaCheckNSUOUV is expected on struct update:
 
-      %Saga{context | steps: context.steps ++ [action_fn]}
+      %SagaCheckNSUOUV{context | steps: context.steps ++ [action_fn]}
 
   but got type:
 
@@ -20,11 +20,11 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableCheckTest do
       # from: credence_check.ex:4:15
       context
 
-  when defining the variable "context", you must also pattern match on "%Saga{}"
+  when defining the variable "context", you must also pattern match on "%SagaCheckNSUOUV{}"
   """
 
   @source """
-  defmodule Saga do
+  defmodule SagaCheckNSUOUV do
     defstruct steps: []
 
     def execute(context, action_fn) when is_function(action_fn, 1) do
@@ -47,6 +47,23 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariableCheckTest do
 
     test "the fix resolves the diagnostic" do
       assert struct_update_diagnostics(Rule.fix(@source, diagnostic())) == []
+    end
+
+    test "the Semantic pipeline owns and fixes the emitted diagnostic" do
+      expected = String.replace(@source, "%__MODULE__{context |", "%{context |")
+      control = String.replace(expected, "SagaCheckNSUOUV", "SagaCheckControlNSUOUV")
+
+      assert [issue] = Credence.Semantic.analyze(@source)
+      assert issue.rule == :no_struct_update_on_untyped_variable
+      assert issue.meta.line == 5
+
+      {emitted, applied} = Credence.Semantic.fix_with_trace(@source)
+
+      assert emitted == expected
+      assert applied == [{Rule, 1}]
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(control)
     end
   end
 
