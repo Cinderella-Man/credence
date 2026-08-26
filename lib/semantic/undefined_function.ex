@@ -187,9 +187,9 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Base", "hex_encode64", 2} => {:rename, "Base", "encode64"},
 
     # `List.keystore/4` confused with `List.keyfind/3`: the POSITION argument is
-    # the one left out, and it belongs second. Appending would compile and mean
+    # the one left out, and it belongs third. Appending would compile and mean
     # something else, which is why this needs its own verb (docs/16 4.6d).
-    {"List", "keystore", 3} => {:insert_arg, "List", "keystore", 1, "0"}
+    {"List", "keystore", 3} => {:insert_arg, "List", "keystore", 2, "0"}
   }
 
   @local_replacements %{
@@ -540,8 +540,8 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   # Insert an argument at a POSITION rather than appending one. Every other
   # table verb renames or appends; `List.keystore/3` needs neither — the missing
-  # argument is the position index and it belongs second
-  # (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`), so appending
+  # argument is the position index and it belongs third
+  # (`List.keystore(l, k, t)` -> `List.keystore(l, k, 0, t)`), so appending
   # would produce a call that compiles and means something else.
   #
   # Arguments are split on top-level commas of the SHADOW, so a comma inside a

@@ -4,6 +4,7 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2]
 
   alias Credence.Semantic.UndefinedFunction
+  alias Credence.RuleHelpers
   alias Qualified
 
   defp fix(source, message, line \\ 1) do
@@ -1013,7 +1014,11 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
 
   describe "Base.hex_encode" do
     defp base_fix(source, message) do
-      UndefinedFunction.fix(source, %{severity: :error, message: message, position: {2, 1}})
+      diagnostic = %{severity: :warning, message: message, position: {2, 1}}
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
     end
 
     test "hex_encode/1 becomes encode16 with case: :lower" do
@@ -1090,20 +1095,25 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   #
   # The last of the deferred rows, and the one that needed a new table verb.
   # LLMs confuse `List.keystore/4` with `List.keyfind/3` and leave out the
-  # POSITION argument, which belongs SECOND — so appending (the only thing
+  # POSITION argument, which belongs THIRD — so appending (the only thing
   # `:rename_add_arg` can do) would produce a call that compiles and means
   # something else. `:insert_arg` puts it at an index.
 
   describe "List.keystore/3" do
     defp keystore(source) do
-      UndefinedFunction.fix(source, %{
-        severity: :error,
+      diagnostic = %{
+        severity: :warning,
         message: "List.keystore/3 is undefined or private. Did you mean: * keystore/4",
         position: {2, 1}
-      })
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
     end
 
-    test "inserts the position argument second" do
+    test "inserts the position argument third" do
       confirm_fix(
         keystore("""
         defmodule KsPlain do
@@ -1112,7 +1122,7 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
         """),
         """
         defmodule KsPlain do
-          def f(l, k, t), do: List.keystore(l, 0, k, t)
+          def f(l, k, t), do: List.keystore(l, k, 0, t)
         end
         """
       )
@@ -1130,7 +1140,7 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
         """),
         """
         defmodule KsNested do
-          def f(l), do: List.keystore(l, 0, "a, b", {:x, [1, 2]})
+          def f(l), do: List.keystore(l, "a, b", 0, {:x, [1, 2]})
         end
         """
       )
@@ -1138,11 +1148,11 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
 
     # The control, and it was a real bug before the guard existed: a CORRECT
     # `List.keystore/4` on the line is not what the /3 diagnostic is about, and
-    # inserting into it produced `List.keystore(l, 0, 0, :k, {:k, 1})`.
+    # inserting into it produced `List.keystore(l, 0, :k, 0, {:k, 1})`.
     test "CONTROL: an already-correct keystore/4 call is left alone" do
       source = """
       defmodule KsCorrect do
-        def f(l), do: List.keystore(l, 0, :k, {:k, 1})
+        def f(l), do: List.keystore(l, :k, 0, {:k, 1})
       end
       """
 
@@ -1156,15 +1166,28 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   # /1 row was missing until the docs/18 rebuild list was checked by running it.
   describe ":queue.empty" do
     test "arity 1 is the is_empty? question" do
-      confirm_fix(
+      diagnostic = %{
+        severity: :warning,
+        message: ":queue.empty/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+
+      fixed =
         UndefinedFunction.fix(
           """
           defmodule QueueOne do
             def f(q), do: :queue.empty(q)
           end
           """,
-          %{severity: :error, message: ":queue.empty/1 is undefined or private", position: {2, 1}}
-        ),
+          diagnostic
+        )
+
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+
+      confirm_fix(
+        fixed,
         """
         defmodule QueueOne do
           def f(q), do: :queue.is_empty(q)
@@ -1174,15 +1197,28 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
 
     test "arity 0 is still the constructor" do
-      confirm_fix(
+      diagnostic = %{
+        severity: :warning,
+        message: ":queue.empty/0 is undefined or private",
+        position: {2, 1}
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+
+      fixed =
         UndefinedFunction.fix(
           """
           defmodule QueueZero do
             def f, do: :queue.empty()
           end
           """,
-          %{severity: :error, message: ":queue.empty/0 is undefined or private", position: {2, 1}}
-        ),
+          diagnostic
+        )
+
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+
+      confirm_fix(
+        fixed,
         """
         defmodule QueueZero do
           def f, do: :queue.new()
@@ -1199,7 +1235,11 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
 
   describe "docs/23 table rows" do
     defp qfix(source, message) do
-      UndefinedFunction.fix(source, %{severity: :error, message: message, position: {2, 1}})
+      diagnostic = %{severity: :warning, message: message, position: {2, 1}}
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
     end
 
     test "Map.reduce/3 becomes Enum.reduce/3" do
