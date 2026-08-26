@@ -590,6 +590,38 @@ end
       })
     end
 
+    test "repairs a real compiler diagnostic through the semantic pipeline" do
+      input = """
+      defmodule UndefinedFunctionExitTwoPipelineFixture do
+        def f(pid), do: exit(pid, :kill)
+      end
+      """
+
+      expected = """
+      defmodule UndefinedFunctionExitTwoPipelineFixture do
+        def f(pid), do: Process.exit(pid, :kill)
+      end
+      """
+
+      assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+      expected_message =
+        "undefined function exit/2 (expected UndefinedFunctionExitTwoPipelineFixture to define such a function or for it to be imported, but none are available)"
+
+      assert Enum.any?(
+               diagnostics,
+               &(&1.severity == :error and &1.message == expected_message and
+                   UndefinedFunction.match?(&1))
+             )
+
+      emitted = Credence.Semantic.fix(input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
     test "qualifies the two-argument call" do
       confirm_fix(
         exit2("""
