@@ -4,7 +4,8 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
   **left** side — which crashes at runtime with `FunctionClauseError` because
   `Kernel.=~/2` requires `is_binary(left)`.
 
-  The fix swaps the operands: `string =~ regex` is the call the author meant.
+  When the right operand is provably a binary, the fix swaps the operands:
+  `string =~ regex` is the call the author meant.
 
   Also detects module attributes holding a `~r` literal — e.g. `@re =~ string`
   where `@re` was defined as `~r/pattern/`.
@@ -12,23 +13,24 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
   ## Bad
 
       @valid_identifier_regex ~r/^[a-zA-Z_][a-zA-Z0-9_]*$/
-      @valid_identifier_regex =~ name
+      @valid_identifier_regex =~ "name"
 
-      ~r/^prefix/ =~ string
+      ~r/^prefix/ =~ "prefix"
 
   ## Good
 
       @valid_identifier_regex ~r/^[a-zA-Z_][a-zA-Z0-9_]*$/
-      name =~ @valid_identifier_regex
+      "name" =~ @valid_identifier_regex
 
-      string =~ ~r/^prefix/
+      "prefix" =~ ~r/^prefix/
 
   ## Safety
 
   Swapping the operands of `=~` changes the answer whenever the left side can
   be a binary (`"ab" =~ "a"` is a substring check and is not symmetric), so the
   rule fires only when the left side is **provably never a binary** — a certain
-  `FunctionClauseError` — and the swap is a repair:
+  `FunctionClauseError` — and the right side is a binary literal or binary
+  construction, making the swap a repair:
 
     * a `~r` sigil literal on the left always crashes;
     * a module attribute qualifies only when **every** `@attr value` assignment
@@ -55,8 +57,8 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:=~, meta, [left, _right]} = node, issues ->
-          if regex_on_left?(left, regex_attrs, meta, quoted) do
+        {:=~, meta, [left, right]} = node, issues ->
+          if repairable_match?(left, right, regex_attrs, meta, quoted) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -76,7 +78,7 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
 
     RuleHelpers.patches_from_postwalk(ast, fn
       {:=~, meta, [left, right]} = node ->
-        if regex_on_left?(left, regex_attrs, meta, quoted) do
+        if repairable_match?(left, right, regex_attrs, meta, quoted) do
           {:=~, meta, [right, left]}
         else
           node
@@ -152,6 +154,14 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgs do
     do: MapSet.member?(regex_attrs, attr_name) and not MapSet.member?(quoted, meta)
 
   defp regex_on_left?(_, _, _, _), do: false
+
+  defp repairable_match?(left, right, regex_attrs, meta, quoted) do
+    binary_literal?(right) and regex_on_left?(left, regex_attrs, meta, quoted)
+  end
+
+  defp binary_literal?({:__block__, _, [value]}) when is_binary(value), do: true
+  defp binary_literal?({:<<>>, _, _}), do: true
+  defp binary_literal?(_), do: false
 
   defp build_issue(meta) do
     %Issue{

@@ -8,7 +8,7 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgsCheckTest do
   test "flags regex literal on the left of =~" do
     code = """
     defmodule M do
-      def f(x), do: ~r/abc/ =~ x
+      def f, do: ~r/abc/ =~ "abc"
     end
     """
 
@@ -19,7 +19,7 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgsCheckTest do
     code = """
     defmodule M do
       @re ~r/^[a-z]+$/
-      def f(x), do: @re =~ x
+      def f, do: @re =~ "abc"
     end
     """
 
@@ -29,9 +29,9 @@ defmodule Credence.Pattern.FixRegexMatchSwappedArgsCheckTest do
   test "flags regex literal on the left even inside a quote block" do
     code = """
     defmodule M do
-      defmacro m(x) do
+      defmacro m(_x) do
         quote do
-          ~r/abc/ =~ unquote(x)
+          ~r/abc/ =~ "abc"
         end
       end
     end
