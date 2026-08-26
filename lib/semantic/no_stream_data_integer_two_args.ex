@@ -120,7 +120,7 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
   def fix(source, diagnostic) do
     with {line_no, col} when is_integer(line_no) <- position(diagnostic),
          {:ok, ast} <- Sourceror.parse_string(source),
-         true <- imports_stream_data?(ast, line_no),
+         true <- imports_stream_data?(ast, {line_no, col}),
          {:ok, arg1, arg2} <- flagged_call(ast, {line_no, col}),
          {:ok, range} <- comma_range(source, arg1, arg2) do
       Sourceror.patch_string(source, [%{range: range, change: ".."}])
@@ -129,62 +129,103 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
     end
   end
 
-  # Is an `import StreamData` (with or without options) — or a
+  # Is an `import StreamData` that includes `integer/1` — or a
   # `use ExUnitProperties`, which imports StreamData for property tests — in
-  # lexical scope at `line_no`? An import earlier in the file counts only when
-  # every `defmodule` wrapping it also wraps the flagged call, so a sibling
-  # module that never imported StreamData is left alone.
-  defp imports_stream_data?(ast, line_no) do
-    modules = module_ranges(ast)
-    target = wrapping_modules(modules, line_no)
+  # lexical scope at the flagged call? Blocks are walked in source order;
+  # imports affect later forms in that block and descendants, but never escape
+  # a function, branch, or other nested block.
+  defp imports_stream_data?(ast, position) do
+    case import_scope_at(ast, position, false) do
+      {:found, imported?} -> imported?
+      :not_found -> false
+    end
+  end
 
-    Enum.any?(import_lines(ast), fn line ->
-      line < line_no and MapSet.subset?(wrapping_modules(modules, line), target)
+  defp import_scope_at({:integer, meta, [_arg1, _arg2]}, {line, col}, imported?) do
+    if meta[:line] == line and (is_nil(col) or meta[:column] == col),
+      do: {:found, imported?},
+      else: :not_found
+  end
+
+  defp import_scope_at({:__block__, _, forms}, position, imported?) when is_list(forms) do
+    Enum.reduce_while(forms, imported?, fn form, in_scope? ->
+      case import_scope_at(form, position, in_scope?) do
+        {:found, _} = found -> {:halt, found}
+        :not_found -> {:cont, in_scope? or imports_integer?(form)}
+      end
+    end)
+    |> case do
+      {:found, _} = found -> found
+      _ -> :not_found
+    end
+  end
+
+  defp import_scope_at({left, middle, right}, position, imported?) do
+    import_scope_at([left, middle, right], position, imported?)
+  end
+
+  defp import_scope_at({left, right}, position, imported?) do
+    import_scope_at([left, right], position, imported?)
+  end
+
+  defp import_scope_at(list, position, imported?) when is_list(list) do
+    Enum.reduce_while(list, :not_found, fn child, _acc ->
+      case import_scope_at(child, position, imported?) do
+        {:found, _} = found -> {:halt, found}
+        :not_found -> {:cont, :not_found}
+      end
     end)
   end
 
-  defp import_lines(ast) do
-    {_, lines} =
-      Macro.prewalk(ast, [], fn
-        {:import, meta, [{:__aliases__, _, [:StreamData]} | _]} = node, acc ->
-          {node, [meta[:line] | acc]}
+  defp import_scope_at(_node, _position, _imported?), do: :not_found
 
-        {:use, meta, [{:__aliases__, _, [:ExUnitProperties]} | _]} = node, acc ->
-          {node, [meta[:line] | acc]}
+  defp imports_integer?({:use, _, [{:__aliases__, _, [:ExUnitProperties]} | _]}), do: true
 
-        node, acc ->
-          {node, acc}
-      end)
+  defp imports_integer?({:import, _, [{:__aliases__, _, [:StreamData]}]}), do: true
 
-    Enum.filter(lines, &is_integer/1)
+  defp imports_integer?({:import, _, [{:__aliases__, _, [:StreamData]}, options]}) do
+    only = import_option(options, :only)
+    except = import_option(options, :except)
+
+    cond do
+      only != :missing -> imports_arity?(only, :integer, 1)
+      except != :missing -> not imports_arity?(except, :integer, 1)
+      true -> true
+    end
   end
 
-  defp module_ranges(ast) do
-    {_, ranges} =
-      Macro.prewalk(ast, [], fn
-        {:defmodule, _, _} = node, acc ->
-          case Sourceror.get_range(node) do
-            %{start: [line: start_line, column: _], end: [line: end_line, column: _]} ->
-              {node, [{start_line, end_line} | acc]}
+  defp imports_integer?(_node), do: false
 
-            _ ->
-              {node, acc}
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    ranges
+  defp import_option(options, name) when is_list(options) do
+    Enum.find_value(options, :missing, fn
+      {key, value} -> if literal(key) == name, do: value
+      _ -> nil
+    end)
   end
 
-  defp wrapping_modules(modules, line) do
-    for {start_line, end_line} <- modules,
-        line >= start_line,
-        line <= end_line,
-        into: MapSet.new(),
-        do: {start_line, end_line}
+  defp import_option(_options, _name), do: :missing
+
+  defp imports_arity?(value, name, arity) do
+    case literal(value) do
+      :functions ->
+        true
+
+      entries when is_list(entries) ->
+        Enum.any?(entries, fn
+          {entry_name, entry_arity} ->
+            literal(entry_name) == name and literal(entry_arity) == arity
+
+          _ ->
+            false
+        end)
+
+      _ ->
+        false
+    end
   end
+
+  defp literal({:__block__, _, [value]}), do: literal(value)
+  defp literal(value), do: value
 
   # The flagged call is the two-argument `integer` call whose own token starts
   # at the diagnostic's line/column. Without a column, a lone candidate on the

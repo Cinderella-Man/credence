@@ -182,6 +182,83 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgsFixTest do
     confirm_fix(fix(input, {4, 16}), expected)
   end
 
+  test "leaves a call in another function outside an import's lexical scope alone" do
+    input = """
+    defmodule CredenceIntegerTwoArgsFunctionScope do
+      def imported do
+        import StreamData
+        :ok
+      end
+      def broken, do: integer(0, 10)
+    end
+    """
+
+    confirm_fix(fix(input, {6, 19}), input)
+  end
+
+  test "leaves a call outside a branch-local import alone" do
+    input = """
+    defmodule CredenceIntegerTwoArgsBranchScope do
+      def gen(condition) do
+        if condition do
+          import StreamData
+          constant(:ok)
+        end
+
+        integer(0, 10)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, {8, 5}), input)
+  end
+
+  test "leaves a call alone when only excludes integer/1 from the import" do
+    input = """
+    defmodule CredenceIntegerTwoArgsOnlyOption do
+      import StreamData, only: [constant: 1]
+
+      def broken, do: integer(0, 10)
+    end
+    """
+
+    confirm_fix(fix(input, {4, 19}), input)
+  end
+
+  test "leaves a call alone when except excludes integer/1 from the import" do
+    input = """
+    defmodule CredenceIntegerTwoArgsExceptOption do
+      import StreamData, except: [integer: 1]
+
+      def broken, do: integer(0, 10)
+    end
+    """
+
+    confirm_fix(fix(input, {4, 19}), input)
+  end
+
+  test "rewrites when integer/1 is explicitly imported in the function scope" do
+    input = """
+    defmodule CredenceIntegerTwoArgsScopedOnlyOption do
+      def gen do
+        import StreamData, only: [integer: 1]
+        integer(0, 10)
+      end
+    end
+    """
+
+    expected = """
+    defmodule CredenceIntegerTwoArgsScopedOnlyOption do
+      def gen do
+        import StreamData, only: [integer: 1]
+        integer(0..10)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, {4, 5}), expected)
+  end
+
   #
   # No-ops — every case the check also declines to report.
 
