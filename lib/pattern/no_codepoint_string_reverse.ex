@@ -159,7 +159,8 @@ defmodule Credence.Pattern.NoCodepointStringReverse do
              [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [subject]}]}
           ]}
        )
-       when outer_mod in [[:Enum], [:IO]] and outer_func in [:join, :iodata_to_binary] do
+       when (outer_mod == [:Enum] and outer_func == :join) or
+              (outer_mod == [:IO] and outer_func == :iodata_to_binary) do
     {:ok, meta, subject}
   end
 
