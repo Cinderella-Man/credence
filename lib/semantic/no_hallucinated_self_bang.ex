@@ -49,24 +49,30 @@ defmodule Credence.Semantic.NoHallucinatedSelfBang do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
+  def fix(source, diagnostic) do
+    {diagnostic_line, diagnostic_column} = position(diagnostic)
+
     with {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
-          {:self!, meta, [_arg] = args}, _acc ->
-            # Only single-argument `self!(arg)` has a deterministic same-answer
-            # fix, `send(self(), arg)`. The diagnostic we claim is `self!/1`;
-            # rewriting `self!/0` (`send(self())` → send/1) or `self!/2`
-            # (`send(self(), a, b)` → send/3) would just swap one compile error
-            # for another, so leave those untouched for a narrower rule/user.
-            #
-            # Strip self!-specific closing metadata so Sourceror formats
-            # the replacement send(self(), ...) on a single line.
-            send_meta = Keyword.drop(meta, [:closing])
-            self_meta = [line: meta[:line], column: (meta[:column] || 0) + 5]
-            send_call = {:send, send_meta, [{:self, self_meta, []} | args]}
+          {:self!, meta, [_arg] = args} = node, acc ->
+            if at_position?(meta, diagnostic_line, diagnostic_column) do
+              # Only single-argument `self!(arg)` has a deterministic same-answer
+              # fix, `send(self(), arg)`. The diagnostic we claim is `self!/1`;
+              # rewriting `self!/0` (`send(self())` → send/1) or `self!/2`
+              # (`send(self(), a, b)` → send/3) would just swap one compile error
+              # for another, so leave those untouched for a narrower rule/user.
+              #
+              # Strip self!-specific closing metadata so Sourceror formats
+              # the replacement send(self(), ...) on a single line.
+              send_meta = Keyword.drop(meta, [:closing])
+              self_meta = [line: meta[:line], column: (meta[:column] || 0) + 5]
+              send_call = {:send, send_meta, [{:self, self_meta, []} | args]}
 
-            {send_call, true}
+              {send_call, true}
+            else
+              {node, acc}
+            end
 
           node, acc ->
             {node, acc}
@@ -80,4 +86,13 @@ defmodule Credence.Semantic.NoHallucinatedSelfBang do
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
+
+  defp position(%{position: {line, column}}) when is_integer(line) and is_integer(column),
+    do: {line, column}
+
+  defp position(%{position: line}) when is_integer(line), do: {line, nil}
+  defp position(_), do: {nil, nil}
+
+  defp at_position?(meta, line, nil), do: meta[:line] == line
+  defp at_position?(meta, line, column), do: meta[:line] == line and meta[:column] == column
 end

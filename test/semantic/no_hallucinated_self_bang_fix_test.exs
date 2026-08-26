@@ -11,7 +11,7 @@ defmodule Credence.Semantic.NoHallucinatedSelfBangFixTest do
     NoHallucinatedSelfBang.fix(source, %{
       severity: :error,
       message: message,
-      position: {line, 1}
+      position: line
     })
   end
 
@@ -42,7 +42,7 @@ defmodule Credence.Semantic.NoHallucinatedSelfBangFixTest do
     end
     """
 
-    confirm_fix(fix(input, @real_message), expected)
+    confirm_fix(fix(input, @real_message, 5), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -59,7 +59,7 @@ defmodule Credence.Semantic.NoHallucinatedSelfBangFixTest do
     end
     """
 
-    assert valid_syntax?(fix(input, @real_message))
+    assert valid_syntax?(fix(input, @real_message, 5))
   end
 
   test "returns source unchanged when no self! present" do
@@ -79,20 +79,61 @@ defmodule Credence.Semantic.NoHallucinatedSelfBangFixTest do
     confirm_fix(fix(input, @real_message), input)
   end
 
-  test "rewrites every single-arg self! occurrence in the file" do
+  test "rewrites only the self! call at the diagnostic location" do
     input = """
-    self!(:a)
-    foo()
-    self!(:b)
+    defmodule NoHallucinatedSelfBangValidScope do
+      def self!(message), do: message
+      def call, do: self!(:keep)
+      def quoted, do: quote(do: self!(:quoted))
+    end
+
+    defmodule NoHallucinatedSelfBangBrokenScope do
+      def call, do: self!(:fix)
+    end
     """
 
     expected = """
-    send(self(), :a)
-    foo()
-    send(self(), :b)
+    defmodule NoHallucinatedSelfBangValidScope do
+      def self!(message), do: message
+      def call, do: self!(:keep)
+      def quoted, do: quote(do: self!(:quoted))
+    end
+
+    defmodule NoHallucinatedSelfBangBrokenScope do
+      def call, do: send(self(), :fix)
+    end
     """
 
-    confirm_fix(fix(input, @real_message), expected)
+    confirm_fix(fix(input, @real_message, 8), expected)
+  end
+
+  test "repairs a real compiler diagnostic through the Semantic pipeline" do
+    input = """
+    defmodule NoHallucinatedSelfBangPipelineValid do
+      def self!(message), do: message
+      def call, do: self!(:keep)
+      def quoted, do: quote(do: self!(:quoted))
+    end
+
+    defmodule NoHallucinatedSelfBangPipelineBroken do
+      def call, do: self!(:fix)
+    end
+    """
+
+    expected = """
+    defmodule NoHallucinatedSelfBangPipelineValid do
+      def self!(message), do: message
+      def call, do: self!(:keep)
+      def quoted, do: quote(do: self!(:quoted))
+    end
+
+    defmodule NoHallucinatedSelfBangPipelineBroken do
+      def call, do: send(self(), :fix)
+    end
+    """
+
+    assert [%{rule: :no_hallucinated_self_bang}] = Credence.Semantic.analyze(input)
+    confirm_fix(Credence.Semantic.fix(input), expected)
   end
 
   test "leaves self!/2 untouched (send/3 would not compile)" do
