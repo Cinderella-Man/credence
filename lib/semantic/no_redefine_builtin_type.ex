@@ -50,12 +50,12 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
 
   @impl true
   def fix(source, %{message: msg} = diagnostic) when is_binary(msg) do
-    with type_name when is_binary(type_name) <- extract_type_name(msg),
+    with {type_name, arity} <- extract_type(msg),
          {:ok, ast} <- Sourceror.parse_string(source),
          target_module when not is_nil(target_module) <- module_at_line(ast, line(diagnostic)),
          atom_name = String.to_atom(type_name),
-         replacement <- unused_replacement(target_module, type_name),
-         renamed_module <- rename_type_in_ast(target_module, atom_name, replacement),
+         replacement <- unused_replacement(target_module, type_name, arity),
+         renamed_module <- rename_type_in_ast(target_module, atom_name, arity, replacement),
          new_ast <- replace_node(ast, target_module, renamed_module),
          true <- new_ast != ast do
       Sourceror.to_string(new_ast)
@@ -93,11 +93,13 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
     end
   end
 
-  defp unused_replacement(module_ast, type_name) do
+  defp unused_replacement(module_ast, type_name, arity) do
     {_ast, names} =
       Macro.prewalk(module_ast, MapSet.new(), fn
         {:@, _, [{kind, _, [{:"::", _, [{name, _, args}, _]}]}]} = node, names
-        when kind in [:type, :typep, :opaque] and is_atom(name) and args in [nil, []] ->
+        when kind in [:type, :typep, :opaque] and is_atom(name) and
+               ((arity == 0 and args in [nil, []]) or
+                  (is_list(args) and length(args) == arity)) ->
           {node, MapSet.put(names, name)}
 
         node, names ->
@@ -118,40 +120,49 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
 
   # Extract the type name from a diagnostic message like
   # "file.ex:2: type node/0 is a built-in type and it cannot be redefined"
-  defp extract_type_name(msg) do
-    case Regex.run(~r/type (\w+)\/\d+ is a built-in type/, msg) do
-      [_, name] -> name
+  defp extract_type(msg) do
+    case Regex.run(~r/type (\w+)\/(\d+) is a built-in type/, msg) do
+      [_, name, arity] -> {name, String.to_integer(arity)}
       _ -> nil
     end
   end
 
   # Walk the AST and rename the built-in type inside @type / @typep definitions
   # and references to it in other type definitions.
-  defp rename_type_in_ast(ast, type_name, replacement) do
+  defp rename_type_in_ast(ast, type_name, arity, replacement) do
     rename_rhs = fn rhs ->
       Macro.prewalk(rhs, fn
-        {^type_name, meta, nil} -> {replacement, meta, nil}
-        node -> node
+        {^type_name, meta, args}
+        when (arity == 0 and args in [nil, []]) or
+               (is_list(args) and length(args) == arity) ->
+          {replacement, meta, args}
+
+        node ->
+          node
       end)
     end
 
     Macro.prewalk(ast, fn
       # @type builtin :: rhs  — rename LHS and RHS
       {:@, attr_meta,
-       [{:type, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+       [{:type, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, args}, rhs]}]}]}
+      when (arity == 0 and args in [nil, []]) or
+             (is_list(args) and length(args) == arity) ->
         {:@, attr_meta,
          [
            {:type, type_meta,
-            [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}
+            [{:"::", op_meta, [{replacement, lhs_meta, args}, rename_rhs.(rhs)]}]}
          ]}
 
       # @typep builtin :: rhs — rename LHS and RHS
       {:@, attr_meta,
-       [{:typep, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+       [{:typep, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, args}, rhs]}]}]}
+      when (arity == 0 and args in [nil, []]) or
+             (is_list(args) and length(args) == arity) ->
         {:@, attr_meta,
          [
            {:typep, type_meta,
-            [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}
+            [{:"::", op_meta, [{replacement, lhs_meta, args}, rename_rhs.(rhs)]}]}
          ]}
 
       # @type other :: rhs — rename references in RHS if the builtin is referenced

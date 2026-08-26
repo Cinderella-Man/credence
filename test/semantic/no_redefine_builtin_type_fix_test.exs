@@ -190,23 +190,29 @@ defmodule Credence.Semantic.NoRedefineBuiltinTypeFixTest do
     confirm_fix(result, input)
   end
 
-  test "renames the flagged type for any builtin name in the message" do
+  test "renames a parameterized built-in type using the compiler diagnostic" do
     input = """
-    defmodule Foo do
-      @type my_type :: atom()
+    defmodule ParameterizedBuiltin do
+      @type list(element) :: [element]
+      @type strings :: list(String.t())
     end
     """
 
     expected = """
-    defmodule Foo do
-      @type trie_my_type :: atom()
+    defmodule ParameterizedBuiltin do
+      @type trie_list(element) :: [element]
+      @type strings :: trie_list(String.t())
     end
     """
 
-    confirm_fix(
-      fix(input, "file.ex:2: type my_type/0 is a built-in type and it cannot be redefined"),
-      expected
-    )
+    {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    diag = Enum.find(diagnostics, &NoRedefineBuiltinType.match?/1)
+    assert diag, "expected the parameterized built-in-type diagnostic to be emitted"
+
+    emitted = NoRedefineBuiltinType.fix(input, diag)
+
+    confirm_fix(emitted, expected)
+    assert {:ok, _} = Credence.RuleHelpers.compile_and_capture(emitted)
   end
 
   test "returns source unchanged when the flagged type is absent from the source" do
