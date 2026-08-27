@@ -1,11 +1,11 @@
 defmodule Credence.Pattern.NoManualCountWithPredicate do
   @moduledoc """
-  Detects hand-rolled recursive counting functions that should use `Enum.count/2`.
+  Detects hand-rolled recursive counting functions that should use `Enum.reduce/3`.
 
   ## Why this matters
 
   When a function counts list elements matching a predicate using manual
-  tail-recursion with an accumulator, it is reimplementing `Enum.count/2`:
+  tail-recursion with an accumulator, it is reimplementing `Enum.reduce/3`:
 
       # Flagged — 3-clause guard pattern
       defp do_count([], _target, acc), do: acc
@@ -24,10 +24,10 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   ## The fix
 
   Each flagged group is collapsed to a single clause that delegates to
-  `Enum.count/2`, threading the accumulator through unchanged:
+  `Enum.reduce/3`, threading the accumulator through unchanged:
 
       defp do_count(list, target, acc) when is_list(list),
-        do: acc + Enum.count(list, fn h -> h == target end)
+        do: Enum.reduce(list, acc, fn h, acc -> if h == target, do: acc + 1, else: acc end)
 
   This is a **behaviour-preserving** rewrite for every input:
 
@@ -36,7 +36,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   - The `when is_list(list)` guard preserves the original domain: the
     multi-clause original only ever matched lists (and raised
     `FunctionClauseError` otherwise), and so does the collapsed clause.
-  - `acc + Enum.count(list, pred)` reproduces `initial_acc + matches`.
+  - `Enum.reduce/3` preserves each individual accumulator update, including its
+    numeric semantics and predicates that inspect the changing accumulator.
 
   ## Detection scope (only the safely-fixable cases)
 
@@ -51,7 +52,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   `and`/`or`/`not`, unary `is_*` type checks over variables/literals). A
   guard that can raise (e.g. `rem(h, 2) == 0`) is **not** flagged: a guard
   silently *skips* an element whose guard raises, but the same expression
-  used as an `Enum.count/2` predicate would *raise* — a different answer.
+  used as an `Enum.reduce/3` condition would *raise* — a different answer.
   The bound argument must be passed through the recursion unchanged.
 
   **2-clause if pattern** — exactly 2 clauses, same name, where:
@@ -64,7 +65,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
      unchanged.
 
   The `<cond>` is an ordinary expression (not a guard), so it carries no
-  error-swallowing semantics — moving it into `Enum.count/2` preserves its
+  error-swallowing semantics — moving it into `Enum.reduce/3` preserves its
   truthiness, side effects, and any exception it raises. No narrowing of
   `<cond>` is needed.
 
@@ -81,7 +82,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   ## Good
 
       defmodule BadNMCWP do
-        defp tally(list, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h > 0 end)
+        defp tally(list, acc) when is_list(list),
+          do: Enum.reduce(list, acc, fn h, acc -> if h > 0, do: acc + 1, else: acc end)
       end
   """
 
@@ -226,7 +228,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
 
   defp analyze_guard_triple(clauses) do
     Enum.find_value(permutations3(clauses), :error, fn {base, guarded, skip} ->
-      case guard_roles(base, guarded, skip) do
+      case clause_before?(guarded, skip, clauses) && guard_roles(base, guarded, skip) do
         {:ok, roles} ->
           case build_guard_clause(roles) do
             {:ok, info} -> {:ok, info}
@@ -235,8 +237,15 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
 
         :error ->
           nil
+
+        false ->
+          nil
       end
     end)
+  end
+
+  defp clause_before?(left, right, clauses) do
+    Enum.find_index(clauses, &(&1 == left)) < Enum.find_index(clauses, &(&1 == right))
   end
 
   defp permutations3([a, b, c]) do
@@ -497,13 +506,24 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
 
   # ── building the collapsed clause ──────────────────────────────────
 
-  # `acc + Enum.count(list, fn head -> <pred> end)`
+  # `Enum.reduce(list, acc, fn head, acc -> if pred, do: acc + 1, else: acc end)`
   defp count_body(acc_name, list_name, head_name, pred) do
-    {:+, [],
+    update =
+      {:if, [],
+       [
+         pred,
+         [
+           {{:__block__, [format: :keyword], [:do]},
+            {:+, [], [var(acc_name), {:__block__, [token: "1"], [1]}]}},
+           {{:__block__, [format: :keyword], [:else]}, var(acc_name)}
+         ]
+       ]}
+
+    {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [],
      [
+       var(list_name),
        var(acc_name),
-       {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [],
-        [var(list_name), {:fn, [], [{:->, [], [[var(head_name)], pred]}]}]}
+       {:fn, [], [{:->, [], [[var(head_name), var(acc_name)], update]}]}
      ]}
   end
 
@@ -541,7 +561,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   # ── safe-guard classification ──────────────────────────────────────
 
   # A guard is "safe" iff it cannot raise and returns a boolean — so moving
-  # it into an `Enum.count/2` predicate gives the same answer. Guards swallow
+  # it into an `Enum.reduce/3` condition gives the same answer. Guards swallow
   # raised errors (skip the clause); a predicate would propagate them.
   defp safe_guard?({op, _, [l, r]}) when op in @comparison_ops do
     safe_leaf?(l) and safe_leaf?(r)
@@ -638,8 +658,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
       rule: :no_manual_count_with_predicate,
       message:
         "`#{def_type} #{fn_name}/#{arity}` is a manual recursive counting function " <>
-          "that reimplements `Enum.count/2`.\n\n" <>
-          "Use `Enum.count(list, predicate)` instead — it is clearer " <>
+          "that reimplements `Enum.reduce/3`.\n\n" <>
+          "Use `Enum.reduce(list, accumulator, reducer)` instead — it is clearer " <>
           "and avoids unnecessary code.",
       meta: %{line: Map.get(info, :line)}
     }

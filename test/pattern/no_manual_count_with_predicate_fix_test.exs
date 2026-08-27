@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
 
   alias Credence.Pattern.NoManualCountWithPredicate
 
-  describe "3-clause guard pattern — collapse to Enum.count/2" do
+  describe "3-clause guard pattern — collapse to Enum.reduce/3" do
     test "canonical multi-clause count" do
       code = """
       defmodule Bad do
@@ -30,7 +30,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
         end
 
         defp do_count(list, target, acc) when is_list(list),
-          do: acc + Enum.count(list, fn h -> h == target end)
+          do: Enum.reduce(list, acc, fn h, acc -> if h == target, do: acc + 1, else: acc end)
       end
       """
 
@@ -51,14 +51,14 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       expected = """
       defmodule Bad do
         defp count_above(list, threshold, acc) when is_list(list),
-          do: acc + Enum.count(list, fn h -> h > threshold end)
+          do: Enum.reduce(list, acc, fn h, acc -> if h > threshold, do: acc + 1, else: acc end)
       end
       """
 
       confirm_fix(fix(NoManualCountWithPredicate, code), expected)
     end
 
-    test "clauses in reversed order collapse at the first clause position" do
+    test "does not collapse when an unguarded clause shadows the guarded clause" do
       code = """
       defmodule Bad do
         defp cnt([_h | t], n, acc), do: cnt(t, n, acc)
@@ -67,17 +67,11 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      expected = """
-      defmodule Bad do
-        defp cnt(list, n, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h == n end)
-      end
-      """
-
-      confirm_fix(fix(NoManualCountWithPredicate, code), expected)
+      confirm_fix(fix(NoManualCountWithPredicate, code), code)
     end
   end
 
-  describe "2-clause if pattern — collapse to Enum.count/2" do
+  describe "2-clause if pattern — collapse to Enum.reduce/3" do
     test "arity 2" do
       code = """
       defmodule Bad do
@@ -91,7 +85,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
 
       expected = """
       defmodule Bad do
-        defp count_positive(list, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h > 0 end)
+        defp count_positive(list, acc) when is_list(list),
+          do: Enum.reduce(list, acc, fn h, acc -> if h > 0, do: acc + 1, else: acc end)
       end
       """
 
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
         end
 
         defp do_count(bound, list, acc) when is_list(list),
-          do: acc + Enum.count(list, fn head -> head < bound end)
+          do: Enum.reduce(list, acc, fn head, acc -> if head < bound, do: acc + 1, else: acc end)
       end
       """
 
@@ -141,7 +136,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
 
       expected = """
       defmodule Bad do
-        defp tally(list, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h > 0 end)
+        defp tally(list, acc) when is_list(list),
+          do: Enum.reduce(list, acc, fn h, acc -> if h > 0, do: acc + 1, else: acc end)
       end
       """
 
