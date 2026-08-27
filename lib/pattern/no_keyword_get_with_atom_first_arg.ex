@@ -38,45 +38,77 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
 
   @impl true
   def check(ast, _opts) do
-    piped = piped_get_positions(ast)
+    if keyword_alias_shadowed?(ast) do
+      []
+    else
+      piped = piped_get_positions(ast)
 
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case detect(node, piped) do
-          {:ok, meta} -> {node, [build_issue(meta) | acc]}
-          :skip -> {node, acc}
-        end
-      end)
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn node, acc ->
+          case detect(node, piped) do
+            {:ok, meta} -> {node, [build_issue(meta) | acc]}
+            :skip -> {node, acc}
+          end
+        end)
 
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    piped = piped_get_positions(ast)
+    if keyword_alias_shadowed?(ast) do
+      []
+    else
+      piped = piped_get_positions(ast)
 
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # Direct call (not piped): Keyword.get(:atom, default) or Keyword.get(:atom, key, default)
-      {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [first | rest]} = node ->
-        if not MapSet.member?(piped, position(meta)) and atom_literal?(first) and
-             length(rest) in 1..2 do
-          List.last(rest)
-        else
+      Credence.RuleHelpers.patches_from_postwalk(ast, fn
+        # Direct call (not piped): Keyword.get(:atom, default) or Keyword.get(:atom, key, default)
+        {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [first | rest]} = node ->
+          if not MapSet.member?(piped, position(meta)) and atom_literal?(first) and
+               length(rest) in 1..2 do
+            List.last(rest)
+          else
+            node
+          end
+
+        # Piped call: :atom |> Keyword.get(key) or :atom |> Keyword.get(key, default)
+        {:|>, _, [pipe_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _, args}]} = node ->
+          if atom_literal?(pipe_lhs) and length(args) in 1..2 do
+            List.last(args)
+          else
+            node
+          end
+
+        node ->
           node
-        end
+      end)
+    end
+  end
 
-      # Piped call: :atom |> Keyword.get(key) or :atom |> Keyword.get(key, default)
-      {:|>, _, [pipe_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _, args}]} = node ->
-        if atom_literal?(pipe_lhs) and length(args) in 1..2 do
-          List.last(args)
-        else
-          node
-        end
+  defp keyword_alias_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [_module, opts]} = node, acc when is_list(opts) ->
+          {node, acc or aliases_as_keyword?(opts)}
 
-      node ->
-        node
+        node, acc ->
+          {node, acc}
+      end)
+
+    shadowed?
+  end
+
+  defp aliases_as_keyword?(opts) do
+    Enum.any?(opts, fn
+      {{:__block__, _, [:as]}, alias_ast} -> keyword_alias?(alias_ast)
+      {:as, alias_ast} -> keyword_alias?(alias_ast)
+      _ -> false
     end)
   end
+
+  defp keyword_alias?({:__aliases__, _, [:Keyword]}), do: true
+  defp keyword_alias?(_), do: false
 
   # Direct call (not piped) where first arg is an atom literal
   defp detect(
