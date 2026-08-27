@@ -1,6 +1,7 @@
 defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
   use Credence.RuleCase, async: true
 
+  alias Credence.RuleHelpers
   alias Credence.Pattern.NoGraphemePalindrome
 
   describe "fix — bare variable, used only in the comparison (inline + drop binding)" do
@@ -85,6 +86,26 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
   end
 
   describe "fix — leaves unsafe / unrelated code untouched" do
+    test "does not borrow a grapheme binding from another function" do
+      code = """
+      defmodule NoGraphemePalindromeScopeProbe do
+        def prepare(x) do
+          g = String.graphemes(x)
+          g
+        end
+
+        def palindrome?(g, x) do
+          g == Enum.reverse(g)
+        end
+      end
+      """
+
+      emitted = fix(NoGraphemePalindrome, code)
+
+      confirm_fix(emitted, code)
+      assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(code)
+    end
+
     test "does not fix a pipe-built variable that is used elsewhere" do
       code = """
       normalized = s |> String.downcase() |> String.graphemes()
