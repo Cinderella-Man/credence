@@ -51,11 +51,14 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
 
   @impl true
   def check(ast, _opts) do
+    enum_shadowed? = alias_shadowed?(ast, :Enum)
+    function_shadowed? = alias_shadowed?(ast, :Function)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Direct: Enum.map(enum, identity)
         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, meta, [_enum, callback]} = node, acc ->
-          if identity_fn?(callback) do
+          if not enum_shadowed? and identity_fn?(callback, function_shadowed?) do
             {node, [build_issue(meta) | acc]}
           else
             {node, acc}
@@ -64,7 +67,7 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
         # Piped: enum |> Enum.map(identity)
         {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, meta, [callback]}]} = node,
         acc ->
-          if identity_fn?(callback) do
+          if not enum_shadowed? and identity_fn?(callback, function_shadowed?) do
             {node, [build_issue(meta) | acc]}
           else
             {node, acc}
@@ -79,11 +82,14 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
 
   @impl true
   def fix_patches(ast, _opts) do
+    enum_shadowed? = alias_shadowed?(ast, :Enum)
+    function_shadowed? = alias_shadowed?(ast, :Function)
+
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
         # Direct: Enum.map(enum, identity)
         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _meta, [enum, callback]} = node, acc ->
-          if identity_fn?(callback) do
+          if not enum_shadowed? and identity_fn?(callback, function_shadowed?) do
             {node, [direct_patch(node, enum) | acc]}
           else
             {node, acc}
@@ -94,7 +100,7 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
         {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _meta, [callback]} = rhs]} =
             node,
         acc ->
-          if identity_fn?(callback) do
+          if not enum_shadowed? and identity_fn?(callback, function_shadowed?) do
             {node, [piped_patch(rhs) | acc]}
           else
             {node, acc}
@@ -124,26 +130,23 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
   end
 
   # fn x -> x end (single-clause, same variable in arg and body)
-  defp identity_fn?({:fn, _, [{:->, _, [[{var, _, ctx}], {var, _, ctx}]}]})
+  defp identity_fn?({:fn, _, [{:->, _, [[{var, _, ctx}], {var, _, ctx}]}]}, _function_shadowed?)
        when is_atom(var) and is_atom(ctx),
        do: true
 
   # & &1
-  defp identity_fn?({:&, _, [{:&, _, [1]}]}), do: true
+  defp identity_fn?({:&, _, [{:&, _, [1]}]}, _function_shadowed?), do: true
 
   # &(&1)
-  defp identity_fn?({:&, _, [{:&, _, [{:__block__, _, [1]}]}]}), do: true
+  defp identity_fn?({:&, _, [{:&, _, [{:__block__, _, [1]}]}]}, _function_shadowed?), do: true
 
   # &Function.identity/1
   defp identity_fn?(
          {:&, _,
           [
-            {:/, _,
-             [
-               {{:., _, [{:__aliases__, _, [:Function]}, :identity]}, _, []},
-               1
-             ]}
-          ]}
+            {:/, _, [{{:., _, [{:__aliases__, _, [:Function]}, :identity]}, _, []}, 1]}
+          ]},
+         false
        ),
        do: true
 
@@ -156,11 +159,41 @@ defmodule Credence.Pattern.NoIdentityEnumMap do
                {{:., _, [{:__aliases__, _, [:Function]}, :identity]}, _, []},
                {:__block__, _, [1]}
              ]}
-          ]}
+          ]},
+         false
        ),
        do: true
 
-  defp identity_fn?(_), do: false
+  defp identity_fn?(_, _function_shadowed?), do: false
+
+  defp alias_shadowed?(ast, name) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
+        when is_list(target) and is_list(opts) ->
+          {node, shadowed? or shadows_alias?(target, alias_as(opts), name)}
+
+        {:alias, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
+          {node, shadowed? or shadows_alias?(target, nil, name)}
+
+        node, shadowed? ->
+          {node, shadowed?}
+      end)
+
+    shadowed?
+  end
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _other -> nil
+    end)
+  end
+
+  defp shadows_alias?(target, {:__aliases__, _, [name]}, name), do: target != [name]
+  defp shadows_alias?(target, nil, name), do: List.last(target) == name and target != [name]
+  defp shadows_alias?(_target, _as, _name), do: false
 
   defp build_issue(meta) do
     %Issue{
