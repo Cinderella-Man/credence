@@ -107,17 +107,24 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKeyCheckTest do
       assert check(NoKeywordGetKeywordKey, "Keyword.get(opts, [{:partial, false}])") == []
     end
 
-    test "piped keyword-list-only call (crashes too, but deliberately skipped)" do
-      assert check(NoKeywordGetKeywordKey, "opts |> Keyword.get(partial: false)") == []
+    test "piped keyword-list-only call" do
+      assert [%Issue{}] =
+               check(NoKeywordGetKeywordKey, "opts |> Keyword.get(partial: false)")
     end
   end
 
   # ── metadata ──────────────────────────────────────────────────
 
   describe "metadata" do
-    test "meta.line is set" do
-      [issue] = check(NoKeywordGetKeywordKey, "Keyword.get(opts, partial: false)")
-      assert issue.meta.line != nil
+    test "meta.line identifies the Keyword.get call" do
+      code = """
+      def read(opts) do
+        Keyword.get(opts, partial: false)
+      end
+      """
+
+      [issue] = check(NoKeywordGetKeywordKey, code)
+      assert issue.meta.line == 2
     end
   end
 end

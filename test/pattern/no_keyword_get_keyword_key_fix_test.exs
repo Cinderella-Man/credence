@@ -2,6 +2,7 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKeyFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoKeywordGetKeywordKey
+  alias Credence.RuleHelpers
 
   # ── rewrites keyword-literal keys ─────────────────────────────
 
@@ -99,9 +100,15 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKeyFixTest do
       confirm_fix(fix(NoKeywordGetKeywordKey, code), code)
     end
 
-    test "piped keyword-list-only call (crashes too, but deliberately skipped)" do
-      code = "opts |> Keyword.get(partial: false)"
-      confirm_fix(fix(NoKeywordGetKeywordKey, code), code)
+    test "piped keyword-list-only call" do
+      input = "(fn opts -> opts |> Keyword.get(partial: false) end).([])"
+      expected = "(fn opts -> opts |> Keyword.get(:partial, false) end).([])"
+      emitted = fix(NoKeywordGetKeywordKey, input)
+
+      confirm_fix(emitted, expected)
+
+      assert RuleHelpers.compile_and_capture(emitted) ==
+               RuleHelpers.compile_and_capture(expected)
     end
   end
 end

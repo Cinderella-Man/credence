@@ -23,9 +23,9 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKey do
 
   Any call to `Keyword.get` with exactly two arguments where the second is a
   keyword list with exactly one element. Three-argument calls are not flagged
-  (their keyword list is a valid default), and neither are piped calls — a
-  piped `Keyword.get(key, kw_list)` is really `Keyword.get/3`, where the
-  keyword list is again a valid default.
+  (their keyword list is a valid default). A piped call with only the keyword
+  list is flagged because it is `Keyword.get/2`; a piped call with a key and
+  keyword-list default is `Keyword.get/3` and remains valid.
 
   ## Auto-fix
 
@@ -59,6 +59,12 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKey do
   # default), so its second arg is a valid DEFAULT, not the key.
   defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [_list, kw_list]}, piped) do
     if not MapSet.member?(piped, position(meta)) and keyword_literal?(unwrap_block(kw_list)),
+      do: {:ok, meta},
+      else: :skip
+  end
+
+  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [kw_list]}, piped) do
+    if MapSet.member?(piped, position(meta)) and keyword_literal?(unwrap_block(kw_list)),
       do: {:ok, meta},
       else: :skip
   end
@@ -123,6 +129,22 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKey do
       new_node =
         {{:., [], [{:__aliases__, [], [:Keyword]}, :get]}, [],
          [list, {:__block__, [], [atom_key]}, default_value]}
+
+      {:ok, %{range: Sourceror.get_range(node), change: render(new_node)}}
+    else
+      _ -> :skip
+    end
+  end
+
+  defp detect_fix(
+         {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [kw_list]} = node,
+         piped
+       ) do
+    with true <- MapSet.member?(piped, position(meta)),
+         {:ok, atom_key, default_value} <- extract_keyword_pair(unwrap_block(kw_list)) do
+      new_node =
+        {{:., [], [{:__aliases__, [], [:Keyword]}, :get]}, [],
+         [{:__block__, [], [atom_key]}, default_value]}
 
       {:ok, %{range: Sourceror.get_range(node), change: render(new_node)}}
     else
