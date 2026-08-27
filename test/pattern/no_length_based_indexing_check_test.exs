@@ -30,8 +30,8 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
              """)
     end
 
-    test "Enum.count variant" do
-      assert flagged?(NoLengthBasedIndexing, """
+    test "Enum.count variant may receive a stateful enumerable" do
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = Enum.count(list)
                last = Enum.at(list, n - 1)

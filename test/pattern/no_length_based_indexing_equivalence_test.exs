@@ -27,4 +27,33 @@ defmodule Credence.Pattern.NoLengthBasedIndexingEquivalenceTest do
       inputs: [[], [5], [1, 2, 3], [1, 1.0], [:a, :b, :c], Enum.to_list(1..20)]
     )
   end
+
+  test "Enum.count rewrite preserves both traversals of a stateful enumerable" do
+    original = """
+    defmodule NoLengthBasedIndexingStatefulCompileWitness do
+      def run(enum) do
+        n = Enum.count(enum)
+        Enum.at(enum, n - 1)
+      end
+    end
+
+    {:ok, agent} = Agent.start_link(fn -> 0 end)
+
+    stream =
+      Stream.repeatedly(fn -> Agent.get_and_update(agent, &{&1, &1 + 1}) end)
+      |> Stream.take(3)
+
+    result = NoLengthBasedIndexingStatefulCompileWitness.run(stream)
+    calls = Agent.get(agent, & &1)
+
+    unless {result, calls} == {5, 6} do
+      raise "stateful enumerable traversal changed"
+    end
+    """
+
+    emitted = Credence.RuleHelpers.apply_rule_fix(NoLengthBasedIndexing, original)
+
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(original)
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
 end

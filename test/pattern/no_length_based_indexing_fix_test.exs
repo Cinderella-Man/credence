@@ -95,14 +95,18 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      expected = """
-      def run(list) do
-        last = Enum.at(list, -1)
-        last
+      confirm_fix(fix(NoLengthBasedIndexing, input), input)
+    end
+
+    test "Enum.count traversal is retained for stateful enumerables" do
+      input = """
+      def run(enum) do
+        n = Enum.count(enum)
+        Enum.at(enum, n - 1)
       end
       """
 
-      confirm_fix(fix(NoLengthBasedIndexing, input), expected)
+      confirm_fix(fix(NoLengthBasedIndexing, input), input)
     end
   end
 
