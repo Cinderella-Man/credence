@@ -21,6 +21,8 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
 
   @impl true
   def check(ast, _opts) do
+    ast = mask_shadowed_local_length(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->
         case check_node(node) do
@@ -34,6 +36,8 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
 
   @impl true
   def fix_patches(ast, _opts) do
+    ast = mask_shadowed_local_length(ast)
+
     Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
       case fix_node(node) do
         {:ok, replacement} -> replacement
@@ -323,6 +327,34 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
 
   defp same_var?({name, _, ctx}, {name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp same_var?(_, _), do: false
+
+  # A local length/1 definition takes precedence over the normally imported
+  # Kernel.length/1. Keep those calls opaque so this rule does not silently
+  # replace application behaviour with a count.
+  defp mask_shadowed_local_length(ast) do
+    if defines_local_length?(ast) do
+      Macro.prewalk(ast, fn
+        {:length, meta, [arg]} -> {:__credence_shadowed_length__, meta, [arg]}
+        node -> node
+      end)
+    else
+      ast
+    end
+  end
+
+  defp defines_local_length?(ast) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {kind, _, [{:length, _, args} | _]} = node, _found?
+        when kind in [:def, :defp, :defmacro, :defmacrop] and length(args) == 1 ->
+          {node, true}
+
+        node, found? ->
+          {node, found?}
+      end)
+
+    found?
+  end
 
   defp flatten_pipeline({:|>, _, [left, right]}),
     do: flatten_pipeline(left) ++ [right]
