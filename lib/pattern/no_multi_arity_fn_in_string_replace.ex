@@ -33,9 +33,9 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplace do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {{:., _dot_meta, [{:__aliases__, _alias_meta, [:String]}, :replace]}, call_meta,
-         [_str, _pattern, {:fn, _, _} = fn_node]} = node,
+         [_str, pattern, {:fn, _, _} = fn_node]} = node,
         acc ->
-          if multi_arity_fn?(fn_node) do
+          if not literal_binary?(pattern) and multi_arity_fn?(fn_node) do
             {node, [build_issue(call_meta) | acc]}
           else
             {node, acc}
@@ -53,7 +53,7 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplace do
     RuleHelpers.patches_from_postwalk(ast, fn
       {{:., dot_meta, [{:__aliases__, alias_meta, [:String]}, :replace]}, call_meta,
        [str, pattern, {:fn, _, _} = fn_node]} = node ->
-        if multi_arity_fn?(fn_node) do
+        if not literal_binary?(pattern) and multi_arity_fn?(fn_node) do
           {{:., dot_meta, [{:__aliases__, alias_meta, [:Regex]}, :replace]}, call_meta,
            [pattern, str, fn_node]}
         else
@@ -74,6 +74,9 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplace do
       _ -> false
     end)
   end
+
+  defp literal_binary?({:__block__, _, [value]}) when is_binary(value), do: true
+  defp literal_binary?(_), do: false
 
   defp build_issue(meta) do
     %Issue{
