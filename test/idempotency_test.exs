@@ -78,16 +78,12 @@ defmodule Credence.IdempotencyTest do
   # The last recorded green sweep is STATUS.md A4 at `00c1c1c`, when the suite was
   # 10,023 tests; it is 10,245 now.
   @ledger [
-    # 32 entries
+    # 28 entries
     {"test/pattern/no_keyword_get_with_atom_first_arg_fix_test.exs", "6c808844672f"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "0c39b6dd92a2"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "8873e59a9634"},
     {"test/pattern/no_length_guard_to_pattern_fix_test.exs", "f6b660297f03"},
     {"test/pattern/no_literal_list_typespec_fix_test.exs", "ba8980e4c64f"},
-    {"test/pattern/no_manual_list_reduce_fix_test.exs", "2f7d8966cdc7"},
-    {"test/pattern/no_manual_list_reduce_fix_test.exs", "b5289e82a4d1"},
-    {"test/pattern/no_manual_list_reduce_fix_test.exs", "da56b6e54a5c"},
-    {"test/pattern/no_manual_list_reduce_fix_test.exs", "e59eb318bc93"},
     {"test/pattern/no_map_update_then_fetch_fix_test.exs", "45d612866893"},
     {"test/pattern/no_map_update_then_fetch_fix_test.exs", "ba640e7aca16"},
     {"test/pattern/no_map_update_then_fetch_fix_test.exs", "d423f8fd8be4"},

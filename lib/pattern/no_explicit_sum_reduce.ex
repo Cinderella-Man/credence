@@ -24,6 +24,8 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
+  # Runs after `NoMapThenAggregate` in the default 500 band because that rule
+  # emits sum reductions for this rule to collapse to `Enum.sum/1`.
   @impl true
   def priority, do: 501
 
@@ -78,7 +80,7 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
   # Notice how we pattern match the two arguments (v1, v2) passed into the anonymous function
   defp sum_reduce_body?([
          _enum,
-         _acc,
+         {:__block__, _, [0]},
          {:fn, _, [{:->, _, [[{v1, _, _}, {v2, _, _}], body]}]}
        ])
        when is_atom(v1) and is_atom(v2) do
