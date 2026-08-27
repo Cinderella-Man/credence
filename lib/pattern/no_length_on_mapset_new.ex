@@ -48,6 +48,10 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   @impl true
   def check(ast, _opts) do
+    if mapset_alias_shadowed?(ast), do: [], else: check_unshadowed(ast)
+  end
+
+  defp check_unshadowed(ast) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->
         case node do
@@ -68,6 +72,10 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   @impl true
   def fix_patches(ast, _opts) do
+    if mapset_alias_shadowed?(ast), do: [], else: fix_unshadowed(ast)
+  end
+
+  defp fix_unshadowed(ast) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:length, _meta, [inner]} = node ->
         if mapset_new_call?(inner) do
@@ -83,6 +91,35 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   defp mapset_new_call?({{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, _}), do: true
   defp mapset_new_call?(_), do: false
+
+  defp mapset_alias_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
+        when is_list(target) and is_list(opts) ->
+          {node, shadowed? or shadows_mapset?(target, alias_as(opts))}
+
+        {:alias, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
+          {node, shadowed? or shadows_mapset?(target, nil)}
+
+        node, shadowed? ->
+          {node, shadowed?}
+      end)
+
+    shadowed?
+  end
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _other -> nil
+    end)
+  end
+
+  defp shadows_mapset?(target, {:__aliases__, _, [:MapSet]}), do: target != [:MapSet]
+  defp shadows_mapset?(target, nil), do: List.last(target) == :MapSet and target != [:MapSet]
+  defp shadows_mapset?(_target, _as), do: false
 
   defp mapset_size_call(inner),
     do: {{:., [], [{:__aliases__, [], [:MapSet]}, :size]}, [], [inner]}

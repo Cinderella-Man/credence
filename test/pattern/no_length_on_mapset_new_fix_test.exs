@@ -146,6 +146,27 @@ defmodule Credence.Pattern.NoLengthOnMapsetNewFixTest do
   end
 
   describe "no-ops outside the safe core" do
+    test "alias shadowing MapSet preserves the valid list-producing call" do
+      input = """
+      defmodule NoLengthOnMapsetNewAliasShadow do
+        defmodule ListFactory do
+          def new(items), do: items
+        end
+
+        alias ListFactory, as: MapSet
+
+        def count(items), do: length(MapSet.new(items))
+      end
+      """
+
+      emitted = fix(NoLengthOnMapsetNew, input)
+
+      assert check(NoLengthOnMapsetNew, input) == []
+      confirm_fix(emitted, input)
+      assert Credence.RuleHelpers.compile_and_capture(input) == {:ok, []}
+      assert Credence.RuleHelpers.compile_and_capture(emitted) == {:ok, []}
+    end
+
     test "MapSet.size(MapSet.new(arg)) — already correct" do
       code = """
       defmodule Good do
