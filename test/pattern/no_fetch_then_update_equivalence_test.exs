@@ -24,4 +24,20 @@ defmodule Credence.Pattern.NoFetchThenUpdateEquivalenceTest do
       inputs: [{%{}, :a}, {%{a: 1}, :a}, {%{a: 1.0}, :a}, {%{a: 1, b: 2}, :b}, {%{"k" => 5}, "k"}]
     )
   end
+
+  test "Map.update/4 still eagerly evaluates a raising default for a present key" do
+    expr = """
+    case Map.fetch(counts, key) do
+      {:ok, n} -> Map.update(counts, key, raise("boom"), &(&1 + n))
+      :error -> counts
+    end
+    """
+
+    assert_equivalent(expr,
+      rule: NoFetchThenUpdate,
+      vars: [:counts, :key],
+      inputs: [{%{a: 1}, :a}, {%{b: 2}, :b}, {%{"c" => 3}, "c"}],
+      allow_constant_output: true
+    )
+  end
 end

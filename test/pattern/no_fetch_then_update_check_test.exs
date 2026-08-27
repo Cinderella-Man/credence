@@ -65,6 +65,31 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
   end
 
   describe "does not flag" do
+    test "quoted updates and calls through a Map alias" do
+      quoted = """
+      case Map.fetch(map, key) do
+        {:ok, n} -> quote do: Map.update!(map, key, &(&1 + unquote(n)))
+        :error -> :error
+      end
+      """
+
+      aliased = """
+      defmodule AliasedCheck827 do
+        alias CustomMap827, as: Map
+
+        def bump(map, key) do
+          case Map.fetch(map, key) do
+            {:ok, n} -> Map.update!(map, key, &(&1 + n))
+            :error -> :error
+          end
+        end
+      end
+      """
+
+      assert check(NoFetchThenUpdate, quoted) == []
+      assert check(NoFetchThenUpdate, aliased) == []
+    end
+
     test "code already using Map.put in the :ok branch" do
       code = """
       defmodule GoodCode do
