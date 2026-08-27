@@ -4,6 +4,23 @@ defmodule Credence.Pattern.NoLengthOnMapsetNewCheckTest do
   alias Credence.Pattern.NoLengthOnMapsetNew
 
   describe "flags the anti-pattern" do
+    test "is discovered and repaired by the Pattern pipeline" do
+      input = """
+      defmodule NoLengthOnMapsetNewCheckPipelineFixture do
+        def count(items), do: length(MapSet.new(items))
+      end
+      """
+
+      expected = """
+      defmodule NoLengthOnMapsetNewCheckPipelineFixture do
+        def count(items), do: MapSet.size(MapSet.new(items))
+      end
+      """
+
+      assert Credence.Pattern.fix_with_trace(input) ==
+               {expected, [{NoLengthOnMapsetNew, 1}]}
+    end
+
     test "length(MapSet.new(arg))" do
       code = """
       defmodule Bad do
