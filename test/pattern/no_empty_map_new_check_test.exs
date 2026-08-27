@@ -33,6 +33,13 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       assert issue.rule == :no_empty_map_new
     end
 
+    test "detects a standalone Map.new() nested in a pipe RHS argument" do
+      code = "items |> process(Map.new())"
+
+      [issue] = check(NoEmptyMapNew, code)
+      assert issue.rule == :no_empty_map_new
+    end
+
     test "detects multiple occurrences" do
       code = """
       defmodule Bad do
@@ -92,6 +99,21 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
     # not compile, so it must not be flagged.
     test "does not flag the arity capture &Map.new/0" do
       code = "build = &Map.new/0"
+
+      assert check(NoEmptyMapNew, code) == []
+    end
+
+    test "does not flag Map.new() when Map is a lexical alias" do
+      code = """
+      alias MyMap, as: Map
+      Map.new()
+      """
+
+      assert check(NoEmptyMapNew, code) == []
+    end
+
+    test "does not flag Map.new() inside quoted code" do
+      code = "quote do: Map.new()"
 
       assert check(NoEmptyMapNew, code) == []
     end

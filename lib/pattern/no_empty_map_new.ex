@@ -50,49 +50,76 @@ defmodule Credence.Pattern.NoEmptyMapNew do
 
   @impl true
   def check(ast, _opts) do
-    issues = walk_and_collect(ast, [])
+    {issues, _map_shadowed?} = walk_and_collect(ast, [], false)
     Enum.reverse(issues)
   end
 
-  # Walk the AST manually to avoid visiting the RHS of `|> Map.new()`.
-  defp walk_and_collect({:|>, _, [left, _rhs]}, issues) do
-    # The pipe provides the first argument to the RHS function call.
-    # Only walk the left side — the RHS `Map.new()` is not standalone.
-    walk_and_collect(left, issues)
+  defp walk_and_collect({:quote, _, _args}, issues, map_shadowed?),
+    do: {issues, map_shadowed?}
+
+  defp walk_and_collect({:__block__, _, expressions}, issues, map_shadowed?) do
+    Enum.reduce(expressions, {issues, map_shadowed?}, fn expression, {acc, shadowed?} ->
+      walk_and_collect(expression, acc, shadowed?)
+    end)
+  end
+
+  defp walk_and_collect({:alias, _, args}, issues, map_shadowed?) do
+    {issues, alias_shadows_map?(args) || map_shadowed?}
+  end
+
+  defp walk_and_collect({:|>, _, [left, rhs]}, issues, map_shadowed?) do
+    {issues, map_shadowed?} = walk_and_collect(left, issues, map_shadowed?)
+
+    if match?({:ok, _}, check_node(rhs)) do
+      {issues, map_shadowed?}
+    else
+      walk_and_collect(rhs, issues, map_shadowed?)
+    end
   end
 
   # An arity capture `&Mod.fun/arity` (here `&Map.new/0`): the `Map.new`
   # operand is a zero-arg *reference*, AST-identical to a real `Map.new()`
   # call. Rewriting it to `%{}` would yield `&%{}/0`, which does not compile
   # ("invalid args for &"). Don't descend into the capture.
-  defp walk_and_collect({:&, _, [{:/, _, [_fun, _arity]}]}, issues), do: issues
+  defp walk_and_collect({:&, _, [{:/, _, [_fun, _arity]}]}, issues, map_shadowed?),
+    do: {issues, map_shadowed?}
 
-  defp walk_and_collect(node, issues) when is_tuple(node) and tuple_size(node) == 3 do
+  defp walk_and_collect(node, issues, map_shadowed?)
+       when is_tuple(node) and tuple_size(node) == 3 do
     {_form, _meta, args} = node
 
     issues =
       case check_node(node) do
+        {:ok, _issue} when map_shadowed? -> issues
         {:ok, issue} -> [issue | issues]
         :error -> issues
       end
 
     if is_list(args) do
-      Enum.reduce(args, issues, &walk_and_collect/2)
+      {Enum.reduce(args, issues, fn arg, acc ->
+         {acc, _nested_shadowed?} = walk_and_collect(arg, acc, map_shadowed?)
+         acc
+       end), map_shadowed?}
     else
-      issues
+      {issues, map_shadowed?}
     end
   end
 
   # 2-tuples (e.g. keyword pairs like {:do, body})
-  defp walk_and_collect({a, b}, issues) do
-    walk_and_collect(a, issues) |> then(&walk_and_collect(b, &1))
+  defp walk_and_collect({a, b}, issues, map_shadowed?) do
+    {issues, _} = walk_and_collect(a, issues, map_shadowed?)
+    {issues, _} = walk_and_collect(b, issues, map_shadowed?)
+    {issues, map_shadowed?}
   end
 
-  defp walk_and_collect(node, issues) when is_list(node) do
-    Enum.reduce(node, issues, &walk_and_collect/2)
+  defp walk_and_collect(node, issues, map_shadowed?) when is_list(node) do
+    {Enum.reduce(node, issues, fn child, acc ->
+       {acc, _} = walk_and_collect(child, acc, map_shadowed?)
+       acc
+     end), map_shadowed?}
   end
 
-  defp walk_and_collect(_, issues), do: issues
+  defp walk_and_collect(_, issues, map_shadowed?), do: {issues, map_shadowed?}
 
   @impl true
   def fix_patches(ast, opts) do
@@ -103,23 +130,46 @@ defmodule Credence.Pattern.NoEmptyMapNew do
   end
 
   defp collect_patches(ast, source) do
-    patches = walk_patches(ast, source, [])
+    {patches, _map_shadowed?} = walk_patches(ast, source, [], false)
     Enum.reverse(patches)
   end
 
-  defp walk_patches({:|>, _, [left, _rhs]}, source, patches) do
-    # Pipe RHS: skip _rhs (Map.new() there is not standalone).
-    walk_patches(left, source, patches)
+  defp walk_patches({:quote, _, _args}, _source, patches, map_shadowed?),
+    do: {patches, map_shadowed?}
+
+  defp walk_patches({:__block__, _, expressions}, source, patches, map_shadowed?) do
+    Enum.reduce(expressions, {patches, map_shadowed?}, fn expression, {acc, shadowed?} ->
+      walk_patches(expression, source, acc, shadowed?)
+    end)
+  end
+
+  defp walk_patches({:alias, _, args}, _source, patches, map_shadowed?) do
+    {patches, alias_shadows_map?(args) || map_shadowed?}
+  end
+
+  defp walk_patches({:|>, _, [left, rhs]}, source, patches, map_shadowed?) do
+    {patches, map_shadowed?} = walk_patches(left, source, patches, map_shadowed?)
+
+    if match?({:ok, _}, check_node(rhs)) do
+      {patches, map_shadowed?}
+    else
+      walk_patches(rhs, source, patches, map_shadowed?)
+    end
   end
 
   # Arity capture `&Map.new/0`: see `walk_and_collect/2` — never rewrite.
-  defp walk_patches({:&, _, [{:/, _, [_fun, _arity]}]}, _source, patches), do: patches
+  defp walk_patches({:&, _, [{:/, _, [_fun, _arity]}]}, _source, patches, map_shadowed?),
+    do: {patches, map_shadowed?}
 
-  defp walk_patches(node, source, patches) when is_tuple(node) and tuple_size(node) == 3 do
+  defp walk_patches(node, source, patches, map_shadowed?)
+       when is_tuple(node) and tuple_size(node) == 3 do
     {_form, _meta, args} = node
 
     patches =
       case check_node(node) do
+        {:ok, _issue} when map_shadowed? ->
+          patches
+
         {:ok, _issue} ->
           case Sourceror.get_range(node) do
             %Sourceror.Range{} = range ->
@@ -134,21 +184,41 @@ defmodule Credence.Pattern.NoEmptyMapNew do
       end
 
     if is_list(args) do
-      Enum.reduce(args, patches, &walk_patches(&1, source, &2))
+      {Enum.reduce(args, patches, fn arg, acc ->
+         {acc, _nested_shadowed?} = walk_patches(arg, source, acc, map_shadowed?)
+         acc
+       end), map_shadowed?}
     else
-      patches
+      {patches, map_shadowed?}
     end
   end
 
-  defp walk_patches({a, b}, source, patches) do
-    walk_patches(a, source, patches) |> then(&walk_patches(b, source, &1))
+  defp walk_patches({a, b}, source, patches, map_shadowed?) do
+    {patches, _} = walk_patches(a, source, patches, map_shadowed?)
+    {patches, _} = walk_patches(b, source, patches, map_shadowed?)
+    {patches, map_shadowed?}
   end
 
-  defp walk_patches(node, source, patches) when is_list(node) do
-    Enum.reduce(node, patches, &walk_patches(&1, source, &2))
+  defp walk_patches(node, source, patches, map_shadowed?) when is_list(node) do
+    {Enum.reduce(node, patches, fn child, acc ->
+       {acc, _} = walk_patches(child, source, acc, map_shadowed?)
+       acc
+     end), map_shadowed?}
   end
 
-  defp walk_patches(_, _source, patches), do: patches
+  defp walk_patches(_, _source, patches, map_shadowed?), do: {patches, map_shadowed?}
+
+  defp alias_shadows_map?([
+         {:__aliases__, _, target},
+         [{{:__block__, _, [:as]}, {:__aliases__, _, [:Map]}}]
+       ]),
+       do: target not in [[:Map], [:"Elixir", :Map]]
+
+  defp alias_shadows_map?([{:__aliases__, _, target}]) do
+    List.last(target) == :Map and target not in [[:Map], [:"Elixir", :Map]]
+  end
+
+  defp alias_shadows_map?(_args), do: false
 
   # ── check helpers ────────────────────────────────────────────────
 
