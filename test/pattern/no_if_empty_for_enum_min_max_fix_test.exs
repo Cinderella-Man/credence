@@ -3,14 +3,30 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
 
   alias Credence.Pattern.NoIfEmptyForEnumMinMax
 
-  describe "fix — rewrites Enum.empty? forms to Enum.min/2 or Enum.max/2" do
+  describe "fix — rewrites Enum.empty? forms to an explicit case" do
+    test "preserves separate traversals for stateful enumerables" do
+      source = "if Enum.empty?(values), do: 0, else: Enum.min(values)"
+
+      confirm_fix(fix(NoIfEmptyForEnumMinMax, source), """
+      case Enum.empty?(values) do
+        true -> 0
+        false -> Enum.min(values)
+      end
+      """)
+    end
+
     test "if Enum.empty?(var), do: 0, else: Enum.min(var)" do
       confirm_fix(
         fix(
           NoIfEmptyForEnumMinMax,
           "if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)"
         ),
-        "Enum.min(lengths, fn -> 0 end)"
+        """
+        case Enum.empty?(lengths) do
+          true -> 0
+          false -> Enum.min(lengths)
+        end
+        """
       )
     end
 
@@ -20,7 +36,12 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
           NoIfEmptyForEnumMinMax,
           "if Enum.empty?(lengths), do: -1, else: Enum.max(lengths)"
         ),
-        "Enum.max(lengths, fn -> -1 end)"
+        """
+        case Enum.empty?(lengths) do
+          true -> -1
+          false -> Enum.max(lengths)
+        end
+        """
       )
     end
 
@@ -30,7 +51,12 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
           NoIfEmptyForEnumMinMax,
           "if !Enum.empty?(lengths), do: Enum.min(lengths), else: 0"
         ),
-        "Enum.min(lengths, fn -> 0 end)"
+        """
+        case Enum.empty?(lengths) do
+          true -> 0
+          false -> Enum.min(lengths)
+        end
+        """
       )
     end
 
@@ -40,7 +66,12 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
           NoIfEmptyForEnumMinMax,
           "if not Enum.empty?(lengths), do: Enum.max(lengths), else: -1"
         ),
-        "Enum.max(lengths, fn -> -1 end)"
+        """
+        case Enum.empty?(lengths) do
+          true -> -1
+          false -> Enum.max(lengths)
+        end
+        """
       )
     end
 
@@ -56,7 +87,10 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
       expected = """
       defmodule Example do
         def run(lengths) do
-          Enum.min(lengths, fn -> 0 end)
+          case Enum.empty?(lengths) do
+            true -> 0
+            false -> Enum.min(lengths)
+          end
         end
       end
       """
