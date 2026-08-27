@@ -161,6 +161,22 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       assert [%Issue{rule: :no_manual_string_reverse}] = check(NoManualStringReverse, code)
     end
 
+    test "ignores IO.iodata_to_binary with explicit pipeline arguments" do
+      code =
+        "def reverse(str, extra), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary(extra)"
+
+      assert check(NoManualStringReverse, code) == []
+    end
+
+    test "ignores nonexistent nested reassembly cross-pairings" do
+      for code <- [
+            "def reverse(str), do: Enum.iodata_to_binary(Enum.reverse(String.graphemes(str)))",
+            "def reverse(str), do: IO.join(Enum.reverse(String.graphemes(str)))"
+          ] do
+        assert check(NoManualStringReverse, code) == []
+      end
+    end
+
     test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
       code = "def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()"
 
