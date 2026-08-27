@@ -144,7 +144,7 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
       rule: :no_enum_take_negative,
       message:
         "`Enum.take(list, -#{n})` forces a double traversal of the list to take from the end. " <>
-          "Sort in the opposite direction and use `Enum.take(list, #{n})` instead.",
+          "Use `Enum.slice(list, -#{n}..-1//1)` instead.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

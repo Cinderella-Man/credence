@@ -49,6 +49,14 @@ defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
       assert hd(issues).message =~ "-1"
     end
 
+    test "recommends the semantics-preserving slice replacement" do
+      [issue] = check(NoEnumTakeNegative, "Enum.take([2, 1, 3], -2)")
+
+      assert issue.message ==
+               "`Enum.take(list, -2)` forces a double traversal of the list to take from the end. " <>
+                 "Use `Enum.slice(list, -2..-1//1)` instead."
+    end
+
     test "passes Enum.take with positive count" do
       assert check(
                NoEnumTakeNegative,
