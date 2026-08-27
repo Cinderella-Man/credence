@@ -124,6 +124,37 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       confirm_fix(fix(NoListAppendInReduce, code), code)
     end
 
+    test "does not modify when the appended expression reads the accumulator" do
+      input =
+        "Enum.reduce([1, 2, 9], [], fn item, acc -> acc ++ [if(acc == [1, 2], do: 7, else: item)] end)"
+
+      emitted = fix(NoListAppendInReduce, input)
+
+      original_module = """
+      defmodule CredenceFixtures.NoListAppendInReduceAccumulatorReadOriginal do
+        def run, do: #{input}
+      end
+
+      unless CredenceFixtures.NoListAppendInReduceAccumulatorReadOriginal.run() == [1, 2, 7],
+        do: raise("original reduce returned the wrong value")
+      """
+
+      emitted_module = """
+      defmodule CredenceFixtures.NoListAppendInReduceAccumulatorReadEmitted do
+        def run, do: #{emitted}
+      end
+
+      unless CredenceFixtures.NoListAppendInReduceAccumulatorReadEmitted.run() == [1, 2, 7],
+        do: raise("emitted reduce changed the value")
+      """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(original_module)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted_module)
+
+      confirm_fix(emitted, input)
+      assert check(NoListAppendInReduce, input) == []
+    end
+
     test "fixed code has no remaining issues" do
       code = """
       defmodule Example do
