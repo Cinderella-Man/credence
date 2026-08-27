@@ -62,12 +62,13 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
     else
       piped = piped_get_positions(ast)
 
-      Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      ast
+      |> Credence.RuleHelpers.patches_from_postwalk(fn
         # Direct call (not piped): Keyword.get(:atom, default) or Keyword.get(:atom, key, default)
         {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [first | rest]} = node ->
           if not MapSet.member?(piped, position(meta)) and atom_literal?(first) and
                length(rest) in 1..2 do
-            List.last(rest)
+            preserve_evaluated_args(rest)
           else
             node
           end
@@ -75,13 +76,20 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
         # Piped call: :atom |> Keyword.get(key) or :atom |> Keyword.get(key, default)
         {:|>, _, [pipe_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _, args}]} = node ->
           if atom_literal?(pipe_lhs) and length(args) in 1..2 do
-            List.last(args)
+            preserve_evaluated_args(args)
           else
             node
           end
 
         node ->
           node
+      end)
+      |> Enum.map(fn patch ->
+        if multi_expression?(patch.change) do
+          %{patch | change: "(" <> patch.change <> ")"}
+        else
+          patch
+        end
       end)
     end
   end
@@ -156,6 +164,13 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
   defp atom_literal?({:__block__, _, [atom]}) when is_atom(atom), do: true
   defp atom_literal?(atom) when is_atom(atom), do: true
   defp atom_literal?(_), do: false
+
+  defp preserve_evaluated_args([default]), do: default
+  defp preserve_evaluated_args([key, default]), do: {:__block__, [], [key, default]}
+
+  defp multi_expression?(change) do
+    match?({:ok, {:__block__, _, [_, _]}}, Sourceror.parse_string(change))
+  end
 
   defp build_issue(meta) do
     %Issue{

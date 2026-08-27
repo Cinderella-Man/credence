@@ -41,22 +41,55 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArgFixTest do
     test "atom key and default" do
       confirm_fix(
         fix(NoKeywordGetWithAtomFirstArg, "Keyword.get(:key, :lookup, :fallback)"),
-        ":fallback"
+        """
+        (:lookup
+        :fallback)
+        """
       )
     end
 
     test "fn default" do
       confirm_fix(
         fix(NoKeywordGetWithAtomFirstArg, "Keyword.get(:clock, :key, fn -> :default end)"),
-        "fn -> :default end"
+        """
+        (:key
+        fn -> :default end)
+        """
       )
     end
 
-    test "call in the key slot is dropped (crashing code — its effect never completed)" do
+    test "call in the key slot is evaluated before the default is returned" do
       confirm_fix(
         fix(NoKeywordGetWithAtomFirstArg, "Keyword.get(:key, compute_key(), default)"),
-        "default"
+        """
+        (compute_key()
+        default)
+        """
       )
+    end
+
+    test "effectful key in the emitted repair still raises" do
+      source = ~S'Keyword.get(:key, raise("boom"), :fallback)'
+      emitted = fix(NoKeywordGetWithAtomFirstArg, source)
+
+      confirm_fix(emitted, """
+      (raise "boom"
+      :fallback)
+      """)
+
+      original_fixture =
+        "defmodule NoKeywordGetAtomFirstArgOriginalEffectFixture do\n" <>
+          "  @result #{source}\nend"
+
+      emitted_fixture =
+        "defmodule NoKeywordGetAtomFirstArgEmittedEffectFixture do\n" <>
+          "  @result #{emitted}\nend"
+
+      expected_error =
+        {:error, [%{message: "boom", position: 0, file: "credence_check.ex", severity: :error}]}
+
+      assert Credence.RuleHelpers.compile_and_capture(original_fixture) == expected_error
+      assert Credence.RuleHelpers.compile_and_capture(emitted_fixture) == expected_error
     end
   end
 
@@ -73,7 +106,10 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArgFixTest do
     test "piped atom 3-arg" do
       confirm_fix(
         fix(NoKeywordGetWithAtomFirstArg, ":atom |> Keyword.get(:key, :default)"),
-        ":default"
+        """
+        (:key
+        :default)
+        """
       )
     end
 
