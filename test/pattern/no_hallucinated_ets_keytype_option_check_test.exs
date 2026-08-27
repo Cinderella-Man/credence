@@ -54,6 +54,15 @@ defmodule Credence.Pattern.NoHallucinatedEtsKeytypeOptionCheckTest do
            """)
   end
 
+  test "leaves non-/2 :ets.new calls alone" do
+    assert clean?(NoHallucinatedEtsKeytypeOption, ":ets.new([keytype: :term])")
+
+    assert clean?(
+             NoHallucinatedEtsKeytypeOption,
+             ":ets.new(:name, :extra, [keytype: :term])"
+           )
+  end
+
   test "anchors the issue to the offending call" do
     [issue] =
       check(NoHallucinatedEtsKeytypeOption, """

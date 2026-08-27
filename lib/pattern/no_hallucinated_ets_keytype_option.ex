@@ -121,7 +121,7 @@ defmodule Credence.Pattern.NoHallucinatedEtsKeytypeOption do
 
   # The scope predicate `check/2` and `fix_patches/2` share. The options list is
   # the last argument, wrapped by Sourceror in a `:__block__`.
-  defp remove_keytype_from_args(args) when is_list(args) do
+  defp remove_keytype_from_args([_, _] = args) do
     case List.last(args) do
       {:__block__, meta, [opts]} when is_list(opts) ->
         case do_remove_keytype(opts) do
