@@ -93,12 +93,10 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
           body ->
             stmts = block_to_list(body)
 
-            self_provides? =
-              scope_provides? or Enum.any?(stmts, &provides_logger?/1) or
-                has_logger_require?(body)
+            self_provides? = scope_provides? or Enum.any?(stmts, &provides_logger?/1)
 
             acc =
-              if has_logger_macro_call?(body) and not self_provides?,
+              if has_unprovided_logger_macro_call?(body, self_provides?),
                 do: [{node, kw} | acc],
                 else: acc
 
@@ -162,8 +160,9 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   # — avoids re-rendering, and thereby reformatting, the rest of the module.
   defp require_patch(kw) do
     with body when not is_nil(body) <- extract_do_body(kw),
-         true <- has_logger_macro_call?(body) and not has_logger_require?(body),
          statements = block_to_list(body),
+         true <-
+           has_unprovided_logger_macro_call?(body, Enum.any?(statements, &provides_logger?/1)),
          anchor when not is_nil(anchor) <- Enum.at(statements, find_directive_end(statements)),
          %Sourceror.Range{start: start} <- Sourceror.get_range(anchor) do
       # Anchor the insertion at column 1 of the statement's line (not its own
@@ -181,6 +180,19 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
     else
       _ -> []
     end
+  end
+
+  # A directive nested in one top-level statement (most importantly, inside one
+  # function) only satisfies Logger calls in that same lexical statement. It
+  # must not suppress an uncovered call in a sibling function.
+  defp has_unprovided_logger_macro_call?(_body, true), do: false
+
+  defp has_unprovided_logger_macro_call?(body, false) do
+    body
+    |> block_to_list()
+    |> Enum.any?(fn statement ->
+      has_logger_macro_call?(statement) and not has_logger_require?(statement)
+    end)
   end
 
   # Walks the body looking for Logger.macro_name(...) calls.
@@ -212,15 +224,20 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
     found
   end
 
-  # A `require Logger` (or import/use) anywhere in the module body satisfies the
-  # requirement — including inside a function body or a `quote`. Checking only
-  # top-level statements falsely flags a module whose require is co-located with
-  # the call inside a function, or lives in the `quote` alongside the call.
+  # A `require Logger` (or import/use) within one lexical statement satisfies a
+  # Logger call co-located in that statement. Nested modules and quoted code are
+  # separate scopes and cannot satisfy calls outside themselves.
   defp has_logger_require?(body) do
     {_, found} =
       Macro.prewalk(body, false, fn
         _node, true ->
           {nil, true}
+
+        {:defmodule, _, _}, acc ->
+          {:__skip__, acc}
+
+        {:quote, _, _}, acc ->
+          {:__skip__, acc}
 
         {directive, _, [{:__aliases__, _, [:Logger]} | _]}, _acc
         when directive in [:require, :import, :use] ->
