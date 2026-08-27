@@ -140,6 +140,30 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
   end
 
   describe "fix/2 — edge cases" do
+    test "does not rewrite a call on a module aliased as Enum" do
+      code = """
+      defmodule NoIdentityFunctionInEnumAliasedEnumFixture do
+        alias MyEnum, as: Enum
+
+        def run(list), do: Enum.uniq_by(list, fn item -> item end)
+      end
+      """
+
+      confirm_fix(fix(NoIdentityFunctionInEnum, code), code)
+    end
+
+    test "does not treat a callback module aliased as Function as canonical" do
+      code = """
+      defmodule NoIdentityFunctionInEnumAliasedFunctionFixture do
+        alias MyCallbacks, as: Function
+
+        def run(list), do: Enum.max_by(list, &Function.identity/1)
+      end
+      """
+
+      confirm_fix(fix(NoIdentityFunctionInEnum, code), code)
+    end
+
     test "does not touch non-identity callbacks" do
       code = """
       defmodule Example do
