@@ -145,7 +145,7 @@ defmodule Credence.Pattern.NoManualFrequencies do
          true <- increment_by_one?(incr) do
       cond do
         var_name(key_arg) == elem -> :identity
-        references_var?(key_arg, acc) -> nil
+        references_var?(key_arg, acc) or calls_binding?(key_arg) -> nil
         true -> {:derived, key_arg, elem}
       end
     else
@@ -161,6 +161,19 @@ defmodule Credence.Pattern.NoManualFrequencies do
       Macro.prewalk(ast, false, fn
         node, true -> {node, true}
         {^name, _, ctx} = node, _ when is_atom(ctx) -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
+
+  # `binding/0` observes every variable in the current lexical scope, including
+  # the accumulator even though its AST contains no explicit `acc` node.
+  defp calls_binding?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        node, true -> {node, true}
+        {:binding, _, []} = node, _ -> {node, true}
         node, acc -> {node, acc}
       end)
 

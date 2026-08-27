@@ -83,6 +83,14 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
 
       confirm_fix(fix(NoManualFrequencies, code), code)
     end
+
+    test "binding key is left unchanged because it observes the accumulator" do
+      code =
+        "Enum.reduce(list, %{}, fn item, acc -> Map.update(acc, binding(), 1, &(&1 + 1)) end)"
+
+      assert check(NoManualFrequencies, code) == []
+      confirm_fix(fix(NoManualFrequencies, code), code)
+    end
   end
 
   describe "round-trip: fixed code has no further issues" do
