@@ -23,7 +23,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixA do
-        def f(m), do: Enum.map(Enum.sort(m), fn {_key, value} -> value end)
+        def f(m), do: Enum.map(Enum.sort(m), fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 
@@ -39,7 +42,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixB do
-        def f(payments), do: payments |> Enum.sort_by(& &1.date) |> Enum.map(fn {_key, value} -> value end)
+        def f(payments), do: payments |> Enum.sort_by(& &1.date) |> Enum.map(fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 
@@ -55,7 +61,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixC do
-        def f(m), do: Enum.sort(m) |> Enum.map(fn {_key, value} -> value end)
+        def f(m), do: Enum.sort(m) |> Enum.map(fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 
@@ -73,7 +82,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixD do
-        def f(m), do: m |> Enum.sort() |> Enum.map(fn {_key, value} -> value end) |> Enum.take(2)
+        def f(m), do: m |> Enum.sort() |> Enum.map(fn
+          {_key, value} -> value
+          value -> value
+        end) |> Enum.take(2)
       end
       """
 
@@ -92,7 +104,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixL do
-        def f(m), do: Enum.map(m |> Enum.sort(), fn {_key, value} -> value end)
+        def f(m), do: Enum.map(m |> Enum.sort(), fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 
@@ -112,7 +127,10 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixE do
-        def f(m), do: m |> Enum.sort_by(&elem(&1, 1).total, :desc) |> Enum.map(fn {_key, value} -> value end)
+        def f(m), do: m |> Enum.sort_by(&elem(&1, 1).total, :desc) |> Enum.map(fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 
@@ -187,8 +205,14 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
 
       expected = """
       defmodule SortValsFixK do
-        def a(m), do: Enum.map(Enum.sort(m), fn {_key, value} -> value end)
-        def b(m), do: m |> Enum.sort_by(& &1) |> Enum.map(fn {_key, value} -> value end)
+        def a(m), do: Enum.map(Enum.sort(m), fn
+          {_key, value} -> value
+          value -> value
+        end)
+        def b(m), do: m |> Enum.sort_by(& &1) |> Enum.map(fn
+          {_key, value} -> value
+          value -> value
+        end)
       end
       """
 

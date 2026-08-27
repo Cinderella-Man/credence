@@ -66,6 +66,15 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesCheckTest do
   end
 
   describe "leaves alone" do
+    test "a lexical Enum alias" do
+      assert clean?(NoEnumSortThenMapValues, """
+             defmodule SortValsCheckAliasedEnum do
+               alias MyEnum, as: Enum
+               def f(value), do: Map.values(Enum.sort(value))
+             end
+             """)
+    end
+
     test "Map.values on a map" do
       assert clean?(NoEnumSortThenMapValues, """
              defmodule SortValsCheckG do

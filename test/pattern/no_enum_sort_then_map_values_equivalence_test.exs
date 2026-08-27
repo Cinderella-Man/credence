@@ -13,6 +13,41 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesEquivalenceTest do
 
   alias Credence.Pattern.NoEnumSortThenMapValues
 
+  test "the emitted fix also repairs a sorted enumerable of non-pairs" do
+    source = """
+    defmodule SortValsEquivNonPairs do
+      def f, do: Map.values(Enum.sort([2, 1]))
+    end
+    """
+
+    emitted = fix(NoEnumSortThenMapValues, source)
+
+    assert_raise BadMapError, fn ->
+      call_fixed(source, SortValsEquivNonPairs, :f, [])
+    end
+
+    assert call_fixed(emitted, SortValsEquivNonPairs, :f, []) == Enum.sort([2, 1])
+  end
+
+  test "a lexical Enum alias keeps its original meaning" do
+    source = """
+    defmodule SortValsEquivAliasedEnum do
+      defmodule MyEnum do
+        def sort(_), do: %{a: 7}
+        def map(_, _), do: :wrong_rewrite
+      end
+
+      alias MyEnum, as: Enum
+      def f, do: Map.values(Enum.sort(:anything))
+    end
+    """
+
+    emitted = fix(NoEnumSortThenMapValues, source)
+
+    confirm_fix(emitted, source)
+    assert call_fixed(emitted, SortValsEquivAliasedEnum, :f, []) == [7]
+  end
+
   test "a lexical Map alias is not an always-failing repair" do
     source = """
     defmodule SortValsEquivAliasedMap do

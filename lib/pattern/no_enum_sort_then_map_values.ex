@@ -131,74 +131,77 @@ defmodule Credence.Pattern.NoEnumSortThenMapValues do
   # is not known to be Elixir.Map.values/1 and therefore is not known to fail.
   # Keep this one traversal as the shared admission decision for check and fix.
   defp eligible_nodes(ast) do
-    {nodes, _map_shadowed?} = collect_eligible(ast, [], false)
+    {nodes, _aliases} = collect_eligible(ast, [], {false, false})
     Enum.reverse(nodes)
   end
 
-  defp collect_eligible({:quote, _, _args}, nodes, map_shadowed?),
-    do: {nodes, map_shadowed?}
+  defp collect_eligible({:quote, _, _args}, nodes, aliases), do: {nodes, aliases}
 
-  defp collect_eligible({:__block__, _, expressions}, nodes, map_shadowed?) do
-    Enum.reduce(expressions, {nodes, map_shadowed?}, fn expression, {acc, shadowed?} ->
-      collect_eligible(expression, acc, shadowed?)
+  defp collect_eligible({:__block__, _, expressions}, nodes, aliases) do
+    Enum.reduce(expressions, {nodes, aliases}, fn expression, {acc, current_aliases} ->
+      collect_eligible(expression, acc, current_aliases)
     end)
   end
 
-  defp collect_eligible({:alias, _, args}, nodes, map_shadowed?) do
-    {nodes, alias_shadows_map?(args) || map_shadowed?}
+  defp collect_eligible({:alias, _, args}, nodes, {map_shadowed?, enum_shadowed?}) do
+    {nodes,
+     {alias_shadows?(args, :Map) || map_shadowed?, alias_shadows?(args, :Enum) || enum_shadowed?}}
   end
 
-  defp collect_eligible(node, nodes, map_shadowed?)
+  defp collect_eligible(node, nodes, {map_shadowed?, enum_shadowed?} = aliases)
        when is_tuple(node) and tuple_size(node) == 3 do
     {_form, _meta, args} = node
 
     nodes =
-      if not map_shadowed? and match?({:ok, _}, offending_meta(node)),
+      if not map_shadowed? and not enum_shadowed? and match?({:ok, _}, offending_meta(node)),
         do: [node | nodes],
         else: nodes
 
     if is_list(args) do
       nodes =
         Enum.reduce(args, nodes, fn arg, acc ->
-          {acc, _nested_shadowed?} = collect_eligible(arg, acc, map_shadowed?)
+          {acc, _nested_aliases} = collect_eligible(arg, acc, aliases)
           acc
         end)
 
-      {nodes, map_shadowed?}
+      {nodes, aliases}
     else
-      {nodes, map_shadowed?}
+      {nodes, aliases}
     end
   end
 
-  defp collect_eligible({left, right}, nodes, map_shadowed?) do
-    {nodes, _} = collect_eligible(left, nodes, map_shadowed?)
-    {nodes, _} = collect_eligible(right, nodes, map_shadowed?)
-    {nodes, map_shadowed?}
+  defp collect_eligible({left, right}, nodes, aliases) do
+    {nodes, _} = collect_eligible(left, nodes, aliases)
+    {nodes, _} = collect_eligible(right, nodes, aliases)
+    {nodes, aliases}
   end
 
-  defp collect_eligible(nodes, acc, map_shadowed?) when is_list(nodes) do
+  defp collect_eligible(nodes, acc, aliases) when is_list(nodes) do
     collected =
       Enum.reduce(nodes, acc, fn node, inner_acc ->
-        {inner_acc, _} = collect_eligible(node, inner_acc, map_shadowed?)
+        {inner_acc, _} = collect_eligible(node, inner_acc, aliases)
         inner_acc
       end)
 
-    {collected, map_shadowed?}
+    {collected, aliases}
   end
 
-  defp collect_eligible(_node, nodes, map_shadowed?), do: {nodes, map_shadowed?}
+  defp collect_eligible(_node, nodes, aliases), do: {nodes, aliases}
 
-  defp alias_shadows_map?([
-         {:__aliases__, _, target},
-         [{{:__block__, _, [:as]}, {:__aliases__, _, [:Map]}}]
-       ]),
-       do: target not in [[:Map], [:"Elixir", :Map]]
+  defp alias_shadows?(
+         [
+           {:__aliases__, _, target},
+           [{{:__block__, _, [:as]}, {:__aliases__, _, [name]}}]
+         ],
+         name
+       ),
+       do: target not in [[name], [:"Elixir", name]]
 
-  defp alias_shadows_map?([{:__aliases__, _, target}]) do
-    List.last(target) == :Map and target not in [[:Map], [:"Elixir", :Map]]
+  defp alias_shadows?([{:__aliases__, _, target}], name) do
+    List.last(target) == name and target not in [[name], [:"Elixir", name]]
   end
 
-  defp alias_shadows_map?(_args), do: false
+  defp alias_shadows?(_args, _name), do: false
 
   # Piped: `... |> Enum.sort() |> Map.values()`. Sourceror does NOT expand
   # pipes, so this is a `:|>` node with `Map.values/0` on the right and the sort
@@ -266,7 +269,8 @@ defmodule Credence.Pattern.NoEnumSortThenMapValues do
   # Parsed rather than hand-assembled. A hand-built `:fn` node carries no
   # renderer metadata, and docs/17 entry 11 records a rule that emitted output
   # which did not parse for exactly that reason.
-  defp value_fn, do: Sourceror.parse_string!("fn {_key, value} -> value end")
+  defp value_fn,
+    do: Sourceror.parse_string!("fn {_key, value} -> value; value -> value end")
 
   defp build_issue(meta) do
     %Issue{
