@@ -106,15 +106,19 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
           ]}
        )
        when is_atom(var) and is_atom(src) do
-    {:ok,
-     %{
-       var: var,
-       map: map_ast,
-       key: key_ast,
-       default: default_ast,
-       fun: fun_ast,
-       func: :update
-     }}
+    if eager_safe?(unwrap_block(default_ast)) and eager_safe?(unwrap_block(fun_ast)) do
+      {:ok,
+       %{
+         var: var,
+         map: map_ast,
+         key: key_ast,
+         default: default_ast,
+         fun: fun_ast,
+         func: :update
+       }}
+    else
+      :error
+    end
   end
 
   defp extract_map_update(
@@ -145,6 +149,14 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   defp scan_fetch(_var, _key, [], _skipped), do: :not_found
 
   defp scan_fetch(var, key, [stmt | rest], skipped) do
+    if binds_key?(stmt, key) do
+      :not_found
+    else
+      scan_fetch_statement(var, key, stmt, rest, skipped)
+    end
+  end
+
+  defp scan_fetch_statement(var, key, stmt, rest, skipped) do
     if references_var?(stmt, var) do
       case extract_fetch_assignment(stmt, var, key) do
         {:ok, fetch_var, fetch_type, meta} ->
@@ -163,7 +175,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
          {:=, _,
           [
             {fetch_var, _, nil},
-            {{:., _, [{:__aliases__, _, [:Map]}, func]}, meta, [{var, _, nil}, fetch_key | _]}
+            {{:., _, [{:__aliases__, _, [:Map]}, func]}, meta, [{var, _, nil}, fetch_key]}
           ]},
          var,
          expected_key
@@ -187,6 +199,41 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
 
     found
   end
+
+  defp binds_key?(_stmt, key) when not is_tuple(key), do: false
+
+  defp binds_key?(stmt, {key_name, _, context})
+       when is_atom(key_name) and (is_atom(context) or is_nil(context)) do
+    case stmt do
+      {:=, _, [pattern, _value]} -> references_var?(pattern, key_name)
+      _ -> false
+    end
+  end
+
+  defp binds_key?(_stmt, _key), do: false
+
+  defp eager_safe?({name, _, context})
+       when is_atom(name) and (is_atom(context) or is_nil(context)),
+       do: true
+
+  defp eager_safe?({:&, _, _}), do: true
+  defp eager_safe?({:fn, _, _}), do: true
+  defp eager_safe?({:__aliases__, _, parts}) when is_list(parts), do: true
+
+  defp eager_safe?({:{}, _, values}) when is_list(values),
+    do: Enum.all?(values, &eager_safe?/1)
+
+  defp eager_safe?({:%{}, _, pairs}) when is_list(pairs) do
+    Enum.all?(pairs, fn {key, value} -> eager_safe?(key) and eager_safe?(value) end)
+  end
+
+  defp eager_safe?(values) when is_list(values), do: Enum.all?(values, &eager_safe?/1)
+
+  defp eager_safe?(literal)
+       when is_atom(literal) or is_number(literal) or is_binary(literal),
+       do: true
+
+  defp eager_safe?(_), do: false
 
   defp unwrap_block({:__block__, _, [value]}), do: value
   defp unwrap_block(other), do: other
