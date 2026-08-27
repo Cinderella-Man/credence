@@ -27,10 +27,12 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
 
   @impl true
   def check(ast, _opts) do
+    enum_shadowed? = enum_shadowed?(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {{:., _, _}, meta, args} = node, issues ->
-          if reduce_call?(node) and product_reduce_body?(args) do
+          if not enum_shadowed? and reduce_call?(node) and product_reduce_body?(args) do
             issue = %Issue{
               rule: :no_explicit_product_reduce,
               message: "Explicit product-reduction detected. Prefer Enum.product/1.",
@@ -51,9 +53,11 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
 
   @impl true
   def fix_patches(ast, _opts) do
+    enum_shadowed? = enum_shadowed?(ast)
+
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {{:., _, _}, _, args} = node ->
-        if reduce_call?(node) and product_reduce_body?(args) do
+        if not enum_shadowed? and reduce_call?(node) and product_reduce_body?(args) do
           [enum | _] = args
           enum_product_call(enum)
         else
@@ -72,6 +76,32 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
   defp reduce_call?({{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, _}), do: true
   defp reduce_call?({{:., _, [:Enum, :reduce]}, _, _}), do: true
   defp reduce_call?(_), do: false
+
+  defp enum_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [module, opts]} = node, shadowed? when is_list(opts) ->
+          {node, shadowed? or (enum_as?(opts) and not standard_enum?(module))}
+
+        node, shadowed? ->
+          {node, shadowed?}
+      end)
+
+    shadowed?
+  end
+
+  defp enum_as?(opts) do
+    Enum.any?(opts, fn
+      {{:__block__, _, [:as]}, {:__aliases__, _, [:Enum]}} -> true
+      {:as, {:__aliases__, _, [:Enum]}} -> true
+      {:as, :Enum} -> true
+      _ -> false
+    end)
+  end
+
+  defp standard_enum?({:__aliases__, _, [:Enum]}), do: true
+  defp standard_enum?({:__aliases__, _, [:"Elixir", :Enum]}), do: true
+  defp standard_enum?(_), do: false
 
   defp product_reduce_body?([
          _enum,
