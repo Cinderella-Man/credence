@@ -127,6 +127,10 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
       assert check(NoKeywordGetIntegerKey, "Keyword.get(:timeout, 5000)") == []
     end
 
+    test ":timeout |> Keyword.get(5000) is not ours" do
+      assert check(NoKeywordGetIntegerKey, ":timeout |> Keyword.get(5000)") == []
+    end
+
     test "the sibling rule does claim it" do
       assert flagged?(
                Credence.Pattern.NoKeywordGetWithAtomFirstArg,

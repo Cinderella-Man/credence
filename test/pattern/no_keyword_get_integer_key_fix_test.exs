@@ -182,6 +182,12 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       )
     end
 
+    test "an atom piped into Keyword.get belongs to the sibling rule" do
+      code = ":timeout |> Keyword.get(5000)"
+
+      confirm_fix(fix(NoKeywordGetIntegerKey, code), code)
+    end
+
     # Scope parity: everything the check flags, the fix now changes — and nothing
     # else. This is what the widening was for.
     test "every flagged shape is a changed shape, and vice versa" do

@@ -86,8 +86,10 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   # Piped call: expr |> Keyword.get(integer_key). A 1-arg node only ever occurs
   # in a pipe (Keyword.get needs ≥2 args), so the sole arg is the key.
-  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [key]}, _piped) do
-    if integer_literal?(key), do: {:ok, meta}, else: :skip
+  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [key]}, piped) do
+    if not MapSet.member?(piped, {:atom_lhs, position(meta)}) and integer_literal?(key),
+      do: {:ok, meta},
+      else: :skip
   end
 
   defp detect(_, _), do: :skip
@@ -97,8 +99,15 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   defp piped_get_positions(ast) do
     {_ast, set} =
       Macro.prewalk(ast, MapSet.new(), fn
-        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, _}]} = node, acc ->
-          {node, MapSet.put(acc, position(meta))}
+        {:|>, _, [lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, _}]} = node, acc ->
+          acc = MapSet.put(acc, position(meta))
+
+          acc =
+            if atom_literal?(lhs),
+              do: MapSet.put(acc, {:atom_lhs, position(meta)}),
+              else: acc
+
+          {node, acc}
 
         node, acc ->
           {node, acc}
@@ -152,13 +161,17 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   end
 
   # Piped: expr |> Keyword.get(integer)
-  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [key]} = node, _piped) do
-    case integer_value(key) do
-      {:ok, n} ->
-        {:ok, %{range: Sourceror.get_range(node), change: piped_replacement(n)}}
+  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [key]} = node, piped) do
+    if MapSet.member?(piped, {:atom_lhs, position(meta)}) do
+      :skip
+    else
+      case integer_value(key) do
+        {:ok, n} ->
+          {:ok, %{range: Sourceror.get_range(node), change: piped_replacement(n)}}
 
-      :error ->
-        :skip
+        :error ->
+          :skip
+      end
     end
   end
 
