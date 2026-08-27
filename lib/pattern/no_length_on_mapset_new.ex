@@ -48,7 +48,7 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   @impl true
   def check(ast, _opts) do
-    if mapset_alias_shadowed?(ast), do: [], else: check_unshadowed(ast)
+    if shadowed?(ast), do: [], else: check_unshadowed(ast)
   end
 
   defp check_unshadowed(ast) do
@@ -72,7 +72,7 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   @impl true
   def fix_patches(ast, _opts) do
-    if mapset_alias_shadowed?(ast), do: [], else: fix_unshadowed(ast)
+    if shadowed?(ast), do: [], else: fix_unshadowed(ast)
   end
 
   defp fix_unshadowed(ast) do
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
   defp mapset_new_call?({{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, _}), do: true
   defp mapset_new_call?(_), do: false
 
-  defp mapset_alias_shadowed?(ast) do
+  defp shadowed?(ast) do
     {_ast, shadowed?} =
       Macro.prewalk(ast, false, fn
         {:alias, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
@@ -101,6 +101,13 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
         {:alias, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
           {node, shadowed? or shadows_mapset?(target, nil)}
+
+        {:import, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
+        when is_list(target) and is_list(opts) ->
+          {node, shadowed? or imports_length?(target, opts)}
+
+        {:import, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
+          {node, shadowed? or target != [:Kernel]}
 
         node, shadowed? ->
           {node, shadowed?}
@@ -120,6 +127,24 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
   defp shadows_mapset?(target, {:__aliases__, _, [:MapSet]}), do: target != [:MapSet]
   defp shadows_mapset?(target, nil), do: List.last(target) == :MapSet and target != [:MapSet]
   defp shadows_mapset?(_target, _as), do: false
+
+  defp imports_length?([:Kernel], _opts), do: false
+
+  defp imports_length?(_target, opts) do
+    opts = unwrap_literals(opts)
+
+    case {Keyword.fetch(opts, :only), Keyword.fetch(opts, :except)} do
+      {{:ok, only}, _} when is_list(only) -> {:length, 1} in only
+      {{:ok, _only}, _} -> true
+      {:error, {:ok, except}} when is_list(except) -> {:length, 1} not in except
+      _ -> true
+    end
+  end
+
+  defp unwrap_literals({:__block__, _, [value]}), do: unwrap_literals(value)
+  defp unwrap_literals({key, value}), do: {unwrap_literals(key), unwrap_literals(value)}
+  defp unwrap_literals(values) when is_list(values), do: Enum.map(values, &unwrap_literals/1)
+  defp unwrap_literals(value), do: value
 
   defp mapset_size_call(inner),
     do: {{:., [], [{:__aliases__, [], [:MapSet]}, :size]}, [], [inner]}

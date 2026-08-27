@@ -146,6 +146,22 @@ defmodule Credence.Pattern.NoLengthOnMapsetNewFixTest do
   end
 
   describe "no-ops outside the safe core" do
+    test "imported length/1 preserves the imported call" do
+      input = """
+      defmodule NoLengthOnMapsetNewImportedLength do
+        import Kernel, except: [length: 1]
+        import NoLengthOnMapsetNewLengthProvider, only: [length: 1]
+
+        def count(items), do: length(MapSet.new(items))
+      end
+      """
+
+      emitted = fix(NoLengthOnMapsetNew, input)
+
+      assert check(NoLengthOnMapsetNew, input) == []
+      confirm_fix(emitted, input)
+    end
+
     test "alias shadowing MapSet preserves the valid list-producing call" do
       input = """
       defmodule NoLengthOnMapsetNewAliasShadow do
