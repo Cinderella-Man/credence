@@ -53,6 +53,14 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
 
   @impl true
   def check(ast, _opts) do
+    if enum_shadowed?(ast) do
+      []
+    else
+      do_check(ast)
+    end
+  end
+
+  defp do_check(ast) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
         case match_dup_concat(node) do
@@ -73,7 +81,33 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, &rewrite/1)
+    if enum_shadowed?(ast), do: [], else: RuleHelpers.patches_from_postwalk(ast, &rewrite/1)
+  end
+
+  defp enum_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, parts}, opts]} = node, acc when is_list(opts) ->
+          alias_name = alias_as(opts) || List.last(parts)
+          {node, acc or enum_alias?(alias_name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    shadowed?
+  end
+
+  defp enum_alias?({:__aliases__, _, [:Enum]}), do: true
+  defp enum_alias?(:Enum), do: true
+  defp enum_alias?(_), do: false
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _ -> nil
+    end)
   end
 
   defp rewrite(node) do
