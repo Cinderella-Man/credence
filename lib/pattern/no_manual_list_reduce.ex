@@ -180,6 +180,12 @@ defmodule Credence.Pattern.NoManualListReduce do
       end
     end)
     |> Enum.group_by(fn {clause, _idx} -> {elem(clause, 0), elem(clause, 1)} end)
+    |> Enum.filter(fn {_key, clauses} ->
+      case Enum.map(clauses, &elem(&1, 1)) do
+        [first, second] -> second == first + 1
+        _ -> false
+      end
+    end)
   end
 
   # clause tuple: {name, arity, def_type, meta, patterns_tuple, body, guard_or_nil}
@@ -211,7 +217,7 @@ defmodule Credence.Pattern.NoManualListReduce do
 
   defp try_reduce(base, rec) do
     with {:ok, info} <- recursive_ok(rec),
-         true <- base_ok(base, info.ci, info.acc_idx),
+         true <- base_ok(base, info),
          {:ok, built} <- build_clause(info) do
       {:ok, built}
     else
@@ -253,14 +259,28 @@ defmodule Credence.Pattern.NoManualListReduce do
 
   # Base: `[]` at the cons position, trailing accumulator returned unchanged as
   # a single expression.
-  defp base_ok({_n, arity, _dt, _m, pats, body, nil}, ci, acc_idx) when arity >= 2 do
+  defp base_ok(
+         {_n, arity, def_type, _m, pats, body, nil},
+         %{ci: ci, acc_idx: acc_idx, def_type: def_type}
+       )
+       when arity >= 2 do
     ci < tuple_size(pats) and acc_idx < tuple_size(pats) and
       empty_list_pattern?(elem(pats, ci)) and
-      var?(elem(pats, acc_idx)) and
+      unconstrained_base_params?(pats, ci) and
       returns_var?(body, elem(pats, acc_idx))
   end
 
-  defp base_ok(_, _, _), do: false
+  defp base_ok(_, _), do: false
+
+  defp unconstrained_base_params?(pats, ci) do
+    params =
+      for i <- 0..(tuple_size(pats) - 1), i != ci do
+        elem(pats, i)
+      end
+
+    Enum.all?(params, &var?/1) and
+      params |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length() == length(params)
+  end
 
   defp single_cons_index(pats, acc_idx) do
     matches =
