@@ -128,16 +128,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
     end
   end
 
-  # length(var) > 0
-  defp extract_fixable_check({:>, _, [{:length, _, [var]}, zero]}) do
-    with {:ok, 0} <- extract_int(zero),
-         true <- simple_var?(var) do
-      {:ok, var, :non_empty, nil}
-    else
-      _ -> :error
-    end
-  end
-
   # length(var) == N (1..5)
   defp extract_fixable_check({:==, _, [{:length, _, [var]}, n_ast]}) do
     with {:ok, n} <- extract_int(n_ast),
@@ -186,11 +176,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
     else
       :error
     end
-  end
-
-  # [_ | _]
-  defp build_match_pattern(:non_empty) do
-    [{:|, [], [{:_, [], nil}, {:_, [], nil}]}]
   end
 
   # [_, _, ...] with exactly n underscores

@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
   describe "NoLengthGuardToPattern check" do
     # --- POSITIVE CASES (should flag) ---
 
-    test "flags length(list) > 0 in a guard" do
+    test "does not flag length(list) > 0 because the pattern accepts improper lists" do
       code = """
       defmodule Bad do
         def process(list) when length(list) > 0 do
@@ -15,12 +15,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      issues = check(NoLengthGuardToPattern, code)
-      assert length(issues) == 1
-      issue = hd(issues)
-      assert issue.rule == :no_length_guard_to_pattern
-      assert issue.message =~ "> 0"
-      assert issue.message =~ "[_ | _]"
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "flags length(list) == 3 in a guard" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
     end
 
-    test "flags length check inside compound guard" do
+    test "does not flag an unsafe length > 0 check inside a compound guard" do
       code = """
       defmodule Bad do
         def process(list, x) when length(list) > 0 and is_integer(x) do
@@ -61,9 +56,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      issues = check(NoLengthGuardToPattern, code)
-      assert length(issues) == 1
-      assert hd(issues).rule == :no_length_guard_to_pattern
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     # --- NEGATIVE CASES (should NOT flag) ---
