@@ -75,6 +75,24 @@ defmodule Credence.Pattern.NoIsNilGuardFixTest do
         "def foo(nil, y, z) when is_binary(y) and is_integer(z), do: :ok"
       )
     end
+
+    test "nil-tested param used by the remaining guard stays bound" do
+      code = """
+      defmodule NoIsNilGuardRemainingGuardFixture do
+        def foo(x, y) when is_nil(x) and x == y, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule NoIsNilGuardRemainingGuardFixture do
+        def foo(nil = x, y) when x == y, do: :ok
+      end
+      """
+
+      fixed = fix(NoIsNilGuard, code)
+      confirm_fix(fixed, expected)
+      assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(fixed)
+    end
   end
 
   # ── param used in body ─────────────────────────────────────────

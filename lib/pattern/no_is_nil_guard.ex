@@ -121,11 +121,10 @@ defmodule Credence.Pattern.NoIsNilGuard do
         nil
       else
         {_fn_name, _fm, fn_args} = fn_head
-        body_used = used_in_body?(nil_params, body_rest)
-        new_fn_args = Enum.map(fn_args, &maybe_replace_param(&1, nil_params, body_used))
-        new_fn_head = put_elem(fn_head, 2, new_fn_args)
-
         remaining_guard = remove_is_nil_from_guard(guard, nil_params)
+        still_used = used_after_head?(nil_params, [remaining_guard | body_rest])
+        new_fn_args = Enum.map(fn_args, &maybe_replace_param(&1, nil_params, still_used))
+        new_fn_head = put_elem(fn_head, 2, new_fn_args)
 
         head_source =
           case remaining_guard do
@@ -172,11 +171,11 @@ defmodule Credence.Pattern.NoIsNilGuard do
 
   defp maybe_replace_param(other, _nil_params, _body_used), do: other
 
-  defp used_in_body?(nil_params, body_rest) do
+  defp used_after_head?(nil_params, guard_and_body) do
     nil_params
     |> Enum.filter(fn name ->
       {_, found} =
-        Macro.prewalk(body_rest, false, fn
+        Macro.prewalk(guard_and_body, false, fn
           {^name, _, ctx} = n, _acc when is_atom(ctx) -> {n, true}
           n, acc -> {n, acc}
         end)
