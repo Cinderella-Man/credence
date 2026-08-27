@@ -2,6 +2,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListConcatWithRecursiveResult
+  alias Credence.RuleHelpers
 
   describe "rewrites [literal] ++ recursive_result to a cons" do
     test "single-element literal ++ direct self-call" do
@@ -110,6 +111,31 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
   end
 
   describe "no-ops (dropped shapes are not touched)" do
+    test "custom ++ macro is unchanged when Kernel's operator is excluded" do
+      code = """
+      defmodule CustomConcatOperator do
+        import Kernel, except: [++: 2]
+
+        defmacro left ++ right do
+          quote do: {:custom_concat, unquote(left), unquote(right)}
+        end
+
+        def build([]), do: []
+        def build([h | t]), do: [h] ++ build(t)
+      end
+
+      unless CustomConcatOperator.build([1, 2]) ==
+               {:custom_concat, [1], {:custom_concat, [2], []}} do
+        raise "custom ++ semantics changed"
+      end
+      """
+
+      assert check(NoListConcatWithRecursiveResult, code) == []
+      emitted = fix(NoListConcatWithRecursiveResult, code)
+      confirm_fix(emitted, code)
+      assert RuleHelpers.compile_and_capture(emitted) == {:ok, []}
+    end
+
     test "computed variable ++ recursive result unchanged" do
       code = """
       defmodule Safe do

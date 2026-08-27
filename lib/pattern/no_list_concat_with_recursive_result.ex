@@ -45,17 +45,21 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResult do
 
   @impl true
   def check(ast, _opts) do
+    unsafe_definitions = custom_concat_definitions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {kind, meta, [{:when, _, [{name, _, params}, _guard]}, body_kw]} = node, issues
         when kind in [:def, :defp] and is_atom(name) and is_list(params) ->
           body = extract_body(body_kw)
-          {node, check_clause(body, name, meta, issues)}
+          unsafe? = MapSet.member?(unsafe_definitions, definition_key(kind, meta, name))
+          {node, check_clause(body, name, meta, issues, unsafe?)}
 
         {kind, meta, [{name, _, params}, body_kw]} = node, issues
         when kind in [:def, :defp] and is_atom(name) and is_list(params) ->
           body = extract_body(body_kw)
-          {node, check_clause(body, name, meta, issues)}
+          unsafe? = MapSet.member?(unsafe_definitions, definition_key(kind, meta, name))
+          {node, check_clause(body, name, meta, issues, unsafe?)}
 
         node, issues ->
           {node, issues}
@@ -66,10 +70,13 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResult do
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, &apply_fix/1)
+    unsafe_definitions = custom_concat_definitions(ast)
+    RuleHelpers.patches_from_postwalk(ast, &apply_fix(&1, unsafe_definitions))
   end
 
-  defp check_clause(body, name, meta, issues) do
+  defp check_clause(_body, _name, _meta, issues, true), do: issues
+
+  defp check_clause(body, name, meta, issues, false) do
     case fixable_concat(body, name) do
       {:ok, concat_meta, _new_node} ->
         line = Keyword.get(concat_meta, :line) || Keyword.get(meta, :line)
@@ -138,17 +145,114 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResult do
     RuleHelpers.rewrap_list(wrapper, init ++ [{:|, [], [last, rhs]}])
   end
 
-  defp apply_fix({kind, meta, [{:when, _, [{name, _, params}, _guard]} = head, body_kw]} = node)
+  defp apply_fix(
+         {kind, meta, [{:when, _, [{name, _, params}, _guard]} = head, body_kw]} = node,
+         unsafe_definitions
+       )
        when kind in [:def, :defp] and is_atom(name) and is_list(params) do
-    fix_clause(node, kind, meta, head, body_kw, name)
+    if MapSet.member?(unsafe_definitions, definition_key(kind, meta, name)) do
+      node
+    else
+      fix_clause(node, kind, meta, head, body_kw, name)
+    end
   end
 
-  defp apply_fix({kind, meta, [{name, _, params} = head, body_kw]} = node)
+  defp apply_fix(
+         {kind, meta, [{name, _, params} = head, body_kw]} = node,
+         unsafe_definitions
+       )
        when kind in [:def, :defp] and is_atom(name) and is_list(params) do
-    fix_clause(node, kind, meta, head, body_kw, name)
+    if MapSet.member?(unsafe_definitions, definition_key(kind, meta, name)) do
+      node
+    else
+      fix_clause(node, kind, meta, head, body_kw, name)
+    end
   end
 
-  defp apply_fix(node), do: node
+  defp apply_fix(node, _unsafe_definitions), do: node
+
+  # `++` is overridable. Once a module excludes Kernel's `++/2`, an
+  # unqualified `++` in a following definition may resolve to an imported or
+  # locally-defined macro with unrelated semantics. Record only definitions in
+  # that lexical module; nested modules are inspected independently by the
+  # prewalk and never inherit this marker accidentally.
+  defp custom_concat_definitions(ast) do
+    {_ast, definitions} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:defmodule, _, [_name, body_kw]} = node, definitions ->
+          body_kw
+          |> extract_body()
+          |> module_expressions()
+          |> Enum.reduce({false, definitions}, &record_custom_concat_definition/2)
+          |> then(fn {_excluded?, definitions} -> {node, definitions} end)
+
+        node, definitions ->
+          {node, definitions}
+      end)
+
+    definitions
+  end
+
+  defp record_custom_concat_definition(expression, {excluded?, definitions}) do
+    cond do
+      kernel_concat_exclusion?(expression) ->
+        {true, definitions}
+
+      excluded? ->
+        case definition_identity(expression) do
+          nil -> {true, definitions}
+          identity -> {true, MapSet.put(definitions, identity)}
+        end
+
+      true ->
+        {false, definitions}
+    end
+  end
+
+  defp kernel_concat_exclusion?(expression) do
+    case strip_literal_blocks(expression) do
+      {:import, _, [{:__aliases__, _, kernel}, options]}
+      when kernel in [[:Kernel], [:"Elixir", :Kernel]] ->
+        Enum.any?(options, fn
+          {:except, exclusions} -> 2 in Keyword.get_values(exclusions, :++)
+          _ -> false
+        end)
+
+      _ ->
+        false
+    end
+  end
+
+  defp strip_literal_blocks({:__block__, _, [value]}), do: strip_literal_blocks(value)
+
+  defp strip_literal_blocks({form, meta, args}) when is_list(args) do
+    {form, meta, Enum.map(args, &strip_literal_blocks/1)}
+  end
+
+  defp strip_literal_blocks({key, value}) do
+    {strip_literal_blocks(key), strip_literal_blocks(value)}
+  end
+
+  defp strip_literal_blocks(list) when is_list(list), do: Enum.map(list, &strip_literal_blocks/1)
+  defp strip_literal_blocks(value), do: value
+
+  defp module_expressions({:__block__, _, expressions}) when is_list(expressions), do: expressions
+  defp module_expressions(nil), do: []
+  defp module_expressions(expression), do: [expression]
+
+  defp definition_identity({kind, meta, [{:when, _, [{name, _, params}, _]}, _]})
+       when kind in [:def, :defp] and is_atom(name) and is_list(params),
+       do: definition_key(kind, meta, name)
+
+  defp definition_identity({kind, meta, [{name, _, params}, _]})
+       when kind in [:def, :defp] and is_atom(name) and is_list(params),
+       do: definition_key(kind, meta, name)
+
+  defp definition_identity(_), do: nil
+
+  defp definition_key(kind, meta, name) do
+    {kind, Keyword.get(meta, :line), Keyword.get(meta, :column), name}
+  end
 
   defp fix_clause(node, kind, meta, head, body_kw, name) do
     body = extract_body(body_kw)
