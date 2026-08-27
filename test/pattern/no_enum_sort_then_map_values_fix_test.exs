@@ -36,20 +36,32 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesFixTest do
     test "the piped spelling, keeping the pipeline a pipeline" do
       input = """
       defmodule SortValsFixB do
-        def f(payments), do: payments |> Enum.sort_by(& &1.date) |> Map.values()
+        def f(payments), do: payments |> Enum.sort_by(&elem(&1, 1).date) |> Map.values()
       end
       """
 
       expected = """
       defmodule SortValsFixB do
-        def f(payments), do: payments |> Enum.sort_by(& &1.date) |> Enum.map(fn
+        def f(payments), do: payments |> Enum.sort_by(&elem(&1, 1).date) |> Enum.map(fn
           {_key, value} -> value
           value -> value
         end)
       end
       """
 
-      confirm_fix(fix(NoEnumSortThenMapValues, input), expected)
+      emitted = fix(NoEnumSortThenMapValues, input)
+      confirm_fix(emitted, expected)
+
+      payments = %{first: %{date: ~D[2026-08-27]}, second: %{date: ~D[2026-08-26]}}
+
+      assert_raise BadMapError, fn ->
+        call_fixed(input, SortValsFixB, :f, [payments])
+      end
+
+      assert call_fixed(emitted, SortValsFixB, :f, [payments]) ==
+               payments
+               |> Enum.sort_by(&elem(&1, 1).date)
+               |> Enum.map(fn {_key, payment} -> payment end)
     end
 
     test "a two-stage pipe, where the sort is the immediate left" do
