@@ -193,15 +193,36 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   defp transform_callback(callback, var_name) do
     case extract_callback_param(callback) do
       {:ok, key_name} ->
-        new_callback =
-          callback
-          |> rewrite_callback_param(key_name)
-          |> replace_map_lookups(var_name, key_name)
+        with {:ok, value_name} <- fresh_value_name(callback) do
+          new_callback =
+            callback
+            |> rewrite_callback_param(key_name, value_name)
+            |> replace_map_lookups(var_name, key_name, value_name)
 
-        {:ok, new_callback}
+          {:ok, new_callback}
+        end
 
       :error ->
         :error
+    end
+  end
+
+  defp fresh_value_name(callback) do
+    used_names =
+      Macro.prewalk(callback, MapSet.new(), fn
+        {name, _, ctx} = node, names when is_atom(name) and is_atom(ctx) ->
+          {node, MapSet.put(names, name)}
+
+        node, names ->
+          {node, names}
+      end)
+      |> elem(1)
+
+    case Enum.find([:v, :v1, :value, :map_value, :__credence_map_value__], fn name ->
+           not MapSet.member?(used_names, name)
+         end) do
+      nil -> :error
+      name -> {:ok, name}
     end
   end
 
@@ -224,14 +245,21 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   defp extract_callback_param(_), do: :error
 
   # Rewrite the parameter from `k` to `{k, v}`.
-  defp rewrite_callback_param({:fn, fn_meta, [{:->, arrow_meta, [params, body]}]}, key_name) do
+  defp rewrite_callback_param(
+         {:fn, fn_meta, [{:->, arrow_meta, [params, body]}]},
+         key_name,
+         value_name
+       ) do
     case params do
       [{^key_name, pmeta, pctx}] ->
-        new_params = [{{key_name, pmeta, pctx}, {:v, [], pctx}}]
+        new_params = [{{key_name, pmeta, pctx}, {value_name, [], pctx}}]
         {:fn, fn_meta, [{:->, arrow_meta, [new_params, body]}]}
 
       [{:when, when_meta, [{^key_name, pmeta, pctx}, guard]}] ->
-        new_params = [{:when, when_meta, [{{key_name, pmeta, pctx}, {:v, [], pctx}}, guard]}]
+        new_params = [
+          {:when, when_meta, [{{key_name, pmeta, pctx}, {value_name, [], pctx}}, guard]}
+        ]
+
         {:fn, fn_meta, [{:->, arrow_meta, [new_params, body]}]}
 
       _ ->
@@ -244,38 +272,96 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   # Replacement rules (key == callback parameter):
   #   var[key]           →  v
   #   Map.get(var, key)  →  v
-  #   Map.get(var, key, default) → v
+  #   Map.get(var, key, default) → evaluate an effectful default, then v
   #   Map.fetch(var, key)        → {:ok, v}
   #   Map.fetch!(var, key)       → v
-  defp replace_map_lookups(callback, map_var_name, key_var_name) do
-    Macro.prewalk(callback, fn
-      # var[key]
-      {{:., _, [Access, :get]}, _, [{name, _, _}, {key, _, _}]}
-      when name == map_var_name and key == key_var_name ->
-        {:v, [], nil}
+  defp replace_map_lookups(
+         {:fn, fn_meta, [{:->, arrow_meta, [params, body]}]},
+         map_var_name,
+         key_var_name,
+         value_name
+       ) do
+    {body, _shadow_depth} =
+      Macro.traverse(
+        body,
+        0,
+        fn
+          {:fn, _, clauses} = node, depth ->
+            if Enum.any?(clauses, &clause_binds?(&1, key_var_name)),
+              do: {node, depth + 1},
+              else: {node, depth}
 
-      # Map.get(var, key)
-      {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _, [{name, _, _}, {key, _, _}]}
-      when name == map_var_name and key == key_var_name ->
-        {:v, [], nil}
+          # var[key]
+          {{:., _, [Access, :get]}, _, [{name, _, _}, {key, _, _}]}, 0
+          when name == map_var_name and key == key_var_name ->
+            {{value_name, [], nil}, 0}
 
-      # Map.get(var, key, _default)
-      {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _, [{name, _, _}, {key, _, _}, _]}
-      when name == map_var_name and key == key_var_name ->
-        {:v, [], nil}
+          # Map.get(var, key)
+          {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _, [{name, _, _}, {key, _, _}]}, 0
+          when name == map_var_name and key == key_var_name ->
+            {{value_name, [], nil}, 0}
 
-      # Map.fetch(var, key) → {:ok, v}
-      {{:., _, [{:__aliases__, _, [:Map]}, :fetch]}, _, [{name, _, _}, {key, _, _}]}
-      when name == map_var_name and key == key_var_name ->
-        {:ok, {:v, [], nil}}
+          # Map.get(var, key, _default)
+          {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _,
+           [
+             {name, _, _},
+             {key, _, _},
+             default
+           ]},
+          0
+          when name == map_var_name and key == key_var_name ->
+            replacement =
+              if inert_default?(default) do
+                {value_name, [], nil}
+              else
+                {:__block__, [], [default, {value_name, [], nil}]}
+              end
 
-      # Map.fetch!(var, key) → v
-      {{:., _, [{:__aliases__, _, [:Map]}, :fetch!]}, _, [{name, _, _}, {key, _, _}]}
-      when name == map_var_name and key == key_var_name ->
-        {:v, [], nil}
+            {replacement, 0}
 
-      node ->
-        node
+          # Map.fetch(var, key) → {:ok, v}
+          {{:., _, [{:__aliases__, _, [:Map]}, :fetch]}, _, [{name, _, _}, {key, _, _}]}, 0
+          when name == map_var_name and key == key_var_name ->
+            {{:ok, {value_name, [], nil}}, 0}
+
+          # Map.fetch!(var, key) → v
+          {{:., _, [{:__aliases__, _, [:Map]}, :fetch!]}, _, [{name, _, _}, {key, _, _}]}, 0
+          when name == map_var_name and key == key_var_name ->
+            {{value_name, [], nil}, 0}
+
+          node, depth ->
+            {node, depth}
+        end,
+        fn
+          {:fn, _, clauses} = node, depth ->
+            if Enum.any?(clauses, &clause_binds?(&1, key_var_name)),
+              do: {node, depth - 1},
+              else: {node, depth}
+
+          node, depth ->
+            {node, depth}
+        end
+      )
+
+    {:fn, fn_meta, [{:->, arrow_meta, [params, body]}]}
+  end
+
+  defp inert_default?({:__block__, _, [value]})
+       when is_atom(value) or is_number(value) or is_binary(value),
+       do: true
+
+  defp inert_default?(value) when is_atom(value) or is_number(value) or is_binary(value), do: true
+  defp inert_default?(_), do: false
+
+  defp clause_binds?({:->, _, [params, _body]}, name) do
+    Enum.any?(params, fn param ->
+      {_param, found?} =
+        Macro.prewalk(param, false, fn
+          {^name, _, ctx} = node, _found when is_atom(ctx) -> {node, true}
+          node, found -> {node, found}
+        end)
+
+      found?
     end)
   end
 
