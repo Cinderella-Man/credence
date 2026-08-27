@@ -13,6 +13,26 @@ defmodule Credence.Pattern.NoEnumSortThenMapValuesEquivalenceTest do
 
   alias Credence.Pattern.NoEnumSortThenMapValues
 
+  test "a lexical Map alias is not an always-failing repair" do
+    source = """
+    defmodule SortValsEquivAliasedMap do
+      defmodule ListMap do
+        def values(list), do: Enum.map(list, fn {_key, value} -> value * 10 end)
+      end
+
+      alias ListMap, as: Map
+
+      def f(m), do: Map.values(Enum.sort(m))
+    end
+    """
+
+    emitted = fix(NoEnumSortThenMapValues, source)
+
+    confirm_fix(emitted, source)
+
+    assert call_fixed(emitted, SortValsEquivAliasedMap, :f, [%{b: 1, a: 2}]) == [20, 10]
+  end
+
   test "marked as a repair: the before raises for every input" do
     mark_equivalence_repair(
       "always-fails. `Enum.sort/1,2` and `Enum.sort_by/2,3` are spec'd `:: list`, so " <>

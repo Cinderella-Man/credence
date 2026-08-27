@@ -108,23 +108,97 @@ defmodule Credence.Pattern.NoEnumSortThenMapValues do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, issues ->
-        case offending_meta(node) do
-          {:ok, meta} -> {node, [build_issue(meta) | issues]}
-          :error -> {node, issues}
-        end
-      end)
-
-    Enum.reverse(issues)
+    ast
+    |> eligible_nodes()
+    |> Enum.map(fn node ->
+      {:ok, meta} = offending_meta(node)
+      build_issue(meta)
+    end)
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, &fix_node/1)
+    eligible = ast |> eligible_nodes() |> MapSet.new()
+
+    RuleHelpers.patches_from_postwalk(ast, fn node ->
+      if MapSet.member?(eligible, node), do: fix_node(node), else: node
+    end)
   end
 
   # ── Matching ───────────────────────────────────────────────────────────────
+
+  # A bare `Map` is resolved lexically. Once a local alias shadows it, the call
+  # is not known to be Elixir.Map.values/1 and therefore is not known to fail.
+  # Keep this one traversal as the shared admission decision for check and fix.
+  defp eligible_nodes(ast) do
+    {nodes, _map_shadowed?} = collect_eligible(ast, [], false)
+    Enum.reverse(nodes)
+  end
+
+  defp collect_eligible({:quote, _, _args}, nodes, map_shadowed?),
+    do: {nodes, map_shadowed?}
+
+  defp collect_eligible({:__block__, _, expressions}, nodes, map_shadowed?) do
+    Enum.reduce(expressions, {nodes, map_shadowed?}, fn expression, {acc, shadowed?} ->
+      collect_eligible(expression, acc, shadowed?)
+    end)
+  end
+
+  defp collect_eligible({:alias, _, args}, nodes, map_shadowed?) do
+    {nodes, alias_shadows_map?(args) || map_shadowed?}
+  end
+
+  defp collect_eligible(node, nodes, map_shadowed?)
+       when is_tuple(node) and tuple_size(node) == 3 do
+    {_form, _meta, args} = node
+
+    nodes =
+      if not map_shadowed? and match?({:ok, _}, offending_meta(node)),
+        do: [node | nodes],
+        else: nodes
+
+    if is_list(args) do
+      nodes =
+        Enum.reduce(args, nodes, fn arg, acc ->
+          {acc, _nested_shadowed?} = collect_eligible(arg, acc, map_shadowed?)
+          acc
+        end)
+
+      {nodes, map_shadowed?}
+    else
+      {nodes, map_shadowed?}
+    end
+  end
+
+  defp collect_eligible({left, right}, nodes, map_shadowed?) do
+    {nodes, _} = collect_eligible(left, nodes, map_shadowed?)
+    {nodes, _} = collect_eligible(right, nodes, map_shadowed?)
+    {nodes, map_shadowed?}
+  end
+
+  defp collect_eligible(nodes, acc, map_shadowed?) when is_list(nodes) do
+    collected =
+      Enum.reduce(nodes, acc, fn node, inner_acc ->
+        {inner_acc, _} = collect_eligible(node, inner_acc, map_shadowed?)
+        inner_acc
+      end)
+
+    {collected, map_shadowed?}
+  end
+
+  defp collect_eligible(_node, nodes, map_shadowed?), do: {nodes, map_shadowed?}
+
+  defp alias_shadows_map?([
+         {:__aliases__, _, target},
+         [{{:__block__, _, [:as]}, {:__aliases__, _, [:Map]}}]
+       ]),
+       do: target not in [[:Map], [:"Elixir", :Map]]
+
+  defp alias_shadows_map?([{:__aliases__, _, target}]) do
+    List.last(target) == :Map and target not in [[:Map], [:"Elixir", :Map]]
+  end
+
+  defp alias_shadows_map?(_args), do: false
 
   # Piped: `... |> Enum.sort() |> Map.values()`. Sourceror does NOT expand
   # pipes, so this is a `:|>` node with `Map.values/0` on the right and the sort
