@@ -68,10 +68,12 @@ defmodule Credence.Pattern.NoIfTrueFalse do
 
   @impl true
   def check(ast, _opts) do
+    enum_shadowed? = enum_shadowed?(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:if, meta, [condition, clauses]} = node, acc when is_list(clauses) ->
-          if rewritable_if?(condition, clauses) do
+          if rewritable_if?(condition, clauses, enum_shadowed?) do
             {node, [build_issue(meta) | acc]}
           else
             {node, acc}
@@ -86,7 +88,8 @@ defmodule Credence.Pattern.NoIfTrueFalse do
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
+    enum_shadowed? = enum_shadowed?(ast)
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite(&1, enum_shadowed?))
   end
 
   # Classifies an if's clause list:
@@ -97,7 +100,7 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   #   :true_expr  — do: true, else: <bool-expr>  (replace with condition or expr)
   #   :expr_true  — do: <bool-expr>, else: true  (replace with not condition or expr)
   #   :other      — not a redundant boolean if
-  defp classify_if(clauses) when is_list(clauses) do
+  defp classify_if(clauses, enum_shadowed?) when is_list(clauses) do
     do_body = extract_clause(clauses, :do)
     else_body = extract_clause(clauses, :else)
 
@@ -105,19 +108,19 @@ defmodule Credence.Pattern.NoIfTrueFalse do
       normalize_bool(do_body) == true and normalize_bool(else_body) == false ->
         :true_false
 
-      normalize_bool(else_body) == false and boolean_expr?(do_body) ->
+      normalize_bool(else_body) == false and boolean_expr?(do_body, enum_shadowed?) ->
         :expr_false
 
       normalize_bool(do_body) == false and normalize_bool(else_body) == true ->
         :false_true
 
-      normalize_bool(do_body) == false and boolean_expr?(else_body) ->
+      normalize_bool(do_body) == false and boolean_expr?(else_body, enum_shadowed?) ->
         :false_expr
 
-      normalize_bool(do_body) == true and boolean_expr?(else_body) ->
+      normalize_bool(do_body) == true and boolean_expr?(else_body, enum_shadowed?) ->
         :true_expr
 
-      normalize_bool(else_body) == true and boolean_expr?(do_body) ->
+      normalize_bool(else_body) == true and boolean_expr?(do_body, enum_shadowed?) ->
         :expr_true
 
       true ->
@@ -125,7 +128,7 @@ defmodule Credence.Pattern.NoIfTrueFalse do
     end
   end
 
-  defp classify_if(_), do: :other
+  defp classify_if(_, _enum_shadowed?), do: :other
 
   # A redundant boolean `if` is only safe to collapse when its CONDITION is
   # guaranteed to evaluate to an actual boolean. Otherwise the rewrites change
@@ -133,8 +136,25 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   # non-boolean `x` (e.g. `5`) while the collapsed form `x` returns `5`; and
   # `if x do expr else false end` returns `expr` while `x and expr` raises a
   # `BadBooleanError`. The branch shapes alone don't make the rewrite safe.
-  defp rewritable_if?(condition, clauses),
-    do: RuleHelpers.boolean_condition?(condition) and classify_if(clauses) != :other
+  defp rewritable_if?(condition, clauses, enum_shadowed?),
+    do:
+      boolean_condition?(condition, enum_shadowed?) and
+        classify_if(clauses, enum_shadowed?) != :other
+
+  defp boolean_condition?(condition, false), do: RuleHelpers.boolean_condition?(condition)
+
+  defp boolean_condition?({:__block__, _, [expr]}, true), do: boolean_condition?(expr, true)
+
+  defp boolean_condition?({op, _, [_, _]}, true)
+       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :match?],
+       do: true
+
+  defp boolean_condition?({op, _, [left, right]}, true) when op in [:and, :or],
+    do: boolean_condition?(left, true) and boolean_condition?(right, true)
+
+  defp boolean_condition?({:not, _, [inner]}, true), do: boolean_condition?(inner, true)
+  defp boolean_condition?({:is_nil, _, [_]}, true), do: true
+  defp boolean_condition?(_, true), do: false
 
   # Conditions whose result is always a boolean (or which raise identically to
   # the original `if`). Comparisons, `match?`, `is_nil`, `not`, and the
@@ -157,18 +177,19 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   defp normalize_bool(_), do: :other
 
   # Rewrites redundant boolean ifs to their collapsed form.
-  defp maybe_rewrite({:if, _meta, [condition, clauses]} = node) when is_list(clauses) do
-    if RuleHelpers.boolean_condition?(condition) do
-      rewrite_if(condition, clauses, node)
+  defp maybe_rewrite({:if, _meta, [condition, clauses]} = node, enum_shadowed?)
+       when is_list(clauses) do
+    if boolean_condition?(condition, enum_shadowed?) do
+      rewrite_if(condition, clauses, node, enum_shadowed?)
     else
       node
     end
   end
 
-  defp maybe_rewrite(node), do: node
+  defp maybe_rewrite(node, _enum_shadowed?), do: node
 
-  defp rewrite_if(condition, clauses, node) do
-    case classify_if(clauses) do
+  defp rewrite_if(condition, clauses, node, enum_shadowed?) do
+    case classify_if(clauses, enum_shadowed?) do
       :true_false ->
         condition
 
@@ -198,33 +219,61 @@ defmodule Credence.Pattern.NoIfTrueFalse do
 
   # Returns true when the expression is a comparison or boolean operator —
   # safe to use as a boolean in `cond and expr`.
-  defp boolean_expr?({:__block__, _, [expr]}), do: boolean_expr?(expr)
+  defp boolean_expr?({:__block__, _, [expr]}, enum_shadowed?),
+    do: boolean_expr?(expr, enum_shadowed?)
 
-  defp boolean_expr?({op, _, [_, _]})
+  defp boolean_expr?({op, _, [_, _]}, _enum_shadowed?)
        when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :and, :or, :match?],
        do: true
 
-  defp boolean_expr?({:not, _, [_]}), do: true
+  defp boolean_expr?({:not, _, [_]}, _enum_shadowed?), do: true
 
   # Kernel type-check predicates (is_nil, is_list, etc.)
-  defp boolean_expr?({:is_nil, _, [_]}), do: true
+  defp boolean_expr?({:is_nil, _, [_]}, _enum_shadowed?), do: true
 
   # Boolean-returning Enum functions — always return true/false.
-  defp boolean_expr?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
+  defp boolean_expr?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}, false)
        when fun in [:all?, :any?, :empty?],
        do: true
 
   # Piped form: value |> Enum.all?(...), etc.
-  defp boolean_expr?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
+  defp boolean_expr?(
+         {:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]},
+         false
+       )
        when fun in [:all?, :any?, :empty?],
        do: true
 
   # An if/else with all-boolean branches is itself a boolean expression.
-  defp boolean_expr?({:if, _, [_condition, clauses]}) when is_list(clauses) do
-    classify_if(clauses) != :other
+  defp boolean_expr?({:if, _, [_condition, clauses]}, enum_shadowed?) when is_list(clauses) do
+    classify_if(clauses, enum_shadowed?) != :other
   end
 
-  defp boolean_expr?(_), do: false
+  defp boolean_expr?(_, _enum_shadowed?), do: false
+
+  defp enum_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [target, opts]} = node, acc when is_list(opts) ->
+          {node, acc or aliases_as_enum?(target, opts)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    shadowed?
+  end
+
+  defp aliases_as_enum?({:__aliases__, _, parts}, opts) do
+    target_is_enum? = parts in [[:Enum], [:"Elixir", :Enum]]
+
+    Enum.any?(opts, fn
+      {{:__block__, _, [:as]}, {:__aliases__, _, [:Enum]}} -> not target_is_enum?
+      _ -> false
+    end)
+  end
+
+  defp aliases_as_enum?(_, _), do: false
 
   # Negates a boolean condition in AST form.
   # Uses the complement operator for comparisons instead of wrapping with `not`,
