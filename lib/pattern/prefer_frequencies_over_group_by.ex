@@ -25,26 +25,74 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupBy do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, issues ->
-        case check_node(node) do
-          {:ok, issue} -> {node, [issue | issues]}
-          :error -> {node, issues}
-        end
-      end)
+    if unsafe_name_resolution?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn node, issues ->
+          case check_node(node) do
+            {:ok, issue} -> {node, [issue | issues]}
+            :error -> {node, issues}
+          end
+        end)
 
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
-      case fix_node(node) do
-        {:ok, replacement} -> replacement
-        :error -> node
-      end
+    if unsafe_name_resolution?(ast) do
+      []
+    else
+      Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
+        case fix_node(node) do
+          {:ok, replacement} -> replacement
+          :error -> node
+        end
+      end)
+    end
+  end
+
+  # Both names in the matched source are resolved by the surrounding lexical
+  # environment. Without expansion information, conservatively leave the file
+  # alone when either can denote something other than Elixir.Enum/Kernel.length.
+  defp unsafe_name_resolution?(ast) do
+    {_ast, unsafe?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, target}, opts]} = node, unsafe? ->
+          {node, unsafe? or shadows_enum?(target, alias_as(opts))}
+
+        {:alias, _, [{:__aliases__, _, target}]} = node, unsafe? ->
+          {node, unsafe? or shadows_enum?(target, nil)}
+
+        {kind, _, [{:length, _, args} | _]} = node, unsafe?
+        when kind in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+          {node, unsafe? or length(args) == 1}
+
+        {:import, _, [{:__aliases__, _, target} | _]} = node, unsafe? ->
+          {node, unsafe? or target != [:Kernel]}
+
+        node, unsafe? ->
+          {node, unsafe?}
+      end)
+
+    unsafe?
+  end
+
+  defp alias_as(opts) when is_list(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _other -> nil
     end)
   end
+
+  defp alias_as(_), do: nil
+
+  defp shadows_enum?(target, {:__aliases__, _, [:Enum]}), do: target != [:Enum]
+  defp shadows_enum?(target, nil), do: List.last(target) == :Enum and target != [:Enum]
+  defp shadows_enum?(_target, _as), do: false
 
   # ── detection ──────────────────────────────────────────────────────────
 
