@@ -40,10 +40,12 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
 
   @impl true
   def check(ast, _opts) do
+    enum_shadowed? = enum_alias_shadowed?(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {{:., _, _} = dot, meta, args} = node, issues when is_list(args) ->
-          if reduce_while_call?(dot) and length(args) >= 2 do
+          if not enum_shadowed? and reduce_while_call?(dot) and length(args) >= 2 do
             fn_node = List.last(args)
 
             if all_cont?(fn_node) do
@@ -65,7 +67,8 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.get(opts, :source, "")
-    RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite(&1, source))
+    enum_shadowed? = enum_alias_shadowed?(ast)
+    RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite(&1, source, enum_shadowed?))
   end
 
   defp reduce_while_call?({:., _, [{:__aliases__, _, [:Enum]}, :reduce_while]}), do: true
@@ -143,9 +146,10 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
   # Rewrite: replace reduce_while → reduce, unwrap {:cont, value} → value
   defp maybe_rewrite(
          {{:., _, _} = dot, call_meta, args} = node,
-         _source
+         _source,
+         enum_shadowed?
        ) do
-    if reduce_while_call?(dot) and length(args) >= 2 do
+    if not enum_shadowed? and reduce_while_call?(dot) and length(args) >= 2 do
       fn_node = List.last(args)
 
       if all_cont?(fn_node) do
@@ -160,7 +164,36 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
     end
   end
 
-  defp maybe_rewrite(node, _source), do: node
+  defp maybe_rewrite(node, _source, _enum_shadowed?), do: node
+
+  defp enum_alias_shadowed?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [{:__aliases__, _, target}, opts]} = node, shadowed?
+        when is_list(target) and is_list(opts) ->
+          {node, shadowed? or shadows_enum?(target, alias_as(opts))}
+
+        {:alias, _, [{:__aliases__, _, target}]} = node, shadowed? when is_list(target) ->
+          {node, shadowed? or shadows_enum?(target, nil)}
+
+        node, shadowed? ->
+          {node, shadowed?}
+      end)
+
+    shadowed?
+  end
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _other -> nil
+    end)
+  end
+
+  defp shadows_enum?(target, {:__aliases__, _, [:Enum]}), do: target != [:Enum]
+  defp shadows_enum?(target, nil), do: List.last(target) == :Enum and target != [:Enum]
+  defp shadows_enum?(_target, _as), do: false
 
   defp unwrap_cont_fn({:fn, fn_meta, clauses}) do
     new_clauses = Enum.map(clauses, &unwrap_cont_clause/1)

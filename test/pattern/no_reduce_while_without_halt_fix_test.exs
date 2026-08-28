@@ -104,6 +104,16 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     confirm_fix(fix(NoReduceWhileWithoutHalt, code), code)
   end
 
+  test "does not modify a different module aliased as Enum" do
+    code = """
+    alias SomeModule, as: Enum
+    Enum.reduce_while([1, 2], 0, fn x, acc -> {:cont, acc + x} end)
+    """
+
+    assert clean?(NoReduceWhileWithoutHalt, code)
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), code)
+  end
+
   test "round-trip: fixed code produces no issues" do
     code = """
     Enum.reduce_while(list, 0, fn x, acc ->
