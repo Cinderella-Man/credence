@@ -76,4 +76,12 @@ defmodule Credence.Pattern.PreferMapNewFixTest do
 
     confirm_fix(fix(PreferMapNew, code), code)
   end
+
+  test "does not rewrite calls through custom Enum and Map aliases" do
+    enum_alias = "alias CustomEnum, as: Enum\nEnum.into(items, %{})"
+    map_alias = "alias CustomMap, as: Map\nEnum.into(items, %{})"
+
+    confirm_fix(fix(PreferMapNew, enum_alias), enum_alias)
+    confirm_fix(fix(PreferMapNew, map_alias), map_alias)
+  end
 end
