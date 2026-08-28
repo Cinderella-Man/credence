@@ -419,8 +419,8 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
   defp mentions_any?(node, names) do
     {_node, found} =
       Macro.prewalk(node, false, fn
-        {name, _, context} = n, _found when is_atom(name) and is_atom(context) ->
-          {n, name in names}
+        {name, _, context} = n, found when is_atom(name) and is_atom(context) ->
+          {n, found or name in names}
 
         n, found ->
           {n, found}

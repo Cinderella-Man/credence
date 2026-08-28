@@ -228,6 +228,28 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionCheckTest do
       refute flagged?(PreferMapIntersectOverMapsetIntersection, source)
     end
 
+    test "declines when a rebinding expression ends in an unrelated variable" do
+      source = """
+      common_keys =
+        Map.keys(freq1)
+        |> MapSet.new()
+        |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+        |> MapSet.to_list()
+
+      freq1 = replacement
+
+      common_keys
+      |> Enum.map(fn element ->
+        count1 = Map.fetch!(freq1, element)
+        count2 = Map.fetch!(freq2, element)
+        {element, min(count1, count2)}
+      end)
+      |> Enum.sort()
+      """
+
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, source)
+    end
+
     test "declines when the rebinding is of the second operand" do
       source = """
       common_keys =
