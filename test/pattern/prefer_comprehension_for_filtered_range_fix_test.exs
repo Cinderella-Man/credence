@@ -86,6 +86,41 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeFixTest do
       confirm_fix(result, "for num <- 1..n, !(num == skip), do: num")
     end
 
+    test "preserves a comment attached to the removed if expression" do
+      input = """
+      Enum.reduce(1..n, [], fn num, acc ->
+        # keep this explanation
+        if rem(num, 2) == 0, do: acc, else: [num | acc]
+      end)
+      |> Enum.reverse()
+      """
+
+      confirm_fix(
+        fix(PreferComprehensionForFilteredRange, input),
+        """
+        # keep this explanation
+        for num <- 1..n, !(rem(num, 2) == 0), do: num
+        """
+      )
+    end
+
+    test "does not rewrite calls through a shadowing Enum alias" do
+      input = """
+      defmodule PreferComprehensionFixAliasProbe do
+        alias MyEnum, as: Enum
+
+        def run(n) do
+          Enum.reduce(1..n, [], fn num, acc ->
+            if rem(num, 2) == 0, do: acc, else: [num | acc]
+          end)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferComprehensionForFilteredRange, input), input)
+    end
+
     test "non-matching code is left unchanged" do
       code = "for num <- 1..n, !MapSet.member?(present, num), do: num"
 

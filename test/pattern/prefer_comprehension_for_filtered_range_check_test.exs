@@ -56,6 +56,23 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeCheckTest do
   end
 
   describe "leaves good code alone" do
+    test "Enum alias shadowed by another module" do
+      code = """
+      defmodule PreferComprehensionAliasProbe do
+        alias MyEnum, as: Enum
+
+        def run(n) do
+          Enum.reduce(1..n, [], fn num, acc ->
+            if rem(num, 2) == 0, do: acc, else: [num | acc]
+          end)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      assert clean?(PreferComprehensionForFilteredRange, code)
+    end
+
     test "already a for comprehension" do
       code = "for num <- 1..n, !MapSet.member?(present, num), do: num"
 
