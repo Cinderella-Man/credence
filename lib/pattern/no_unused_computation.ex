@@ -189,9 +189,13 @@ defmodule Credence.Pattern.NoUnusedComputation do
     {non_last, _last} = Enum.split(stmts, length(stmts) - 1)
 
     {dead, _bindings} =
-      Enum.reduce(non_last, {[], %{}}, fn stmt, {dead, bindings} ->
+      non_last
+      |> Enum.with_index()
+      |> Enum.reduce({[], %{}}, fn {stmt, index}, {dead, bindings} ->
+        later = Enum.drop(stmts, index + 1)
+
         cond do
-          dead_computation?(stmt, bindings) -> {[stmt | dead], bindings}
+          dead_computation?(stmt, bindings, later) -> {[stmt | dead], bindings}
           (b = binding(stmt, bindings)) != nil -> {dead, b}
           true -> {dead, bindings}
         end
@@ -201,12 +205,28 @@ defmodule Credence.Pattern.NoUnusedComputation do
   end
 
   # `_v = func(arg)` where func is total-given-type T and arg is provably type T.
-  defp dead_computation?({:=, _, [lhs, rhs]}, bindings) do
+  defp dead_computation?({:=, _, [lhs, rhs]}, bindings, later) do
     type = total_given_type_call(rhs)
-    underscore_var?(lhs) and type != nil and arg_type_of(rhs, bindings) == type
+
+    underscore_var?(lhs) and not referenced_later?(lhs, later) and type != nil and
+      arg_type_of(rhs, bindings) == type
   end
 
-  defp dead_computation?(_, _), do: false
+  defp dead_computation?(_, _, _), do: false
+
+  defp referenced_later?({:_, _, _}, _later), do: false
+
+  defp referenced_later?({name, _, ctx}, later) do
+    Enum.any?(later, fn stmt ->
+      {_stmt, found?} =
+        Macro.prewalk(stmt, false, fn
+          {^name, _, ^ctx} = node, _found? -> {node, true}
+          node, found? -> {node, found?}
+        end)
+
+      found?
+    end)
+  end
 
   # `var = <typed expr>` (non-underscore) → updated bindings, else nil.
   defp binding({:=, _, [{name, _, ctx}, rhs]}, bindings)
