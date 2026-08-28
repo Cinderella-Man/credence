@@ -27,10 +27,22 @@ defmodule Credence.Pattern.NoRedundantToListFixTest do
     confirm_fix(fix(NoRedundantToList, code), "Map.new(pairs)")
   end
 
-  test "non-pipe /2 form keeps the transform arg" do
+  test "non-pipe /2 form is left unchanged because transformation order is observable" do
     code = "MapSet.new(Enum.to_list(items), fn x -> x + 1 end)"
 
-    confirm_fix(fix(NoRedundantToList, code), "MapSet.new(items, fn x -> x + 1 end)")
+    confirm_fix(fix(NoRedundantToList, code), code)
+  end
+
+  test "aliases named like Enum, Map, or MapSet are left unchanged" do
+    fixtures = [
+      "alias CustomEnum, as: Enum\nMapSet.new(Enum.to_list(items))",
+      "alias CustomMap, as: Map\nMap.new(Enum.to_list(items))",
+      "alias CustomSet, as: MapSet\nMapSet.new(Enum.to_list(items))"
+    ]
+
+    for code <- fixtures do
+      confirm_fix(fix(NoRedundantToList, code), code)
+    end
   end
 
   test "preserves surrounding code" do

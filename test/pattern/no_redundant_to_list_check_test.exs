@@ -54,7 +54,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       assert length(check(NoRedundantToList, code)) == 1
     end
 
-    test "non-pipe /2 form keeps fix safe, so it still fires" do
+    test "non-pipe /2 form can change effect order, so it is skipped" do
       code = """
       defmodule Example do
         def run(items) do
@@ -63,7 +63,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(NoRedundantToList, code)) == 1
+      assert check(NoRedundantToList, code) == []
     end
 
     test "multiple occurrences in same module" do
@@ -82,6 +82,18 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
   end
 
   describe "no issue" do
+    test "aliases named like standard modules are not treated as standard modules" do
+      fixtures = [
+        "alias CustomEnum, as: Enum\nMapSet.new(Enum.to_list(items))",
+        "alias CustomMap, as: Map\nMap.new(Enum.to_list(items))",
+        "alias CustomSet, as: MapSet\nMapSet.new(Enum.to_list(items))"
+      ]
+
+      for code <- fixtures do
+        assert check(NoRedundantToList, code) == []
+      end
+    end
+
     test "MapSet.new(items)" do
       code = """
       defmodule Example do
