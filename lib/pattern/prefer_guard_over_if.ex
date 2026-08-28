@@ -141,11 +141,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     found?
   end
 
-  # A `~H` (Phoenix component) body implicitly references a variable literally
-  # named `assigns`. The rewrite re-renders the head through
-  # `underscore_unused_params/2`, which — blind to the macro-level reference —
-  # underscores `assigns` into `_assigns`, and `~H` then fails to compile
-  # ("~H requires a variable named \"assigns\""). Skip such bodies entirely.
+  # Keep the existing conservative exclusion for Phoenix `~H` component bodies.
   defp body_has_h_sigil?(body) do
     {_node, found?} =
       Macro.prewalk(body, false, fn
@@ -156,11 +152,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     found?
   end
 
-  # A function head containing a binary/bitstring pattern (`<<c::utf8, rest::binary>>`)
-  # is skipped: the clause-splitting rewrite re-renders the head and
-  # `underscore_unused_params/2` mistakes the segment type specifiers (`utf8`,
-  # `binary`, …) for unused variables, underscoring them into `_utf8`/`_binary`
-  # — invalid specifiers that don't compile (the reverted bug).
+  # Keep the existing conservative exclusion for binary/bitstring head patterns.
   defp head_has_bitstring?(head_ast) do
     {_node, found?} =
       Macro.prewalk(head_ast, false, fn
@@ -171,14 +163,8 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     found?
   end
 
-  # A PARAMETER pattern-matching a module attribute (`def encode(@max_size, rest)`)
-  # is skipped for the same reason as a bitstring head: the rewrite re-renders the
-  # head through `underscore_unused_params/2`, whose postwalk sees the variable
-  # node *inside* `@attr` (`{:@, _, [{name, _, nil}]}`) and underscores it into
-  # `@_attr` — an undefined attribute that evaluates to `nil`, silently breaking
-  # the match. Only the param patterns are scanned: an attribute in the `when`
-  # guard (`when level in @levels`) is carried through verbatim, never
-  # underscored, so it is safe and must not block the fix.
+  # Keep the existing conservative exclusion for module attributes in parameter
+  # patterns. Attributes in an existing guard do not block the rewrite.
   defp head_has_attribute?(head_ast) do
     call =
       case head_ast do
@@ -217,20 +203,12 @@ defmodule Credence.Pattern.PreferGuardOverIf do
           var_equalities = extract_var_equalities(condition, call)
           has_var_equalities? = var_equalities != []
 
-          guard_names =
-            if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
-
           # Build first clause: defp call when condition do do_body end
           # For var == var conditions, keep the original condition as a guard.
           first_combined_guard = combine_guards(existing_guard, condition)
           first_guard = first_combined_guard
 
-          first_used =
-            guard_names
-            |> MapSet.union(collect_var_names(do_body))
-            |> MapSet.union(collect_var_names(first_guard))
-
-          first_head = build_head(underscore_unused_params(call, first_used), first_guard)
+          first_head = build_head(call, first_guard)
 
           # Carry any comment that led the `if` (a `# why` line before it in the
           # body) onto the first generated clause — the if node is discarded, so
@@ -258,12 +236,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
               existing_guard
             end
 
-          second_used =
-            guard_names
-            |> MapSet.union(collect_var_names(else_body))
-            |> MapSet.union(collect_var_names(second_guard))
-
-          second_head = build_head(underscore_unused_params(call, second_used), second_guard)
+          second_head = build_head(call, second_guard)
           second_clause = {def_kind, [], [second_head, [do: else_body]]}
           second_text = Sourceror.to_string(second_clause)
 
@@ -487,67 +460,4 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   defp var_name({name, _, ctx}) when is_atom(name) and (is_atom(ctx) or is_nil(ctx)), do: name
   defp var_name({:__block__, _, [expr]}), do: var_name(expr)
   defp var_name(_), do: nil
-
-  # Collect all variable names referenced in an AST subtree.
-  defp collect_var_names(ast) do
-    {_, names} =
-      Macro.prewalk(ast, MapSet.new(), fn
-        {name, _, ctx} = node, acc
-        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
-          {node, MapSet.put(acc, name)}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    names
-  end
-
-  # In a function head AST, prefix any variable not in `used_names` with `_`.
-  defp underscore_unused_params(head, used_names) do
-    counts = var_counts(head)
-    existing = collect_var_names(head)
-
-    Macro.postwalk(head, fn
-      {name, meta, ctx} = node when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
-        if safe_to_underscore?(name, used_names, counts, existing) do
-          {:"_#{name}", meta, ctx}
-        else
-          node
-        end
-
-      node ->
-        node
-    end)
-  end
-
-  defp safe_to_underscore?(name, used_names, counts, existing) do
-    # Leave an already-underscore-prefixed name (`_x`, `_`) alone — re-underscoring
-    # it into `__x` is not a conventional unused name.
-    # Non-linear pattern variable (appears more than once in the head): the
-    # repetition is a join/equality constraint, e.g. `f(x, x)`. Underscoring it
-    # changes the matched domain — leave it (an unused-var warning is harmless).
-    # Collision: `_name` already appears in the head, so underscoring `name`
-    # would create a `{_name, _name}`-style equality constraint that did not
-    # exist. Leave it.
-    name not in used_names and
-      not String.starts_with?(Atom.to_string(name), "_") and
-      Map.get(counts, name, 0) == 1 and
-      not MapSet.member?(existing, :"_#{name}")
-  end
-
-  # Count occurrences of each (non-underscore) variable name in the head.
-  defp var_counts(head) do
-    {_ast, counts} =
-      Macro.prewalk(head, %{}, fn
-        {name, _, ctx} = node, acc
-        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
-          {node, Map.update(acc, name, 1, &(&1 + 1))}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    counts
-  end
 end
