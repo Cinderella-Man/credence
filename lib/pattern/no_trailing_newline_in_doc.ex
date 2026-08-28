@@ -120,7 +120,12 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
   # An escape needs an ODD run of backslashes before the `n`: `\\n` is a newline,
   # `\\\\n` is a backslash and a letter.
   defp raw_trailing_only?(value) do
-    raw_trailing_escape?(value) and not String.contains?(drop_all_raw_escapes(value), "\\n")
+    raw_trailing_escape?(value) and not raw_newline_escape?(drop_all_raw_escapes(value))
+  end
+
+  defp raw_newline_escape?(value) do
+    Regex.scan(~r/(\\+)n/, value, capture: :all_but_first)
+    |> Enum.any?(fn [slashes] -> rem(byte_size(slashes), 2) == 1 end)
   end
 
   defp raw_trailing_escape?(value) do

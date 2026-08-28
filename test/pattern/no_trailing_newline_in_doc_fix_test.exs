@@ -4,6 +4,25 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
   alias Credence.Pattern.NoTrailingNewlineInDoc
 
   describe "strips trailing newline from single-line strings" do
+    test "preserves an internal escaped backslash before n" do
+      code = """
+      defmodule NoTrailingNewlineInDocEscapedBackslashFixture do
+        @doc "Path C:\\\\new.\\n"
+        def path, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule NoTrailingNewlineInDocEscapedBackslashFixture do
+        @doc "Path C:\\\\new."
+        def path, do: :ok
+      end
+      """
+
+      [_issue] = check(NoTrailingNewlineInDoc, code)
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
+    end
+
     test "@doc trailing newline" do
       code = """
       defmodule Example do
