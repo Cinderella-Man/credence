@@ -112,7 +112,10 @@ defmodule Credence.Pattern.NoUnusedUnderscoreAssignment do
   # A single underscore-prefixed variable on the left side, never a pattern.
   defp underscore_var({name, _meta, ctx}) when is_atom(name) and is_atom(ctx) do
     str = Atom.to_string(name)
-    if String.starts_with?(str, "_"), do: {:ok, name}, else: :error
+
+    if String.starts_with?(str, "_") and not Macro.special_form?(name, 0),
+      do: {:ok, name},
+      else: :error
   end
 
   defp underscore_var(_), do: :error

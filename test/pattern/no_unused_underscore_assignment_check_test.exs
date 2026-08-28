@@ -87,5 +87,16 @@ defmodule Credence.Pattern.NoUnusedUnderscoreAssignmentCheckTest do
              end
              """)
     end
+
+    test "special forms whose names begin with underscores are never touched" do
+      assert clean?(Rule, """
+             defmodule NoUnusedUnderscoreAssignmentCheckSpecialFormFixture do
+               def run do
+                 __MODULE__ = :ok
+                 :done
+               end
+             end
+             """)
+    end
   end
 end
