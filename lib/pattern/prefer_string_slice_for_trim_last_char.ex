@@ -95,6 +95,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
          true <- length(clauses) >= 2,
          {leading, [last]} <- Enum.split(clauses, -1),
          true <- match_slice_clause?(last, var),
+         true <- Enum.any?(leading, &match_empty_clause?/1),
          true <- Enum.all?(leading, &match_empty_result_clause?/1) do
       {:ok, var}
     else
@@ -130,7 +131,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
   end
 
   defp match_wildcard_slice_clause?({:->, _, [[{var_name, _, nil}], body]}, var)
-       when is_atom(var_name) do
+       when is_atom(var_name) and var_name != var do
     match_slice_body?(body, var)
   end
 
@@ -186,7 +187,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
           ]},
          var
        )
-       when is_atom(head) and is_atom(tail) do
+       when is_atom(head) and is_atom(tail) and head != var and tail != var do
     match_slice_body?(body, var)
   end
 
