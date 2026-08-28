@@ -70,4 +70,17 @@ defmodule Credence.Pattern.PreferMapNewWithTransformCheckTest do
   test "leaves unrelated pipe alone" do
     assert clean?(PreferMapNewWithTransform, "1..5 |> Enum.map(fn i -> i * i end) |> Enum.sum()")
   end
+
+  test "leaves calls through custom Enum and Map aliases alone" do
+    code = """
+    defmodule PreferMapNewAliasCheckFixture do
+      alias MyApp.Collection, as: Enum
+      alias MyApp.Dictionary, as: Map
+
+      def build(items), do: Enum.map(items, fn item -> {item, item} end) |> Map.new()
+    end
+    """
+
+    assert clean?(PreferMapNewWithTransform, code)
+  end
 end
