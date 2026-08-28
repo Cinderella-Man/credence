@@ -164,7 +164,10 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
   defp nil_pattern?({:__block__, _, [nil]}), do: true
   defp nil_pattern?(_), do: false
 
-  defp wildcard_clause?({:->, _, [[pattern], _body]}), do: wildcard_pattern?(pattern)
+  defp wildcard_clause?({:->, _, [[pattern], body]}) do
+    wildcard_pattern?(pattern) and not bound_wildcard_referenced?(pattern, body)
+  end
+
   defp wildcard_clause?(_), do: false
 
   defp wildcard_pattern?({:_, _, _}), do: true
@@ -173,6 +176,18 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
     do: name |> to_string() |> String.starts_with?("_")
 
   defp wildcard_pattern?(_), do: false
+
+  defp bound_wildcard_referenced?({:_, _, _}, _body), do: false
+
+  defp bound_wildcard_referenced?({name, _, ctx}, body) do
+    {_body, referenced?} =
+      Macro.prewalk(body, false, fn
+        {^name, _, ^ctx} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    referenced?
+  end
 
   # Only a *bare variable* middle pattern is a safe target. The fix reuses
   # the pattern as an expression inside `not is_nil(...)`; for a bare

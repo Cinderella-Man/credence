@@ -187,4 +187,16 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
 
     confirm_fix(fix(NoRedundantCaseNilClause, input), input)
   end
+
+  test "leaves a named underscore catch-all unchanged because it binds the subject" do
+    input = """
+    case subject do
+      nil -> _fallback
+      n when is_integer(n) -> n
+      _fallback -> _fallback
+    end
+    """
+
+    confirm_fix(fix(NoRedundantCaseNilClause, input), input)
+  end
 end
