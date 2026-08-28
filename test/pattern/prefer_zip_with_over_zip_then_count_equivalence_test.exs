@@ -3,9 +3,10 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountEquivalenceTest do
   Tier 1 (expression). `a |> Enum.zip(b) |> Enum.count(fn {x, y} -> x != y end)`
   → `a |> Enum.zip_with(b, fn x, y -> x != y end) |> Enum.count(& &1)`.
 
-  Both zip the two enumerables element-wise, apply the predicate to each pair,
-  and count the truthy results. `Enum.zip_with/3` just avoids the intermediate
-  2-tuple list.
+  For eager lists, both zip element-wise, apply the predicate to each pair, and
+  count the truthy results. For lazy enumerables, the rewrite is not equivalent:
+  `Enum.zip/2` consumes the sources before the predicate runs, while
+  `Enum.zip_with/3` interleaves source consumption and predicate calls.
   """
   use Credence.RuleCase, async: true
 
@@ -43,5 +44,41 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountEquivalenceTest do
         {["x"], ["y", "z"]}
       ]
     )
+  end
+
+  test "lazy enumerable failures expose the rewrite's changed evaluation order" do
+    original =
+      "a |> Enum.zip(b) |> Enum.count(fn {x, y} -> if x == 1 and y == 1, do: raise(ArgumentError, \"predicate-first\"), else: true end)"
+
+    emitted = fix(PreferZipWithOverZipThenCount, original)
+
+    executable = """
+    defmodule Credence.Pattern.PreferZipWithOverZipThenCountLazyOrderFixture do
+      def source do
+        Stream.map([1, 2], fn
+          1 -> 1
+          2 -> raise "source-second"
+        end)
+      end
+
+      def original(a, b), do: #{original}
+      def repaired(a, b), do: #{emitted}
+
+      def outcome(fun) do
+        try do
+          fun.(source(), [1, 2])
+        rescue
+          error -> {error.__struct__, Exception.message(error)}
+        end
+      end
+    end
+
+    alias Credence.Pattern.PreferZipWithOverZipThenCountLazyOrderFixture, as: Fixture
+
+    {RuntimeError, "source-second"} = Fixture.outcome(&Fixture.original/2)
+    {ArgumentError, "predicate-first"} = Fixture.outcome(&Fixture.repaired/2)
+    """
+
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(executable)
   end
 end
