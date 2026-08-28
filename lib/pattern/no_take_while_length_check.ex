@@ -181,11 +181,39 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
   # The predicate is wrapped in parens — `(#{fun_text}).(elem)` — so a captured
   # function like `&is_integer/1` is applied, not parsed as `is_integer / 1.(elem)`.
   defp build_reduce_while_text(enum_mod, fun_text, nil) do
-    "#{enum_mod}.reduce_while(0, fn elem, acc -> if (#{fun_text}).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
+    build_reduce_while_text(
+      enum_mod,
+      fun_text,
+      nil,
+      fresh_name(fun_text, "elem"),
+      fresh_name(fun_text, "acc")
+    )
   end
 
   defp build_reduce_while_text(enum_mod, fun_text, enum_text) do
-    "#{enum_mod}.reduce_while(#{enum_text}, 0, fn elem, acc -> if (#{fun_text}).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
+    build_reduce_while_text(
+      enum_mod,
+      fun_text,
+      enum_text,
+      fresh_name(fun_text, "elem"),
+      fresh_name(fun_text, "acc")
+    )
+  end
+
+  defp build_reduce_while_text(enum_mod, fun_text, enum_text, elem_name, acc_name) do
+    enum_prefix = if enum_text, do: "#{enum_text}, ", else: ""
+
+    "#{enum_mod}.reduce_while(#{enum_prefix}0, fn #{elem_name}, #{acc_name} -> if (#{fun_text}).(#{elem_name}), do: {:cont, #{acc_name} + 1}, else: {:halt, #{acc_name}} end)"
+  end
+
+  defp fresh_name(text, base, suffix \\ nil) do
+    candidate = if suffix, do: "#{base}_#{suffix}", else: base
+
+    if Regex.match?(~r/\b#{Regex.escape(candidate)}\b/u, text) do
+      fresh_name(text, base, (suffix || 0) + 1)
+    else
+      candidate
+    end
   end
 
   defp check_node({:|>, meta, _} = node) do
