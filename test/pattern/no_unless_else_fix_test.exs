@@ -362,4 +362,42 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       confirm_fix(fix(NoUnlessElse, input), input)
     end
   end
+
+  describe "respects the lexical origin of unless" do
+    test "does not rewrite unless imported from a custom DSL" do
+      input = """
+      defmodule Query do
+        import CustomDsl
+
+        def run(x), do: unless(x, do: :dsl_a, else: :dsl_b)
+      end
+      """
+
+      confirm_fix(fix(NoUnlessElse, input), input)
+    end
+
+    test "rewrites Kernel unless in a sibling of a module defining unless" do
+      input = """
+      defmodule LocalDsl do
+        defmacro unless(cond, clauses), do: build(cond, clauses)
+      end
+
+      defmodule Ordinary do
+        def run(x), do: unless(x, do: :a, else: :b)
+      end
+      """
+
+      expected = """
+      defmodule LocalDsl do
+        defmacro unless(cond, clauses), do: build(cond, clauses)
+      end
+
+      defmodule Ordinary do
+        def run(x), do: if x, do: :b, else: :a
+      end
+      """
+
+      confirm_fix(fix(NoUnlessElse, input), expected)
+    end
+  end
 end

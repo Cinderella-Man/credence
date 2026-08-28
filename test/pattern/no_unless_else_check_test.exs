@@ -219,18 +219,32 @@ defmodule Credence.Pattern.NoUnlessElseCheckTest do
              """)
     end
 
-    test "skips even a real Kernel-style unless/else when the module redefines unless" do
-      assert clean?(NoUnlessElse, """
-             defmodule M do
-               defmacro unless(cond, clauses), do: build(cond, clauses)
+    test "still flags Kernel unless in a sibling module" do
+      code = """
+      defmodule LocalDsl do
+        defmacro unless(cond, clauses), do: build(cond, clauses)
+      end
 
-               def run(x) do
-                 unless x > 0 do
-                   :a
-                 else
-                   :b
-                 end
-               end
+      defmodule Ordinary do
+        def run(x) do
+          unless x > 0 do
+            :a
+          else
+            :b
+          end
+        end
+      end
+      """
+
+      assert length(check(NoUnlessElse, code)) == 1
+    end
+
+    test "does not flag unless after importing a custom DSL" do
+      assert clean?(NoUnlessElse, """
+             defmodule Query do
+               import CustomDsl
+
+               def run(x), do: unless(x, do: :dsl_a, else: :dsl_b)
              end
              """)
     end
