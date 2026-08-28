@@ -19,6 +19,20 @@ defmodule Credence.Pattern.PreferFunctionCaptureFixTest do
     confirm_fix(fix(PreferFunctionCapture, input), expected)
   end
 
+  test "preserves a comment inside the delegated function" do
+    input = """
+    fn x -> # explain delegation
+      to_string(x) end
+    """
+
+    expected = """
+    # explain delegation
+    &to_string/1
+    """
+
+    confirm_fix(fix(PreferFunctionCapture, input), expected)
+  end
+
   test "rewrites fn in pipe expression" do
     input = "list |> Enum.map(fn x -> String.upcase(x) end)"
 

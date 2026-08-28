@@ -63,7 +63,16 @@ defmodule Credence.Pattern.PreferFunctionCapture do
       {:fn, meta, [{:->, _, [[param], body]}]} = node ->
         with false <- MapSet.member?(captured, position_key(meta)),
              {:ok, capture_info} <- analyze_fn_body(param, body) do
-          build_capture(capture_info)
+          capture =
+            capture_info
+            |> build_capture()
+            |> put_elem(1, Keyword.take(meta, [:line, :column]))
+
+          discarded_comments =
+            Credence.RuleHelpers.collect_comments(node) --
+              Credence.RuleHelpers.collect_comments(capture)
+
+          Credence.RuleHelpers.carry_comments(capture, discarded_comments, [])
         else
           _ -> node
         end
