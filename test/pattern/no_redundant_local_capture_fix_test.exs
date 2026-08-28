@@ -59,6 +59,46 @@ defmodule Credence.Pattern.NoRedundantLocalCaptureFixTest do
     confirm_fix(fix(NoRedundantLocalCapture, input), expected)
   end
 
+  test "rewrites nested applications without overlapping patches" do
+    input = """
+    defmodule NoRedundantLocalCaptureNestedApplication do
+      def run(x) do
+        f = &foo/1
+        f.(f.(x))
+      end
+
+      defp foo(x), do: x + 1
+    end
+    """
+
+    expected = """
+    defmodule NoRedundantLocalCaptureNestedApplication do
+      def run(x) do
+        foo(foo(x))
+      end
+
+      defp foo(x), do: x + 1
+    end
+    """
+
+    confirm_fix(fix(NoRedundantLocalCapture, input), expected)
+  end
+
+  test "leaves captures referenced only inside quoted code unchanged" do
+    code = """
+    defmodule NoRedundantLocalCaptureQuotedApplication do
+      def run do
+        f = &foo/1
+        quote do: f.(1)
+      end
+
+      defp foo(x), do: x + 1
+    end
+    """
+
+    confirm_fix(fix(NoRedundantLocalCapture, code), code)
+  end
+
   test "leaves direct function calls unchanged" do
     code = """
     defmodule Example do

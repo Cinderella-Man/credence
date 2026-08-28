@@ -25,6 +25,9 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
+        {:quote, _, _}, issues ->
+          {:__skip__, issues}
+
         {:=, meta, [{var_name, _, nil}, {:&, _, [{:/, _, [{fn_name, _, nil}, arity_block]}]}]} =
             node,
         issues
@@ -74,6 +77,9 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp collect_assignments(ast, source) do
     {_ast, assignments} =
       Macro.prewalk(ast, %{}, fn
+        {:quote, _, _}, acc ->
+          {:__skip__, acc}
+
         {:=, _meta, [{var_name, _, nil}, {:&, _, [{:/, _, [{fn_name, _, nil}, arity_block]}]}]} =
             node,
         acc
@@ -100,19 +106,22 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp usage_replacement_patches(ast, assignments) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
+        {:quote, _, _}, patches ->
+          {:__skip__, patches}
+
         {{:., _, [{var_name, _, nil}]}, call_meta, args} = node, patches
         when is_atom(var_name) and is_list(args) ->
           case Map.get(assignments, var_name) do
             {fn_name, arity, _assign_node} when length(args) == arity ->
               # Build the direct call AST
-              direct_call = {fn_name, call_meta, args}
+              direct_call = {fn_name, call_meta, rewrite_applications(args, assignments)}
               replacement = Sourceror.to_string(direct_call)
 
               # Use Sourceror.get_range for the full var.(args) node
               case Sourceror.get_range(node) do
                 %Sourceror.Range{} = range ->
                   patch = %{range: range, change: replacement}
-                  {node, [patch | patches]}
+                  {:__skip__, [patch | patches]}
 
                 _ ->
                   {node, patches}
@@ -128,6 +137,41 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
 
     patches
   end
+
+  defp rewrite_applications(args, assignments) do
+    Enum.map(args, &rewrite_application(&1, assignments))
+  end
+
+  defp rewrite_application({:quote, _, _} = node, _assignments), do: node
+
+  defp rewrite_application(
+         {{:., dot_meta, [{var_name, var_meta, nil}]}, call_meta, args},
+         assignments
+       )
+       when is_atom(var_name) and is_list(args) do
+    rewritten_args = rewrite_applications(args, assignments)
+
+    case Map.get(assignments, var_name) do
+      {fn_name, arity, _assign_node} when length(args) == arity ->
+        {fn_name, call_meta, rewritten_args}
+
+      _ ->
+        {{:., dot_meta, [{var_name, var_meta, nil}]}, call_meta, rewritten_args}
+    end
+  end
+
+  defp rewrite_application(list, assignments) when is_list(list) do
+    Enum.map(list, &rewrite_application(&1, assignments))
+  end
+
+  defp rewrite_application(tuple, assignments) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&rewrite_application(&1, assignments))
+    |> List.to_tuple()
+  end
+
+  defp rewrite_application(node, _assignments), do: node
 
   defp assignment_removal_patches(assignments, source) do
     source_lines = String.split(source, "\n")
@@ -184,6 +228,7 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp single_capture?(ast, var) do
     {_ast, n} =
       Macro.prewalk(ast, 0, fn
+        {:quote, _, _}, acc -> {:__skip__, acc}
         {:=, _, [{^var, _, nil}, {:&, _, [{:/, _, _}]}]} = node, acc -> {node, acc + 1}
         node, acc -> {node, acc}
       end)
@@ -224,6 +269,7 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp count_var_refs(ast, var) do
     {_ast, n} =
       Macro.prewalk(ast, 0, fn
+        {:quote, _, _}, acc -> {:__skip__, acc}
         {:=, _, [{^var, _, nil}, {:&, _, [{:/, _, _}]}]}, acc -> {:__skip__, acc}
         {^var, _, nil} = node, acc -> {node, acc + 1}
         node, acc -> {node, acc}
@@ -236,6 +282,9 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp count_applied(ast, var, arity) do
     {_ast, n} =
       Macro.prewalk(ast, 0, fn
+        {:quote, _, _}, acc ->
+          {:__skip__, acc}
+
         {{:., _, [{^var, _, nil}]}, _, args} = node, acc
         when is_list(args) and length(args) == arity ->
           {node, acc + 1}
