@@ -58,12 +58,12 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocation do
 
   @impl true
   def fix_patches(ast, _opts) do
-    # `... |> (&body).()` → `... |> then(&body)`.
+    # `... |> (&body).()` → `... |> Kernel.then(&body)`.
     #
     # We patch the `.()`-application node on the pipe's right in
     # place. Sourceror's range for the application starts at the `&`,
-    # EXCLUDING the wrapping `(` that `.()` requires, so we extend
-    # the range one column to the left to swallow that `(`.
+    # excluding the wrapping parentheses, whose metadata supplies the
+    # true start even when whitespace separates `(` and `&`.
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
         {:|>, _, [_left, {{:., _, [{:&, _, [body]} = capture_node]}, _, []} = dotcall]} = node,
@@ -74,11 +74,14 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocation do
                 {node, acc}
 
               %Sourceror.Range{start: start, end: stop} ->
-                start_at_paren = Keyword.update!(start, :column, &(&1 - 1))
+                start_at_paren = capture_paren_start(capture_node, start)
                 range = %Sourceror.Range{start: start_at_paren, end: stop}
 
                 change =
-                  Credence.RuleHelpers.render_replacement({:then, [], [capture_node]}, range)
+                  Credence.RuleHelpers.render_replacement(
+                    {{:., [], [{:__aliases__, [], [:Kernel]}, :then]}, [], [capture_node]},
+                    range
+                  )
 
                 {node, [%{range: range, change: change} | acc]}
             end
@@ -91,6 +94,13 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocation do
       end)
 
     Enum.reverse(patches)
+  end
+
+  defp capture_paren_start({:&, meta, _}, fallback) do
+    case Keyword.get(meta, :parens) do
+      parens when is_list(parens) -> Keyword.take(parens, [:line, :column])
+      _ -> Keyword.update!(fallback, :column, &(&1 - 1))
+    end
   end
 
   # Returns true if the capture body uses &1 (positional placeholder for the
