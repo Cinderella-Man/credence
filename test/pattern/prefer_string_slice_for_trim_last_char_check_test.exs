@@ -2,6 +2,22 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastCharCheckTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferStringSliceForTrimLastChar
+  alias Credence.RuleHelpers
+
+  @equivalence_inputs ["", "a", "ab", "abc", "é", "é", "👨‍👩‍👧", "a👨‍👩‍👧", "日本語"]
+
+  test "equivalence fixtures use the bounded compiler" do
+    source = File.read!(__ENV__.file)
+    unsafe_call = Regex.compile!("call_" <> "fixed\\(")
+
+    assert Regex.scan(unsafe_call, source) == []
+  end
+
+  test "equivalence inputs include a decomposed combining sequence" do
+    decomposed = Enum.filter(@equivalence_inputs, &(String.codepoints(&1) == ["e", "́"]))
+
+    assert decomposed == ["é"]
+  end
 
   test "flags the anti-pattern" do
     assert flagged?(PreferStringSliceForTrimLastChar, """
@@ -161,15 +177,21 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastCharCheckTest do
       end
       """
 
-      inputs = ["", "a", "ab", "abc", "é", "👨‍👩‍👧", "a👨‍👩‍👧", "日本語"]
-
       for {source, mod} <- [{two_clause, TrimEqTwo}, {codepoints, TrimEqCp}] do
         fixed = fix(PreferStringSliceForTrimLastChar, source)
         assert fixed != source, "expected this spelling to be rewritten:\n#{source}"
 
-        for input <- inputs do
-          assert call_fixed(source, mod, :f, [input]) == call_fixed(fixed, mod, :f, [input]),
-                 "diverged on #{inspect(input)}"
+        for input <- @equivalence_inputs do
+          for candidate <- [source, fixed] do
+            assertion = """
+
+            unless #{inspect(mod)}.f(#{inspect(input)}) === String.slice(#{inspect(input)}, 0..-2//1) do
+              raise #{inspect("diverged on #{inspect(input)}")}
+            end
+            """
+
+            assert {:ok, []} = RuleHelpers.compile_and_capture(candidate <> assertion)
+          end
         end
       end
     end
