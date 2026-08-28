@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
     clauses = collect_clauses(ast)
 
     clauses
-    |> Enum.group_by(fn {name, arity, _, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {scope, name, arity, _, _, _, _} -> {scope, name, arity} end)
     |> Enum.flat_map(fn {_key, group} -> analyze_group(group) end)
     |> Enum.sort_by(fn issue -> issue.meta[:line] || 0 end)
   end
@@ -75,25 +75,17 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   end
 
   defp collect_clauses(ast) do
-    {_ast, clauses} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case extract_clause(node) do
-          {:ok, clause} -> {node, [clause | acc]}
-          :error -> {node, acc}
-        end
-      end)
-
-    Enum.reverse(clauses)
+    collect_scoped_clauses(ast, &extract_clause/1)
   end
 
   defp extract_clause({def_type, meta, [{:when, _, [{fn_name, _, args}, guard]}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    {:ok, {fn_name, length(args), guard, meta, def_type}}
+    {:ok, {fn_name, length(args), args, guard, meta, def_type}}
   end
 
   defp extract_clause({def_type, _meta, [{fn_name, _, args}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    {:ok, {fn_name, length(args), nil, nil, def_type}}
+    {:ok, {fn_name, length(args), args, nil, nil, def_type}}
   end
 
   defp extract_clause(_), do: :error
@@ -109,11 +101,13 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   end
 
   defp check_pair(
-         {_name1, _arity1, prev_guard, _meta1, _def_type1},
-         {_name2, _arity2, curr_guard, meta2, def_type2}
+         {_scope1, _name1, _arity1, prev_args, prev_guard, _meta1, _def_type1},
+         {_scope2, _name2, _arity2, curr_args, curr_guard, meta2, def_type2}
        ) do
     with {:ok, eq_op, eq_left, eq_right} <- extract_comparison(prev_guard, @equality_ops),
          {:ok, neq_op, neq_left, neq_right} <- extract_comparison(curr_guard, @inequality_ops),
+         true <- complementary_ops?(eq_op, neq_op),
+         true <- same_pattern_shapes?(prev_args, curr_args),
          true <- same_vars?(eq_left, neq_left) and same_vars?(eq_right, neq_right) do
       [build_issue(def_type2, neq_op, eq_op, meta2)]
     else
@@ -133,12 +127,38 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
 
   defp extract_comparison(_, _), do: :error
 
+  defp complementary_ops?(:==, :!=), do: true
+  defp complementary_ops?(:===, :!==), do: true
+  defp complementary_ops?(_, _), do: false
+
+  defp same_pattern_shapes?(left, right), do: pattern_shape(left) == pattern_shape(right)
+
+  defp pattern_shape(ast) do
+    Macro.prewalk(ast, fn
+      {name, meta, context}
+      when is_atom(name) and is_list(meta) and (is_atom(context) or is_nil(context)) ->
+        :__variable__
+
+      node ->
+        node
+    end)
+    |> strip_meta()
+  end
+
   defp same_vars?({name1, _, ctx1}, {name2, _, ctx2})
-       when is_atom(name1) and is_atom(name2) and is_atom(ctx1) and is_atom(ctx2) do
+       when is_atom(name1) and is_atom(name2) and (is_atom(ctx1) or is_nil(ctx1)) and
+              (is_atom(ctx2) or is_nil(ctx2)) do
     name1 == name2
   end
 
   defp same_vars?(_, _), do: false
+
+  defp strip_meta(ast) do
+    Macro.prewalk(ast, fn
+      {name, meta, args} when is_atom(name) and is_list(meta) -> {name, [], args}
+      node -> node
+    end)
+  end
 
   defp build_issue(def_type, neq_op, eq_op, meta) do
     eq_str = if eq_op == :==, do: "==", else: "==="
@@ -175,24 +195,44 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   #   3. The variable names match across both clauses
 
   defp collect_clauses_for_fix(ast) do
-    {_ast, clauses} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case extract_clause_fix(node) do
-          {:ok, clause} -> {node, [clause | acc]}
-          :error -> {node, acc}
-        end
-      end)
+    collect_scoped_clauses(ast, &extract_clause_fix/1)
+  end
 
-    Enum.reverse(clauses)
+  defp collect_scoped_clauses(ast, extractor) do
+    {_ast, {_scope, clauses}} =
+      Macro.traverse(
+        ast,
+        {[], []},
+        fn
+          {:defmodule, meta, _} = node, {scope, acc} ->
+            token = {Keyword.get(meta, :line), Keyword.get(meta, :column)}
+            {node, {[token | scope], acc}}
+
+          node, {scope, acc} ->
+            case extractor.(node) do
+              {:ok, clause} -> {node, {scope, [{scope, clause} | acc]}}
+              :error -> {node, {scope, acc}}
+            end
+        end,
+        fn
+          {:defmodule, _, _} = node, {[_token | scope], acc} -> {node, {scope, acc}}
+          node, state -> {node, state}
+        end
+      )
+
+    clauses
+    |> Enum.reverse()
+    |> Enum.map(fn {scope, clause} -> List.to_tuple([scope | Tuple.to_list(clause)]) end)
   end
 
   defp extract_clause_fix(
-         {def_type, _meta, [{:when, _when_meta, [{fn_name, _fn_meta, args}, guard]}, _body]}
+         {def_type, _meta, [{:when, _when_meta, [{fn_name, _fn_meta, args}, guard]}, _body]} =
+           node
        )
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
     case extract_comparison(guard, @equality_ops ++ @inequality_ops) do
       {:ok, op, left, right} ->
-        {:ok, {fn_name, length(args), def_type, guard, op, {left, right}}}
+        {:ok, {fn_name, length(args), args, def_type, guard, op, {left, right}, node}}
 
       :error ->
         :error
@@ -203,14 +243,17 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
 
   defp find_fixable_clauses(clauses) do
     clauses
-    |> Enum.group_by(fn {name, arity, _, _, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {scope, name, arity, _, _, _, _, _, _} -> {scope, name, arity} end)
     |> Enum.flat_map(fn {_key, group} ->
       group
       |> Enum.chunk_every(2, 1, :discard)
-      |> Enum.flat_map(fn [{_, _, _, _, op1, {l1, r1}}, {_, _, _, guard2, op2, {l2, r2}}] ->
-        if op1 in @equality_ops and op2 in @inequality_ops and
+      |> Enum.flat_map(fn [
+                            {_, _, _, args1, _, _, op1, {l1, r1}, _},
+                            {_, _, _, args2, _, _, op2, {l2, r2}, node2}
+                          ] ->
+        if complementary_ops?(op1, op2) and same_pattern_shapes?(args1, args2) and
              same_vars?(l1, l2) and same_vars?(r1, r2) do
-          [guard2]
+          [node2]
         else
           []
         end
@@ -220,9 +263,9 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
 
   defp apply_fix_if_needed(node, fixable) do
     case node do
-      {def_type, meta, [{:when, _when_meta, [{fn_name, fn_meta, args}, guard]}, body]}
+      {def_type, meta, [{:when, _when_meta, [{fn_name, fn_meta, args}, _guard]}, body]}
       when def_type in [:def, :defp] ->
-        if guard in fixable do
+        if node in fixable do
           {def_type, meta, [{fn_name, fn_meta, args}, body]}
         else
           node

@@ -205,5 +205,44 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
 
       confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
+
+    test "preserves mixed loose and strict comparison operators" do
+      code = """
+      defmodule MixedComparisonOperators do
+        def compare(x, y) when x === y, do: :same
+        def compare(x, y) when x != y, do: :different
+      end
+      """
+
+      assert clean?(NoRedundantNegatedGuard, code)
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
+    end
+
+    test "preserves guards when the clause argument patterns differ" do
+      code = """
+      defmodule DifferentArgumentPatterns do
+        def compare([x], y) when x == y, do: :same
+        def compare(x, y) when x != y, do: :different
+      end
+      """
+
+      assert clean?(NoRedundantNegatedGuard, code)
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
+    end
+
+    test "does not pair clauses from separate modules" do
+      code = """
+      defmodule EqualityModule do
+        def compare(x, y) when x == y, do: :same
+      end
+
+      defmodule InequalityModule do
+        def compare(x, y) when x != y, do: :different
+      end
+      """
+
+      assert clean?(NoRedundantNegatedGuard, code)
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
+    end
   end
 end
