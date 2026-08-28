@@ -151,26 +151,44 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityCheckTest do
 
   describe "&Function.identity/1" do
     test "direct call" do
-      assert flagged?(PreferConcatOverFlatMapIdentity, """
-             defmodule M do
-               def f(l), do: Enum.flat_map(l, &Function.identity/1)
-             end
-             """)
+      input = """
+      defmodule CredencePreferConcatIdentityDirectFixture do
+        def f(l), do: Enum.flat_map(l, &Function.identity/1)
+      end
+      """
+
+      expected = """
+      defmodule CredencePreferConcatIdentityDirectFixture do
+        def f(l), do: Enum.concat(l)
+      end
+      """
+
+      assert flagged?(PreferConcatOverFlatMapIdentity, input)
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
 
     test "piped" do
-      assert flagged?(PreferConcatOverFlatMapIdentity, """
-             defmodule M do
-               def f(l), do: l |> Enum.flat_map(&Function.identity/1)
-             end
-             """)
+      input = """
+      defmodule CredencePreferConcatIdentityPipedFixture do
+        def f(l), do: l |> Enum.flat_map(&Function.identity/1)
+      end
+      """
+
+      expected = """
+      defmodule CredencePreferConcatIdentityPipedFixture do
+        def f(l), do: l |> Enum.concat()
+      end
+      """
+
+      assert flagged?(PreferConcatOverFlatMapIdentity, input)
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
 
     # The control: a capture that is NOT identity must stay unflagged, so the
     # newly-reachable clauses did not simply widen the rule to every capture.
     test "CONTROL: a different captured function is not identity" do
       assert clean?(PreferConcatOverFlatMapIdentity, """
-             defmodule M do
+             defmodule CredencePreferConcatIdentityControlFixture do
                def f(l), do: Enum.flat_map(l, &List.wrap/1)
              end
              """)
