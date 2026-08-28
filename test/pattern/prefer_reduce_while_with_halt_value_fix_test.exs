@@ -2,6 +2,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValueFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferReduceWhileWithHaltValue
+  alias Credence.RuleHelpers
 
   test "rewrites the anti-pattern" do
     input = """
@@ -106,5 +107,97 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValueFixTest do
 
     fixed = fix(PreferReduceWhileWithHaltValue, code)
     assert clean?(PreferReduceWhileWithHaltValue, fixed)
+  end
+
+  test "does not remove a callback flag that the body reads" do
+    code = """
+    defmodule PreferReduceWhileUsedFlagFixture do
+      def check(list) do
+        {_a, _b, found?} =
+          Enum.reduce_while(list, {0, 0, false}, fn x, {a, b, flag} ->
+            if flag or x > 0 do
+              {:halt, {a, b, true}}
+            else
+              {:cont, {a + x, b, false}}
+            end
+          end)
+
+        found?
+      end
+    end
+    """
+
+    emitted = fix(PreferReduceWhileWithHaltValue, code)
+    confirm_fix(emitted, code)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "does not discard evaluation of halt accumulator expressions" do
+    code = """
+    defmodule PreferReduceWhileHaltEvaluationFixture do
+      def check(list) do
+        {_a, _b, found?} =
+          Enum.reduce_while(list, {0, 0, false}, fn x, {a, b, _flag} ->
+            if x > 0 do
+              {:halt, {raise("evaluated first"), b, true}}
+            else
+              {:cont, {a, b, false}}
+            end
+          end)
+
+        found?
+      end
+    end
+    """
+
+    emitted = fix(PreferReduceWhileWithHaltValue, code)
+    confirm_fix(emitted, code)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "does not rewrite an if that is not the callback result" do
+    code = """
+    defmodule PreferReduceWhileTrailingResultFixture do
+      def check(list) do
+        {_a, _b, found?} =
+          Enum.reduce_while(list, {0, 0, false}, fn x, {a, b, _flag} ->
+            if x > 0 do
+              {:halt, {a, b, true}}
+            else
+              {:cont, {a, b, false}}
+            end
+
+            {:cont, {a + x, b, false}}
+          end)
+
+        found?
+      end
+    end
+    """
+
+    emitted = fix(PreferReduceWhileWithHaltValue, code)
+    confirm_fix(emitted, code)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "leaves a dynamic halt flag unchanged instead of crashing" do
+    code = """
+    defmodule PreferReduceWhileDynamicFlagFixture do
+      def check(list) do
+        {_a, _b, found?} =
+          Enum.reduce_while(list, {0, 0, false}, fn x, {a, b, flag} ->
+            if x > 0 do
+              {:halt, {a, b, flag}}
+            else
+              {:cont, {a, b, false}}
+            end
+          end)
+
+        found?
+      end
+    end
+    """
+
+    confirm_fix(fix(PreferReduceWhileWithHaltValue, code), code)
   end
 end
