@@ -168,7 +168,8 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
       # 1. Single Map.update call (the function body / returned value)
       {{:., _, [{:__aliases__, _, [:Map]}, :update]}, _,
        [acc_var, key_expr, default_arg, update_fn]} ->
-        if valid_map_update?(acc_var, acc, default_arg, update_fn, elem) do
+        if valid_map_update?(acc_var, acc, default_arg, update_fn, elem) and
+             accumulator_independent?(key_expr, acc) do
           {:ok, key_expr}
         else
           :error
@@ -183,7 +184,8 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
        ]}
       when is_atom(key_var) and is_atom(key_ctx) and is_atom(map_key) and is_atom(map_key_ctx) ->
         if map_key == key_var and
-             valid_map_update?(acc_var, acc, default_arg, update_fn, elem) do
+             valid_map_update?(acc_var, acc, default_arg, update_fn, elem) and
+             accumulator_independent?(key_expr, acc) do
           {:ok, key_expr}
         else
           :error
@@ -204,6 +206,16 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
 
   defp match_acc?({acc, _, ctx}, acc) when is_atom(ctx), do: true
   defp match_acc?(_, _), do: false
+
+  defp accumulator_independent?(key_expr, acc) do
+    {_key_expr, references_acc?} =
+      Macro.prewalk(key_expr, false, fn
+        {^acc, _, ctx} = node, _references_acc? when is_atom(ctx) -> {node, true}
+        node, references_acc? -> {node, references_acc?}
+      end)
+
+    not references_acc?
+  end
 
   # Check default value is [elem] — either as a list literal or
   # Sourceror's {:__block__, _, [[elem_var]]} wrapper

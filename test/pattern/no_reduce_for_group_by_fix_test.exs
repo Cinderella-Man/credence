@@ -111,4 +111,16 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
 
     confirm_fix(fix(NoReduceForGroupBy, code), code)
   end
+
+  test "no-op when the key expression depends on the accumulator" do
+    code = """
+    Enum.reduce(list, %{}, fn x, acc ->
+      Map.update(acc, map_size(acc), [x], &[x | &1])
+    end)
+    |> Map.new(fn {k, v} -> {k, Enum.reverse(v)} end)
+    """
+
+    assert check(NoReduceForGroupBy, code) == []
+    confirm_fix(fix(NoReduceForGroupBy, code), code)
+  end
 end
