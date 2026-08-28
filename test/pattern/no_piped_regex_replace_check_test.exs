@@ -119,5 +119,17 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
 
       assert check(NoPipedRegexReplace, code) == []
     end
+
+    test "does not flag a custom module aliased as Regex" do
+      code = """
+      defmodule NoPipedRegexReplaceCustomAliasCheckFixture do
+        alias MyRegex, as: Regex
+
+        def clean(value, replacement), do: value |> Regex.replace(~r/x/, replacement)
+      end
+      """
+
+      assert check(NoPipedRegexReplace, code) == []
+    end
   end
 end

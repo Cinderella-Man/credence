@@ -41,49 +41,93 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {:|>, meta,
-         [
-           _left,
-           {{:., _, [{:__aliases__, _, [:Regex]}, :replace]}, _, args}
-         ]} = node,
-        acc ->
-          if misused_pipe?(args) do
-            {node, [build_issue(meta) | acc]}
-          else
-            {node, acc}
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    Enum.reverse(issues)
+    ast
+    |> targets()
+    |> Enum.map(fn {meta, _alias_node} -> build_issue(meta) end)
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    {_ast, patches} =
-      Macro.prewalk(ast, [], fn
-        {:|>, _meta,
-         [
-           _left,
-           {{:., _, [{:__aliases__, _, [:Regex]} = alias_node, :replace]}, _, args}
-         ]} = node,
-        acc ->
-          if misused_pipe?(args) do
-            patch = %{range: Sourceror.get_range(alias_node), change: "String"}
-            {node, [patch | acc]}
-          else
-            {node, acc}
-          end
+    ast
+    |> targets()
+    |> Enum.map(fn {_meta, alias_node} ->
+      %{range: Sourceror.get_range(alias_node), change: "String"}
+    end)
+  end
 
-        node, acc ->
-          {node, acc}
-      end)
+  defp targets(ast) do
+    {_shadowed?, targets} = walk(ast, false, [])
+    Enum.reverse(targets)
+  end
 
-    Enum.reverse(patches)
+  # Aliases take effect for the expressions that follow them in the same
+  # lexical block. Keep that small amount of lexical state so a custom module
+  # named `Regex` is not mistaken for Elixir.Regex.
+  defp walk({:__block__, _meta, expressions}, shadowed?, acc) do
+    Enum.reduce(expressions, {shadowed?, acc}, fn expression, {current?, targets} ->
+      {_inner_shadowed?, targets} = walk(expression, current?, targets)
+      {regex_alias_state(expression, current?), targets}
+    end)
+  end
+
+  defp walk(
+         {:|>, meta,
+          [
+            _left,
+            {{:., _, [{:__aliases__, _, [:Regex]} = alias_node, :replace]}, _, args}
+          ]} = node,
+         shadowed?,
+         acc
+       ) do
+    acc = if not shadowed? and misused_pipe?(args), do: [{meta, alias_node} | acc], else: acc
+    walk_children(node, shadowed?, acc)
+  end
+
+  defp walk(node, shadowed?, acc), do: walk_children(node, shadowed?, acc)
+
+  defp walk_children(tuple, shadowed?, acc) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.reduce({shadowed?, acc}, fn child, {_state, targets} ->
+      {_child_state, targets} = walk(child, shadowed?, targets)
+      {shadowed?, targets}
+    end)
+  end
+
+  defp walk_children(list, shadowed?, acc) when is_list(list) do
+    Enum.reduce(list, {shadowed?, acc}, fn child, {_state, targets} ->
+      {_child_state, targets} = walk(child, shadowed?, targets)
+      {shadowed?, targets}
+    end)
+  end
+
+  defp walk_children(_other, shadowed?, acc), do: {shadowed?, acc}
+
+  defp regex_alias_state({:alias, _, [{:__aliases__, _, target_parts}]}, current?) do
+    if List.last(target_parts) == :Regex,
+      do: target_parts not in [[:Regex], [Elixir, :Regex]],
+      else: current?
+  end
+
+  defp regex_alias_state(
+         {:alias, _, [{:__aliases__, _, target_parts}, opts]},
+         current?
+       )
+       when is_list(opts) do
+    case alias_as(opts) do
+      {:__aliases__, _, [:Regex]} -> target_parts not in [[:Regex], [Elixir, :Regex]]
+      _ -> current?
+    end
+  end
+
+  defp regex_alias_state(_expression, current?), do: current?
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, alias_node} -> alias_node
+      {{:__block__, _, [:as]}, alias_node} -> alias_node
+      _ -> nil
+    end)
   end
 
   # `regex |> Regex.replace(string, repl)` desugars to the CORRECT
