@@ -38,7 +38,7 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplaceFixTest do
 
   test "rewrites a multi-line call with a regex literal inside a module" do
     input = ~S"""
-    defmodule Emails do
+    defmodule CredenceNoMultiArityFnInStringReplacePipelineFixture do
       def anonymize(text) do
         String.replace(text, ~r/([a-z]+)@([a-z]+)/, fn _, local, domain ->
           "#{String.first(local)}***@#{domain}"
@@ -48,7 +48,7 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplaceFixTest do
     """
 
     expected = ~S"""
-    defmodule Emails do
+    defmodule CredenceNoMultiArityFnInStringReplacePipelineFixture do
       def anonymize(text) do
         Regex.replace(~r/([a-z]+)@([a-z]+)/, text, fn _, local, domain ->
           "#{String.first(local)}***@#{domain}"
@@ -58,6 +58,8 @@ defmodule Credence.Pattern.NoMultiArityFnInStringReplaceFixTest do
     """
 
     confirm_fix(fix(NoMultiArityFnInStringReplace, input), expected)
+    pipeline_output = Credence.Pattern.fix(input)
+    confirm_fix(pipeline_output, expected)
   end
 
   test "rewrites both calls when two occurrences appear" do
