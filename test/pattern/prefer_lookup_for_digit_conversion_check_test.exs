@@ -187,6 +187,23 @@ defmodule Credence.Pattern.PreferLookupForDigitConversionCheckTest do
                check(PreferLookupForDigitConversion, source)
     end
 
+    test "the recommendation preserves the function name, alphabet, and domain" do
+      for {name, alphabet} <- [
+            {"lower_hex", "0123456789abcdef"},
+            {"upper_hex", "0123456789ABCDEF"}
+          ] do
+        assert [%Issue{message: message}] =
+                 check(PreferLookupForDigitConversion, hex_table(name, alphabet))
+
+        assert message ==
+                 "16 separate function clauses for hex digit conversion. " <>
+                   "Use a single guarded clause with string lookup instead:\n" <>
+                   "  defp #{name}(remainder) when remainder in 0..15 do\n" <>
+                   "    #{inspect(alphabet)} |> String.at(remainder)\n" <>
+                   "  end"
+      end
+    end
+
     test "the repair keeps the alphabet it found — lowercase stays lowercase" do
       fixed = fix(PreferLookupForDigitConversion, hex_table("hex_digit", "0123456789abcdef"))
 

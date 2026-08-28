@@ -2,7 +2,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
   @moduledoc """
   Detects the anti-pattern of mapping each hex digit (0–15) to its character
   representation via 16 separate function clauses, and rewrites it to a single
-  clause using `String.at/2` on the lookup string `"0123456789ABCDEF"`.
+  guarded clause using `String.at/2` on the matching lookup alphabet.
 
   ## Bad
 
@@ -25,7 +25,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
 
   ## Good
 
-      defp hex_digit(remainder) do
+      defp hex_digit(remainder) when remainder in 0..15 do
         "0123456789ABCDEF"
         |> String.at(remainder)
       end
@@ -89,12 +89,12 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
   defp detect_hex_digit_clauses(stmts) do
     stmts
     |> collect_defp_by_name()
-    |> Enum.flat_map(fn {_name_arity, clauses} ->
+    |> Enum.flat_map(fn {{name, _arity}, clauses} ->
       case extract_hex_mapping(clauses) do
         {:ok, mapping} ->
-          if hex_alphabet(mapping) do
+          if chars = hex_alphabet(mapping) do
             meta = elem(hd(clauses), 1)
-            [build_issue(meta)]
+            [build_issue(meta, name, chars)]
           else
             []
           end
@@ -264,13 +264,15 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
     end
   end
 
-  defp build_issue(meta) do
+  defp build_issue(meta, name, chars) do
     %Issue{
       rule: :prefer_lookup_for_digit_conversion,
       message:
         "16 separate function clauses for hex digit conversion. " <>
-          "Use a single clause with string lookup instead:\n" <>
-          "  \"0123456789ABCDEF\" |> String.at(remainder)",
+          "Use a single guarded clause with string lookup instead:\n" <>
+          "  defp #{name}(remainder) when remainder in 0..15 do\n" <>
+          "    #{inspect(chars)} |> String.at(remainder)\n" <>
+          "  end",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end
