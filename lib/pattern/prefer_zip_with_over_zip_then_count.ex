@@ -1,16 +1,16 @@
 defmodule Credence.Pattern.PreferZipWithOverZipThenCount do
   @moduledoc """
   Detects `Enum.zip/2` whose result goes straight into `Enum.count/2` with a
-  predicate that destructures the 2-tuples, and rewrites the pair to
-  `Enum.zip_with/3` piped into `Enum.count(& &1)`.
+  predicate that destructures the 2-tuples, and rewrites the pair using
+  `Enum.zip_with/3` while preserving when the predicate runs.
 
   ## Why this matters
 
   `Enum.zip(a, b) |> Enum.count(fn {x, y} -> pred end)` allocates an
   intermediate list of 2-tuples only to destructure and discard them.
-  `Enum.zip_with/3` applies the predicate while zipping, and
-  `Enum.count(& &1)` counts the truthy results — the same truthy-counting
-  `Enum.count/2` does, so the answer is identical.
+  `Enum.zip_with/3` can express the same pair construction explicitly. The
+  predicate remains in `Enum.count/2`, so it still runs only after both inputs
+  have been consumed, preserving failures and side effects for lazy sources.
 
   ## Bad
 
@@ -20,7 +20,7 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCount do
 
   ## Good
 
-      a |> Enum.zip_with(b, fn x, y -> x != y end) |> Enum.count(& &1)
+      a |> Enum.zip_with(b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end)
 
   ## Scope
 
@@ -173,27 +173,29 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCount do
   # ── Rewriting ─────────────────────────────────────────────────────────
 
   defp rewrite({:pipe, {:head, a, b}, x, y, body}) do
-    pipe(zip_with_call([a, b], x, y, body), count_truthy())
+    pipe(zip_with_call([a, b], x, y), count_predicate(x, y, body))
   end
 
   defp rewrite({:pipe, {:piped, lmeta, deeper, b}, x, y, body}) do
-    pipe({:|>, lmeta, [deeper, zip_with_call([b], x, y, body)]}, count_truthy())
+    pipe({:|>, lmeta, [deeper, zip_with_call([b], x, y)]}, count_predicate(x, y, body))
   end
 
   defp rewrite({:nested, a, b, x, y, body}) do
-    pipe(zip_with_call([a, b], x, y, body), count_truthy())
+    pipe(zip_with_call([a, b], x, y), count_predicate(x, y, body))
   end
 
   defp pipe(left, right), do: {:|>, [], [left, right]}
 
-  defp zip_with_call(enum_args, x, y, body) do
-    fn_expr = {:fn, [], [{:->, [], [[x, y], body]}]}
+  defp zip_with_call(enum_args, x, y) do
+    fn_expr = {:fn, [], [{:->, [], [[x, y], {x, y}]}]}
 
     {{:., [], [{:__aliases__, [], [:Enum]}, :zip_with]}, [], enum_args ++ [fn_expr]}
   end
 
-  defp count_truthy do
-    {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [{:&, [], [{:&, [], [1]}]}]}
+  defp count_predicate(x, y, body) do
+    fn_expr = {:fn, [], [{:->, [], [[{x, y}], body]}]}
+
+    {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [fn_expr]}
   end
 
   # ── Issue ─────────────────────────────────────────────────────────────
@@ -202,17 +204,16 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCount do
     %Issue{
       rule: :prefer_zip_with_over_zip_then_count,
       message: """
-      `Enum.zip/2 |> Enum.count(fn {x, y} -> ... end)` allocates an intermediate \
-      list of 2-tuples only to discard it. `Enum.zip_with/3` applies the function \
-      inline and avoids the extra allocation entirely.
+      `Enum.zip/2 |> Enum.count(fn {x, y} -> ... end)` can express its pair \
+      construction directly with `Enum.zip_with/3`.
 
       Replace the pattern with `Enum.zip_with/3`:
 
-          # Before (allocates intermediate tuples):
+          # Before:
           Enum.zip(a, b) |> Enum.count(fn {x, y} -> x != y end)
 
-          # After (no intermediate allocation):
-          Enum.zip_with(a, b, fn x, y -> x != y end) |> Enum.count(& &1)
+          # After (predicate timing is preserved):
+          Enum.zip_with(a, b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end)
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

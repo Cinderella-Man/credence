@@ -9,7 +9,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
     test "rewrites Enum.zip |> Enum.count(fn {x, y} -> ... end)" do
       code = "a |> Enum.zip(b) |> Enum.count(fn {x, y} -> x != y end)"
 
-      expected = "a |> Enum.zip_with(b, fn x, y -> x != y end) |> Enum.count(& &1)"
+      expected =
+        "a |> Enum.zip_with(b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
@@ -17,7 +18,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
     test "rewrites Enum.zip(a, b) |> Enum.count(fn ...) (direct zip at pipe head)" do
       code = "Enum.zip(a, b) |> Enum.count(fn {x, y} -> x != y end)"
 
-      expected = "Enum.zip_with(a, b, fn x, y -> x != y end) |> Enum.count(& &1)"
+      expected =
+        "Enum.zip_with(a, b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
@@ -39,8 +41,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
         def diff_count(a, b) do
           a
           |> Enum.map(&to_string/1)
-          |> Enum.zip_with(b, fn x, y -> x != y end)
-          |> Enum.count(& &1)
+          |> Enum.zip_with(b, fn x, y -> {x, y} end)
+          |> Enum.count(fn {x, y} -> x != y end)
         end
       end
       """
@@ -52,7 +54,7 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
       code = "a |> Enum.zip(b) |> Enum.count(fn {x, y} -> rem(x, 2) == rem(y, 2) end)"
 
       expected =
-        "a |> Enum.zip_with(b, fn x, y -> rem(x, 2) == rem(y, 2) end) |> Enum.count(& &1)"
+        "a |> Enum.zip_with(b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> rem(x, 2) == rem(y, 2) end)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
@@ -60,7 +62,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
     test "rewrites when more steps follow the count" do
       code = "a |> Enum.zip(b) |> Enum.count(fn {x, y} -> x != y end) |> Kernel.+(1)"
 
-      expected = "a |> Enum.zip_with(b, fn x, y -> x != y end) |> Enum.count(& &1) |> Kernel.+(1)"
+      expected =
+        "a |> Enum.zip_with(b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end) |> Kernel.+(1)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
@@ -72,7 +75,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
     test "rewrites Enum.count(Enum.zip(a, b), fn {x, y} -> ... end)" do
       code = "Enum.count(Enum.zip(a, b), fn {x, y} -> x != y end)"
 
-      expected = "Enum.zip_with(a, b, fn x, y -> x != y end) |> Enum.count(& &1)"
+      expected =
+        "Enum.zip_with(a, b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
@@ -80,7 +84,8 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCountFixTest do
     test "rewrites the nested form at a pipe head" do
       code = "Enum.count(Enum.zip(a, b), fn {x, y} -> x != y end) |> Kernel.+(1)"
 
-      expected = "Enum.zip_with(a, b, fn x, y -> x != y end) |> Enum.count(& &1) |> Kernel.+(1)"
+      expected =
+        "Enum.zip_with(a, b, fn x, y -> {x, y} end) |> Enum.count(fn {x, y} -> x != y end) |> Kernel.+(1)"
 
       confirm_fix(fix(PreferZipWithOverZipThenCount, code), expected)
     end
