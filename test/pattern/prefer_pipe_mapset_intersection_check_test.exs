@@ -119,5 +119,20 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionCheckTest do
 
       assert clean?(PreferPipeMapsetIntersection, code)
     end
+
+    test "does not flag when a later MapSet.new argument uses an earlier assigned set" do
+      code = """
+      defmodule DependentMapSetCheckFixture do
+        def get_common do
+          set_a = MapSet.new([1])
+          set_b = MapSet.new(set_a)
+
+          MapSet.intersection(set_a, set_b) |> MapSet.to_list()
+        end
+      end
+      """
+
+      assert clean?(PreferPipeMapsetIntersection, code)
+    end
   end
 end
