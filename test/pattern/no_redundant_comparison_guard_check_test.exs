@@ -114,6 +114,21 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
   end
 
   describe "check — negative cases (should NOT flag)" do
+    test "does not group same-name clauses from different modules" do
+      code = """
+      defmodule NRCGCheckModuleA do
+        def f(n) when is_number(n) and n < 0, do: :negative
+      end
+
+      defmodule NRCGCheckModuleB do
+        def f(n) when is_number(n) and n >= 0, do: :non_negative
+        def f(_n), do: :fallback
+      end
+      """
+
+      assert check(NoRedundantComparisonGuard, code) == []
+    end
+
     test "does not flag bare comparisons without type guards" do
       code = """
       defmodule Good do

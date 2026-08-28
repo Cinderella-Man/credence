@@ -66,7 +66,9 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
     clauses = collect_clauses(ast)
 
     clauses
-    |> Enum.group_by(fn {name, arity, _, _, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {module_path, name, arity, _, _, _, _} ->
+      {module_path, name, arity}
+    end)
     |> Enum.flat_map(fn {_key, group} -> analyze_group(group) end)
     |> Enum.sort_by(fn issue -> issue.meta[:line] || 0 end)
   end
@@ -100,13 +102,28 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   # ── Clause collection ──────────────────────────────────────────
 
   defp collect_clauses(ast) do
-    {_ast, clauses} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case extract_clause(node) do
-          {:ok, clause} -> {node, [clause | acc]}
-          :error -> {node, acc}
+    {_ast, {[], clauses}} =
+      Macro.traverse(
+        ast,
+        {[], []},
+        fn
+          {:defmodule, _, [name | _]} = node, {module_path, acc} ->
+            {node, {[name | module_path], acc}}
+
+          node, {module_path, acc} ->
+            case extract_clause(node) do
+              {:ok, clause} -> {node, {module_path, [scope_clause(module_path, clause) | acc]}}
+              :error -> {node, {module_path, acc}}
+            end
+        end,
+        fn
+          {:defmodule, _, [_name | _]} = node, {[_ | module_path], acc} ->
+            {node, {module_path, acc}}
+
+          node, acc ->
+            {node, acc}
         end
-      end)
+      )
 
     Enum.reverse(clauses)
   end
@@ -125,6 +142,14 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   end
 
   defp extract_clause(_), do: :error
+
+  defp scope_clause(module_path, clause) do
+    module_path = Enum.map(module_path, &strip_meta/1)
+
+    clause
+    |> Tuple.to_list()
+    |> then(&List.to_tuple([module_path | &1]))
+  end
 
   # ── Comparison extraction ──────────────────────────────────────
 
@@ -199,7 +224,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp analyze_group(clauses) do
     clauses
     |> Enum.with_index()
-    |> Enum.flat_map(fn {{_name, _arity, info, meta, def_type, head}, idx} ->
+    |> Enum.flat_map(fn {{_module_path, _name, _arity, info, meta, def_type, head}, idx} ->
       case info do
         nil ->
           []
@@ -216,7 +241,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   end
 
   defp find_complementary_earlier(earlier_clauses, curr_info, curr_head) do
-    Enum.find_value(earlier_clauses, fn {_n, _a, prev_info, _m, _d, prev_head} ->
+    Enum.find_value(earlier_clauses, fn {_module_path, _n, _a, prev_info, _m, _d, prev_head} ->
       case prev_info do
         nil ->
           nil
@@ -264,18 +289,33 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp collect_fixable_guards(ast) do
     ast
     |> collect_clauses_for_fix()
-    |> Enum.group_by(fn {name, arity, _, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {module_path, name, arity, _, _, _} -> {module_path, name, arity} end)
     |> Enum.flat_map(fn {_key, group} -> fixable_in_group(group) end)
   end
 
   defp collect_clauses_for_fix(ast) do
-    {_ast, clauses} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case extract_clause_with_guard(node) do
-          {:ok, clause} -> {node, [clause | acc]}
-          :error -> {node, acc}
+    {_ast, {[], clauses}} =
+      Macro.traverse(
+        ast,
+        {[], []},
+        fn
+          {:defmodule, _, [name | _]} = node, {module_path, acc} ->
+            {node, {[name | module_path], acc}}
+
+          node, {module_path, acc} ->
+            case extract_clause_with_guard(node) do
+              {:ok, clause} -> {node, {module_path, [scope_clause(module_path, clause) | acc]}}
+              :error -> {node, {module_path, acc}}
+            end
+        end,
+        fn
+          {:defmodule, _, [_name | _]} = node, {[_ | module_path], acc} ->
+            {node, {module_path, acc}}
+
+          node, acc ->
+            {node, acc}
         end
-      end)
+      )
 
     Enum.reverse(clauses)
   end
@@ -305,7 +345,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp fixable_in_group(group) do
     group
     |> Enum.with_index()
-    |> Enum.flat_map(fn {{_n, _a, info, guard, head}, idx} ->
+    |> Enum.flat_map(fn {{_module_path, _n, _a, info, guard, head}, idx} ->
       case info do
         nil ->
           []
@@ -323,7 +363,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   end
 
   defp complementary_earlier?(earlier, curr_info, curr_head) do
-    Enum.any?(earlier, fn {_n, _a, prev_info, _g, prev_head} ->
+    Enum.any?(earlier, fn {_module_path, _n, _a, prev_info, _g, prev_head} ->
       case prev_info do
         nil ->
           false
