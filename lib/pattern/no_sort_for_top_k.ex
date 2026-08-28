@@ -236,26 +236,12 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp flatten_pipeline(expr), do: [expr]
 
   defp analyze_pipeline([first | rest]) do
-    with {:ok, var} <- extract_sort(first),
+    with {:ok, arg} <- extract_sort_1(first),
+         var when var != nil <- var_name(arg),
          {:ok, op, _k, reverses} <- find_topk(rest) do
       {:ok, var, op, reverses}
     end
   end
-
-  # [arg | _] keeps compatibility with Enum.sort/2 calls — the check
-  # still flags them, even though fix only handles single-arg sort.
-  defp extract_sort({{:., _, [mod, :sort]}, _, [arg | _]}) do
-    if enum_module?(mod) do
-      case var_name(arg) do
-        nil -> :error
-        var -> {:ok, var}
-      end
-    else
-      :error
-    end
-  end
-
-  defp extract_sort(_), do: :error
 
   # Requires the terminal operation to be the LAST step in the
   # pipeline.  Intermediate steps must all be Enum.reverse().
