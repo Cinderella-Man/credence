@@ -82,6 +82,14 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
   end
 
   describe "does not fire" do
+    test "MapSet.new/2 transform forms" do
+      pipe_code = "Enum.uniq(items) |> MapSet.new(transform)"
+      direct_code = "MapSet.new(Enum.uniq(items), transform)"
+
+      assert check(NoRedundantDedupBeforeMapset, pipe_code) == []
+      assert check(NoRedundantDedupBeforeMapset, direct_code) == []
+    end
+
     test "MapSet.new(items) with no dedup" do
       code = """
       defmodule Example do

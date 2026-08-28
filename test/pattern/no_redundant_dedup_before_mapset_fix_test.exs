@@ -43,6 +43,14 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
+  test "MapSet.new/2 transform forms are left alone" do
+    pipe_code = "Enum.uniq(items) |> MapSet.new(transform)"
+    direct_code = "MapSet.new(Enum.uniq(items), transform)"
+
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, pipe_code), pipe_code)
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, direct_code), direct_code)
+  end
+
   test "preserves surrounding code, fixes multiple occurrences" do
     code = """
     defmodule Solution do
