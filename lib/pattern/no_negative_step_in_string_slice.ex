@@ -47,47 +47,75 @@ defmodule Credence.Pattern.NoNegativeStepInStringSlice do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        # Both spellings. `String.slice(str, range)` arrives with two arguments and
-        # `str |> String.slice(range)` with one — the pipe's left side is not in
-        # this node. Matching only the two-argument form is what let the fix
-        # rewrite piped calls the check had never reported.
-        {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _meta, args} = node, issues
-        when is_list(args) ->
-          case slice_range(args) do
-            {:ok, range} ->
-              if bare_neg_one_range?(range) do
-                {node, [build_issue(get_line(range)) | issues]}
-              else
+    if custom_string_alias?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn
+          # Both spellings. `String.slice(str, range)` arrives with two arguments and
+          # `str |> String.slice(range)` with one — the pipe's left side is not in
+          # this node. Matching only the two-argument form is what let the fix
+          # rewrite piped calls the check had never reported.
+          {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _meta, args} = node, issues
+          when is_list(args) ->
+            case slice_range(args) do
+              {:ok, range} ->
+                if bare_neg_one_range?(range) do
+                  {node, [build_issue(get_line(range)) | issues]}
+                else
+                  {node, issues}
+                end
+
+              :error ->
                 {node, issues}
-              end
+            end
 
-            :error ->
-              {node, issues}
-          end
+          node, issues ->
+            {node, issues}
+        end)
 
-        node, issues ->
-          {node, issues}
-      end)
-
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, fn
-      {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _, args} = node when is_list(args) ->
-        with {:ok, range} <- slice_range(args),
-             true <- bare_neg_one_range?(range) do
-          put_elem(node, 2, replace_range(args, with_step_one(range)))
-        else
-          _ -> node
-        end
+    if custom_string_alias?(ast) do
+      []
+    else
+      RuleHelpers.patches_from_postwalk(ast, fn
+        {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _, args} = node when is_list(args) ->
+          with {:ok, range} <- slice_range(args),
+               true <- bare_neg_one_range?(range) do
+            put_elem(node, 2, replace_range(args, with_step_one(range)))
+          else
+            _ -> node
+          end
 
-      node ->
-        node
-    end)
+        node ->
+          node
+      end)
+    end
+  end
+
+  defp custom_string_alias?(ast) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [_module, opts]} = node, found? when is_list(opts) ->
+          shadowed? =
+            Enum.any?(opts, fn
+              {{:__block__, _, [:as]}, {:__aliases__, _, [:String]}} -> true
+              {:as, {:__aliases__, _, [:String]}} -> true
+              _ -> false
+            end)
+
+          {node, found? or shadowed?}
+
+        node, found? ->
+          {node, found?}
+      end)
+
+    found?
   end
 
   # The one place that decides which argument is the range, shared by `check/2`
@@ -120,7 +148,8 @@ defmodule Credence.Pattern.NoNegativeStepInStringSlice do
     %Issue{
       rule: :no_negative_step_in_string_slice,
       message:
-        "`String.slice(str, n..-1)` uses a range with implicit step -1 in Elixir 1.19+. " <>
+        "`String.slice(str, n..-1)` uses a range with implicit step -1, " <>
+          "which has been deprecated since Elixir 1.12. " <>
           "Use `String.slice(str, n..-1//1)` to make the positive step explicit.",
       meta: %{line: line}
     }

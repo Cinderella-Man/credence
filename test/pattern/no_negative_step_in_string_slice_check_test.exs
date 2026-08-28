@@ -19,6 +19,11 @@ defmodule Credence.Pattern.NoNegativeStepInStringSliceCheckTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_negative_step_in_string_slice
+
+      assert issue.message ==
+               "`String.slice(str, n..-1)` uses a range with implicit step -1, " <>
+                 "which has been deprecated since Elixir 1.12. " <>
+                 "Use `String.slice(str, n..-1//1)` to make the positive step explicit."
     end
 
     test "flags String.slice(str, 0..-1) with literal start" do
@@ -91,6 +96,15 @@ defmodule Credence.Pattern.NoNegativeStepInStringSliceCheckTest do
       """
 
       assert clean?(NoNegativeStepInStringSlice, code)
+    end
+
+    test "leaves calls through a custom module aliased as String alone" do
+      assert clean?(NoNegativeStepInStringSlice, """
+             defmodule NoNegativeStepCustomStringCheckFixture do
+               alias MyRangeModule, as: String
+               def slice(value), do: String.slice(value, 2..-1)
+             end
+             """)
     end
 
     test "leaves String.slice with variable range alone" do

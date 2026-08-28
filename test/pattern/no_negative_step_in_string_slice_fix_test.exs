@@ -126,6 +126,17 @@ defmodule Credence.Pattern.NoNegativeStepInStringSliceFixTest do
       confirm_fix(fix(NoNegativeStepInStringSlice, code), code)
     end
 
+    test "does not modify calls through a custom module aliased as String" do
+      code = """
+      defmodule NoNegativeStepCustomStringFixFixture do
+        alias MyRangeModule, as: String
+        def slice(value), do: String.slice(value, 2..-1)
+      end
+      """
+
+      confirm_fix(fix(NoNegativeStepInStringSlice, code), code)
+    end
+
     test "fixed code has no remaining issues" do
       code = """
       defmodule M do
