@@ -119,6 +119,23 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
     end
   end
 
+  describe "no fix for stream inputs" do
+    test "preserves the separate zip and map evaluation phases" do
+      code =
+        "Enum.zip(Stream.map([1, 2], fn x -> Process.put(:zip_state, x); x end), [10, 20]) |> Enum.map(fn {x, y} -> {x, y, Process.get(:zip_state)} end)"
+
+      emitted = fix(NoZipThenMap, code)
+
+      confirm_fix(emitted, code)
+
+      original_fixture = effect_order_fixture(NoZipThenMapOriginalOrder, code)
+      emitted_fixture = effect_order_fixture(NoZipThenMapEmittedOrder, emitted)
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(original_fixture)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted_fixture)
+    end
+  end
+
   describe "no fix for Enum.zip/1 over a list at pipe head" do
     # `Enum.zip([names, scores])` is the real zip/1 (a list of enumerables),
     # not a pipe-elided zip/2 — it must be left untouched.
@@ -130,5 +147,17 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
 
       confirm_fix(fix(NoZipThenMap, code), code)
     end
+  end
+
+  defp effect_order_fixture(module, expression) do
+    """
+    defmodule #{module} do
+      Process.delete(:zip_state)
+      result = (#{expression})
+
+      unless result == [{1, 10, 2}, {2, 20, 2}],
+        do: raise("unexpected evaluation order: \#{inspect(result)}")
+    end
+    """
   end
 end

@@ -43,6 +43,8 @@ defmodule Credence.Pattern.NoZipThenMap do
     real `Enum.zip/1`, not a pipe-elided `zip/2`, and is not convertible.
   - Guarded fns (`fn {x, y} when ... -> ... end`) — dropping or rebuilding the
     guard is out of scope, so these are left untouched.
+  - Calls with visible `Stream` inputs — `Enum.zip/2` finishes stream
+    enumeration before mapping, while `Enum.zip_with/3` interleaves the two.
   - Already-idiomatic `Enum.zip_with/3`.
 
   ## Auto-fix
@@ -70,7 +72,8 @@ defmodule Credence.Pattern.NoZipThenMap do
           with true <- two_tuple_fn?(fn_arg),
                false <- guarded_fn?(fn_arg),
                zip_node = rightmost(left),
-               true <- valid_zip_for_pipe?(zip_node, left) do
+               true <- valid_zip_for_pipe?(zip_node, left),
+               false <- stream_input?(left) do
             {node, [build_issue(map_meta) | acc]}
           else
             _ -> {node, acc}
@@ -79,11 +82,11 @@ defmodule Credence.Pattern.NoZipThenMap do
         # Nested: Enum.map(Enum.zip(a, b), fn {x, y} -> ...)
         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, map_meta,
          [
-           {{:., _, [{:__aliases__, _, [:Enum]}, :zip]}, _, [_, _]},
+           {{:., _, [{:__aliases__, _, [:Enum]}, :zip]}, _, [_, _]} = zip_node,
            fn_arg
          ]} = node,
         acc ->
-          if two_tuple_fn?(fn_arg) and not guarded_fn?(fn_arg) do
+          if two_tuple_fn?(fn_arg) and not guarded_fn?(fn_arg) and not stream_input?(zip_node) do
             {node, [build_issue(map_meta) | acc]}
           else
             {node, acc}
@@ -120,6 +123,7 @@ defmodule Credence.Pattern.NoZipThenMap do
          false <- guarded_fn?(fn_arg),
          zip_node = rightmost(left),
          true <- valid_zip_for_pipe?(zip_node, left),
+         false <- stream_input?(left),
          {:ok, x, y, body} <- extract_fn_vars(fn_arg) do
       zip_with = build_zip_with_from_zip(zip_node, x, y, body)
       replace_in_pipe(left, zip_node, zip_with)
@@ -132,12 +136,13 @@ defmodule Credence.Pattern.NoZipThenMap do
   defp transform_node(
          {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _map_meta,
           [
-            {{:., _, [{:__aliases__, _, [:Enum]}, :zip]}, _, [a, b]},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :zip]}, _, [a, b]} = zip_node,
             fn_arg
           ]} = node
        ) do
     with true <- two_tuple_fn?(fn_arg),
          false <- guarded_fn?(fn_arg),
+         false <- stream_input?(zip_node),
          {:ok, x, y, body} <- extract_fn_vars(fn_arg) do
       build_zip_with_call(a, b, x, y, body)
     else
@@ -230,6 +235,18 @@ defmodule Credence.Pattern.NoZipThenMap do
        do: left != zip_node
 
   defp valid_zip_for_pipe?(_, _), do: false
+
+  # A stream is consumed lazily by zip_with, so the mapping callback would run
+  # during stream enumeration instead of after Enum.zip has fully completed.
+  defp stream_input?(zip_node) do
+    {_node, found?} =
+      Macro.prewalk(zip_node, false, fn
+        {{:., _, [{:__aliases__, _, [:Stream]}, _]}, _, _} = node, _ -> {node, true}
+        node, found? -> {node, found?}
+      end)
+
+    found?
+  end
 
   # --- extraction helpers ---
 
