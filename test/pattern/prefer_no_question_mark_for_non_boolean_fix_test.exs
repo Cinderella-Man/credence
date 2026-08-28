@@ -57,6 +57,36 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, input), expected)
   end
 
+  test "does not rename variables that share the private function name" do
+    input = """
+    defmodule VariableNameWitness do
+      @spec count?() :: integer()
+      defp count?, do: 9
+
+      def value do
+        count = 1
+        count? = 2
+        count + count? + count?()
+      end
+    end
+    """
+
+    expected = """
+    defmodule VariableNameWitness do
+      @spec count() :: integer()
+      defp count, do: 9
+
+      def value do
+        count = 1
+        count? = 2
+        count + count? + count()
+      end
+    end
+    """
+
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, input), expected)
+  end
+
   test "no-op on a public def with ? suffix (breaking API rename)" do
     code = """
     defmodule Example do
