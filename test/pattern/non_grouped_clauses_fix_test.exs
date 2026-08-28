@@ -2,8 +2,42 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NonGroupedClauses
+  alias Credence.RuleHelpers
 
   describe "reorders stray clauses to join siblings" do
+    test "repairs scattered clauses in nested and enclosing modules without overlapping patches" do
+      input = """
+      defmodule OuterNestedGrouping do
+        def foo(1), do: 1
+        defmodule InnerNestedGrouping do
+          def baz(1), do: 1
+          def qux(x), do: x
+          def baz(x), do: x
+        end
+        def bar(x), do: x
+        def foo(x), do: x
+      end
+      """
+
+      expected = """
+      defmodule OuterNestedGrouping do
+        def foo(1), do: 1
+        def foo(x), do: x
+        defmodule InnerNestedGrouping do
+          def baz(1), do: 1
+          def baz(x), do: x
+          def qux(x), do: x
+        end
+        def bar(x), do: x
+      end
+      """
+
+      emitted = fix(NonGroupedClauses, input)
+      confirm_fix(emitted, expected)
+      assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(expected)
+      confirm_fix(fix(NonGroupedClauses, emitted), emitted)
+    end
+
     test "simple case: def foo, def bar, def foo → grouped" do
       input = """
       defmodule M do

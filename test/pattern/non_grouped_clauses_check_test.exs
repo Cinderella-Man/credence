@@ -92,6 +92,31 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
   # is load-bearing, so `attr_run_start/2` answers `:unmovable` and the check
   # declines alongside the fix.
   describe "does not flag a stray behind a non-annotation attribute" do
+    test "declines the whole function when a later clause follows a value attribute" do
+      code = """
+      defmodule ValueAttributeAfterMovableStray do
+        def foo(1), do: 1
+        def bar(x), do: x
+        def foo(2), do: 2
+        @threshold 9
+        def foo(x), do: x + @threshold
+      end
+      """
+
+      assert check(NonGroupedClauses, code) == []
+    end
+
+    test "declines modules whose statements share source lines" do
+      code = """
+      defmodule SameLineGrouping do
+        def foo(1), do: 1; def bar(x), do: x; def foo(x), do: x
+      end
+      """
+
+      assert check(NonGroupedClauses, code) == []
+      confirm_fix(fix(NonGroupedClauses, code), code)
+    end
+
     test "a value-defining attribute in the run" do
       code = """
       defmodule M do

@@ -89,7 +89,41 @@ defmodule Credence.Pattern.NonGroupedClauses do
         end
       end)
 
+    merge_nested_patches(patches, lines)
+  end
+
+  # A module-body replacement can contain another module-body replacement. Applying
+  # both ranges independently is unsafe because Sourceror patches bottom-up and the
+  # ranges overlap. Fold each inner replacement into its enclosing replacement and
+  # return only the outermost, disjoint patches.
+  defp merge_nested_patches(patches, lines) do
     patches
+    |> Enum.sort_by(&patch_span/1)
+    |> Enum.reduce([], fn patch, disjoint ->
+      {children, rest} = Enum.split_with(disjoint, &range_contains?(patch, &1))
+
+      merged =
+        Enum.reduce(children, patch, fn child, parent ->
+          original = patch_source(child, lines)
+          %{parent | change: String.replace(parent.change, original, child.change, global: false)}
+        end)
+
+      [merged | rest]
+    end)
+  end
+
+  defp patch_span(%{range: %{start: start, end: finish}}),
+    do: Keyword.fetch!(finish, :line) - Keyword.fetch!(start, :line)
+
+  defp range_contains?(%{range: outer}, %{range: inner}) do
+    Keyword.fetch!(outer.start, :line) <= Keyword.fetch!(inner.start, :line) and
+      Keyword.fetch!(outer.end, :line) >= Keyword.fetch!(inner.end, :line)
+  end
+
+  defp patch_source(%{range: %{start: start, end: finish}}, lines) do
+    first = Keyword.fetch!(start, :line)
+    last = Keyword.fetch!(finish, :line) - 1
+    lines |> Enum.slice((first - 1)..(last - 1)) |> Enum.join("\n") |> Kernel.<>("\n")
   end
 
   # ONE patch for the module body, its text reassembled from the ORIGINAL line
@@ -203,8 +237,8 @@ defmodule Credence.Pattern.NonGroupedClauses do
     end
   end
 
-  # `check/2` reports exactly the strays `group_clauses/1` will move, because both
-  # go through `movable_stray_indices/1`.
+  # `check/2` reports exactly the function keys `groupable_keys/1` admits, so a
+  # function is never reported when any of its clauses makes the whole move unsafe.
   #
   # This used to be its own near-copy of phase 1 of `group_clauses/1` with no
   # movability test at all, so it flagged every stray whether or not the fix could
@@ -212,8 +246,12 @@ defmodule Credence.Pattern.NonGroupedClauses do
   # ended with the words "`check/2` still flags them" — the report-without-repair
   # was written down in the source rather than overlooked.
   defp check_body(body) do
+    groupable = groupable_keys(body)
+
     body
-    |> movable_stray_indices()
+    |> stray_indices()
+    |> Enum.filter(fn idx -> Map.has_key?(groupable, function_key(Enum.at(body, idx))) end)
+    |> Enum.sort()
     |> Enum.uniq_by(&function_key(Enum.at(body, &1)))
     |> Enum.map(&build_issue(body, &1))
   end
@@ -258,13 +296,6 @@ defmodule Credence.Pattern.NonGroupedClauses do
     strays
   end
 
-  # The single admission decision, in one place, consumed by both callbacks.
-  defp movable_stray_indices(body) do
-    body |> stray_indices() |> Enum.filter(&movable_stray?(body, &1)) |> Enum.sort()
-  end
-
-  defp movable_stray?(body, idx), do: attr_run_start(body, idx) != :unmovable
-
   # The index the moved slice must START at: walk back over the contiguous run of
   # ANNOTATION attributes directly above `idx`, so `@impl true` / `@doc` / `@spec`
   # travel with the clause they annotate instead of being orphaned by the move.
@@ -299,6 +330,14 @@ defmodule Credence.Pattern.NonGroupedClauses do
   defp groupable_keys(body) do
     strays = stray_indices(body)
 
+    if statement_start_lines_unique?(body) do
+      do_groupable_keys(body, strays)
+    else
+      %{}
+    end
+  end
+
+  defp do_groupable_keys(body, strays) do
     body
     |> Enum.with_index()
     |> Enum.filter(fn {expr, _idx} -> function_key(expr) != nil end)
@@ -312,6 +351,16 @@ defmodule Credence.Pattern.NonGroupedClauses do
     |> Map.new(fn {key, [first | rest]} ->
       {key, [first..first | Enum.map(rest, fn idx -> attr_run_start(body, idx)..idx end)]}
     end)
+  end
+
+  defp statement_start_lines_unique?(body) do
+    lines =
+      Enum.map(
+        body,
+        &(&1 |> Sourceror.get_range() |> Map.fetch!(:start) |> Keyword.fetch!(:line))
+      )
+
+    Enum.uniq(lines) == lines
   end
 
   defp function_key({kind, _, [{:when, _, [{name, _, args} | _]}, _body]})
