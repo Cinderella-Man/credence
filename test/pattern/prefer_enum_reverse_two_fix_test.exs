@@ -40,20 +40,29 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
-    test "fixes with complex tail expression" do
+    test "does not reorder a potentially effectful tail before reverse/1" do
       input = "Enum.reverse(acc) ++ Enum.map(tail, &to_string/1)"
 
-      expected = "Enum.reverse(acc, Enum.map(tail, &to_string/1))"
-
-      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
+      confirm_fix(fix(PreferEnumReverseTwo, input), input)
     end
 
-    test "fixes chained ++ from inside out" do
+    test "does not rewrite an Enum alias" do
+      input = """
+      defmodule PreferEnumReverseTwoAliasedFixture do
+        alias CustomEnum, as: Enum
+        def merge(acc, tail), do: Enum.reverse(acc) ++ tail
+      end
+      """
+
+      confirm_fix(fix(PreferEnumReverseTwo, input), input)
+    end
+
+    test "fixes only the inner safe operation in a chained ++" do
       # Right-associative: Enum.reverse(a) ++ (Enum.reverse(b) ++ c)
-      # Should become:     Enum.reverse(a, Enum.reverse(b, c))
+      # Moving the inner call ahead of reverse(a) would change evaluation order.
       input = "Enum.reverse(a) ++ Enum.reverse(b) ++ c"
 
-      expected = "Enum.reverse(a, Enum.reverse(b, c))"
+      expected = "Enum.reverse(a) ++ Enum.reverse(b, c)"
 
       confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end

@@ -14,33 +14,79 @@ defmodule Credence.Pattern.PreferEnumReverseTwo do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {:++, meta, [{{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [_acc]}, _tail]} =
-            node,
-        issues ->
-          {node, [create_issue(meta) | issues]}
+    if enum_aliased?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn node, issues ->
+          case rewrite(node) do
+            {:ok, _replacement, meta} -> {node, [create_issue(meta) | issues]}
+            :error -> {node, issues}
+          end
+        end)
 
-        node, issues ->
-          {node, issues}
-      end)
-
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      {:++, _meta,
-       [
-         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [acc]},
-         tail
-       ]} ->
-        {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], [acc, tail]}
+    if enum_aliased?(ast) do
+      []
+    else
+      Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
+        case rewrite(node) do
+          {:ok, replacement, _meta} -> replacement
+          :error -> node
+        end
+      end)
+    end
+  end
 
-      node ->
-        node
-    end)
+  defp rewrite({:++, meta, [{{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [acc]}, tail]}) do
+    if safe_tail?(tail) do
+      {:ok, {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], [acc, tail]}, meta}
+    else
+      :error
+    end
+  end
+
+  defp rewrite(_node), do: :error
+
+  # Moving the second argument before reverse/1 is observable when evaluating it
+  # can have effects or raise. Variables and literal data are safe to move.
+  defp safe_tail?({name, _meta, context})
+       when is_atom(name) and (is_atom(context) or is_nil(context)),
+       do: true
+
+  defp safe_tail?(value) when is_atom(value) or is_number(value) or is_binary(value), do: true
+  defp safe_tail?(values) when is_list(values), do: Enum.all?(values, &safe_tail?/1)
+  defp safe_tail?({:{}, _meta, values}), do: Enum.all?(values, &safe_tail?/1)
+
+  defp safe_tail?({:%{}, _meta, pairs}) do
+    Enum.all?(pairs, fn {key, value} -> safe_tail?(key) and safe_tail?(value) end)
+  end
+
+  defp safe_tail?(_node), do: false
+
+  defp enum_aliased?(ast) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, [_, opts]} = node, found? when is_list(opts) ->
+          as_enum? =
+            Enum.any?(opts, fn
+              {{:__block__, _, [:as]}, {:__aliases__, _, [:Enum]}} -> true
+              {:as, {:__aliases__, _, [:Enum]}} -> true
+              _ -> false
+            end)
+
+          {node, found? or as_enum?}
+
+        node, found? ->
+          {node, found?}
+      end)
+
+    found?
   end
 
   defp create_issue(meta) do
