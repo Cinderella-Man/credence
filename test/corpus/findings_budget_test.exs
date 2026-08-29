@@ -94,6 +94,13 @@ defmodule Credence.Corpus.FindingsBudgetTest do
 
   defp only(violations, kind), do: Enum.filter(violations, &(elem(&1, 0) == kind))
 
+  defp stale_ceilings(counts, ledger) do
+    for {rule, ceiling} <- ledger,
+        count = Map.get(counts, rule, 0),
+        count > @cap and count < ceiling,
+        do: {rule, ceiling, count}
+  end
+
   describe "the gate cannot pass vacuously" do
     test "the accepted-findings snapshot is present and non-empty", %{counts: counts} do
       assert File.exists?(Findings.snapshot_path()),
@@ -161,6 +168,12 @@ defmodule Credence.Corpus.FindingsBudgetTest do
   end
 
   describe "the ledger itself" do
+    test "a partial paydown above the cap ratchets its ceiling down" do
+      assert stale_ceilings(%{"legacy_rule" => 400}, %{"legacy_rule" => 521}) == [
+               {"legacy_rule", 521, 400}
+             ]
+    end
+
     test "names exactly the rules that are over the cap today", %{counts: counts} do
       over_cap = for {rule, count} <- counts, count > @cap, into: MapSet.new(), do: rule
 
@@ -168,6 +181,14 @@ defmodule Credence.Corpus.FindingsBudgetTest do
              "@grandfathered must be exactly the set of rules over the cap of #{@cap}. " <>
                "Extra entries are refill room for a rule that no longer needs them; missing " <>
                "entries are a rule over the cap with nobody's name on it."
+    end
+
+    test "every ceiling equals its rule's count today", %{counts: counts} do
+      stale = stale_ceilings(counts, @grandfathered)
+
+      assert stale == [],
+             "@grandfathered has refill room after a partial paydown; ratchet each " <>
+               "{rule, old ceiling, current count} down: #{inspect(stale)}"
     end
 
     test "every ceiling is above the cap — a ceiling at or under it belongs off the ledger" do
