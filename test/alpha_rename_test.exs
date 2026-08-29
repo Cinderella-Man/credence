@@ -90,6 +90,10 @@ defmodule Credence.AlphaRenameTest do
       assert out =~ "[v1]"
     end
 
+    test "a variable is renamed even when it shares a definition name" do
+      assert AlphaRename.rename("def f(f), do: f") == {:ok, "def f(v1), do: v1"}
+    end
+
     test "a definition whose only variable-shaped token IS its name is unchanged" do
       assert AlphaRename.rename("defmodule M do\n  defp get_items?, do: [1]\nend\n") == :unchanged
     end
@@ -121,8 +125,15 @@ defmodule Credence.AlphaRenameTest do
       assert scan([Credence.AlphaRenameProbe.Silent]) == []
     end
 
-    test "a raising rule is skipped rather than counted" do
-      assert scan([Credence.AlphaRenameProbe.Raiser]) == []
+    test "a raising rule fails the gate loudly" do
+      assert_raise RuntimeError, "probe", fn ->
+        scan([Credence.AlphaRenameProbe.Raiser])
+      end
+    end
+
+    test "a rule is caught when only one of several diagnostics is name-keyed" do
+      assert [{Credence.AlphaRenameProbe.PartlyNameKeyed, [@probe_fixture]}] =
+               scan([Credence.AlphaRenameProbe.PartlyNameKeyed])
     end
   end
 end
@@ -158,6 +169,20 @@ defmodule Credence.AlphaRenameProbe.ConstructKeyed do
       end)
 
     if found, do: [%Credence.Issue{rule: :probe, message: "m", meta: %{line: 1}}], else: []
+  end
+end
+
+defmodule Credence.AlphaRenameProbe.PartlyNameKeyed do
+  def check(ast, _opts) do
+    {_ast, found_name} =
+      Macro.prewalk(ast, false, fn
+        {:items, _, ctx} = node, _ when is_atom(ctx) -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    construct = %Credence.Issue{rule: :probe, message: "construct", meta: %{line: 1}}
+    name = %Credence.Issue{rule: :probe, message: "name", meta: %{line: 1}}
+    if found_name, do: [construct, name], else: [construct]
   end
 end
 

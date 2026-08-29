@@ -56,11 +56,11 @@ defmodule Credence.AlphaRename do
   end
 
   defp walk(ast) do
-    skip = protected_names(ast)
+    skip = protected_nodes(ast)
 
     Macro.prewalk(ast, %{}, fn
       {name, meta, context} = node, acc when is_atom(name) and is_atom(context) ->
-        if variable?(name) and name not in skip do
+        if variable?(name) and node not in skip do
           {new_name, acc} = fresh(acc, name)
           {{new_name, meta, context}, acc}
         else
@@ -74,21 +74,21 @@ defmodule Credence.AlphaRename do
 
   # Names that parse as variables but are not: attribute references and the
   # names in definition heads.
-  defp protected_names(ast) do
-    {_ast, names} =
+  defp protected_nodes(ast) do
+    {_ast, nodes} =
       Macro.prewalk(ast, MapSet.new(), fn
-        {:@, _, [{name, _, _} | _]} = node, acc ->
-          {node, MapSet.put(acc, name)}
+        {:@, _, [{_, _, _} = name_node | _]} = node, acc ->
+          {node, MapSet.put(acc, name_node)}
 
-        {def_kind, _, [{name, _, _} | _]} = node, acc
+        {def_kind, _, [{_, _, _} = name_node | _]} = node, acc
         when def_kind in [:def, :defp, :defmacro, :defmacrop, :defguard, :defguardp] ->
-          {node, MapSet.put(acc, name)}
+          {node, MapSet.put(acc, name_node)}
 
         node, acc ->
           {node, acc}
       end)
 
-    names
+    nodes
   end
 
   defp variable?(name) when name in @reserved, do: false
@@ -116,9 +116,9 @@ defmodule Credence.AlphaRename do
   end
 
   @doc """
-  `[{rule, [fixture]}]` for every rule that fires on a fixture and stops firing
-  once its variables are renamed — i.e. every rule keyed to a *name* rather than
-  a construct (docs/12 C12, Rule Standard requirement 7).
+  `[{rule, [fixture]}]` for every rule that loses one or more diagnostics once a
+  fixture's variables are renamed — i.e. every rule keyed to a *name* rather
+  than a construct (docs/12 C12, Rule Standard requirement 7).
 
   Takes both the rule list and the fixture source as arguments so the controls
   can drive it against fabricated rules; a gate whose vacuity depends on real
@@ -146,9 +146,10 @@ defmodule Credence.AlphaRename do
   defp name_keyed_fixtures(rule, fixtures) do
     Enum.filter(fixtures, fn source ->
       with baseline when is_binary(baseline) <- reprint(source),
-           true <- fires?(rule, baseline),
-           {:ok, renamed} <- rename(source) do
-        not fires?(rule, renamed)
+           baseline_issues when baseline_issues != [] <- diagnostics(rule, baseline),
+           {:ok, renamed} <- rename(source),
+           renamed_issues <- diagnostics(rule, renamed) do
+        length(renamed_issues) < length(baseline_issues)
       else
         _ -> false
       end
@@ -163,11 +164,6 @@ defmodule Credence.AlphaRename do
     _, _ -> nil
   end
 
-  defp fires?(rule, source) do
-    rule.check(Sourceror.parse_string!(source), source: source) != []
-  rescue
-    _ -> false
-  catch
-    _, _ -> false
-  end
+  defp diagnostics(rule, source),
+    do: rule.check(Sourceror.parse_string!(source), source: source)
 end
