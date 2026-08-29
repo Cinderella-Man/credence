@@ -34,7 +34,7 @@ defmodule Credence.Mutation.SweepTest do
     # scorable ran" is the absence of a claim, and a 0.0 in a summary table would
     # read as a rule with a uselessly loose triplet.
     test "nothing scorable is nil, not a score" do
-      refute Sweep.kill_rate(%{killed: 0, survived: 0, timeout: 0, invalid: 5, error: 0})
+      assert Sweep.kill_rate(%{killed: 0, survived: 0, timeout: 0, invalid: 5, error: 0}) == nil
     end
   end
 
@@ -70,7 +70,39 @@ defmodule Credence.Mutation.SweepTest do
       assert result.skipped == :baseline_red
       assert result.counts.killed == 0
       assert result.counts.survived == 0
-      refute Sweep.kill_rate(result.counts)
+      assert Sweep.kill_rate(result.counts) == nil
+    end
+
+    @tag :tmp_dir
+    test "CONTROL: a green subject executes and records a mutant", %{tmp_dir: dir} do
+      src = Path.join(dir, "rule.ex")
+      test_path = Path.join(dir, "rule_test.exs")
+
+      File.write!(src, "defmodule SweepGreenProbe do\n  def at_least?(a, b), do: a >= b\nend\n")
+
+      File.write!(test_path, """
+      defmodule SweepGreenProbeTest do
+        use ExUnit.Case
+        test "equality boundary" do
+          assert SweepGreenProbe.at_least?(1, 1)
+        end
+      end
+      """)
+
+      subject = %{
+        name: "green_sweep_probe",
+        layer: :pattern,
+        source_path: src,
+        test_files: [test_path]
+      }
+
+      result = Sweep.run(subject, root: dir, timeout_s: 30, cap: 1)
+
+      assert result.baseline == {:green, 1}
+      assert result.skipped == nil
+      assert [%{status: :killed, tests_total: 1, tests_failed: 1}] = result.results
+      assert result.counts == %{killed: 1, survived: 0, timeout: 0, invalid: 0, error: 0}
+      assert result.kill_rate == 1.0
     end
 
     @tag :tmp_dir
@@ -92,7 +124,7 @@ defmodule Credence.Mutation.SweepTest do
 
       assert result.baseline == {:error, "no runnable tests"}
       assert result.skipped == :baseline_error
-      refute result.kill_rate
+      assert result.kill_rate == nil
     end
   end
 
