@@ -108,6 +108,13 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
 
   defp block_groups(stmts) do
     stmts
+    |> Enum.chunk_by(&def_statement?/1)
+    |> Enum.filter(fn [statement | _] -> def_statement?(statement) end)
+    |> Enum.flat_map(&clause_groups/1)
+  end
+
+  defp clause_groups(stmts) do
+    stmts
     |> filter_def_nodes()
     |> Enum.chunk_by(fn {name, arity, _, _, _} -> {name, arity} end)
     |> Enum.flat_map(fn group ->
@@ -122,6 +129,9 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
       end
     end)
   end
+
+  defp def_statement?({dt, _, _}) when dt in [:def, :defp], do: true
+  defp def_statement?(_), do: false
 
   # Delete one merged range from END of catch-all through END of last redundant
   # catch-all clause.
