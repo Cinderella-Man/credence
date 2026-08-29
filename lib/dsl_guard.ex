@@ -297,7 +297,7 @@ defmodule Credence.DslGuard do
   # Qualified call: Ecto.Query.from(...), or alias Ash.Expr; Expr.expr(...).
   defp collect({{:., _, [{:__aliases__, _, prefix}, name]}, _meta, args} = node, acc, ctx)
        when is_list(args) and args != [] do
-    full = Map.get(ctx.aliases, List.last(prefix), prefix)
+    full = if length(prefix) == 1, do: Map.get(ctx.aliases, hd(prefix), prefix), else: prefix
 
     case qualified_family(full, name) do
       nil -> acc
