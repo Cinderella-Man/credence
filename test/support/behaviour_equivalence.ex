@@ -279,15 +279,15 @@ defmodule Credence.BehaviourEquivalence do
   end
 
   # Non-empty list whose every element is a stacktrace frame. The `location` is
-  # a keyword list in practice, but Erlang frames may omit it, so only the first
-  # three positions are demanded.
+  # a keyword list (possibly empty); demanding that shape keeps ordinary data
+  # with module/function atoms from being mistaken for a trace.
   defp stacktrace?([_ | _] = list), do: Enum.all?(list, &frame?/1)
   defp stacktrace?(_), do: false
 
-  defp frame?({mod, fun, arity_or_args, _location})
+  defp frame?({mod, fun, arity_or_args, location})
        when is_atom(mod) and is_atom(fun) and
-              (is_integer(arity_or_args) or is_list(arity_or_args)),
-       do: true
+              (is_integer(arity_or_args) or is_list(arity_or_args)) and is_list(location),
+       do: Keyword.keyword?(location)
 
   defp frame?(_), do: false
 

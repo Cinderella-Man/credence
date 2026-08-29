@@ -185,7 +185,9 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
     end
 
     test "CONTROL: a list of ordinary 4-tuples is not a stacktrace" do
-      assert Credence.BehaviourEquivalence.normalize_traces([{1, 2, 3, 4}]) == [{1, 2, 3, 4}]
+      ordinary_data = [{Foo, :bar, 1, :left}]
+
+      assert Credence.BehaviourEquivalence.normalize_traces(ordinary_data) == ordinary_data
     end
 
     test "CONTROL: a struct is left alone" do
