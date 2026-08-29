@@ -60,7 +60,8 @@ defmodule Credence.Syntax do
   for every rule that actually fired and was applied.
 
   A rule whose output was rejected by the progress guard appears as
-  `{rule, :reverted}`; if the whole round was rolled back because the result
+  `{rule, :reverted}`; a rule whose `fix/1` crashed or returned a non-string
+  appears as `{rule, :crashed}`; if the whole round was rolled back because the result
   still does not parse, every kept change appears as `{rule, :rolled_back}` and
   the returned source is the untouched original.
 
@@ -70,7 +71,7 @@ defmodule Credence.Syntax do
   is skipped entirely.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
-          {String.t(), [{module(), non_neg_integer() | :reverted | :rolled_back}]}
+          {String.t(), [{module(), non_neg_integer() | :reverted | :rolled_back | :crashed}]}
   def fix_with_trace(source, opts \\ []) do
     case Sourceror.parse_string(source) do
       {:ok, _ast} ->
@@ -113,33 +114,62 @@ defmodule Credence.Syntax do
   # retreat above the text this rule rewrote. See `Credence.Syntax.ProgressGuard`.
   defp run_rule(rule, {src, applied, state}) do
     name = RuleHelpers.rule_name(rule)
-    result = rule.fix(src)
+    result = isolate_fix(rule, src)
 
-    if result == src do
-      {src, applied, state}
-    else
-      result_state = ProgressGuard.measure(result)
+    case result do
+      :crashed ->
+        {src, [{rule, :crashed} | applied], state}
 
-      case ProgressGuard.verdict(src, state, result, result_state) do
-        :keep ->
-          Logger.debug("[credence_fix] #{name}: fix produced a change")
+      ^src ->
+        {src, applied, state}
 
-          RuleHelpers.log_diff(name, src, result)
-          {result, [{rule, 1} | applied], result_state}
+      result ->
+        result_state = ProgressGuard.measure(result)
 
-        :revert ->
-          Logger.warning(
-            "[credence_fix] #{name}: fix made the source WORSE " <>
-              "(#{ProgressGuard.describe(state)} → #{ProgressGuard.describe(result_state)}), " <>
-              "reverting"
-          )
+        case ProgressGuard.verdict(src, state, result, result_state) do
+          :keep ->
+            Logger.debug("[credence_fix] #{name}: fix produced a change")
 
-          # Log the rejected before/after so the offending rewrite lands in the
-          # row log for the deterministic bugfix lane, as Pattern does.
-          RuleHelpers.log_diff(name, src, result)
-          {src, [{rule, :reverted} | applied], state}
-      end
+            RuleHelpers.log_diff(name, src, result)
+            {result, [{rule, 1} | applied], result_state}
+
+          :revert ->
+            Logger.warning(
+              "[credence_fix] #{name}: fix made the source WORSE " <>
+                "(#{ProgressGuard.describe(state)} → #{ProgressGuard.describe(result_state)}), " <>
+                "reverting"
+            )
+
+            # Log the rejected before/after so the offending rewrite lands in the
+            # row log for the deterministic bugfix lane, as Pattern does.
+            RuleHelpers.log_diff(name, src, result)
+            {src, [{rule, :reverted} | applied], state}
+        end
     end
+  end
+
+  defp isolate_fix(rule, source) do
+    case rule.fix(source) do
+      result when is_binary(result) -> result
+      result -> raise "fix/1 returned a non-string: #{inspect(result)}"
+    end
+  rescue
+    error ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.fix CRASHED — rule skipped for this source. " <>
+          "This is a defect in the rule: #{Exception.message(error)}\n" <>
+          Exception.format_stacktrace(__STACKTRACE__)
+      )
+
+      :crashed
+  catch
+    kind, value ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.fix threw #{kind} #{inspect(value)} — " <>
+          "rule skipped for this source. This is a defect in the rule."
+      )
+
+      :crashed
   end
 
   # All-or-nothing. A round that ends on source the parser still rejects has
@@ -217,5 +247,10 @@ defmodule Credence.Syntax do
 
   # `:syntax_rules`, not `:rules`: `Credence.fix/2` forwards one opts list to all
   # three rounds, and `:rules` there means "these Pattern rules".
-  defp rules(opts), do: Keyword.get(opts, :syntax_rules, default_rules())
+  defp rules(opts) do
+    case Keyword.fetch(opts, :syntax_rules) do
+      {:ok, rules} -> rules
+      :error -> default_rules()
+    end
+  end
 end
