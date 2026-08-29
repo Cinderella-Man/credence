@@ -1,3 +1,34 @@
+defmodule Credence.Corpus.FixSafety do
+  alias Credence.{RuleHelpers, RuleName}
+
+  def apply_rule(rule, src) do
+    module = RuleName.derive(to_string(rule), :pattern).rule_module
+    apply_module(module, src)
+  end
+
+  def apply_module(module, src) do
+    {:ok, RuleHelpers.apply_rule_fix(module, src)}
+  rescue
+    exception -> {:error, exception}
+  end
+end
+
+defmodule Credence.Corpus.FixSafetyCrashingWitness do
+  def fix_patches(_ast, _opts), do: raise("fix safety witness crashed")
+end
+
+defmodule Credence.Corpus.FixSafetyCrashTest do
+  use ExUnit.Case, async: true
+
+  test "a crashing fix is reported instead of treated as unchanged" do
+    assert {:error, %RuntimeError{message: "fix safety witness crashed"}} =
+             Credence.Corpus.FixSafety.apply_module(
+               Credence.Corpus.FixSafetyCrashingWitness,
+               "value = 1\n"
+             )
+  end
+end
+
 defmodule Credence.Corpus.FixSafetyTest do
   @moduledoc """
   Fix-safety layer over the real-world corpus.
@@ -27,7 +58,7 @@ defmodule Credence.Corpus.FixSafetyTest do
   # applying fixes is heavier than analysis, so give generous headroom.
   @moduletag timeout: 180_000
 
-  alias Credence.{Corpus, RuleHelpers, RuleName}
+  alias Credence.Corpus
   alias Credence.Corpus.Progress
 
   @progress_step 500
@@ -54,7 +85,7 @@ defmodule Credence.Corpus.FixSafetyTest do
     {:ok, violations: violations_by_package()}
   end
 
-  @empty_violations %{comments: [], mangling: [], over_reach: []}
+  @empty_violations %{comments: [], mangling: [], over_reach: [], crashes: []}
 
   # One test per entry. The three safety invariants (no comment loss, no mangled
   # `__var`, no over-reach) are checked together so each (file, rule) fix is
@@ -66,9 +97,10 @@ defmodule Credence.Corpus.FixSafetyTest do
       pkg = unquote(pkg)
       version = unquote(version)
 
-      %{comments: comments, mangling: mangling, over_reach: over_reach} =
+      %{comments: comments, mangling: mangling, over_reach: over_reach, crashes: crashes} =
         Map.get(violations, pkg, @empty_violations)
 
+      assert crashes == [], crash_report(pkg, version, crashes)
       assert comments == [], report(pkg, version, comments)
       assert mangling == [], mangling_report(pkg, version, mangling)
       assert over_reach == [], over_reach_report(pkg, version, over_reach)
@@ -111,22 +143,32 @@ defmodule Credence.Corpus.FixSafetyTest do
   defp merge_violations(a, b), do: Map.merge(a, b, fn _key, x, y -> x ++ y end)
 
   defp group_violations({{rel, rule, path}, lines}) do
-    empty = %{comments: [], mangling: [], over_reach: []}
+    empty = @empty_violations
     src = File.read!(path)
-    fixed = safe_fix(rule, src)
 
-    # A check-only rule (or a self-reverted fix) leaves the source byte-for-byte
-    # unchanged — no comment can be lost, no var mangled, nothing reformatted —
-    # so skip the (parse + mix-format) work entirely.
-    if fixed == src do
-      empty
-    else
-      meta = %{rule: rule, rel: rel, lines: Enum.sort(lines)}
+    case safe_fix(rule, src) do
+      {:error, exception} ->
+        meta = %{rule: rule, rel: rel, lines: Enum.sort(lines), exception: exception}
+        %{empty | crashes: [meta]}
 
-      empty
-      |> collect(:comments, lost_comments(src, fixed), &Map.put(meta, :lost, &1))
-      |> collect(:mangling, introduced_mangled_vars(src, fixed), &Map.put(meta, :mangled, &1))
-      |> collect(:over_reach, rewrap_hunks(src, fixed), &Map.put(meta, :hunks, &1))
+      {:ok, fixed} ->
+        # A check-only rule (or a self-reverted fix) leaves the source byte-for-byte
+        # unchanged — no comment can be lost, no var mangled, nothing reformatted —
+        # so skip the (parse + mix-format) work entirely.
+        if fixed == src do
+          empty
+        else
+          meta = %{rule: rule, rel: rel, lines: Enum.sort(lines)}
+
+          empty
+          |> collect(:comments, lost_comments(src, fixed), &Map.put(meta, :lost, &1))
+          |> collect(
+            :mangling,
+            introduced_mangled_vars(src, fixed),
+            &Map.put(meta, :mangled, &1)
+          )
+          |> collect(:over_reach, rewrap_hunks(src, fixed), &Map.put(meta, :hunks, &1))
+        end
     end
   end
 
@@ -287,10 +329,7 @@ defmodule Credence.Corpus.FixSafetyTest do
   end
 
   defp safe_fix(rule, src) do
-    module = RuleName.derive(to_string(rule), :pattern).rule_module
-    RuleHelpers.apply_rule_fix(module, src)
-  rescue
-    _ -> src
+    Credence.Corpus.FixSafety.apply_rule(rule, src)
   end
 
   # Comment texts present in `before` more often than in `after_` — i.e. dropped.
@@ -325,6 +364,16 @@ defmodule Credence.Corpus.FixSafetyTest do
 
     #{body}
     """
+  end
+
+  defp crash_report(pkg, version, violations) do
+    body =
+      Enum.map_join(violations, "\n", fn v ->
+        "  • #{v.rel}:#{Enum.join(v.lines, ",")}  #{v.rule}: " <>
+          Exception.message(v.exception)
+      end)
+
+    "#{length(violations)} fix(es) on #{pkg} v#{version} crashed while being applied:\n\n#{body}"
   end
 
   defp mangling_report(pkg, version, violations) do
