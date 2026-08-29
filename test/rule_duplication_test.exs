@@ -88,7 +88,7 @@ defmodule Credence.RuleDuplicationTest do
                "signal has gone silent"
 
       pairs = RuleDuplication.duplicate_pairs(signatures, firing, @threshold)
-      new = Enum.reject(pairs, fn {a, b, _score} -> {a, b} in @ledger end)
+      new = gate_offenders(pairs, firing, @ledger)
 
       assert new == [],
              """
@@ -98,8 +98,8 @@ defmodule Credence.RuleDuplicationTest do
              #{Enum.map_join(new, "\n", fn {a, b, s} -> "  #{s}  #{inspect(a)} contains #{inspect(b)}" end)}
 
              That is the shape of a duplicate. Probe both rules on inputs either
-             side of their boundary before adding them to @ledger — the three
-             already there are overlapping, not redundant, and each says why.
+             side of their boundary before adding them to @ledger — the pair
+             already there is overlapping, not redundant, and its note says why.
              """
     end
 
@@ -190,8 +190,17 @@ defmodule Credence.RuleDuplicationTest do
 
       pairs = RuleDuplication.duplicate_pairs(signatures, firing, @threshold)
 
-      assert Enum.any?(pairs, fn {a, b, _} -> a == SupersetRule and b == SubsetRule end),
-             "the gate did not report an obvious subsumption: #{inspect(pairs)}"
+      assert gate_offenders(pairs, firing, []) == [
+               {SupersetRule, SubsetRule, 1.0}
+             ]
+    end
+
+    test "the ledger cannot hide a pair whose firing sets become identical" do
+      pair = {SupersetRule, SubsetRule, 1.0}
+      identical = MapSet.new([0, 2])
+      firing = %{SupersetRule => identical, SubsetRule => identical}
+
+      assert gate_offenders([pair], firing, [{SupersetRule, SubsetRule}]) == [pair]
     end
   end
 
@@ -279,5 +288,11 @@ defmodule Credence.RuleDuplicationTest do
              "containment alone should be noisier than the intersection; if it is " <>
                "not, the signature half is doing nothing"
     end
+  end
+
+  defp gate_offenders(pairs, firing, ledger) do
+    Enum.reject(pairs, fn {a, b, _score} ->
+      {a, b} in ledger and not MapSet.equal?(firing[a], firing[b])
+    end)
   end
 end
