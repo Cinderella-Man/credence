@@ -15,8 +15,14 @@ defmodule Credence.EquivalenceInputsTest do
   # inputs, so the same hole cannot open silently in the new dimensions.
 
   describe "maps" do
+    test "the key-identity trap predicate rejects an unrelated second key" do
+      decoy = %{1 => :int, other: :value}
+
+      refute key_identity_trap?(decoy)
+    end
+
     test "contains a key-identity trap: `==` keys that are distinct as map keys" do
-      trap = Enum.find(E.maps(), fn m -> map_size(m) == 2 and Map.has_key?(m, 1) end)
+      trap = Enum.find(E.maps(), &key_identity_trap?/1)
 
       assert trap, "no map with both 1 and 1.0 as keys — the key-identity trap is missing"
       assert map_size(trap) == 2, "1 and 1.0 must be DISTINCT map keys"
@@ -129,7 +135,7 @@ defmodule Credence.EquivalenceInputsTest do
       source = File.read!("lib/mix/tasks/credence.equiv.ex")
 
       names =
-        ~r/@all_string_dims\s+\[(?<a>[^\]]*)\]|@collection_dims\s+\[(?<b>[^\]]*)\]|@all_dims\s+\[(?<c>[^\]]*)\]/
+        ~r/@all_string_dims\s+\[(?<a>[^\]]*)\]|@collection_dims\s+\[(?<b>[^\]]*)\]|@struct_dims\s+\[(?<c>[^\]]*)\]|@all_dims\s+\[(?<d>[^\]]*)\]/
         |> Regex.scan(source)
         |> List.flatten()
         |> Enum.join(" ")
@@ -138,11 +144,16 @@ defmodule Credence.EquivalenceInputsTest do
         |> Enum.uniq()
 
       assert length(names) >= 10, "did not find the dimension registry — the regex needs updating"
+      assert :structs in names, "did not read @struct_dims from the dimension registry"
 
       for dim <- names do
         assert function_exported?(E, dim, 0),
                "mix credence.equiv offers --dim #{dim} but Credence.EquivalenceInputs has no #{dim}/0"
       end
     end
+  end
+
+  defp key_identity_trap?(map) do
+    map_size(map) == 2 and Map.has_key?(map, 1) and Map.has_key?(map, 1.0)
   end
 end
