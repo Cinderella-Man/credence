@@ -433,10 +433,10 @@ defmodule Credence.RuleHelpers do
   has always accepted them, and a fix that trades one warning for another must
   not be reverted on that basis alone.
 
-  A signature is the message alone, with no position. A fix legitimately moves
-  code, so the same error would otherwise look like a different one purely
-  because it now sits on line 7 instead of line 6 — which would make every
-  repair on a broken file look like a regression.
+  A signature is `{message, occurrence}`, with no position. The occurrence
+  preserves multiplicity, so adding the same error at a second location is a
+  regression. Positions stay excluded because a fix may legitimately move an
+  existing error from line 7 to line 6.
   """
   @spec compile_errors(String.t()) :: MapSet.t()
   def compile_errors(source) do
@@ -447,7 +447,12 @@ defmodule Credence.RuleHelpers do
       {:error, diagnostics} ->
         diagnostics
         |> Enum.filter(&(Map.get(&1, :severity) == :error))
-        |> MapSet.new(&to_string(Map.get(&1, :message, "")))
+        |> Enum.map(&to_string(Map.get(&1, :message, "")))
+        |> Enum.frequencies()
+        |> Enum.flat_map(fn {message, count} ->
+          Enum.map(1..count, &{message, &1})
+        end)
+        |> MapSet.new()
     end
   end
 

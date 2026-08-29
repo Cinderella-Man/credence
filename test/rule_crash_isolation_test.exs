@@ -134,6 +134,19 @@ defmodule Credence.RuleCrashIsolationTest do
   end
 
   describe "fix_with_trace/2" do
+    test "a rule crashing in check is recorded and later healthy rules still run" do
+      capture_log(fn ->
+        {code, applied} =
+          Credence.Pattern.fix_with_trace(@source,
+            rules: [CrashingCheckRule, HealthyRule],
+            assumptions: :default
+          )
+
+        assert code == "defmodule Sample do\n  y = 2\n  def go, do: :ok\nend\n"
+        assert applied == [{CrashingCheckRule, :crashed}, {HealthyRule, 1}]
+      end)
+    end
+
     test "a rule crashing in fix_patches is recorded as {rule, :crashed}" do
       capture_log(fn ->
         {code, applied} =

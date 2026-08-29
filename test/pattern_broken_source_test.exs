@@ -89,6 +89,26 @@ defmodule Credence.PatternBrokenSourceTest do
       refute RuleHelpers.compiles_no_worse?(worse, baseline)
     end
 
+    test "a duplicate of a pre-existing error at another location is rejected" do
+      one = """
+      defmodule PbsDuplicate do
+        def first, do: missing()
+      end
+      """
+
+      duplicate = """
+      defmodule PbsDuplicate do
+        def first, do: missing()
+        def second, do: missing()
+      end
+      """
+
+      baseline = RuleHelpers.compile_errors(one)
+      assert MapSet.size(baseline) == 2
+      assert MapSet.size(RuleHelpers.compile_errors(duplicate)) == 3
+      refute RuleHelpers.compiles_no_worse?(duplicate, baseline)
+    end
+
     test "removing an error is accepted — a subset, not an equality" do
       baseline = RuleHelpers.compile_errors(@broken)
       assert RuleHelpers.compiles_no_worse?(@clean, baseline)

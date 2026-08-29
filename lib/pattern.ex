@@ -122,36 +122,41 @@ defmodule Credence.Pattern do
         case parsed do
           {:ok, ast} ->
             check_opts = Keyword.put(opts, :source, source)
-            issues = rule.check(ast, check_opts)
+            issues = isolate(rule, :check, :crashed, fn -> rule.check(ast, check_opts) end)
 
-            if issues != [] do
-              name = RuleHelpers.rule_name(rule)
+            case issues do
+              :crashed ->
+                {source, parsed, [{rule, :crashed} | applied], baseline}
 
-              Logger.debug(
-                "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
-              )
+              [] ->
+                {source, parsed, applied, baseline}
 
-              case isolate(rule, :fix_patches, :crashed, fn ->
-                     invoke_fix(rule, source, check_opts)
-                   end) do
-                :crashed ->
-                  {source, parsed, [{rule, :crashed} | applied], baseline}
+              issues ->
+                name = RuleHelpers.rule_name(rule)
 
-                {status, fixed} ->
-                  apply_or_revert(
-                    rule,
-                    name,
-                    source,
-                    parsed,
-                    fixed,
-                    status,
-                    issues,
-                    applied,
-                    baseline
-                  )
-              end
-            else
-              {source, parsed, applied, baseline}
+                Logger.debug(
+                  "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
+                )
+
+                case isolate(rule, :fix_patches, :crashed, fn ->
+                       invoke_fix(rule, source, check_opts)
+                     end) do
+                  :crashed ->
+                    {source, parsed, [{rule, :crashed} | applied], baseline}
+
+                  {status, fixed} ->
+                    apply_or_revert(
+                      rule,
+                      name,
+                      source,
+                      parsed,
+                      fixed,
+                      status,
+                      issues,
+                      applied,
+                      baseline
+                    )
+                end
             end
 
           {:error, reason} ->
