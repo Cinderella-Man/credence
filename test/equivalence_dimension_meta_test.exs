@@ -49,20 +49,18 @@ defmodule Credence.EquivalenceDimensionMetaTest do
 
     * **An `mark_equivalence_*` opt-out is exempt** — there is no input set to
       judge (all three `Keyword.get/2` repair rules land here).
-    * **A trap that is unconstructible is not demanded.** Class 1 skips a test
-      whose inputs contain no number, class 2 one whose inputs contain no string.
-      `PreferMapsetForSetEquality` sorts `String.codepoints/1` output — binaries
-      only — and its own moduledoc shows the int/float divergence is excluded *by
-      construction*; demanding a numeric tie of it would be unsatisfiable.
+    * **A value-kind trap that is unconstructible is not demanded.** The audited
+      `@value_kind_unconstructible` set names rules whose matched pipeline itself
+      produces strings. This exemption comes from the rule's admitted domain,
+      never from an author's chosen test values.
     * **A rule that declares `:single_codepoint_graphemes` is exempt from class
       2.** It has narrowed its own domain and the engine already filters it out
       under `:strict`; testing it outside that domain is a bonus, never a duty.
 
-  Finally, a test whose `inputs:` expression cannot be evaluated standalone is
-  **not judged** — the gate declines rather than guesses. All 155 rules evaluate
-  today (module attributes and the `EquivalenceInputs` alias are resolved first);
-  a test that binds its inputs to test-local state would slip past, which is the
-  one known way to dodge this gate.
+  Finally, a sensitive test whose `inputs:` expression cannot be evaluated
+  standalone fails the relevant gate: declining to judge would let test-local
+  state bypass dimension coverage. Module attributes and the
+  `EquivalenceInputs` alias are resolved first.
 
   ## Live population when this landed
 
@@ -99,6 +97,45 @@ defmodule Credence.EquivalenceDimensionMetaTest do
 
   import Credence.MetaTestSupport
 
+  @value_kind_unconstructible MapSet.new([
+                                Credence.Pattern.PreferCountsForLength,
+                                Credence.Pattern.PreferFrequenciesOverGroupBy,
+                                Credence.Pattern.PreferGraphemesForCharacterUniqueness,
+                                Credence.Pattern.PreferMapsetForSetEquality
+                              ])
+
+  @expected_populations %{
+    value_kind:
+      MapSet.new([
+        Credence.Pattern.NoDoubleSortSameList,
+        Credence.Pattern.NoEnumTakeNegative,
+        Credence.Pattern.NoGroupByForFrequencies,
+        Credence.Pattern.NoIfEmptyForEnumMinMax,
+        Credence.Pattern.NoNestedEnumOnSameEnumerable,
+        Credence.Pattern.NoReduceForGroupBy,
+        Credence.Pattern.NoSortForTopK,
+        Credence.Pattern.NoSortThenAt,
+        Credence.Pattern.NoSortThenReverse,
+        Credence.Pattern.PreferDescSortOverNegativeTake,
+        Credence.Pattern.PreferMapIntersectOverMapsetIntersection,
+        Credence.Pattern.NoChunkByIdentityForDedup
+      ]),
+    grapheme:
+      MapSet.new([
+        Credence.Pattern.AvoidGraphemesEnumCount,
+        Credence.Pattern.AvoidGraphemesLength,
+        Credence.Pattern.NoGraphemePalindrome,
+        Credence.Pattern.NoManualStringReverse,
+        Credence.Pattern.NoNegativeStepInStringSlice,
+        Credence.Pattern.NoStringLengthForCharCheck,
+        Credence.Pattern.NoStringLengthForEmptyCheck,
+        Credence.Pattern.PreferCountsForLength,
+        Credence.Pattern.PreferMapsetForSetEquality,
+        Credence.Pattern.PreferStringSliceForTrimLastChar,
+        Credence.Pattern.UnnecessaryGraphemeChunking
+      ])
+  }
+
   # The predicates (`rule_stdlib_callees/1`, `value_kind_tie?/1`,
   # `multi_codepoint_grapheme?/1`, …) live in `Credence.MetaTestSupport` next to
   # the ones the sibling gates use, so one place defines what the project means
@@ -124,6 +161,7 @@ defmodule Credence.EquivalenceDimensionMetaTest do
       path: path,
       value_kind_class: value_kind_sensitive?(callees),
       grapheme_class: grapheme_sensitive?(callees),
+      value_kind_unconstructible: rule in @value_kind_unconstructible,
       declares_single_codepoint: :single_codepoint_graphemes in rule.assumptions()
     }
 
@@ -143,19 +181,19 @@ defmodule Credence.EquivalenceDimensionMetaTest do
             })
 
           :error ->
-            Map.merge(base, unjudgeable())
+            Map.merge(base, unjudgeable(marked))
         end
 
       :error ->
-        Map.merge(base, unjudgeable())
+        Map.merge(base, unjudgeable(true))
     end
   end
 
   # Not judged: an opt-out mark, a missing file (test 1 of `EquivalenceMetaTest`
   # owns that), or inputs that cannot be evaluated standalone.
-  defp unjudgeable do
+  defp unjudgeable(marked) do
     %{
-      judgeable: false,
+      judgeable: not marked,
       inputs: [],
       has_number: false,
       has_string: false,
@@ -168,21 +206,85 @@ defmodule Credence.EquivalenceDimensionMetaTest do
   # vacuity block and the gates cannot drift apart: each gate is exactly
   # `subjects |> Enum.reject(carries_the_trap)`.
   defp class1_subjects(all),
-    do: Enum.filter(all, fn a -> a.judgeable and a.value_kind_class and a.has_number end)
+    do:
+      Enum.filter(all, fn a ->
+        a.judgeable and a.value_kind_class and not a.value_kind_unconstructible
+      end)
 
   defp class2_subjects(all) do
     Enum.filter(all, fn a ->
-      a.judgeable and a.grapheme_class and a.has_string and not a.declares_single_codepoint
+      a.judgeable and a.grapheme_class and not a.declares_single_codepoint
     end)
+  end
+
+  # Kept as predicates so the controls themselves can be tested against a
+  # deliberately truncated population, rather than only today's healthy tree.
+  defp discovery_complete?(discovered, expected),
+    do: MapSet.new(discovered) == MapSet.new(expected)
+
+  defp populations_pinned?(actual, expected),
+    do: Map.new(actual, fn {class, subjects} -> {class, MapSet.new(subjects)} end) == expected
+
+  defp source_rules do
+    "lib/pattern/*.ex"
+    |> Path.wildcard()
+    |> Enum.flat_map(fn path ->
+      source = File.read!(path)
+
+      case Regex.run(~r/^defmodule (Credence\.Pattern\.[A-Za-z0-9_]+) do/m, source) do
+        [_, name] ->
+          if name != "Credence.Pattern.Rule" and
+               (String.contains?(source, "use Credence.Pattern.Rule") or
+                  String.contains?(source, "@behaviour Credence.Pattern.Rule")),
+             do: [Module.concat([name])],
+             else: []
+
+        nil ->
+          []
+      end
+    end)
+  end
+
+  describe "adversarial controls" do
+    test "an unevaluable sensitive test remains a gate subject" do
+      analysis = %{judgeable: true, value_kind_class: true, value_kind_unconstructible: false}
+      refute class1_subjects([analysis]) == []
+    end
+
+    test "chosen value kinds cannot remove an otherwise applicable rule" do
+      analysis = %{judgeable: true, value_kind_class: true, value_kind_unconstructible: false}
+      refute class1_subjects([analysis]) == []
+    end
+
+    test "chosen string values cannot remove an otherwise applicable rule" do
+      analysis = %{
+        judgeable: true,
+        grapheme_class: true,
+        declares_single_codepoint: false
+      }
+
+      refute class2_subjects([analysis]) == []
+    end
+
+    test "discovery control rejects the same missing rule on both sides" do
+      complete = [:one, :two]
+      refute discovery_complete?(tl(complete), complete)
+    end
+
+    test "population control rejects losing one of several subjects" do
+      expected = %{value_kind: MapSet.new([:one, :two]), grapheme: MapSet.new([:three, :four])}
+      actual = %{value_kind: [:one], grapheme: [:three]}
+      refute populations_pinned?(actual, expected)
+    end
   end
 
   describe "the gate cannot pass vacuously" do
     test "the analysis sees every Pattern rule" do
-      live = length(Credence.Pattern.default_rules())
-      seen = length(analyze_all())
+      live = source_rules()
+      seen = Enum.map(analyze_all(), & &1.rule)
 
-      assert seen == live,
-             "the gate analysed #{seen} rules but Credence.Pattern.default_rules/0 has #{live}. " <>
+      assert discovery_complete?(seen, live),
+             "the gate analysed #{length(seen)} rules but the rule source tree has #{length(live)}. " <>
                "Both checks below are over the analysed set, so a discovery that silently " <>
                "returns fewer rules than exist passes while saying nothing."
     end
@@ -199,17 +301,14 @@ defmodule Credence.EquivalenceDimensionMetaTest do
     test "each class has a non-empty subject population" do
       all = analyze_all()
 
-      empty =
-        [{"1 (value-kind)", class1_subjects(all)}, {"2 (grapheme)", class2_subjects(all)}]
-        |> Enum.filter(fn {_name, subjects} -> subjects == [] end)
-        |> Enum.map(&elem(&1, 0))
+      actual = %{
+        value_kind: Enum.map(class1_subjects(all), & &1.rule),
+        grapheme: Enum.map(class2_subjects(all), & &1.rule)
+      }
 
-      assert empty == [],
-             "class(es) #{Enum.join(empty, ", ")} have zero subjects, so the matching check " <>
-               "below asserts nothing. The trigger is `rule_stdlib_callees/1` — a regex over " <>
-               "whitespace-stripped rule source — so the usual cause is that the regex, " <>
-               "`@scanned_mods`, or the rules' emission shape changed and the class stopped " <>
-               "being detected. Re-derive the trigger; do not delete the check."
+      assert populations_pinned?(actual, @expected_populations),
+             "the exact value-kind or grapheme subject population changed. Re-derive the " <>
+               "trigger and update the pinned set only after reviewing every added or removed rule."
     end
   end
 

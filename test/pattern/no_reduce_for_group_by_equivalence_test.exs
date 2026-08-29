@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoReduceForGroupByEquivalenceTest do
   alias Credence.Pattern.NoReduceForGroupBy
 
   @expr """
-  Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, String.first(x), [x], &[x | &1]) end)
+  Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, x, [x], &[x | &1]) end)
   |> Map.new(fn {k, v} -> {k, Enum.reverse(v)} end)
   """
 
@@ -25,7 +25,8 @@ defmodule Credence.Pattern.NoReduceForGroupByEquivalenceTest do
         [],
         ["apple", "avocado", "banana"],
         ["a", "ab", "ac", "b"],
-        ["x", "y", "x", "z", "y"]
+        ["x", "y", "x", "z", "y"],
+        [1, 1.0, 2]
       ]
     )
   end

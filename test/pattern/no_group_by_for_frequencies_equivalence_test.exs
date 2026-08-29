@@ -14,7 +14,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesEquivalenceTest do
   defmodule Bad do
     def freq(words) do
       words
-      |> Enum.group_by(&String.downcase/1)
+      |> Enum.group_by(& &1)
       |> Map.new(fn {key, group} -> {key, length(group)} end)
     end
   end
@@ -24,7 +24,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesEquivalenceTest do
     assert_equivalent_module(@before,
       rule: NoGroupByForFrequencies,
       call: {:freq, 1},
-      inputs: [[], ["a", "A", "b"], ["x", "x", "x"], ["Cat", "cat", "Dog"]]
+      inputs: [[], ["a", "A", "b"], ["x", "x", "x"], [1, 1.0, 2]]
     )
   end
 end
