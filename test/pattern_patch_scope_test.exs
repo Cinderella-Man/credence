@@ -72,10 +72,23 @@ defmodule Credence.PatternPatchScopeTest do
   describe "the machinery is provable with the ledger empty" do
     @src ~S|x = foo("hello world")|
 
-    defp scan(rules), do: PatternPatchScope.scan(rules, fn _ -> [@src] end)
+    defp scan(rules, source \\ @src), do: PatternPatchScope.scan(rules, fn _ -> [source] end)
 
-    test "a patch that CUTS a literal in half is caught" do
-      assert [%{rule: PatchProbe.Splitter, side: _}] = scan([PatchProbe.Splitter])
+    test "a patch that CUTS each masked construct in half is caught" do
+      sources = [
+        ~S|x = foo("hello world")|,
+        ~S|x = foo('hello world')|,
+        ~S|x = foo(~s(hello world))|,
+        "x = \"\"\"\nhello world\n\"\"\"",
+        "x = :ok # hello world"
+      ]
+
+      for source <- sources do
+        assert [%{rule: PatchProbe.Splitter, fixture: ^source, side: side}] =
+                 scan([PatchProbe.Splitter], source)
+
+        assert side in [:start, :end]
+      end
     end
 
     test "a patch covering a WHOLE literal is not" do
@@ -90,8 +103,9 @@ defmodule Credence.PatternPatchScopeTest do
       assert scan([PatchProbe.Silent]) == []
     end
 
-    test "a raising rule is skipped rather than counted" do
-      assert scan([PatchProbe.Raiser]) == []
+    test "a raising rule is counted as an offender" do
+      assert [%{rule: PatchProbe.Raiser, fixture: @src, side: :crashed}] ==
+               scan([PatchProbe.Raiser])
     end
   end
 end
@@ -102,9 +116,19 @@ end
 # `x = foo("hello world")` — the literal body spans columns 10..20 inclusive of
 # its quotes at 9 and 21.
 defmodule PatchProbe.Splitter do
-  def fix_patches(_ast, _opts) do
-    # starts inside "hello world", ends inside it: a cut.
-    [%{range: %{start: [line: 1, column: 12], end: [line: 1, column: 17]}, change: "X"}]
+  def fix_patches(_ast, source: source) do
+    {offset, _length} = :binary.match(source, "hello world")
+
+    # Both positions are inside "hello world", so the range cuts whichever
+    # masked construct contains that marker.
+    range = %{start: position(source, offset + 2), end: position(source, offset + 7)}
+    [%{range: range, change: "X"}]
+  end
+
+  defp position(source, offset) do
+    prefix = binary_part(source, 0, offset)
+    lines = String.split(prefix, "\n")
+    [line: length(lines), column: String.length(List.last(lines)) + 1]
   end
 end
 

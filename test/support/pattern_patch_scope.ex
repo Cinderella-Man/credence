@@ -39,7 +39,23 @@ defmodule Credence.PatternPatchScope do
   @spec scan([module()], (module() -> [String.t()])) :: [map()]
   def scan(rules \\ Credence.Pattern.default_rules(), candidates \\ &default_candidates/1) do
     Enum.flat_map(rules, fn rule ->
-      rule |> candidates.() |> Enum.flat_map(&split_patches(rule, &1))
+      results = rule |> candidates.() |> Enum.map(&split_patches(rule, &1))
+      entries = for {:ok, found} <- results, entry <- found, do: entry
+
+      cond do
+        entries != [] ->
+          entries
+
+        Enum.any?(results, &match?({:ok, _}, &1)) ->
+          []
+
+        match = Enum.find(results, &match?({:error, :crashed, _}, &1)) ->
+          {:error, :crashed, fixture} = match
+          [%{rule: rule, fixture: fixture, side: :crashed}]
+
+        true ->
+          []
+      end
     end)
   end
 
@@ -48,24 +64,28 @@ defmodule Credence.PatternPatchScope do
 
   defp split_patches(rule, source) do
     with {:ok, ast} <- Sourceror.parse_string(source),
-         patches when is_list(patches) <- safe_patches(rule, ast, source) do
+         {:ok, patches} <- safe_patches(rule, ast, source) do
       mask = SourceMask.mask(source)
-      Enum.flat_map(patches, &check_range(rule, source, mask, &1))
+      {:ok, Enum.flat_map(patches, &check_range(rule, source, mask, &1))}
     else
-      _ -> []
+      {:error, :crashed} -> {:error, :crashed, source}
+      _ -> :skipped
     end
   rescue
-    _ -> []
+    _ -> {:error, :crashed, source}
   catch
-    _, _ -> []
+    _, _ -> {:error, :crashed, source}
   end
 
   defp safe_patches(rule, ast, source) do
-    rule.fix_patches(ast, source: source)
+    case rule.fix_patches(ast, source: source) do
+      patches when is_list(patches) -> {:ok, patches}
+      _ -> {:error, :invalid_return}
+    end
   rescue
-    _ -> nil
+    _ -> {:error, :crashed}
   catch
-    _, _ -> nil
+    _, _ -> {:error, :crashed}
   end
 
   defp check_range(rule, source, mask, %{range: %{start: s, end: e}}) do
