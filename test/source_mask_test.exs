@@ -227,6 +227,26 @@ defmodule Credence.SourceMaskTest do
       assert mask(~S|IO.puts(~ABC123(a div b))|) == "IO.puts(················)"
     end
 
+    test "paired sigil delimiters nest without exposing their contents as code" do
+      source = ~S|~s(outer (a % b) tail)|
+      shadow = SourceMask.mask(source)
+
+      assert show(shadow) == "······················"
+      assert SourceMask.replace_code(source, shadow, "%", "DIV") == source
+
+      assert SourceMask.replace_code("a % b", SourceMask.mask("a % b"), "%", "DIV") ==
+               "a DIV b"
+    end
+
+    test "sigil modifiers are masked with the sigil" do
+      source = ~S|~r/foo/iu|
+      shadow = SourceMask.mask(source)
+
+      assert show(shadow) == "·········"
+      assert SourceMask.replace_code(source, shadow, "i", "X") == source
+      assert SourceMask.replace_code("i = 1", SourceMask.mask("i = 1"), "i", "X") == "X = 1"
+    end
+
     test "sigil-shaped things that are not sigils are still code" do
       assert mask(~S|a ~ b|) == "a ~ b"
       assert mask(~S|x = ~~~5|) == "x = ~~~5"

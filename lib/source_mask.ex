@@ -52,9 +52,9 @@ defmodule Credence.SourceMask do
     * `\"\"\"` and `'''` heredocs, whose terminator is only recognised when
       nothing but whitespace precedes it on the line
     * sigils `~x` / `~NAME` with every delimiter pair — `" ' / |` and the
-      bracket pairs `( [ { <` — plus their heredoc forms. Elixir does not nest
-      paired sigil delimiters (`~s(a (b) c)` is a syntax error), so the first
-      unescaped close terminates.
+      bracket pairs `( [ { <` — plus their heredoc forms and modifiers. Paired
+      delimiters may nest, so only the close matching the outer opener
+      terminates the sigil.
     * `?x` character literals, including `?"`, `?'`, `?%`, `?#`, `?\\n`, the hex
       tail of `?\\xHH`, and multi-byte characters like `?é` — masked whole, so
       no fragment of one survives as a token. Elixir 1.20 has no `?\\xHH`
@@ -317,7 +317,7 @@ defmodule Credence.SourceMask do
 
   defp scan(<<>>, _stack, _prev, _bol, acc), do: acc
 
-  defp scan(bin, [{:str, _, _, _} | _] = stack, prev, bol, acc),
+  defp scan(bin, [{:str, _, _, _, _, _, _} | _] = stack, prev, bol, acc),
     do: str_scan(bin, stack, prev, bol, acc)
 
   defp scan(bin, stack, prev, bol, acc), do: code_scan(bin, stack, prev, bol, acc)
@@ -337,17 +337,52 @@ defmodule Credence.SourceMask do
     do: scan(rest, stack, ?\n, true, [?\n | acc])
 
   # `#{` opens real code, but only in an interpolating literal
-  defp str_scan(<<"\#{", rest::binary>>, [{:str, _, true, _} | _] = stack, _prev, _bol, acc),
-    do: scan(rest, [{:interp, 0} | stack], ?{, false, [@blank, @blank | acc])
+  defp str_scan(
+         <<"\#{", rest::binary>>,
+         [{:str, _, true, _, _, _, _} | _] = stack,
+         _prev,
+         _bol,
+         acc
+       ),
+       do: scan(rest, [{:interp, 0} | stack], ?{, false, [@blank, @blank | acc])
 
-  defp str_scan(bin, [{:str, close, _interp?, heredoc?} | outer] = stack, _prev, bol, acc) do
-    if terminates?(bin, close, heredoc?, bol) do
-      n = byte_size(close)
-      <<_::binary-size(^n), rest::binary>> = bin
-      scan(rest, outer, :binary.last(close), false, blanks(n, acc))
-    else
-      <<c, rest::binary>> = bin
-      scan(rest, stack, c, bol and horizontal_space?(c), [@blank | acc])
+  defp str_scan(
+         bin,
+         [{:str, close, interp?, heredoc?, open, depth, sigil?} | outer] = stack,
+         _prev,
+         bol,
+         acc
+       ) do
+    cond do
+      open != nil and String.starts_with?(bin, open) ->
+        n = byte_size(open)
+        <<_::binary-size(^n), rest::binary>> = bin
+        nested = {:str, close, interp?, heredoc?, open, depth + 1, sigil?}
+        scan(rest, [nested | outer], :binary.last(open), false, blanks(n, acc))
+
+      terminates?(bin, close, heredoc?, bol) and depth > 1 ->
+        n = byte_size(close)
+        <<_::binary-size(^n), rest::binary>> = bin
+        nested = {:str, close, interp?, heredoc?, open, depth - 1, sigil?}
+        scan(rest, [nested | outer], :binary.last(close), false, blanks(n, acc))
+
+      terminates?(bin, close, heredoc?, bol) ->
+        close_len = byte_size(close)
+        <<_::binary-size(^close_len), rest::binary>> = bin
+        modifier_len = if sigil?, do: sigil_modifier_len(rest, 0), else: 0
+        <<_::binary-size(^modifier_len), rest::binary>> = rest
+
+        scan(
+          rest,
+          outer,
+          :binary.last(close),
+          false,
+          blanks(close_len + modifier_len, acc)
+        )
+
+      true ->
+        <<c, rest::binary>> = bin
+        scan(rest, stack, c, bol and horizontal_space?(c), [@blank | acc])
     end
   end
 
@@ -401,12 +436,12 @@ defmodule Credence.SourceMask do
 
   defp code_scan(<<"~", rest::binary>>, stack, prev, bol, acc) do
     case sigil_open(rest) do
-      {:ok, len, close, interp?, heredoc?} ->
+      {:ok, len, close, interp?, heredoc?, open} ->
         <<_::binary-size(^len), after_delim::binary>> = rest
 
         scan(
           after_delim,
-          [{:str, close, interp?, heredoc?} | stack],
+          [{:str, close, interp?, heredoc?, open, 1, true} | stack],
           :binary.last(close),
           false,
           blanks(len + 1, acc)
@@ -419,16 +454,17 @@ defmodule Credence.SourceMask do
   end
 
   defp code_scan(<<"\"\"\"", rest::binary>>, stack, _prev, _bol, acc),
-    do: scan(rest, [{:str, "\"\"\"", true, true} | stack], ?", false, blanks(3, acc))
+    do:
+      scan(rest, [{:str, "\"\"\"", true, true, nil, 1, false} | stack], ?", false, blanks(3, acc))
 
   defp code_scan(<<"'''", rest::binary>>, stack, _prev, _bol, acc),
-    do: scan(rest, [{:str, "'''", true, true} | stack], ?', false, blanks(3, acc))
+    do: scan(rest, [{:str, "'''", true, true, nil, 1, false} | stack], ?', false, blanks(3, acc))
 
   defp code_scan(<<"\"", rest::binary>>, stack, _prev, _bol, acc),
-    do: scan(rest, [{:str, "\"", true, false} | stack], ?", false, [@blank | acc])
+    do: scan(rest, [{:str, "\"", true, false, nil, 1, false} | stack], ?", false, [@blank | acc])
 
   defp code_scan(<<"'", rest::binary>>, stack, _prev, _bol, acc),
-    do: scan(rest, [{:str, "'", true, false} | stack], ?', false, [@blank | acc])
+    do: scan(rest, [{:str, "'", true, false, nil, 1, false} | stack], ?', false, [@blank | acc])
 
   # brace tracking so `#{%{a: 1}}` finds the right closing brace
   defp code_scan(<<"{", rest::binary>>, [{:interp, d} | outer], _prev, _bol, acc),
@@ -532,19 +568,32 @@ defmodule Credence.SourceMask do
   end
 
   defp sigil_delimiter(<<"\"\"\"", _::binary>>, name, interp?),
-    do: {:ok, name + 3, "\"\"\"", interp?, true}
+    do: {:ok, name + 3, "\"\"\"", interp?, true, nil}
 
   defp sigil_delimiter(<<"'''", _::binary>>, name, interp?),
-    do: {:ok, name + 3, "'''", interp?, true}
+    do: {:ok, name + 3, "'''", interp?, true, nil}
 
   defp sigil_delimiter(<<c, _::binary>>, name, interp?) when c in [?", ?', ?/, ?|],
-    do: {:ok, name + 1, <<c>>, interp?, false}
+    do: {:ok, name + 1, <<c>>, interp?, false, nil}
 
-  defp sigil_delimiter(<<?(, _::binary>>, name, interp?), do: {:ok, name + 1, ")", interp?, false}
-  defp sigil_delimiter(<<?[, _::binary>>, name, interp?), do: {:ok, name + 1, "]", interp?, false}
-  defp sigil_delimiter(<<?{, _::binary>>, name, interp?), do: {:ok, name + 1, "}", interp?, false}
-  defp sigil_delimiter(<<?<, _::binary>>, name, interp?), do: {:ok, name + 1, ">", interp?, false}
+  defp sigil_delimiter(<<?(, _::binary>>, name, interp?),
+    do: {:ok, name + 1, ")", interp?, false, "("}
+
+  defp sigil_delimiter(<<?[, _::binary>>, name, interp?),
+    do: {:ok, name + 1, "]", interp?, false, "["}
+
+  defp sigil_delimiter(<<?{, _::binary>>, name, interp?),
+    do: {:ok, name + 1, "}", interp?, false, "{"}
+
+  defp sigil_delimiter(<<?<, _::binary>>, name, interp?),
+    do: {:ok, name + 1, ">", interp?, false, "<"}
+
   defp sigil_delimiter(_, _name, _interp?), do: :error
+
+  defp sigil_modifier_len(<<c, rest::binary>>, n) when c in ?a..?z or c in ?A..?Z,
+    do: sigil_modifier_len(rest, n + 1)
+
+  defp sigil_modifier_len(_bin, n), do: n
 
   # A sigil name is one lowercase letter, or an uppercase letter followed by
   # alphanumerics — `~B64(...)` and `~ABC123(...)` are both real sigils. Counting
