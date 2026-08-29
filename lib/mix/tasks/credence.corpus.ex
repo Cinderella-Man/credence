@@ -145,7 +145,6 @@ defmodule Mix.Tasks.Credence.Corpus do
         Mix.raise("--only-rule takes no other arguments.\n#{usage()}")
 
       opts[:only_rule] ->
-        assert_complete_corpus!(Corpus.entries(), &Corpus.fetched?/1)
         report_only_rule(opts[:only_rule])
 
       rest == [] ->
@@ -270,6 +269,7 @@ defmodule Mix.Tasks.Credence.Corpus do
   defp report_only_rule(name) do
     shell = Mix.shell()
     %{rule_module: module, snake: snake} = resolve_rule!(name)
+    assert_complete_corpus!(Corpus.entries(), &Corpus.fetched?/1)
     assert_enabled!(module, snake, Credence.Pattern.rule_status([]))
 
     total = Enum.sum(for {entry, _} <- Corpus.entries(), do: length(Corpus.lib_files(entry)))
@@ -332,7 +332,13 @@ defmodule Mix.Tasks.Credence.Corpus do
             "before scanning, or scan the full corpus."
         )
 
-      _ ->
+      nil ->
+        Mix.raise(
+          "#{snake} has no assumption status, so a scoped corpus scan cannot " <>
+            "prove that the rule is enabled."
+        )
+
+      %{enabled: true} ->
         :ok
     end
   end

@@ -17,6 +17,22 @@ defmodule Credence.CorpusTaskTest do
 
   @rule Credence.Pattern.NoUniqThenCount
 
+  describe "run/1" do
+    test "--only-rule dispatches through rule validation before requiring the corpus" do
+      error =
+        assert_raise Mix.Error, fn ->
+          CorpusTask.run(["--only-rule", "Credence.Syntax.FixDivRem"])
+        end
+
+      assert error.message ==
+               "Credence.Syntax.FixDivRem is not a Pattern rule, and the corpus layer is " <>
+                 "Pattern-only (over-firing, fix-safety, scope-parity and fix-breakage all " <>
+                 "analyze via Credence.Pattern). A candidate that touches only lib/syntax/ " <>
+                 "or lib/semantic/ cannot change any corpus verdict — skip the corpus phase " <>
+                 "entirely (docs/13 P3)."
+    end
+  end
+
   describe "resolve_rule!/1" do
     test "accepts the snake name" do
       assert CorpusTask.resolve_rule!("no_uniq_then_count").rule_module == @rule
@@ -102,6 +118,17 @@ defmodule Credence.CorpusTaskTest do
           %{rule: @rule, enabled: false, missing: [:some_promise]}
         ])
       end
+    end
+
+    test "raises when the requested rule has no status entry" do
+      error =
+        assert_raise Mix.Error, fn ->
+          CorpusTask.assert_enabled!(@rule, "no_uniq_then_count", [])
+        end
+
+      assert error.message ==
+               "no_uniq_then_count has no assumption status, so a scoped corpus scan cannot " <>
+                 "prove that the rule is enabled."
     end
 
     test "every shipped Pattern rule is scopeable today" do
