@@ -102,30 +102,41 @@ defmodule Credence.FixByteScope do
 
   defp non_code_edits(rule, source, diagnostic) do
     case safe_fix(rule, source, diagnostic) do
-      ^source ->
+      {:ok, ^source} ->
         []
 
-      nil ->
+      {:ok, nil} ->
         []
 
-      fixed ->
+      {:ok, fixed} ->
         was_shadows = shadow_lines(source)
         now_shadows = shadow_lines(fixed)
 
         source
         |> changed_lines(fixed)
         |> Enum.flat_map(&flag(rule, source, &1, was_shadows, now_shadows))
+
+      {:error, reason} ->
+        [
+          %{
+            rule: rule,
+            fixture: source,
+            line: 0,
+            was: "fix/2 completed",
+            now: reason
+          }
+        ]
     end
   end
 
   defp shadow_lines(source), do: source |> SourceMask.lines() |> Enum.map(&elem(&1, 1))
 
   defp safe_fix(rule, source, diagnostic) do
-    rule.fix(source, diagnostic)
+    {:ok, rule.fix(source, diagnostic)}
   rescue
-    _ -> nil
+    error -> {:error, "fix/2 raised #{inspect(error.__struct__)}: #{Exception.message(error)}"}
   catch
-    _, _ -> nil
+    kind, reason -> {:error, "fix/2 #{kind}: #{inspect(reason)}"}
   end
 
   # Pair up lines that were rewritten in place. `myers_difference` reports a

@@ -104,8 +104,16 @@ defmodule Credence.FixByteScopeTest do
       assert probe_scan([ByteScopeProbe.Decliner]) == []
     end
 
-    test "a raising rule is skipped, not counted and not fatal" do
-      assert probe_scan([ByteScopeProbe.Raiser]) == []
+    test "a rule whose fix/2 raises is a hit, not a skip" do
+      assert probe_scan([ByteScopeProbe.Raiser]) == [
+               %{
+                 rule: ByteScopeProbe.Raiser,
+                 fixture: ByteScopeProbe.fixture(),
+                 line: 0,
+                 was: "fix/2 completed",
+                 now: "fix/2 raised RuntimeError: probe"
+               }
+             ]
     end
   end
 end
