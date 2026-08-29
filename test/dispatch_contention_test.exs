@@ -148,7 +148,7 @@ defmodule Credence.DispatchContentionTest do
                []
     end
 
-    test "CONTROL: a raising match?/1 counts as a decline, not a claim" do
+    test "a raising match?/1 propagates like the real dispatcher" do
       diagnostic = %{
         severity: :error,
         message: "undefined function ghost/0",
@@ -156,8 +156,34 @@ defmodule Credence.DispatchContentionTest do
         file: "x.ex"
       }
 
-      assert Contention.claimers([ContentionProbe.Exploding, ContentionProbe.Greedy], diagnostic) ==
-               [ContentionProbe.Greedy]
+      assert_raise RuntimeError, "match?/1 blew up", fn ->
+        Contention.claimers([ContentionProbe.Exploding, ContentionProbe.Greedy], diagnostic)
+      end
+    end
+
+    test "captured diagnostics retain equal messages at different severities" do
+      # These are compiled through `captured_diagnostics/1`; they make the
+      # compiler emit the same message once as a warning and once as an error.
+      warning_source = "IO.warn(\"dispatch severity probe\")"
+      error_source = "raise CompileError, description: \"dispatch severity probe\""
+
+      assert warning_source != error_source
+
+      key = {Credence.PipelineWitness, :index, :semantic}
+      prior_index = :persistent_term.get(key)
+
+      on_exit(fn -> :persistent_term.put(key, prior_index) end)
+
+      :persistent_term.put(key, %{
+        ContentionSeverityProbe: [warning_source, error_source]
+      })
+
+      diagnostics = Contention.captured_diagnostics([Credence.Semantic.ContentionSeverityProbe])
+
+      assert diagnostics
+             |> Enum.filter(&(&1.message == "dispatch severity probe"))
+             |> Enum.map(& &1.severity)
+             |> Enum.sort() == [:error, :warning]
     end
   end
 
@@ -204,4 +230,9 @@ end
 defmodule ContentionProbe.Exploding do
   def match?(_diagnostic), do: raise("match?/1 blew up")
   def priority, do: 499
+end
+
+# Its name puts it in the Semantic fixture index. The gate only needs the
+# module identity here; the two sources in the test above are its candidates.
+defmodule Credence.Semantic.ContentionSeverityProbe do
 end

@@ -31,9 +31,10 @@ defmodule Credence.DispatchContention do
   @doc """
   Every distinct diagnostic that `rules`' own witness fixtures actually produce.
 
-  Distinct by message: the same defect in twenty fixtures is one dispatch
-  question, and the module name embedded in a diagnostic would otherwise make
-  twenty of them.
+  Distinct by severity and message: the same defect in twenty fixtures is one
+  dispatch question, and the module name embedded in a diagnostic would
+  otherwise make twenty of them. Severity remains part of the question because
+  rules may accept only warnings or only errors.
   """
   @spec captured_diagnostics([module()]) :: [map()]
   def captured_diagnostics(rules) do
@@ -44,7 +45,7 @@ defmodule Credence.DispatchContention do
       |> Enum.flat_map(&diagnostics_of/1)
     end)
     |> Enum.reject(&String.starts_with?(&1.message, @self_reported))
-    |> Enum.uniq_by(& &1.message)
+    |> Enum.uniq_by(&{&1.severity, &1.message})
   end
 
   defp diagnostics_of(source) do
@@ -68,20 +69,11 @@ defmodule Credence.DispatchContention do
   @doc """
   The rules whose `match?/1` accepts `diagnostic`, in dispatch order.
 
-  A raising `match?/1` counts as a decline, matching what `Enum.find` would do
-  after C6's per-rule crash isolation rather than what it would do here.
+  Exceptions propagate, matching the Semantic dispatcher's predicate calls.
   """
   @spec claimers([module()], map()) :: [module()]
   def claimers(rules, diagnostic) do
-    Enum.filter(rules, fn rule ->
-      try do
-        rule.match?(diagnostic)
-      rescue
-        _ -> false
-      catch
-        _, _ -> false
-      end
-    end)
+    Enum.filter(rules, & &1.match?(diagnostic))
   end
 
   @doc "Dispatch order for `rules` — the same ordering `discover_rules/1` applies."
