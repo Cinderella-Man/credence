@@ -54,6 +54,29 @@ defmodule Credence.RuleSelfRepairTest do
 
   alias Credence.RuleDuplication
 
+  defp successfully_applied?(applied, rule) do
+    match?({^rule, count} when is_integer(count), List.keyfind(applied, rule, 0))
+  end
+
+  defp repaired_output?(before, after_source, applied, rule, anti_pattern_survives?) do
+    before != after_source and successfully_applied?(applied, rule) and
+      not anti_pattern_survives?
+  end
+
+  defp cascade_applied?(applied, rule), do: successfully_applied?(applied, rule)
+
+  defp pattern_survives?(rule, source) do
+    with {:ok, ast} <- Sourceror.parse_string(source) do
+      rule.check(ast, source: source) != []
+    else
+      _ -> true
+    end
+  rescue
+    _ -> true
+  catch
+    _, _ -> true
+  end
+
   # Rules whose Bad example is repaired by a DIFFERENT rule reaching it first.
   # This is the Pattern round working as designed — it is a cascade, and the
   # earlier rule leaves nothing for the later one to match. Ledgered rather than
@@ -76,12 +99,24 @@ defmodule Credence.RuleSelfRepairTest do
             bad = RuleDuplication.bad_example(rule),
             bad not in [nil, ""] do
           {code, applied} = Credence.Pattern.fix_with_trace(bad)
+          survives? = pattern_survives?(rule, code)
 
           status =
             case List.keyfind(applied, rule, 0) do
-              {^rule, count} when is_integer(count) -> :repaired
-              {^rule, other} -> other
-              nil -> if code != bad, do: :repaired_by_another, else: :untouched
+              {^rule, count} when is_integer(count) ->
+                if repaired_output?(bad, code, applied, rule, survives?),
+                  do: :repaired,
+                  else: :survived
+
+              {^rule, other} ->
+                other
+
+              nil ->
+                cond do
+                  code == bad -> :untouched
+                  survives? -> :survived
+                  true -> :repaired_by_another
+                end
             end
 
           {rule, status}
@@ -118,11 +153,12 @@ defmodule Credence.RuleSelfRepairTest do
       stale =
         for {rule, expected} <- @cascade do
           bad = RuleDuplication.bad_example(rule)
-          {_code, applied} = Credence.Pattern.fix_with_trace(bad)
+          {code, applied} = Credence.Pattern.fix_with_trace(bad)
 
           cond do
             List.keyfind(applied, rule, 0) != nil -> {rule, :fires_itself_now}
-            List.keyfind(applied, expected, 0) == nil -> {rule, :different_rule_now}
+            not cascade_applied?(applied, expected) -> {rule, :different_rule_now}
+            pattern_survives?(rule, code) -> {rule, :anti_pattern_survived}
             true -> nil
           end
         end
@@ -152,6 +188,18 @@ defmodule Credence.RuleSelfRepairTest do
 
       assert code == clean
       assert applied == []
+    end
+
+    test "a positive trace is not success when the anti-pattern survives" do
+      rule = Credence.Pattern.NoEnumCountForLength
+
+      refute repaired_output?("before", "after", [{rule, 1}], rule, true)
+    end
+
+    test "a failed cascade trace entry is not an applied repair" do
+      rule = Credence.Pattern.NoEnumCountForLength
+
+      refute cascade_applied?([{rule, :reverted}], rule)
     end
   end
 
@@ -196,8 +244,15 @@ defmodule Credence.RuleSelfRepairTest do
     end
 
     defp repaired_by?(rule, source) do
-      {_code, applied} = Credence.Semantic.fix_with_trace(source)
-      match?({^rule, count} when is_integer(count), List.keyfind(applied, rule, 0))
+      {code, applied} = Credence.Semantic.fix_with_trace(source)
+
+      repaired_output?(
+        source,
+        code,
+        applied,
+        rule,
+        Credence.Semantic.analyze(code, semantic_rules: [rule]) != []
+      )
     rescue
       _ -> false
     catch
