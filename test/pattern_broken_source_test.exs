@@ -42,7 +42,12 @@ defmodule Credence.PatternBrokenSourceTest do
     test "the Pattern round runs and applies the repair" do
       result = Credence.fix(@broken)
 
-      assert result.code =~ "Enum.find(nums, &even?/1)"
+      assert result.code == """
+             defmodule PbsBroken do
+               def first_even(nums), do: Enum.find(nums, &even?/1)
+             end
+             """
+
       assert {Credence.Pattern.NoFilterThenFirst, 1} in result.applied_rules
     end
 
@@ -54,7 +59,11 @@ defmodule Credence.PatternBrokenSourceTest do
     end
 
     test "the same idiom in a compiling file is repaired identically" do
-      assert Credence.fix(@clean).code =~ "Enum.find(nums, &(rem(&1, 2) == 0))"
+      assert Credence.fix(@clean).code == """
+             defmodule PbsClean do
+               def first_even(nums), do: Enum.find(nums, &(rem(&1, 2) == 0))
+             end
+             """
     end
   end
 
