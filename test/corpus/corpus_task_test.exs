@@ -114,6 +114,26 @@ defmodule Credence.CorpusTaskTest do
     end
   end
 
+  describe "assert_complete_corpus!/2" do
+    test "raises when even one corpus entry is missing" do
+      entries = [{:fetched, "1.0.0"}, {:missing, "2.0.0"}]
+
+      error =
+        assert_raise Mix.Error, fn ->
+          CorpusTask.assert_complete_corpus!(entries, &(&1 == :fetched))
+        end
+
+      assert error.message ==
+               "The corpus is incomplete; missing 1 of 2 entries (including missing). " <>
+                 "Run `mix credence.corpus.fetch` before using --only-rule."
+    end
+
+    test "passes when every corpus entry is fetched" do
+      entries = [{:first, "1.0.0"}, {:second, "2.0.0"}]
+      assert CorpusTask.assert_complete_corpus!(entries, fn _ -> true end) == :ok
+    end
+  end
+
   describe "drift/2" do
     test "no drift when the live findings are the accepted ones" do
       lines = ["a.ex:1  r", "b.ex:2  r"]

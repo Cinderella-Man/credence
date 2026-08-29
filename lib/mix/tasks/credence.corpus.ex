@@ -145,7 +145,7 @@ defmodule Mix.Tasks.Credence.Corpus do
         Mix.raise("--only-rule takes no other arguments.\n#{usage()}")
 
       opts[:only_rule] ->
-        require_corpus!()
+        assert_complete_corpus!(Corpus.entries(), &Corpus.fetched?/1)
         report_only_rule(opts[:only_rule])
 
       rest == [] ->
@@ -182,6 +182,29 @@ defmodule Mix.Tasks.Credence.Corpus do
         "No corpus found in #{Corpus.root()}/. " <>
           "Run `mix credence.corpus.fetch` first (or `mix test`)."
       )
+    end
+  end
+
+  @doc false
+  def assert_complete_corpus!(entries, fetched?) do
+    missing = for {name, _} <- entries, not fetched?.(name), do: name
+
+    cond do
+      length(missing) == length(entries) ->
+        Mix.raise(
+          "No corpus found in #{Corpus.root()}/. " <>
+            "Run `mix credence.corpus.fetch` first (or `mix test`)."
+        )
+
+      missing != [] ->
+        Mix.raise(
+          "The corpus is incomplete; missing #{length(missing)} of #{length(entries)} entries " <>
+            "(including #{missing |> Enum.take(5) |> Enum.map_join(", ", &to_string/1)}). " <>
+            "Run `mix credence.corpus.fetch` before using --only-rule."
+        )
+
+      true ->
+        :ok
     end
   end
 
