@@ -19,6 +19,21 @@ defmodule Credence.EquivTaskTest do
     :ok
   end
 
+  setup do
+    old_heap = Application.get_env(:credence, :equiv_max_heap_words)
+    old_timeout = Application.get_env(:credence, :equiv_timeout_ms)
+
+    on_exit(fn ->
+      restore_env(:equiv_max_heap_words, old_heap)
+      restore_env(:equiv_timeout_ms, old_timeout)
+    end)
+
+    :ok
+  end
+
+  defp restore_env(key, nil), do: Application.delete_env(:credence, key)
+  defp restore_env(key, value), do: Application.put_env(:credence, key, value)
+
   defp run(dir, before_src, after_src, extra) do
     b = Path.join(dir, "before.exs")
     a = Path.join(dir, "after.exs")
@@ -67,6 +82,99 @@ defmodule Credence.EquivTaskTest do
 
       assert out =~ "DIVERGES"
       refute out =~ "SKIPPED"
+    end
+  end
+
+  describe "message-aware exception outcomes" do
+    @tag :tmp_dir
+    test "identical raises are SKIPPED when messages are compared", %{tmp_dir: dir} do
+      out =
+        run(dir, ~S(raise ArgumentError, "same"), ~S(raise ArgumentError, "same"), [
+          "--vars",
+          "x",
+          "--dim",
+          "signed_integers",
+          "--compare-messages"
+        ])
+
+      assert out ==
+               "SKIPPED all_raised — every input made BOTH sides raise, so the battery " <>
+                 "never reached the behaviour under test. Choose inputs in the admitted domain."
+    end
+
+    @tag :tmp_dir
+    test "a changed exception class cannot be classified as REPAIR", %{tmp_dir: dir} do
+      inputs = Path.join(dir, "inputs.exs")
+      File.write!(inputs, "[0, 1]")
+
+      out =
+        run(
+          dir,
+          "if x == 0, do: :same, else: raise(ArgumentError)",
+          "if x == 0, do: :same, else: raise(RuntimeError)",
+          ["--vars", "x", "--inputs-file", inputs]
+        )
+
+      assert out ==
+               "DIVERGES input=1 before={:raise, ArgumentError} after={:raise, RuntimeError}"
+    end
+  end
+
+  describe "bounded user evaluation" do
+    @tag :tmp_dir
+    test "a nonterminating expression is stopped by the evaluation deadline", %{tmp_dir: dir} do
+      Application.put_env(:credence, :equiv_timeout_ms, 25)
+      inputs = Path.join(dir, "inputs.exs")
+      File.write!(inputs, "[1]")
+
+      out =
+        run(dir, "Stream.cycle([1]) |> Enum.to_list()", "x", [
+          "--vars",
+          "x",
+          "--inputs-file",
+          inputs
+        ])
+
+      assert out == "DIVERGES input=1 before={:aborted, :timeout} after={:ok, 1}"
+    end
+
+    @tag :tmp_dir
+    test "an allocating expression is stopped by the evaluation heap ceiling", %{tmp_dir: dir} do
+      Application.put_env(:credence, :equiv_max_heap_words, 50_000)
+      inputs = Path.join(dir, "inputs.exs")
+      File.write!(inputs, "[1]")
+
+      out =
+        run(dir, "Enum.to_list(1..1_000_000)", "x", [
+          "--vars",
+          "x",
+          "--inputs-file",
+          inputs
+        ])
+
+      assert out == "DIVERGES input=1 before={:aborted, :heap_limit} after={:ok, 1}"
+    end
+
+    @tag :tmp_dir
+    test "a nonterminating inputs file is stopped by the evaluation deadline", %{tmp_dir: dir} do
+      Application.put_env(:credence, :equiv_timeout_ms, 25)
+      inputs = Path.join(dir, "inputs.exs")
+      File.write!(inputs, "Stream.cycle([1]) |> Enum.to_list()")
+
+      assert_raise Mix.Error, "inputs file evaluation aborted: time budget exceeded", fn ->
+        run(dir, "x", "x", ["--vars", "x", "--inputs-file", inputs])
+      end
+    end
+
+    @tag :tmp_dir
+    test "an allocating inputs file is stopped by the evaluation heap ceiling", %{tmp_dir: dir} do
+      Application.put_env(:credence, :equiv_max_heap_words, 50_000)
+      inputs = Path.join(dir, "inputs.exs")
+      File.write!(inputs, "Enum.to_list(1..1_000_000)")
+
+      assert_raise Mix.Error, "inputs file evaluation aborted: heap ceiling exceeded", fn ->
+        run(dir, "x", "x", ["--vars", "x", "--inputs-file", inputs])
+      end
     end
   end
 

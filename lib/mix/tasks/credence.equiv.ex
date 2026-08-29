@@ -82,6 +82,9 @@ defmodule Mix.Tasks.Credence.Equiv do
   @all_dims [:term_lists, :signed_integers, :stability_lists] ++
               @all_string_dims ++ @collection_dims ++ @struct_dims
 
+  @eval_max_heap_words 8_000_000
+  @eval_timeout_ms 1_000
+
   @impl Mix.Task
   def run(argv) do
     ensure_test_env!()
@@ -154,8 +157,8 @@ defmodule Mix.Tasks.Credence.Equiv do
           :equivalent
 
         repair?(pairs) ->
-          raised = Enum.filter(pairs, fn {_i, ob, _oa} -> match?({:raise, _}, ob) end)
-          {:raise, exc} = elem(hd(raised), 1)
+          raised = Enum.filter(pairs, fn {_i, ob, _oa} -> raised?(ob) end)
+          exc = raised |> hd() |> elem(1) |> exception_module()
           {:repair, exc, length(raised), length(pairs)}
 
         true ->
@@ -167,8 +170,10 @@ defmodule Mix.Tasks.Credence.Equiv do
     end
   end
 
-  # REPAIR iff every input either RAISED on the before, or the two sides already
-  # AGREE — and the after succeeded on at least one.
+  # REPAIR iff the before always raised and the after succeeded at least once,
+  # or, for a partial repair, every input either already AGREES or changes a
+  # raise into a value. A partial repair may not change one exception into a
+  # different exception: that is a divergence under the task's own policy.
   #
   # The "already agree" half is escalation-ledger H-B. Demanding the before
   # raise on *every* input killed row 185, where the hallucinated call is
@@ -183,11 +188,23 @@ defmodule Mix.Tasks.Credence.Equiv do
   # untouched, so a repair that is itself broken — row 105's `File.stream/1` —
   # remains DIVERGES.
   defp repair?(pairs) do
-    Enum.all?(pairs, fn {_i, ob, oa} -> match?({:raise, _}, ob) or ob === oa end) and
-      Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
+    after_succeeds? = Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
+    before_always_raises? = Enum.all?(pairs, fn {_i, ob, _oa} -> raised?(ob) end)
+
+    admissible_partial_repair? =
+      Enum.all?(pairs, fn {_i, ob, oa} ->
+        ob === oa or (raised?(ob) and match?({:ok, _}, oa))
+      end)
+
+    after_succeeds? and (before_always_raises? or admissible_partial_repair?)
   end
 
-  defp raised?(outcome), do: match?({:raise, _}, outcome)
+  defp raised?({:raise, _module}), do: true
+  defp raised?({:raise, _module, _message}), do: true
+  defp raised?(_outcome), do: false
+
+  defp exception_module({:raise, module}), do: module
+  defp exception_module({:raise, module, _message}), do: module
 
   # ── Minimal switch set ──────────────────────────────────────────────────
 
@@ -220,8 +237,10 @@ defmodule Mix.Tasks.Credence.Equiv do
   defp base_inputs(opts, vars) do
     cond do
       file = opts[:inputs_file] ->
-        {term, _} = Code.eval_string(File.read!(file))
-        term
+        case bounded(fn -> Code.eval_string(File.read!(file)) end) do
+          {:ok, {term, _binding}} -> term
+          {:aborted, reason} -> Mix.raise("inputs file evaluation aborted: #{abort_text(reason)}")
+        end
 
       opts[:dim] ->
         opts[:dim]
@@ -306,8 +325,59 @@ defmodule Mix.Tasks.Credence.Equiv do
     # test/support module, absent under :dev, so a static call would warn
     # "undefined function" at compile time. The task only runs under :test.
     # credo:disable-for-next-line Credo.Check.Refactor.Apply
-    apply(Credence.BehaviourEquivalence, :eval_outcome, [thunk, compare_messages?])
+    case bounded(fn ->
+           apply(Credence.BehaviourEquivalence, :eval_outcome, [thunk, compare_messages?])
+         end) do
+      {:ok, outcome} -> outcome
+      {:aborted, reason} -> {:aborted, reason}
+    end
   end
+
+  defp bounded(fun) do
+    parent = self()
+    tag = make_ref()
+    {heap_words, timeout_ms} = eval_bounds()
+
+    {pid, monitor} =
+      spawn_monitor(fn ->
+        Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
+        send(parent, {tag, fun.()})
+      end)
+
+    receive do
+      {^tag, result} ->
+        Process.demonitor(monitor, [:flush])
+        {:ok, result}
+
+      {:DOWN, ^monitor, :process, ^pid, :killed} ->
+        {:aborted, :heap_limit}
+
+      {:DOWN, ^monitor, :process, ^pid, reason} ->
+        {:aborted, {:exited, reason}}
+    after
+      timeout_ms ->
+        Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
+        after
+          1_000 -> :ok
+        end
+
+        {:aborted, :timeout}
+    end
+  end
+
+  defp eval_bounds do
+    {
+      Application.get_env(:credence, :equiv_max_heap_words, @eval_max_heap_words),
+      Application.get_env(:credence, :equiv_timeout_ms, @eval_timeout_ms)
+    }
+  end
+
+  defp abort_text(:heap_limit), do: "heap ceiling exceeded"
+  defp abort_text(:timeout), do: "time budget exceeded"
+  defp abort_text({:exited, reason}), do: "evaluator exited (#{inspect(reason)})"
 
   defp to_args(_input, []), do: []
 
