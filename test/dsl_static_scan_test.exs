@@ -104,6 +104,33 @@ defmodule Credence.DslStaticScanTest do
   end
 
   describe "the gate cannot pass vacuously" do
+    @tag :tmp_dir
+    test "fabricated rules exercise every decision that can empty the ledger", %{tmp_dir: tmp_dir} do
+      sources = [
+        {"construct",
+         "defmodule FabricatedConstruct do\n  def fix_patches(_, _), do: {:if, [], []}\nend"},
+        {"reachable",
+         "defmodule FabricatedReachable do\n  def fix_patches(_, _), do: helper()\n  defp helper, do: {:if, [], []}\nend"},
+        {"anchored",
+         "defmodule FabricatedAnchored do\n  def fix_patches({:def, _, _}, _), do: {:if, [], []}\nend"},
+        {"declared",
+         "defmodule FabricatedDeclared do\n  def unsafe_in_dsl, do: []\n  def fix_patches(_, _), do: {:if, [], []}\nend"}
+      ]
+
+      Enum.each(sources, fn {name, source} ->
+        File.write!(Path.join(tmp_dir, name <> ".ex"), source)
+      end)
+
+      buckets = tmp_dir |> DslStaticScan.scan([]) |> Map.new(&{&1.name, &1.bucket})
+
+      assert buckets == %{
+               "anchored" => :anchored,
+               "construct" => :possibly_unsafe,
+               "declared" => :declared,
+               "reachable" => :possibly_unsafe
+             }
+    end
+
     test "the scan sees every Pattern rule", %{entries: entries} do
       live = length(Credence.Pattern.default_rules())
 
@@ -142,6 +169,18 @@ defmodule Credence.DslStaticScanTest do
       unknown = entries |> Enum.map(& &1.bucket) |> Enum.uniq() |> Enum.reject(&(&1 in known))
 
       assert unknown == [], "unknown bucket(s): #{inspect(unknown)}"
+    end
+
+    test "the live scan retains classified and construct-bearing populations", %{entries: entries} do
+      tally = DslStaticScan.tally(entries)
+      classified = Map.get(tally, :declared, 0) + Map.get(tally, :verified_safe, 0)
+      construct_bearing = length(entries) - Map.get(tally, :no_construct, 0)
+
+      assert classified >= 90,
+             "only #{classified} rules remain explicitly classified; the live floor is 90"
+
+      assert construct_bearing >= 50,
+             "only #{construct_bearing} rules remain construct-bearing; the live floor is 50"
     end
   end
 
