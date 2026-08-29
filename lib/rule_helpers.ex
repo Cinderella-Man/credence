@@ -212,23 +212,33 @@ defmodule Credence.RuleHelpers do
   # is used because it needs no supervision tree — this library has none — and
   # `[node()]` keeps it local.
   defp with_module_lock(source, fun) do
-    case module_key(source) do
-      nil -> fun.()
-      key -> :global.trans({{__MODULE__, key}, self()}, fun, [node()])
-    end
+    source
+    |> module_keys()
+    |> lock_modules(fun)
   end
 
-  # The module names a source defines, as one key. A cheap regex rather than a
+  # The module names a source defines, each locked independently. A cheap regex rather than a
   # parse: this runs before every compile, the answer only has to be *stable*
   # for a given source, and over-matching (a `defmodule` inside a string) costs
   # a little needless serialisation rather than a wrong answer.
   @defmodule ~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/m
 
-  defp module_key(source) do
-    case Regex.scan(@defmodule, source, capture: :all_but_first) do
-      [] -> nil
-      names -> names |> List.flatten() |> Enum.sort() |> Enum.uniq() |> Enum.join(",")
-    end
+  defp module_keys(source) do
+    @defmodule
+    |> Regex.scan(source, capture: :all_but_first)
+    |> List.flatten()
+    |> Enum.sort()
+    |> Enum.uniq()
+  end
+
+  defp lock_modules([], fun), do: fun.()
+
+  defp lock_modules([module | rest], fun) do
+    :global.trans(
+      {{__MODULE__, module}, self()},
+      fn -> lock_modules(rest, fun) end,
+      [node()]
+    )
   end
 
   defp do_compile_and_capture(source) do
@@ -266,8 +276,11 @@ defmodule Credence.RuleHelpers do
     parent = self()
     {heap_words, timeout_ms} = compile_bounds()
 
+    collector = spawn(fn -> collect_compile_processes(MapSet.new()) end)
+
     {pid, ref} =
       spawn_monitor(fn ->
+        :erlang.trace(self(), true, [:procs, :set_on_spawn, {:tracer, collector}])
         Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
 
         captured =
@@ -282,6 +295,19 @@ defmodule Credence.RuleHelpers do
             end
           end)
 
+        delivered = :erlang.trace_delivered(:all)
+
+        receive do
+          {:trace_delivered, _tracee, ^delivered} -> :ok
+        end
+
+        send(collector, {__MODULE__, :compiled, self()})
+
+        receive do
+          {__MODULE__, :compile_processes, spawned} ->
+            terminate_compile_processes(spawned)
+        end
+
         send(parent, {__MODULE__, :compiled, captured})
       end)
 
@@ -291,13 +317,16 @@ defmodule Credence.RuleHelpers do
         {:ok, captured}
 
       {:DOWN, ^ref, :process, _pid, :killed} ->
+        send(collector, :stop)
         {:aborted, :heap_limit}
 
       {:DOWN, ^ref, :process, _pid, reason} ->
+        send(collector, :stop)
         {:aborted, {:exited, reason}}
     after
       timeout_ms ->
         Process.exit(pid, :kill)
+        send(collector, :stop)
 
         receive do
           {:DOWN, ^ref, :process, _pid, _reason} -> :ok
@@ -307,6 +336,41 @@ defmodule Credence.RuleHelpers do
 
         {:aborted, :timeout}
     end
+  end
+
+  defp collect_compile_processes(spawned) do
+    receive do
+      {:trace, _pid, :spawn, child, _mfa} ->
+        collect_compile_processes(MapSet.put(spawned, child))
+
+      {:trace, child, :spawned, _parent, _mfa} ->
+        collect_compile_processes(MapSet.put(spawned, child))
+
+      {__MODULE__, :compiled, compiler} ->
+        send(compiler, {__MODULE__, :compile_processes, spawned})
+
+      :stop ->
+        Enum.each(spawned, &Process.exit(&1, :kill))
+
+      _trace_event ->
+        collect_compile_processes(spawned)
+    end
+  end
+
+  defp terminate_compile_processes(spawned) do
+    refs =
+      Enum.map(spawned, fn child ->
+        Process.unlink(child)
+        ref = Process.monitor(child)
+        Process.exit(child, :kill)
+        ref
+      end)
+
+    Enum.each(refs, fn ref ->
+      receive do
+        {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+      end
+    end)
   end
 
   defp compile_bounds do
@@ -429,9 +493,10 @@ defmodule Credence.RuleHelpers do
   @doc """
   The set of compile *errors* `source` produces, each reduced to a signature.
 
-  `:ok` means it compiled — the empty set. Warnings are excluded: `compiles?/1`
-  has always accepted them, and a fix that trades one warning for another must
-  not be reverted on that basis alone.
+  Both return statuses are inspected because `Code.with_diagnostics/1` can
+  report an error diagnostic even when `Code.compile_string/2` returns normally.
+  Warnings are excluded: `compiles?/1` has always accepted them, and a fix that
+  trades one warning for another must not be reverted on that basis alone.
 
   A signature is `{message, occurrence}`, with no position. The occurrence
   preserves multiplicity, so adding the same error at a second location is a
@@ -441,10 +506,7 @@ defmodule Credence.RuleHelpers do
   @spec compile_errors(String.t()) :: MapSet.t()
   def compile_errors(source) do
     case compile_and_capture(source) do
-      {:ok, _diagnostics} ->
-        MapSet.new()
-
-      {:error, diagnostics} ->
+      {_status, diagnostics} ->
         diagnostics
         |> Enum.filter(&(Map.get(&1, :severity) == :error))
         |> Enum.map(&to_string(Map.get(&1, :message, "")))

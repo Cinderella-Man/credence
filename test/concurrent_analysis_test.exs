@@ -98,4 +98,33 @@ defmodule Credence.ConcurrentAnalysisTest do
 
     assert Enum.reject(runs, &(&1 == {[:unused_variable], [:unused_variable]})) == []
   end
+
+  test "overlapping module sets cannot compile concurrently" do
+    coordinator = :credence_overlapping_module_lock_test
+    Process.register(self(), coordinator)
+
+    source = fn label, modules ->
+      "send(#{inspect(coordinator)}, {:entered, #{inspect(label)}, self()})\n" <>
+        "receive do :continue -> :ok end\n" <> modules
+    end
+
+    both =
+      source.(:both, "defmodule ConcurrentOverlapA do end\ndefmodule ConcurrentOverlapB do end")
+
+    one = source.(:one, "defmodule ConcurrentOverlapA do end")
+
+    tasks =
+      Enum.map([both, one], fn input ->
+        Task.async(fn -> Credence.RuleHelpers.compile_and_capture(input) end)
+      end)
+
+    assert_receive {:entered, _label, first_pid}, 1_000
+    refute_receive {:entered, _label, _pid}, 100
+    send(first_pid, :continue)
+
+    assert_receive {:entered, _label, second_pid}, 1_000
+    send(second_pid, :continue)
+
+    assert Enum.map(tasks, &Task.await(&1, 5_000)) == [{:ok, []}, {:ok, []}]
+  end
 end

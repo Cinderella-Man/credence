@@ -109,6 +109,18 @@ defmodule Credence.PatternBrokenSourceTest do
       refute RuleHelpers.compiles_no_worse?(duplicate, baseline)
     end
 
+    test "error diagnostics from a successful compiler return are rejected" do
+      candidate = """
+      defmodule PbsStructDiagnostic do
+        defstruct [:known]
+        def value(%__MODULE__{unknown: value}), do: value
+      end
+      """
+
+      assert {:ok, [%{severity: :error}]} = RuleHelpers.compile_and_capture(candidate)
+      refute RuleHelpers.compiles_no_worse?(candidate, MapSet.new())
+    end
+
     test "removing an error is accepted — a subset, not an equality" do
       baseline = RuleHelpers.compile_errors(@broken)
       assert RuleHelpers.compiles_no_worse?(@clean, baseline)

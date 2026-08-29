@@ -61,6 +61,18 @@ defmodule Credence.CompileBoundsTest do
       assert diagnostic.message =~ "exited during compilation"
       assert Process.alive?(self())
     end
+
+    test "processes spawned by top-level source are killed before returning" do
+      name = :credence_compile_bounds_spawned_child
+
+      source =
+        "spawn(fn -> Process.register(self(), #{inspect(name)}); Process.sleep(:infinity) end)"
+
+      for _ <- 1..10 do
+        assert {:ok, []} = RuleHelpers.compile_and_capture(source)
+        assert Process.whereis(name) == nil
+      end
+    end
   end
 
   # Positive controls. A ceiling nobody has seen enforced is a ceiling nobody
