@@ -84,6 +84,37 @@ defmodule Credence.RuleCrashIsolationTest do
     end
   end
 
+  defmodule CrashingSemanticReportRule do
+    @moduledoc false
+    use Credence.Semantic.Rule
+
+    @impl true
+    def match?(%{message: message}), do: String.contains?(message, "unused")
+
+    def should_report?(_diagnostic, _source), do: raise("boom from should_report?")
+
+    @impl true
+    def to_issue(_diagnostic), do: raise("unreachable")
+
+    @impl true
+    def fix(source, _diagnostic), do: source
+  end
+
+  defmodule CrashingSemanticFixRule do
+    @moduledoc false
+    use Credence.Semantic.Rule
+
+    @impl true
+    def match?(%{message: message}), do: String.contains?(message, "unused")
+
+    @impl true
+    def to_issue(diagnostic),
+      do: %Issue{rule: :crashing_semantic_fix, message: diagnostic.message, meta: %{line: 2}}
+
+    @impl true
+    def fix(_source, _diagnostic), do: exit(:boom_from_semantic_fix)
+  end
+
   @source """
   defmodule Sample do
     y = 1
@@ -176,6 +207,43 @@ defmodule Credence.RuleCrashIsolationTest do
 
       assert log =~ "[error]"
       assert log =~ "boom from fix_patches"
+    end
+  end
+
+  describe "Semantic callback isolation" do
+    @semantic_source """
+    defmodule SemanticCrashIsolationSubject do
+      def run do
+        unused = 1
+        :ok
+      end
+    end
+    """
+
+    test "a should_report?/2 exception drops only that rule's finding" do
+      log =
+        capture_log(fn ->
+          assert Credence.Semantic.analyze(@semantic_source,
+                   semantic_rules: [CrashingSemanticReportRule]
+                 ) == []
+        end)
+
+      assert log =~ "CrashingSemanticReportRule.should_report? CRASHED"
+    end
+
+    test "a fix/2 exit is recorded without crashing the pipeline" do
+      log =
+        capture_log(fn ->
+          assert {code, applied} =
+                   Credence.Semantic.fix_with_trace(@semantic_source,
+                     semantic_rules: [CrashingSemanticFixRule]
+                   )
+
+          assert code == @semantic_source
+          assert applied == [{CrashingSemanticFixRule, :crashed}]
+        end)
+
+      assert log =~ "CrashingSemanticFixRule.fix threw exit :boom_from_semantic_fix"
     end
   end
 end

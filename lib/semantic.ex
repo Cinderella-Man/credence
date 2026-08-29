@@ -125,7 +125,7 @@ defmodule Credence.Semantic do
   diagnostic and returned the source unchanged). See `t:Credence.rule_outcome/0`,
   which is the closed set this is drawn from.
   """
-  @type trace_entry :: {module(), non_neg_integer() | :reverted | :no_op}
+  @type trace_entry :: {module(), non_neg_integer() | :reverted | :crashed | :no_op}
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
   def analyze(source, opts \\ []) do
@@ -380,6 +380,7 @@ defmodule Credence.Semantic do
     |> Enum.map(fn step ->
       cond do
         MapSet.member?(reverted_ids, step.index) -> {step.rule, :reverted}
+        step.outcome == :crashed -> {step.rule, :crashed}
         step.after == step.before -> {step.rule, :no_op}
         true -> {step.rule, 1}
       end
@@ -475,10 +476,7 @@ defmodule Credence.Semantic do
             name = RuleHelpers.rule_name(rule)
 
             if outcome == :no_op do
-              Logger.debug(
-                "[credence_fix] #{name}: fix returned IDENTICAL source (no change), and no " <>
-                  "later matching rule changed it either"
-              )
+              Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
             else
               RuleHelpers.log_diff(name, src, fixed)
             end
@@ -486,6 +484,7 @@ defmodule Credence.Semantic do
             step = %{
               index: length(steps),
               rule: rule,
+              outcome: outcome,
               diagnostic: diagnostic,
               before: src,
               after: fixed
@@ -518,7 +517,7 @@ defmodule Credence.Semantic do
 
   defp should_report?(rule, diagnostic, source) do
     if function_exported?(rule, :should_report?, 2) do
-      rule.should_report?(diagnostic, source)
+      isolate(rule, :should_report?, false, fn -> rule.should_report?(diagnostic, source) end)
     else
       true
     end
@@ -532,35 +531,44 @@ defmodule Credence.Semantic do
   end
 
   @doc false
-  # The first matching rule whose fix actually CHANGES the source; if none does,
-  # the first matcher, tagged `:no_op`.
-  #
-  # Dispatch used to stop at the first `match?/1` and accept whatever it did —
-  # including nothing. A rule that matched and then declined therefore CONSUMED
-  # the diagnostic, and every other rule that could have repaired it was
-  # unreachable. Measured: `FixLocalFunctionInGuard` matched `when is_range(r)`
-  # with no local `is_range` defined anywhere, returned the source unchanged, and
-  # `NoHallucinatedGuardFn` — which exists for exactly that case — never ran
-  # (escalation ledger row 196).
-  #
-  # docs/20 §3 says one diagnostic has one owner. This is what makes that true in
-  # practice rather than by seniority: ownership is decided by doing the repair,
-  # not by sorting first. A rule that declines yields the slot.
-  #
-  # The `:no_op` outcome is preserved when nobody repairs it, so the trace still
-  # distinguishes "matched and did nothing" from "nothing matched" (T3.2).
+  # One diagnostic has one owner: the first matcher in priority order. A
+  # conservative no-op must not hand uncertain input to a broader fallback.
   def first_effective_fix(diagnostic, rules, source) do
-    diagnostic
-    |> matching_rules(rules)
-    |> Enum.reduce_while(:none, fn rule, acc ->
-      fixed = rule.fix(source, diagnostic)
+    matchers = matching_rules(diagnostic, rules)
+    owner = Enum.find(matchers, &should_report?(&1, diagnostic, source)) || List.first(matchers)
 
-      cond do
-        fixed != source -> {:halt, {:fixed, rule, fixed}}
-        acc == :none -> {:cont, {:no_op, rule, source}}
-        true -> {:cont, acc}
-      end
-    end)
+    case owner do
+      nil ->
+        :none
+
+      rule ->
+        case isolate(rule, :fix, :crashed, fn -> rule.fix(source, diagnostic) end) do
+          :crashed -> {:crashed, rule, source}
+          ^source -> {:no_op, rule, source}
+          fixed -> {:fixed, rule, fixed}
+        end
+    end
+  end
+
+  defp isolate(rule, callback, on_crash, fun) do
+    fun.()
+  rescue
+    exception ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.#{callback} CRASHED — rule skipped for " <>
+          "this source. This is a defect in the rule: #{Exception.message(exception)}\n" <>
+          Exception.format_stacktrace(__STACKTRACE__)
+      )
+
+      on_crash
+  catch
+    kind, value ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.#{callback} threw #{kind} #{inspect(value)} — " <>
+          "rule skipped for this source. This is a defect in the rule."
+      )
+
+      on_crash
   end
 
   # `:semantic_rules` is a testing/advanced seam, NOT the Pattern round's

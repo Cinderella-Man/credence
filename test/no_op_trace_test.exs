@@ -123,6 +123,24 @@ defmodule Credence.NoOpTraceTest do
     def fix(source, _diagnostic), do: source
   end
 
+  defmodule SemanticLowerPriorityFixRule do
+    @moduledoc false
+    use Credence.Semantic.Rule
+
+    @impl true
+    def match?(%{severity: :warning, message: msg}) when is_binary(msg),
+      do: String.contains?(msg, "is unused")
+
+    def match?(_), do: false
+
+    @impl true
+    def to_issue(d),
+      do: %Issue{rule: :semantic_lower_priority, message: d.message, meta: %{line: 1}}
+
+    @impl true
+    def fix(source, _diagnostic), do: String.replace(source, "unused = 1", "wrong = 1")
+  end
+
   @semantic_source """
   defmodule NoOpProbeSemantic do
     def run do
@@ -143,6 +161,18 @@ defmodule Credence.NoOpTraceTest do
                  "diagnostic had been fixed, when the source came back byte-identical"
 
         assert code == @semantic_source
+      end)
+    end
+
+    test "a no-op owner does not yield its diagnostic to a lower-priority rule" do
+      capture_log(fn ->
+        {code, applied} =
+          Credence.Semantic.fix_with_trace(@semantic_source,
+            semantic_rules: [SemanticNoOpRule, SemanticLowerPriorityFixRule]
+          )
+
+        assert code == @semantic_source
+        assert applied == [{SemanticNoOpRule, :no_op}]
       end)
     end
   end
