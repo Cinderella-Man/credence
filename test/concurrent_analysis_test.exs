@@ -89,14 +89,30 @@ defmodule Credence.ConcurrentAnalysisTest do
            """
   end
 
-  # The control that keeps the lock honest: it must not have been implemented by
-  # serialising everything. Different module names is the common case, and it has
-  # to stay concurrent — this asserts the answers, and the lock's key is what
-  # makes it possible.
-  test "two files defining DIFFERENT modules also analyse correctly in parallel" do
-    runs = concurrently(@same_a, @different, 20)
+  test "two files defining DIFFERENT modules compile concurrently" do
+    coordinator = :credence_different_module_lock_test
+    Process.register(self(), coordinator)
 
-    assert Enum.reject(runs, &(&1 == {[:unused_variable], [:unused_variable]})) == []
+    source = fn label, module ->
+      "send(#{inspect(coordinator)}, {:entered, #{inspect(label)}, self()})\n" <>
+        "receive do :continue -> :ok end\n" <> "defmodule #{module} do end"
+    end
+
+    tasks =
+      Enum.map(
+        [source.(:a, "ConcurrentDifferentA"), source.(:b, "ConcurrentDifferentB")],
+        fn input ->
+          Task.async(fn -> Credence.RuleHelpers.compile_and_capture(input) end)
+        end
+      )
+
+    assert_receive {:entered, first_label, first_pid}, 1_000
+    assert_receive {:entered, second_label, second_pid}, 1_000
+    assert MapSet.new([first_label, second_label]) == MapSet.new([:a, :b])
+    send(first_pid, :continue)
+    send(second_pid, :continue)
+
+    assert Enum.map(tasks, &Task.await(&1, 5_000)) == [{:ok, []}, {:ok, []}]
   end
 
   test "overlapping module sets cannot compile concurrently" do
