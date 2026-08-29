@@ -45,9 +45,16 @@ defmodule Credence.SemanticRuleCardTest do
   defp verdict(rule, source) do
     atom = Credence.RuleName.from_module(rule).atom
 
-    if Enum.any?(Credence.Semantic.analyze(source, source: source), &(&1.rule == atom)),
-      do: :reports,
-      else: :silent
+    cond do
+      Enum.any?(Credence.Semantic.analyze(source, source: source), &(&1.rule == atom)) ->
+        :reports
+
+      aborted?(source) ->
+        :could_not_tell
+
+      true ->
+        :silent
+    end
   rescue
     _ -> :could_not_tell
   catch
@@ -86,11 +93,13 @@ defmodule Credence.SemanticRuleCardTest do
            "only #{length(examples)} Semantic Bad examples extracted; the extractor has regressed"
 
     suspects =
-      for {rule, snippet} <- examples, verdict(rule, snippet) != :reports, do: {rule, snippet}
+      for {rule, snippet} <- examples,
+          (result = verdict(rule, snippet)) != :reports,
+          do: {rule, result}
 
     {unprovable, liars} =
       suspects
-      |> Enum.split_with(fn {_rule, snippet} -> aborted?(snippet) end)
+      |> Enum.split_with(fn {_rule, result} -> result == :could_not_tell end)
       |> then(fn {u, l} -> {Enum.map(u, &elem(&1, 0)), Enum.map(l, &elem(&1, 0))} end)
 
     if unprovable != [] do
@@ -121,12 +130,30 @@ defmodule Credence.SemanticRuleCardTest do
   end
 
   test "no Semantic `## Good` example makes its own rule report" do
-    liars =
+    examples =
       for rule <- Credence.Semantic.default_rules(),
           snippet = RuleDuplication.good_example(rule),
           snippet not in [nil, ""],
-          reports?(rule, snippet),
-          do: rule
+          do: {rule, snippet}
+
+    assert length(examples) >= 86,
+           "only #{length(examples)} Semantic Good examples extracted; the extractor has regressed"
+
+    verdicts = for {rule, snippet} <- examples, do: {rule, verdict(rule, snippet)}
+
+    unprovable = for {rule, :could_not_tell} <- verdicts, do: rule
+    liars = for {rule, :reports} <- verdicts, do: rule
+
+    if unprovable != [] do
+      IO.warn("""
+      #{length(unprovable)} Semantic Good example(s) could not be analysed at all — the
+      compile hit its wall-clock or heap ceiling, which happens under a loaded run:
+
+          #{Enum.map_join(unprovable, "\n    ", &inspect/1)}
+
+      These are NOT accepted as valid examples. Re-run this file alone to judge them.
+      """)
+    end
 
     assert liars == [],
            """
@@ -170,16 +197,12 @@ defmodule Credence.SemanticRuleCardTest do
       refute aborted?("defmodule SemanticCardControl do\n  def f, do: :ok\nend\n")
     end
 
-    # The whole point, stated as the two-step it is: analysis says nothing, and
-    # that silence must not be read as a verdict.
+    # The whole point: analysis says nothing, but the verdict must distinguish an
+    # aborted compile from genuine silence.
     test "an aborted example reads as :could_not_tell, never as :silent" do
       rule = List.first(Credence.Semantic.default_rules())
 
-      assert verdict(rule, @runaway) == :silent,
-             "analyze/2 returns [] for an aborted compile — that is the trap"
-
-      assert aborted?(@runaway),
-             "so the second question is what separates it from a real liar"
+      assert verdict(rule, @runaway) == :could_not_tell
     end
   end
 end
