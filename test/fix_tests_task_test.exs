@@ -149,19 +149,40 @@ defmodule Credence.FixTestsTaskTest do
   defp expected_runtime_value(src) do
     {:ok, ast} = Sourceror.parse_string(src)
 
-    ast
-    |> Macro.prewalk([], fn
-      {:=, _, [{:expected, _, ctx}, node]} = n, acc when is_atom(ctx) ->
-        {n, [node | acc]}
+    node =
+      ast
+      |> Macro.prewalk([], fn
+        {:=, _, [{:expected, _, ctx}, node]} = n, acc when is_atom(ctx) ->
+          {n, [node | acc]}
 
-      n, acc ->
-        {n, acc}
-    end)
-    |> elem(1)
-    |> List.first()
-    |> Sourceror.to_string()
-    |> Code.eval_string([], file: "nofile")
-    |> elem(0)
+        n, acc ->
+          {n, acc}
+      end)
+      |> elem(1)
+      |> List.first()
+
+    case node do
+      {:__block__, meta, [value]} when is_binary(value) ->
+        if Keyword.get(meta, :delimiter) == ~s("""),
+          do: Macro.unescape_string(value),
+          else: :not_a_literal
+
+      _ ->
+        :not_a_literal
+    end
+  end
+
+  test "reading an expected value does not evaluate an arbitrary expression" do
+    Process.delete(:fix_tests_expected_expression_ran)
+
+    source = """
+    defmodule Credence.FixTestsExpectedExpressionFixture do
+      expected = Process.put(:fix_tests_expected_expression_ran, true)
+    end
+    """
+
+    assert expected_runtime_value(source) == :not_a_literal
+    refute Process.get(:fix_tests_expected_expression_ran)
   end
 
   test "an emitted fixture whose value contains a backslash reads back unchanged" do
@@ -197,6 +218,63 @@ defmodule Credence.FixTestsTaskTest do
              `heredoc_value/1` must unescape on the way in, or the recorded fixture
              is a different string from the one the rule produced.
              """
+    end)
+  end
+
+  @interpolation_fixture ~S'''
+  defmodule Credence.Pattern.UseMapJoinFixTest do
+    use Credence.RuleCase, async: true
+
+    test "rewrites map then join without activating source interpolation" do
+      input = """
+      defmodule Credence.UseMapJoinInterpolationInput do
+        def f(pairs) do
+          pairs
+          |> Enum.map(fn {k, v} -> "\#{k}=\#{v}" end)
+          |> Enum.join("&")
+        end
+      end
+      """
+
+      expected = """
+      WRONG PLACEHOLDER
+      """
+
+      assert fix(UseMapJoin, input) == expected
+    end
+  end
+  '''
+
+  test "an emitted fixture escapes interpolation markers and reads back unchanged" do
+    in_temp_named(@interpolation_fixture, "use_map_join_fix_test.exs", fn path ->
+      FixTests.fix_file(path)
+      out = File.read!(path)
+
+      real =
+        Credence.RuleHelpers.apply_rule_fix(
+          Credence.Pattern.UseMapJoin,
+          """
+          defmodule Credence.UseMapJoinInterpolationInput do
+            def f(pairs) do
+              pairs
+              |> Enum.map(fn {k, v} -> "\#{k}=\#{v}" end)
+              |> Enum.join("&")
+            end
+          end
+          """
+        )
+
+      assert real ==
+               ~S'''
+               defmodule Credence.UseMapJoinInterpolationInput do
+                 def f(pairs) do
+                   pairs
+                   |> Enum.map_join("&", fn {k, v} -> "#{k}=#{v}" end)
+                 end
+               end
+               '''
+
+      assert expected_runtime_value(out) == real
     end)
   end
 
