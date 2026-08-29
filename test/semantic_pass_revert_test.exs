@@ -352,8 +352,16 @@ defmodule Credence.SemanticPassRevertTest do
           )
 
         assert applied == [{BreaksCompileRule, 1}, {RepairsWhatBreaksCompileRuleBrokeRule, 1}]
-        refute code =~ "broken_local()"
-        assert code =~ "_unused = 1"
+
+        assert code == """
+               defmodule CrdC4_Warns do
+                 def go do
+                   _unused = 1
+                   Missing.call()
+                 end
+               end
+               """
+
         assert RuleHelpers.compiles?(code)
       end)
     end
