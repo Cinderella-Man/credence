@@ -29,6 +29,13 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
   alias Credence.Pattern.NoLengthComparisonForEmpty
   alias Credence.Pattern.NoTautologicalIf
 
+  defmodule ExternalExample do
+    def run({parent, value}) do
+      send(parent, {:external_example_called, value})
+      {:external, value}
+    end
+  end
+
   # Check 2 needs a rule that finds a problem but offers no fix. None of the real
   # rules behave that way (they all fix what they find), so here is a fake one:
   # `check` says "there's a problem", `fix_patches` returns [] (no change).
@@ -144,6 +151,46 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
                  inputs: [[], [1], [1, 2]]
                )
     end
+
+    test "a short alias shadowing the fixture name remains external" do
+      source = """
+      defmodule Example do
+        alias Credence.BehaviourEquivalenceSelfTest.ExternalExample, as: Example
+        def run(value), do: Example.run(value)
+        def flagged(value), do: length(value) == 0
+      end
+      """
+
+      assert :ok =
+               assert_equivalent_module(source,
+                 rule: NoLengthComparisonForEmpty,
+                 call: {:run, 1},
+                 inputs: [{self(), 1}, {self(), 2}, {self(), 3}]
+               )
+
+      for value <- 1..3 do
+        assert_receive {:external_example_called, ^value}
+        assert_receive {:external_example_called, ^value}
+      end
+    end
+
+    test "top-level fixture execution is isolated" do
+      source = """
+      defmodule BehaviourEquivalenceBoundedFixture do
+        exit(:behaviour_equivalence_fixture_exit)
+        def run(value), do: value
+        def flagged(value), do: length(value) == 0
+      end
+      """
+
+      assert_raise CompileError, fn ->
+        assert_equivalent_module(source,
+          rule: NoLengthComparisonForEmpty,
+          call: {:run, 1},
+          inputs: [[], [1], [1, 2]]
+        )
+      end
+    end
   end
 
   # ── Stacktrace normalisation (docs/22 T3.4c, ledger H-C) ─────────────
@@ -198,9 +245,17 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
     # `normalize_traces/1` directly and stay green even with it unwired from
     # `run_outcome/2` — which is the shape of a control that proves nothing.
     # These go through `eval_outcome/1`, the path the comparison actually uses.
-    test "a returned stacktrace is normalised THROUGH eval_outcome" do
+    test "successful frame-shaped user values remain distinct THROUGH eval_outcome" do
+      other_frames =
+        List.update_at(@frames, 0, fn {mod, fun, arity, location} ->
+          {mod, fun, arity, Keyword.put(location, :line, 4)}
+        end)
+
       assert Credence.BehaviourEquivalence.eval_outcome(fn -> {:trace, @frames} end) ==
-               {:ok, {:trace, :__stacktrace__}}
+               {:ok, {:trace, @frames}}
+
+      refute Credence.BehaviourEquivalence.eval_outcome(fn -> @frames end) ===
+               Credence.BehaviourEquivalence.eval_outcome(fn -> other_frames end)
     end
 
     test "and one inside an exit reason is too" do

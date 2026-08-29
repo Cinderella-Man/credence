@@ -232,7 +232,10 @@ defmodule Credence.BehaviourEquivalence do
   end
 
   defp run_outcome(thunk, compare_messages?) do
-    {:ok, normalize_traces(thunk.())}
+    # A successful return is opaque user data. A frame-shaped list returned as
+    # data is not distinguishable from a captured stacktrace, so normalising it
+    # here can turn genuinely different results into an apparent equivalence.
+    {:ok, thunk.()}
   rescue
     e ->
       if compare_messages?,
@@ -352,9 +355,12 @@ defmodule Credence.BehaviourEquivalence do
 
   defp compile_fn!(vars, expr) do
     arglist = Enum.join(vars, ", ")
-    code = "fn #{arglist} -> (#{expr}) end"
-    {fun, _binding} = silence(fn -> Code.eval_string(code) end)
-    fun
+    uniq = :"Eqv_Fn_#{System.unique_integer([:positive])}"
+    mod = Module.concat([uniq])
+
+    code = "defmodule #{inspect(mod)} do\n  def run(#{arglist}), do: (#{expr})\nend"
+    compile_loaded!(code)
+    Function.capture(mod, :run, length(vars))
   end
 
   # T3.5. The before/after modules are renamed so the two versions can coexist
@@ -379,16 +385,78 @@ defmodule Credence.BehaviourEquivalence do
     {:ok, ast} = Code.string_to_quoted(source)
     segments = module_segments!(ast)
     uniq = :"Eqv_#{tag}_#{System.unique_integer([:positive])}"
+    mod = Module.concat([uniq])
 
-    renamed =
-      Macro.prewalk(ast, fn
-        {:__aliases__, meta, ^segments} -> {:__aliases__, meta, [uniq]}
-        node -> node
-      end)
+    renamed = rename_fixture_module(ast, segments, uniq)
+    renamed_source = Macro.to_string(renamed)
 
-    {{:module, mod, _bin, _val}, _binding} = silence(fn -> Code.eval_quoted(renamed) end)
+    compile_loaded!(renamed_source)
+
     mod
   end
+
+  defp compile_loaded!(source) do
+    case RuleHelpers.compile_and_capture(source, cleanup_modules: false) do
+      {:ok, _diagnostics} -> :ok
+      {:error, diagnostics} -> raise CompileError, description: inspect(diagnostics)
+    end
+  end
+
+  defp rename_fixture_module(
+         {:defmodule, meta, [{:__aliases__, alias_meta, segments}, body]},
+         segments,
+         uniq
+       ) do
+    {:defmodule, meta,
+     [{:__aliases__, alias_meta, [uniq]}, rename_alias_scope(body, segments, uniq, false)]}
+  end
+
+  defp rename_fixture_module(ast, _segments, _uniq), do: ast
+
+  # Aliases are lexical. Once `alias External.Example` is in scope, a later
+  # short `Example` means that external module rather than the fixture itself.
+  defp rename_alias_scope({:__block__, meta, expressions}, segments, uniq, shadowed?) do
+    {expressions, _shadowed?} =
+      Enum.map_reduce(expressions, shadowed?, fn expression, shadowed? ->
+        renamed = rename_alias_scope(expression, segments, uniq, shadowed?)
+        {renamed, shadowed? or aliases_short_name?(expression, segments)}
+      end)
+
+    {:__block__, meta, expressions}
+  end
+
+  defp rename_alias_scope({:alias, _, _} = alias_ast, _segments, _uniq, _shadowed?),
+    do: alias_ast
+
+  defp rename_alias_scope({:__aliases__, meta, segments}, segments, uniq, false),
+    do: {:__aliases__, meta, [uniq]}
+
+  defp rename_alias_scope(tuple, segments, uniq, shadowed?) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&rename_alias_scope(&1, segments, uniq, shadowed?))
+    |> List.to_tuple()
+  end
+
+  defp rename_alias_scope(list, segments, uniq, shadowed?) when is_list(list),
+    do: Enum.map(list, &rename_alias_scope(&1, segments, uniq, shadowed?))
+
+  defp rename_alias_scope(node, _segments, _uniq, _shadowed?), do: node
+
+  defp aliases_short_name?(
+         {:alias, _, [{:__aliases__, _, external}, opts]},
+         segments
+       ) do
+    bound_name =
+      case Keyword.get(opts, :as) do
+        {:__aliases__, _, as_segments} -> List.last(as_segments)
+        nil -> List.last(external)
+      end
+
+    bound_name == List.last(segments)
+  end
+
+  defp aliases_short_name?(_node, _segments), do: false
 
   # The alias segments of the first `defmodule` — `[:Point]`, or `[:A, :B]` for
   # a dotted name. Taking the first matches the old regex's behaviour on a file
@@ -436,16 +504,6 @@ defmodule Credence.BehaviourEquivalence do
   defp args_by_arity(input, _arity) when is_tuple(input), do: Tuple.to_list(input)
   defp args_by_arity(input, _arity) when is_list(input), do: input
   defp args_by_arity(input, _arity), do: [input]
-
-  # Suppress compiler warnings (unused var, deprecated charlist, redefined
-  # module, …) emitted while eval'ing fixture code, keeping the return value.
-  # `Code.with_diagnostics/1` collects diagnostics instead of printing them and
-  # is process-local — unlike `capture_io(:stderr, …)`, which races and leaks
-  # across the `async: true` suite.
-  defp silence(fun) do
-    {result, _diagnostics} = Code.with_diagnostics(fun)
-    result
-  end
 
   defp divergence_msg(rule, input, o, n, before, fixed) do
     """

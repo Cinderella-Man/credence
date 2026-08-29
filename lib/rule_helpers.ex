@@ -171,6 +171,9 @@ defmodule Credence.RuleHelpers do
   Compiles `source` with `Code.with_diagnostics/1` and returns
   `{:ok, diagnostics}` or `{:error, diagnostics}`.
 
+  Pass `cleanup_modules: false` only when the caller needs to execute a module
+  compiled from a uniquely named fixture after this function returns.
+
   Uses `:code.soft_purge/1` for cleanup so that compiling source
   which redefines a currently-executing module does not kill the BEAM
   (see `:code.purge/1` — it sends an unconditional kill signal to
@@ -182,9 +185,9 @@ defmodule Credence.RuleHelpers do
   a synthesized diagnostic rather than being allowed to take the VM with it.
   `System.halt/0` remains outside anyone's reach.
   """
-  @spec compile_and_capture(String.t()) :: {:ok, [map()]} | {:error, [map()]}
-  def compile_and_capture(source) do
-    with_module_lock(source, fn -> do_compile_and_capture(source) end)
+  @spec compile_and_capture(String.t(), keyword()) :: {:ok, [map()]} | {:error, [map()]}
+  def compile_and_capture(source, opts \\ []) do
+    with_module_lock(source, fn -> do_compile_and_capture(source, opts) end)
   end
 
   # Compiling is a GLOBAL side effect: `Code.compile_string/2` loads the modules
@@ -241,7 +244,7 @@ defmodule Credence.RuleHelpers do
     )
   end
 
-  defp do_compile_and_capture(source) do
+  defp do_compile_and_capture(source, opts) do
     case bounded_compile(source) do
       {:ok, {result, diagnostics}} ->
         case result do
@@ -254,7 +257,7 @@ defmodule Credence.RuleHelpers do
             {:error, diagnostics ++ [exception_diagnostic(e)]}
 
           modules when is_list(modules) ->
-            safe_cleanup_modules(modules)
+            if Keyword.get(opts, :cleanup_modules, true), do: safe_cleanup_modules(modules)
             {:ok, drop_phantom_redefinitions(diagnostics, source)}
         end
 
