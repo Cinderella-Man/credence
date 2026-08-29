@@ -192,7 +192,7 @@ defmodule Credence.RuleCrashIsolationTest do
 
         # And the healthy rule still did its work on the same call.
         assert {HealthyRule, 1} in applied
-        assert code =~ "y = 2"
+        assert code == "defmodule Sample do\n  y = 2\n  def go, do: :ok\nend\n"
       end)
     end
 
