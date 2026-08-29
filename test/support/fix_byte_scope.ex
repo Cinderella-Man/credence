@@ -64,19 +64,18 @@ defmodule Credence.FixByteScope do
     rule
     |> candidates.()
     |> Enum.flat_map(fn fixture ->
-      case claimed_diagnostic(rule, fixture) do
-        nil -> []
-        diagnostic -> non_code_edits(rule, fixture, diagnostic)
-      end
+      rule
+      |> claimed_diagnostics(fixture)
+      |> Enum.flat_map(&non_code_edits(rule, fixture, &1))
     end)
     |> Enum.uniq_by(&{&1.line, &1.was, &1.now})
   end
 
-  defp claimed_diagnostic(rule, source) do
+  defp claimed_diagnostics(rule, source) do
     source
     |> diagnostics_of()
     |> Enum.reject(&String.starts_with?(&1.message, @self_reported))
-    |> Enum.find(&safe_match?(rule, &1))
+    |> Enum.filter(&safe_match?(rule, &1))
   end
 
   defp diagnostics_of(source) do
@@ -170,10 +169,41 @@ defmodule Credence.FixByteScope do
     pair_runs(rest, a + length(dels), b + length(ins), Enum.reverse(paired) ++ acc)
   end
 
+  defp pair_runs([{:del, dels}, {:ins, ins} | rest], a, b, acc) do
+    paired = pair_similar_lines(dels, ins, a, b)
+    pair_runs(rest, a + length(dels), b + length(ins), Enum.reverse(paired) ++ acc)
+  end
+
   defp pair_runs([{:del, dels} | rest], a, b, acc),
     do: pair_runs(rest, a + length(dels), b, acc)
 
   defp pair_runs([{:ins, ins} | rest], a, b, acc), do: pair_runs(rest, a, b + length(ins), acc)
+
+  # An in-place rewrite can share a Myers hunk with an adjacent line insertion
+  # or deletion. Pair only strongly similar lines in those unequal runs; the
+  # leftovers remain genuine whole-line changes and are deliberately ignored.
+  defp pair_similar_lines(dels, ins, a, b) do
+    candidates =
+      for {del, di} <- Enum.with_index(dels),
+          {inserted, ii} <- Enum.with_index(ins),
+          score = String.jaro_distance(del, inserted),
+          score >= 0.8,
+          do: {score, di, ii, del, inserted}
+
+    candidates
+    |> Enum.sort_by(fn {score, _, _, _, _} -> score end, :desc)
+    |> Enum.reduce({MapSet.new(), MapSet.new(), []}, fn
+      {_score, di, ii, del, inserted}, {used_dels, used_ins, pairs} ->
+        if MapSet.member?(used_dels, di) or MapSet.member?(used_ins, ii) do
+          {used_dels, used_ins, pairs}
+        else
+          pair = %{line: a + di, new_line: b + ii, was: del, now: inserted}
+          {MapSet.put(used_dels, di), MapSet.put(used_ins, ii), [pair | pairs]}
+        end
+    end)
+    |> elem(2)
+    |> Enum.sort_by(& &1.line)
+  end
 
   # Three things a fix can do to the literals on a line, and only one is the bug:
   #

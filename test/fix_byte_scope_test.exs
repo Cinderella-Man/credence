@@ -80,12 +80,25 @@ defmodule Credence.FixByteScopeTest do
   # T3.10a lesson, applied at construction instead of afterwards.
 
   describe "the machinery is provable without any real offender" do
-    defp probe_scan(rules),
-      do: FixByteScope.scan(rules, fn _rule -> [ByteScopeProbe.fixture()] end)
+    defp probe_scan(rules, fixture \\ ByteScopeProbe.fixture()),
+      do: FixByteScope.scan(rules, fn _rule -> [fixture] end)
 
     test "a rule that rewrites inside a surviving string IS caught" do
       assert [%{rule: ByteScopeProbe.Corrupter}] =
                probe_scan([ByteScopeProbe.Corrupter])
+    end
+
+    test "a corrupting rewrite is caught when the same repair also inserts a line" do
+      assert [%{rule: ByteScopeProbe.CorrupterWithInsertion}] =
+               probe_scan([ByteScopeProbe.CorrupterWithInsertion])
+    end
+
+    test "every diagnostic claimed for a fixture drives the repair" do
+      assert [%{rule: ByteScopeProbe.LaterDiagnosticCorrupter}] =
+               probe_scan(
+                 [ByteScopeProbe.LaterDiagnosticCorrupter],
+                 ByteScopeProbe.multiple_diagnostics_fixture()
+               )
     end
 
     test "a rule that rewrites only code is NOT caught" do
@@ -133,6 +146,14 @@ defmodule ByteScopeProbe do
   """
 
   def fixture, do: @fixture
+
+  def multiple_diagnostics_fixture do
+    """
+    defmodule ByteScopeMultipleDiagnosticsTarget do
+      def f(l), do: {len(l), wid(l), "the helper wid(x) is not real"}
+    end
+    """
+  end
 end
 
 defmodule ByteScopeProbe.Corrupter do
@@ -142,6 +163,36 @@ defmodule ByteScopeProbe.Corrupter do
 
   # The bug, in one line: replace every `len(` on the line, literals included.
   def fix(source, _d), do: String.replace(source, "len(", "length(")
+end
+
+defmodule ByteScopeProbe.CorrupterWithInsertion do
+  def match?(%{message: m}), do: String.contains?(m, "undefined function len/1")
+  def match?(_), do: false
+  def priority, do: 500
+
+  def fix(source, _d) do
+    source
+    |> String.replace("len(", "length(")
+    |> String.replace("\nend", "\n  # inserted by repair\nend")
+  end
+end
+
+defmodule ByteScopeProbe.LaterDiagnosticCorrupter do
+  def match?(%{message: m}),
+    do:
+      String.contains?(m, "undefined function len/1") or
+        String.contains?(m, "undefined function wid/1")
+
+  def match?(_), do: false
+  def priority, do: 500
+
+  def fix(source, %{message: message}) do
+    if String.contains?(message, "undefined function wid/1") do
+      String.replace(source, "wid(", "width(")
+    else
+      source
+    end
+  end
 end
 
 defmodule ByteScopeProbe.Clean do
