@@ -39,6 +39,16 @@ defmodule Credence.CommentPreservationTest do
   # The corpus fix-safety test confirms no *real-world* comment is dropped here.
   @known_unfixable [{"PreferPipeMapsetIntersection", "|> MapSet.to_list()"}]
 
+  defmodule CrashingCommentFixRule do
+    def fix_patches(_ast, _opts), do: raise("comment fix crashed")
+  end
+
+  test "fix exceptions are not treated as unchanged source" do
+    assert_raise RuntimeError, "comment fix crashed", fn ->
+      safe_fix(CrashingCommentFixRule, "value = 1\n")
+    end
+  end
+
   test "no rule's fix drops a comment on a line it leaves verbatim" do
     violations = Enum.flat_map(Meta.rules(), &rule_violations/1) -- @known_unfixable
 
@@ -127,8 +137,6 @@ defmodule Credence.CommentPreservationTest do
 
   defp safe_fix(rule, code) do
     RuleHelpers.apply_rule_fix(rule, code)
-  rescue
-    _ -> code
   end
 
   defp report(violations) do
