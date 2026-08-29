@@ -72,5 +72,93 @@ defmodule Credence.Mutation.SweepTest do
       assert result.counts.survived == 0
       refute Sweep.kill_rate(result.counts)
     end
+
+    @tag :tmp_dir
+    test "a baseline with no runnable tests is discarded", %{tmp_dir: dir} do
+      src = Path.join(dir, "rule.ex")
+      test_path = Path.join(dir, "rule_test.exs")
+
+      File.write!(src, "defmodule SweepZeroTestsProbe do\n  def f(x), do: x + 1\nend\n")
+      File.write!(test_path, "defmodule SweepZeroTestsProbeTest do\n  use ExUnit.Case\nend\n")
+
+      subject = %{
+        name: "zero_tests_probe",
+        layer: :pattern,
+        source_path: src,
+        test_files: [test_path]
+      }
+
+      result = Sweep.run(subject, root: dir, timeout_s: 30, cap: 1)
+
+      assert result.baseline == {:error, "no runnable tests"}
+      assert result.skipped == :baseline_error
+      refute result.kill_rate
+    end
+  end
+
+  describe "subprocess resource ceilings" do
+    @tag :tmp_dir
+    test "the configured heap ceiling terminates an allocating runner", %{tmp_dir: dir} do
+      test_path = Path.join(dir, "heap_rule_test.exs")
+
+      File.write!(test_path, """
+      defmodule SweepHeapCeilingProbeTest do
+        use ExUnit.Case
+        test "control", do: assert(true)
+      end
+      """)
+
+      subject = %{
+        name: "heap_ceiling_probe",
+        layer: :pattern,
+        source_path: Path.join(dir, "heap_rule.ex"),
+        test_files: [test_path]
+      }
+
+      source = """
+      values = Enum.to_list(1..2_000_000)
+      :erlang.garbage_collect()
+      IO.puts(length(values))
+      defmodule SweepHeapCeilingProbe do
+      end
+      """
+
+      assert Sweep.execute(subject, source,
+               root: dir,
+               timeout_s: 5,
+               max_heap_words: 500_000
+             ) == {:error, "heap ceiling exceeded"}
+    end
+
+    @tag :tmp_dir
+    test "stops collecting output at the configured ceiling", %{tmp_dir: dir} do
+      test_path = Path.join(dir, "rule_test.exs")
+
+      File.write!(test_path, """
+      defmodule SweepOutputCeilingProbeTest do
+        use ExUnit.Case
+        test "control", do: assert(true)
+      end
+      """)
+
+      subject = %{
+        name: "output_ceiling_probe",
+        layer: :pattern,
+        source_path: Path.join(dir, "rule.ex"),
+        test_files: [test_path]
+      }
+
+      source = """
+      IO.write(String.duplicate("x", 100_000))
+      defmodule SweepOutputCeilingProbe do
+      end
+      """
+
+      assert Sweep.execute(subject, source,
+               root: dir,
+               timeout_s: 30,
+               max_output_bytes: 1_024
+             ) == {:error, "output ceiling exceeded (1024 bytes)"}
+    end
   end
 end

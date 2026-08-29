@@ -67,6 +67,8 @@ defmodule Credence.Mutation.Sweep do
 
   @default_timeout_s 180
   @default_test_timeout_ms 30_000
+  @default_max_heap_words 20_000_000
+  @default_max_output_bytes 1_000_000
   @marker "CREDENCE_MUTANT"
 
   @doc """
@@ -76,6 +78,10 @@ defmodule Credence.Mutation.Sweep do
     * `:timeout_s` — wall clock per mutant run (default `#{@default_timeout_s}`).
     * `:test_timeout_ms` — ExUnit per-test timeout inside the run
       (default `#{@default_test_timeout_ms}`).
+    * `:max_heap_words` — maximum heap words for any runner process
+      (default `#{@default_max_heap_words}`).
+    * `:max_output_bytes` — maximum combined stdout/stderr retained from a run
+      (default `#{@default_max_output_bytes}`).
     * `:code_paths` — ebin dirs the runner prepends (default: every
       `lib/*/ebin` beside the loaded `:credence` build).
     * `:root` — project root the runner is executed from (default `File.cwd!/0`).
@@ -108,6 +114,8 @@ defmodule Credence.Mutation.Sweep do
   def execute(subject, source, opts) do
     root = Keyword.get_lazy(opts, :root, &File.cwd!/0)
     timeout_s = Keyword.get(opts, :timeout_s, @default_timeout_s)
+    max_heap_words = Keyword.get(opts, :max_heap_words, @default_max_heap_words)
+    max_output_bytes = Keyword.get(opts, :max_output_bytes, @default_max_output_bytes)
 
     job = %{
       code_paths: Keyword.get_lazy(opts, :code_paths, &default_code_paths/0),
@@ -126,9 +134,12 @@ defmodule Credence.Mutation.Sweep do
     File.write!(job_path, :erlang.term_to_binary(job))
 
     try do
-      {command, args} = runner_command(job_path, timeout_s)
-      {output, exit_code} = System.cmd(command, args, cd: root, stderr_to_stdout: true)
-      interpret(output, exit_code)
+      {command, args} = runner_command(job_path, timeout_s, max_heap_words)
+
+      case run_capped(command, args, root, max_output_bytes) do
+        {:ok, output, exit_code} -> interpret(output, exit_code)
+        :output_ceiling -> {:error, "output ceiling exceeded (#{max_output_bytes} bytes)"}
+      end
     after
       File.rm(job_path)
     end
@@ -179,6 +190,7 @@ defmodule Credence.Mutation.Sweep do
 
   defp baseline(subject, source, opts) do
     case execute(subject, source, opts) do
+      {:ok, 0, 0} -> {:error, "no runnable tests"}
       {:ok, total, 0} -> {:green, total}
       {:ok, total, failed} -> {:red, total, failed}
       {_other, detail} -> {:error, detail}
@@ -216,6 +228,14 @@ defmodule Credence.Mutation.Sweep do
   end
 
   defp interpret(output, exit_code) do
+    if String.contains?(output, "maximum heap size reached") do
+      {:error, "heap ceiling exceeded"}
+    else
+      interpret_verdict(output, exit_code)
+    end
+  end
+
+  defp interpret_verdict(output, exit_code) do
     line =
       output
       |> String.split("\n")
@@ -254,13 +274,43 @@ defmodule Credence.Mutation.Sweep do
   # the test's timer, so ExUnit alone cannot always cut it short). Where the
   # coreutils binary is absent the sweep still runs — it just loses that
   # backstop, which the task reports.
-  defp runner_command(job_path, timeout_s) do
+  defp runner_command(job_path, timeout_s, max_heap_words) do
     elixir = System.find_executable("elixir") || "elixir"
     runner = runner_script()
+    elixir_args = ["--erl", "+hmax #{max_heap_words} +hmaxk true", runner, job_path]
 
     case System.find_executable("timeout") do
-      nil -> {elixir, [runner, job_path]}
-      timeout -> {timeout, ["--kill-after=5", "#{timeout_s}", elixir, runner, job_path]}
+      nil -> {elixir, elixir_args}
+      timeout -> {timeout, ["--kill-after=5", "#{timeout_s}", elixir | elixir_args]}
+    end
+  end
+
+  defp run_capped(command, args, root, max_output_bytes) do
+    port =
+      Port.open({:spawn_executable, command}, [
+        :binary,
+        :exit_status,
+        :hide,
+        :stderr_to_stdout,
+        {:args, args},
+        {:cd, root},
+        {:env, [{~c"ERL_CRASH_DUMP_SECONDS", ~c"0"}]}
+      ])
+
+    collect_output(port, [], 0, max_output_bytes)
+  end
+
+  defp collect_output(port, chunks, size, max_output_bytes) do
+    receive do
+      {^port, {:data, data}} when size + byte_size(data) > max_output_bytes ->
+        Port.close(port)
+        :output_ceiling
+
+      {^port, {:data, data}} ->
+        collect_output(port, [data | chunks], size + byte_size(data), max_output_bytes)
+
+      {^port, {:exit_status, exit_code}} ->
+        {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary(), exit_code}
     end
   end
 
