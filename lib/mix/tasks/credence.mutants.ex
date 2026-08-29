@@ -94,7 +94,7 @@ defmodule Mix.Tasks.Credence.Mutants do
   @impl Mix.Task
   def run(argv) do
     ensure_test_env!()
-    {opts, _, _} = OptionParser.parse(argv, strict: @switches)
+    opts = parse_options!(argv)
 
     subjects = subjects(opts)
 
@@ -138,6 +138,18 @@ defmodule Mix.Tasks.Credence.Mutants do
     write_ledger(out_dir, reports)
     write_summary(out_dir, reports, opts, sweep_opts, elapsed_ms)
     print_console(reports, out_dir)
+  end
+
+  @doc false
+  def parse_options!(argv) do
+    case OptionParser.parse(argv, strict: @switches) do
+      {opts, _, []} ->
+        opts
+
+      {_, _, errors} ->
+        details = Enum.map_join(errors, ", ", fn {option, value} -> "#{option} #{value}" end)
+        Mix.raise("invalid option: #{details}")
+    end
   end
 
   defp sweep_one(subject, sweep_opts) do
@@ -232,7 +244,8 @@ defmodule Mix.Tasks.Credence.Mutants do
   # Deterministic and stratified: sample within each layer in proportion to the
   # layer's size, ranking by `phash2({module, seed})`. Same seed ⇒ same sample,
   # so a published rate names a reproducible set of rules.
-  defp sample(subjects, opts) do
+  @doc false
+  def sample(subjects, opts) do
     case Keyword.get(opts, :sample) do
       nil ->
         subjects
@@ -244,11 +257,25 @@ defmodule Mix.Tasks.Credence.Mutants do
         seed = Keyword.get(opts, :seed, 0)
         total = length(subjects)
 
-        subjects
-        |> Enum.group_by(& &1.layer)
-        |> Enum.sort_by(fn {layer, _} -> layer end)
-        |> Enum.flat_map(fn {_layer, group} ->
-          quota = max(1, round(n * length(group) / total))
+        quotas =
+          subjects
+          |> Enum.group_by(& &1.layer)
+          |> Enum.map(fn {layer, group} ->
+            product = n * length(group)
+            {layer, group, div(product, total), rem(product, total)}
+          end)
+
+        remaining = n - Enum.sum(Enum.map(quotas, &elem(&1, 2)))
+
+        bonuses =
+          quotas
+          |> Enum.sort_by(fn {layer, _group, _quota, remainder} -> {-remainder, layer} end)
+          |> Enum.take(remaining)
+          |> MapSet.new(&elem(&1, 0))
+
+        quotas
+        |> Enum.flat_map(fn {layer, group, quota, _remainder} ->
+          quota = quota + if(layer in bonuses, do: 1, else: 0)
 
           group
           |> Enum.sort_by(&:erlang.phash2({&1.module, seed}))
@@ -417,7 +444,8 @@ defmodule Mix.Tasks.Credence.Mutants do
       ) <> "\n"
   end
 
-  defp survivor_table(scored) do
+  @doc false
+  def survivor_table(scored) do
     rows =
       for report <- scored,
           result <- report.results,
@@ -425,7 +453,7 @@ defmodule Mix.Tasks.Credence.Mutants do
         m = result.mutant
 
         "| #{report.subject.name} | #{report.subject.source_path}:#{m.line}:#{m.column} | " <>
-          "#{m.operator} | `#{m.original}` → `#{m.replacement}` | `#{escape(m.context)}` |"
+          "#{m.operator} | `#{m.original}` → `#{m.replacement}` | `#{escape_markdown_table(m.context)}` |"
       end
 
     case rows do
@@ -443,6 +471,10 @@ defmodule Mix.Tasks.Credence.Mutants do
           "\n"
         ) <> "\n"
     end
+  end
+
+  defp escape_markdown_table(text) do
+    text |> escape() |> String.replace("|", "\\|")
   end
 
   defp baseline_total({:green, total}), do: total
