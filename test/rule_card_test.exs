@@ -75,11 +75,11 @@ defmodule Credence.RuleCardTest do
     doc |> String.split("\n\n") |> Enum.find("", &(String.trim(&1) != "")) |> String.trim()
   end
 
-  # ". " followed by a capital is the sentence boundary that matters here. It
+  # Terminal punctuation followed by a capital is the sentence boundary that matters here. It
   # deliberately does not split on "e.g." or "Enum.map/2" — a period inside a
   # token has no following space, and a period before a lowercase word is not a
   # new sentence.
-  defp sentences(paragraph), do: String.split(paragraph, ~r/\.\s+[A-Z]/)
+  defp sentences(paragraph), do: String.split(paragraph, ~r/[.?!]\s+[A-Z]/)
 
   describe "every rule has a moduledoc" do
     test "no rule ships without one" do
@@ -190,6 +190,8 @@ defmodule Credence.RuleCardTest do
 
     test "but two real sentences are" do
       assert length(sentences("Does a thing. Then it does another thing.")) == 2
+      assert length(sentences("Does a thing? Does it do another thing.")) == 2
+      assert length(sentences("Does a thing! Then it does another thing.")) == 2
     end
   end
 
@@ -218,6 +220,10 @@ defmodule Credence.RuleCardTest do
   describe "documented examples are true, not decorative" do
     alias Credence.RuleDuplication
 
+    defmodule CrashingGoodExampleRule do
+      def check(_ast, _opts), do: raise("example rule crashed")
+    end
+
     defp fires?(rule, source) do
       case Sourceror.parse_string(source) do
         {:ok, ast} ->
@@ -233,6 +239,8 @@ defmodule Credence.RuleCardTest do
           :unparsable
       end
     end
+
+    defp acceptable_good_example?(rule, source), do: fires?(rule, source) == false
 
     test "every Pattern `## Bad` example makes its own rule fire" do
       examples =
@@ -273,7 +281,8 @@ defmodule Credence.RuleCardTest do
       assert length(examples) >= 156,
              "only #{length(examples)} Good examples extracted; the extractor has regressed"
 
-      liars = for {rule, snippet} <- examples, fires?(rule, snippet) == true, do: rule
+      liars =
+        for {rule, snippet} <- examples, not acceptable_good_example?(rule, snippet), do: rule
 
       assert liars == [],
              """
@@ -294,6 +303,15 @@ defmodule Credence.RuleCardTest do
 
     test "CONTROL: fires?/2 says :unparsable for a placeholder example" do
       assert fires?(Credence.Pattern.NoManualFind, "Enum.reduce(list, fn ...)") == :unparsable
+    end
+
+    test "CONTROL: a Good example is acceptable only when it parses and does not fire" do
+      refute acceptable_good_example?(
+               Credence.Pattern.NoManualFind,
+               "Enum.reduce(list, fn ...)"
+             )
+
+      refute acceptable_good_example?(CrashingGoodExampleRule, "value = :valid_elixir")
     end
   end
 
