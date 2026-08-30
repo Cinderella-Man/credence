@@ -172,7 +172,9 @@ defmodule Credence.RuleHelpers do
   `{:ok, diagnostics}` or `{:error, diagnostics}`.
 
   Pass `cleanup_modules: false` only when the caller needs to execute a module
-  compiled from a uniquely named fixture after this function returns.
+  compiled from a uniquely named fixture after this function returns. A compile
+  that raises or aborts is always cleaned up because it has no usable result to
+  retain.
 
   Uses `:code.soft_purge/1` for cleanup so that compiling source
   which redefines a currently-executing module does not kill the BEAM
@@ -234,6 +236,45 @@ defmodule Credence.RuleHelpers do
     |> Enum.uniq()
   end
 
+  @dynamic_module_load ~r/(?:\bModule\.create\s*\(|\bCode\.(?:compile|eval)_(?:string|quoted|file)\s*\(|:code\.(?:load_binary|load_file|load_abs)\s*\()/
+
+  defp track_dynamic_modules?(source) do
+    Regex.match?(@dynamic_module_load, source) or
+      (String.contains?(source, "defmodule") and module_keys(source) == [])
+  end
+
+  # The lock already serializes these names against other Credence compiles.
+  # Remember which were loaded before this compile so an over-match in a string
+  # or a conditional `defmodule` cannot make exceptional cleanup delete a host
+  # module that this source never loaded.
+  defp declared_module_state(source) do
+    names = module_keys(source)
+
+    preloaded =
+      names
+      |> Enum.flat_map(&existing_module/1)
+      |> Enum.filter(&(:code.is_loaded(&1) != false))
+      |> MapSet.new()
+
+    {names, preloaded}
+  end
+
+  defp newly_loaded_declared_modules({names, preloaded}) do
+    names
+    |> Enum.flat_map(&existing_module/1)
+    |> Enum.reject(&MapSet.member?(preloaded, &1))
+    |> Enum.filter(&(:code.is_loaded(&1) != false))
+  end
+
+  defp existing_module("Elixir." <> _ = name), do: to_existing_atom(name)
+  defp existing_module(name), do: to_existing_atom("Elixir." <> name)
+
+  defp to_existing_atom(name) do
+    [String.to_existing_atom(name)]
+  rescue
+    ArgumentError -> []
+  end
+
   defp lock_modules([], fun), do: fun.()
 
   defp lock_modules([module | rest], fun) do
@@ -245,8 +286,10 @@ defmodule Credence.RuleHelpers do
   end
 
   defp do_compile_and_capture(source, opts) do
-    case bounded_compile(source) do
-      {:ok, {result, diagnostics}} ->
+    declared_module_state = declared_module_state(source)
+
+    case bounded_compile(source, track_dynamic_modules?(source)) do
+      {:ok, {result, diagnostics}, loaded_modules} ->
         case result do
           # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
           # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
@@ -254,14 +297,25 @@ defmodule Credence.RuleHelpers do
           # the semantic round can still match + fix it (without this, every such
           # error was a 0-diagnostic dead end). Append to any captured diagnostics.
           {:raised, e} ->
+            safe_cleanup_modules(
+              loaded_modules ++ newly_loaded_declared_modules(declared_module_state)
+            )
+
             {:error, diagnostics ++ [exception_diagnostic(e)]}
 
           modules when is_list(modules) ->
-            if Keyword.get(opts, :cleanup_modules, true), do: safe_cleanup_modules(modules)
+            if Keyword.get(opts, :cleanup_modules, true) do
+              safe_cleanup_modules(loaded_modules ++ modules)
+            end
+
             {:ok, drop_phantom_redefinitions(diagnostics, source)}
         end
 
-      {:aborted, why} ->
+      {:aborted, why, loaded_modules} ->
+        safe_cleanup_modules(
+          loaded_modules ++ newly_loaded_declared_modules(declared_module_state)
+        )
+
         Logger.warning("[credence] compile aborted: #{abort_reason_text(why)} — not analysed")
 
         {:error, [abort_diagnostic(why)]}
@@ -275,64 +329,110 @@ defmodule Credence.RuleHelpers do
   # source called `exit/1` on it. Either way the caller survives, which the
   # unwrapped version did not: a top-level `exit/1` used to take down whichever
   # process was running the pipeline.
-  defp bounded_compile(source) do
+  #
+  # `Code.compile_string/2` only returns its module list when the whole compile
+  # returns normally. Literal `defmodule` names can be recovered from the source
+  # on that exceptional path. A source that can choose a module name at runtime
+  # cannot, so those uncommon sources get a per-compile trace session recording
+  # every successful `:code.load_binary/3` in the compiler process tree. The
+  # session is isolated, so concurrently compiled sources cannot donate modules
+  # to each other's cleanup sets. Ordinary compiles retain the cheaper process
+  # tracing they already used to contain spawned work.
+  defp bounded_compile(source, track_modules?) do
     parent = self()
     {heap_words, timeout_ms} = compile_bounds()
 
-    collector = spawn(fn -> collect_compile_processes(MapSet.new()) end)
+    collector = spawn(fn -> collect_compile_activity(initial_compile_activity()) end)
+    session = start_module_load_trace(collector, track_modules?)
 
-    {pid, ref} =
-      spawn_monitor(fn ->
-        :erlang.trace(self(), true, [:procs, :set_on_spawn, {:tracer, collector}])
-        Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
+    try do
+      {pid, ref} =
+        spawn_monitor(fn ->
+          unless track_modules? do
+            :erlang.trace(self(), true, [:procs, :set_on_spawn, {:tracer, collector}])
+          end
 
-        captured =
-          Code.with_diagnostics(fn ->
-            try do
-              Code.compile_string(source, "credence_check.ex")
-            rescue
-              e ->
-                Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
+          receive do
+            {__MODULE__, :start_compile} -> :ok
+          end
 
-                {:raised, e}
-            end
-          end)
+          Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
 
-        delivered = :erlang.trace_delivered(:all)
+          captured =
+            Code.with_diagnostics(fn ->
+              try do
+                Code.compile_string(source, "credence_check.ex")
+              rescue
+                e ->
+                  Logger.debug(
+                    "[credence_fix] Code.compile_string raised: #{Exception.message(e)}"
+                  )
 
-        receive do
-          {:trace_delivered, _tracee, ^delivered} -> :ok
-        end
+                  {:raised, e}
+              end
+            end)
 
-        send(collector, {__MODULE__, :compiled, self()})
+          send(parent, {__MODULE__, :compiled, self(), captured})
+        end)
 
-        receive do
-          {__MODULE__, :compile_processes, spawned} ->
-            terminate_compile_processes(spawned)
-        end
+      if session do
+        :trace.process(session, pid, true, [:call, :procs, :set_on_spawn])
+      end
 
-        send(parent, {__MODULE__, :compiled, captured})
-      end)
+      send(pid, {__MODULE__, :start_compile})
 
+      outcome = await_compile(pid, ref, timeout_ms)
+      {spawned, loaded_modules} = finish_compile_activity(collector, session)
+      terminate_compile_processes(spawned)
+
+      case outcome do
+        {:ok, captured} -> {:ok, captured, loaded_modules}
+        {:aborted, why} -> {:aborted, why, loaded_modules}
+      end
+    after
+      stop_module_load_trace(session)
+      send(collector, :stop)
+    end
+  end
+
+  defp start_module_load_trace(_collector, false), do: nil
+
+  defp start_module_load_trace(collector, true) do
+    session = :trace.session_create(__MODULE__, collector, [])
+
+    :trace.function(
+      session,
+      {:code, :load_binary, 3},
+      [{:_, [], [{:return_trace}]}],
+      [:local]
+    )
+
+    session
+  end
+
+  defp stop_module_load_trace(nil), do: :ok
+  defp stop_module_load_trace(session), do: :trace.session_destroy(session)
+
+  defp await_compile(pid, ref, timeout_ms) do
     receive do
-      {__MODULE__, :compiled, captured} ->
-        Process.demonitor(ref, [:flush])
+      {__MODULE__, :compiled, ^pid, captured} ->
+        receive do
+          {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+        end
+
         {:ok, captured}
 
-      {:DOWN, ^ref, :process, _pid, :killed} ->
-        send(collector, :stop)
+      {:DOWN, ^ref, :process, ^pid, :killed} ->
         {:aborted, :heap_limit}
 
-      {:DOWN, ^ref, :process, _pid, reason} ->
-        send(collector, :stop)
+      {:DOWN, ^ref, :process, ^pid, reason} ->
         {:aborted, {:exited, reason}}
     after
       timeout_ms ->
         Process.exit(pid, :kill)
-        send(collector, :stop)
 
         receive do
-          {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+          {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
         after
           1_000 -> :ok
         end
@@ -341,22 +441,114 @@ defmodule Credence.RuleHelpers do
     end
   end
 
-  defp collect_compile_processes(spawned) do
+  defp initial_compile_activity do
+    %{spawned: MapSet.new(), loading: %{}, loaded: MapSet.new()}
+  end
+
+  defp collect_compile_activity(activity) do
     receive do
-      {:trace, _pid, :spawn, child, _mfa} ->
-        collect_compile_processes(MapSet.put(spawned, child))
+      {__MODULE__, :finish_compile_activity, caller, session} ->
+        delivered = trace_delivered(session)
+        activity = collect_until_delivered(activity, delivered)
 
-      {:trace, child, :spawned, _parent, _mfa} ->
-        collect_compile_processes(MapSet.put(spawned, child))
-
-      {__MODULE__, :compiled, compiler} ->
-        send(compiler, {__MODULE__, :compile_processes, spawned})
+        send(
+          caller,
+          {__MODULE__, :compile_activity, self(), activity.spawned,
+           MapSet.to_list(activity.loaded)}
+        )
 
       :stop ->
-        Enum.each(spawned, &Process.exit(&1, :kill))
+        terminate_compile_processes(activity.spawned)
 
-      _trace_event ->
-        collect_compile_processes(spawned)
+      trace_event ->
+        trace_event
+        |> record_compile_activity(activity)
+        |> collect_compile_activity()
+    end
+  end
+
+  defp trace_delivered(nil), do: :erlang.trace_delivered(:all)
+  defp trace_delivered(session), do: :trace.delivered(session, :all)
+
+  defp collect_until_delivered(activity, delivered) do
+    receive do
+      {:trace_delivered, :all, ^delivered} ->
+        activity
+
+      trace_event ->
+        trace_event
+        |> record_compile_activity(activity)
+        |> collect_until_delivered(delivered)
+    end
+  end
+
+  defp record_compile_activity(
+         {:trace, _parent, :spawn, child, _mfa},
+         activity
+       ) do
+    %{activity | spawned: MapSet.put(activity.spawned, child)}
+  end
+
+  defp record_compile_activity(
+         {:trace, child, :spawned, _parent, _mfa},
+         activity
+       ) do
+    %{activity | spawned: MapSet.put(activity.spawned, child)}
+  end
+
+  defp record_compile_activity(
+         {:trace, pid, :call, {:code, :load_binary, [module, _file, _binary]}},
+         activity
+       )
+       when is_atom(module) do
+    loading = Map.update(activity.loading, pid, [module], &[module | &1])
+    %{activity | loading: loading}
+  end
+
+  defp record_compile_activity(
+         {:trace, pid, :return_from, {:code, :load_binary, 3}, result},
+         activity
+       ) do
+    case Map.get(activity.loading, pid, []) do
+      [module | rest] ->
+        loading =
+          case rest do
+            [] -> Map.delete(activity.loading, pid)
+            _ -> Map.put(activity.loading, pid, rest)
+          end
+
+        loaded =
+          if result == {:module, module} and not compiler_temporary_module?(module) do
+            MapSet.put(activity.loaded, module)
+          else
+            activity.loaded
+          end
+
+        %{activity | loading: loading, loaded: loaded}
+
+      [] ->
+        activity
+    end
+  end
+
+  defp record_compile_activity(_trace_event, activity), do: activity
+
+  # `Code.compile_string/2` evaluates top-level expressions in short-lived
+  # `:elixir_compiler_N` modules and manages those modules itself. They are not
+  # source modules and deleting them here adds three serialized code-server
+  # calls per evaluator — enough to time out the suite's compile-heavy gates.
+  defp compiler_temporary_module?(module) do
+    module
+    |> Atom.to_string()
+    |> String.starts_with?("elixir_compiler_")
+  end
+
+  defp finish_compile_activity(collector, session) do
+    send(collector, {__MODULE__, :finish_compile_activity, self(), session})
+
+    receive do
+      {__MODULE__, :compile_activity, ^collector, spawned, loaded_modules} ->
+        {spawned, loaded_modules}
     end
   end
 
@@ -558,13 +750,19 @@ defmodule Credence.RuleHelpers do
   end
 
   defp safe_cleanup_modules(modules) do
-    for {mod, _binary} <- modules do
+    modules
+    |> Enum.map(fn
+      {module, _binary} -> module
+      module when is_atom(module) -> module
+    end)
+    |> Enum.uniq()
+    |> Enum.each(fn mod ->
       # soft_purge any pre-existing old code so that delete can proceed
       # (delete fails if old code exists and cannot be purged)
       :code.soft_purge(mod)
       :code.delete(mod)
       :code.soft_purge(mod)
-    end
+    end)
   end
 
   @doc """

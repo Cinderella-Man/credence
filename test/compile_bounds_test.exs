@@ -75,6 +75,112 @@ defmodule Credence.CompileBoundsTest do
     end
   end
 
+  describe "module cleanup follows the compiler lifecycle" do
+    test "minimized sequence: a raised compile cannot hide a later undefined-module diagnostic" do
+      declared = Credence.CompileCleanupRaisedDeclaredFixture
+      dynamic = Credence.CompileCleanupRaisedDynamicFixture
+      isolate_modules([declared, dynamic])
+
+      source = """
+      defmodule Credence.CompileCleanupRaisedDeclaredFixture do
+        def marker, do: :declared
+      end
+
+      Module.create(
+        String.to_atom("Elixir.Credence.CompileCleanupRaisedDynamicFixture"),
+        quote do
+          def marker, do: :dynamic
+        end,
+        Macro.Env.location(__ENV__)
+      )
+
+      Credence.CompileCleanupMissingFixture.run()
+      """
+
+      assert {:error, _diagnostics} = RuleHelpers.compile_and_capture(source)
+      refute Code.ensure_loaded?(declared)
+      refute Code.ensure_loaded?(dynamic)
+
+      probe = """
+      defmodule Credence.CompileCleanupRaisedProbe do
+        def declared, do: Credence.CompileCleanupRaisedDeclaredFixture.marker()
+        def dynamic, do: Credence.CompileCleanupRaisedDynamicFixture.marker()
+      end
+      """
+
+      assert {:ok, diagnostics} = RuleHelpers.compile_and_capture(probe)
+
+      for name <- [
+            "Credence.CompileCleanupRaisedDeclaredFixture.marker/0 is undefined",
+            "Credence.CompileCleanupRaisedDynamicFixture.marker/0 is undefined"
+          ] do
+        assert Enum.any?(diagnostics, &(&1.message =~ name))
+      end
+    end
+
+    test "an aborted compile cleans declared and dynamically created modules" do
+      declared = Credence.CompileCleanupAbortedDeclaredFixture
+      dynamic = Credence.CompileCleanupAbortedDynamicFixture
+      isolate_modules([declared, dynamic])
+
+      source = """
+      defmodule Credence.CompileCleanupAbortedDeclaredFixture do
+        def marker, do: :declared
+      end
+
+      Module.create(
+        String.to_atom("Elixir.Credence.CompileCleanupAbortedDynamicFixture"),
+        quote do
+          def marker, do: :dynamic
+        end,
+        Macro.Env.location(__ENV__)
+      )
+
+      exit(:after_modules_loaded)
+      """
+
+      assert {:error, [diagnostic]} = RuleHelpers.compile_and_capture(source)
+      assert diagnostic.message =~ "exited during compilation"
+      refute Code.ensure_loaded?(declared)
+      refute Code.ensure_loaded?(dynamic)
+    end
+
+    test "an aborted compile cleans a declared module on the ordinary fast path" do
+      declared = Credence.CompileCleanupFastPathFixture
+      isolate_modules([declared])
+
+      source = """
+      defmodule Credence.CompileCleanupFastPathFixture do
+        def marker, do: :declared
+      end
+
+      exit(:after_declared_module_loaded)
+      """
+
+      assert {:error, [diagnostic]} = RuleHelpers.compile_and_capture(source)
+      assert diagnostic.message =~ "exited during compilation"
+      refute Code.ensure_loaded?(declared)
+    end
+
+    test "a successful compile cleans a dynamically created module" do
+      dynamic = Credence.CompileCleanupSuccessfulDynamicFixture
+      isolate_modules([dynamic])
+
+      source = """
+      Module.create(
+        String.to_atom("Elixir.Credence.CompileCleanupSuccessfulDynamicFixture"),
+        quote do
+          def marker, do: :dynamic
+        end,
+        Macro.Env.location(__ENV__)
+      )
+      """
+
+      assert {:ok, []} = RuleHelpers.compile_and_capture(source)
+      refute Code.ensure_loaded?(dynamic)
+    end
+  end
+
   # Positive controls. A ceiling nobody has seen enforced is a ceiling nobody
   # has verified — each of these perturbs one bound and requires that source
   # which passes comfortably under the real bound is refused under the tiny one.
@@ -99,5 +205,16 @@ defmodule Credence.CompileBoundsTest do
       assert {:error, [diagnostic]} = RuleHelpers.compile_and_capture(ordinary)
       assert diagnostic.message =~ "time budget"
     end
+  end
+
+  defp isolate_modules(modules) do
+    Enum.each(modules, &unload/1)
+    on_exit(fn -> Enum.each(modules, &unload/1) end)
+  end
+
+  defp unload(module) do
+    :code.soft_purge(module)
+    :code.delete(module)
+    :code.soft_purge(module)
   end
 end
