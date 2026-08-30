@@ -181,6 +181,18 @@ defmodule Credence.SyntaxRoundSafetyTest do
   end
   """
 
+  @two_faults_fixed """
+  defmodule Sample do
+    def gauss(total) do
+      div(total, 2)
+    end
+
+    def broken(x) do
+      Enum.map(x, [], name: 1)
+    end
+  end
+  """
+
   # Parses everywhere except line 7; line 3 is code the parser accepts.
   @sound_line_and_a_fault """
   defmodule Sample do
@@ -268,16 +280,11 @@ defmodule Credence.SyntaxRoundSafetyTest do
     test "a real two-rule repair (infix div + keyword order) still completes" do
       {code, applied} = Credence.Syntax.fix_with_trace(@two_faults)
 
-      assert code =~ "div(total, 2)"
-      assert code =~ "Enum.map(x, [], name: 1)"
-      assert parses?(code)
-
       names =
         Enum.map(applied, fn {rule, count} -> {RuleHelpers.rule_name(rule), count} end)
 
-      assert {"FixDivRem", 1} in names
-      assert {"FixKeywordBeforePositionalArgument", 1} in names
-      refute Enum.any?(names, fn {_name, count} -> count in [:reverted, :rolled_back] end)
+      assert code == @two_faults_fixed
+      assert names == [{"FixDivRem", 1}, {"FixKeywordBeforePositionalArgument", 1}]
     end
 
     test "keeps a repair that reveals an earlier fault the front end had run past" do
@@ -347,11 +354,21 @@ defmodule Credence.SyntaxRoundSafetyTest do
         end
       """
 
+      expected = """
+      defmodule Sample do
+        def gauss(total) do
+          div(total, 2)
+        end
+      end
+      """
+
       {code, applied} = Credence.Syntax.fix_with_trace(source)
 
-      assert code =~ "div(total, 2)"
-      assert parses?(code)
-      assert Enum.all?(applied, fn {_rule, count} -> is_integer(count) end)
+      names =
+        Enum.map(applied, fn {rule, count} -> {RuleHelpers.rule_name(rule), count} end)
+
+      assert code == expected
+      assert names == [{"FixDivRem", 1}, {"FixMissingModuleEnd", 1}]
     end
   end
 
