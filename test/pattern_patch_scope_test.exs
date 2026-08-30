@@ -67,6 +67,12 @@ defmodule Credence.PatternPatchScopeTest do
     test "a line beyond the source is nil, not a crash" do
       assert PatternPatchScope.byte_offset("abc", 9, 1) == nil
     end
+
+    test "positions outside the source are rejected" do
+      assert PatternPatchScope.byte_offset("abc", 0, 1) == nil
+      assert PatternPatchScope.byte_offset("abc", 1, 0) == nil
+      assert PatternPatchScope.byte_offset("abc", 1, 5) == nil
+    end
   end
 
   describe "the machinery is provable with the ledger empty" do

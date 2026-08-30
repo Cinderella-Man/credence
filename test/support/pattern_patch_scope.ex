@@ -121,15 +121,9 @@ defmodule Credence.PatternPatchScope do
   """
   @spec byte_offset(String.t(), pos_integer(), pos_integer()) :: non_neg_integer() | nil
   def byte_offset(source, line, column) when is_integer(line) and is_integer(column) do
-    lines = String.split(source, "\n")
-
-    if line <= length(lines) do
-      prefix_bytes =
-        lines |> Enum.take(line - 1) |> Enum.reduce(0, fn l, acc -> acc + byte_size(l) + 1 end)
-
-      target = Enum.at(lines, line - 1) || ""
-      within = target |> String.graphemes() |> Enum.take(column - 1) |> IO.iodata_to_binary()
-      prefix_bytes + byte_size(within)
+    case SourceMask.byte_offset(source, line, column) do
+      {:ok, offset} -> offset
+      :error -> nil
     end
   end
 
