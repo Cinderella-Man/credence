@@ -124,6 +124,9 @@ defmodule Credence.RuleCase do
         {:@, _, [{:spec, _, [spec]}]} = node, acc ->
           {node, %{acc | specs: acc.specs ++ [Macro.to_string(spec)]}}
 
+        {:def, _, [{:when, _, [{name, _, args} | _]} | _]} = node, acc when is_atom(name) ->
+          {node, %{acc | defs: acc.defs ++ [{name, length(args || [])}]}}
+
         {:def, _, [{name, _, args} | _]} = node, acc when is_atom(name) ->
           {node, %{acc | defs: acc.defs ++ [{name, length(args || [])}]}}
 
@@ -140,13 +143,7 @@ defmodule Credence.RuleCase do
   `Code.compile_string` reach from the test.
   """
   def compiles?(code) do
-    # `with_diagnostics` keeps fixture-compile warnings (deprecated charlist,
-    # redefined module, …) out of the suite output; it is process-local, so it
-    # is safe under `async: true`.
-    Code.with_diagnostics(fn -> Code.compile_string(code) end)
-    true
-  rescue
-    _ -> false
+    match?({:ok, _diagnostics}, RuleHelpers.compile_and_capture(code))
   end
 
   @doc """
@@ -164,7 +161,7 @@ defmodule Credence.RuleCase do
   redefines any module of the same name.
   """
   def call_fixed(code, module, fun, args) do
-    Code.with_diagnostics(fn -> Code.compile_string(code) end)
+    {:ok, _diagnostics} = RuleHelpers.compile_and_capture(code, cleanup_modules: false)
     apply(module, fun, args)
   after
     :code.purge(module)
