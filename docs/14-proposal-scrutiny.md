@@ -77,7 +77,7 @@ affordable.
 Applied `no_eager_with_index_in_reduce`'s fix to a real gold
 (`Enum.with_index()` → `Stream.with_index()`), then ran the task's own
 14-test harness against the fixed module **standalone**
-(`elixir -e 'ExUnit.start(); Code.compile_file(sol); Code.compile_file(harness)'`):
+with the bounded compiler shown in Appendix B.4:
 **14/14 green in 0.6 s wall**, no workspace, no `mix`. For the pure-OTP
 majority of tasks, H2's per-subject cost is sub-second, not the ~5 s
 mix-test estimate in the proposal; only dep-needing tasks require the
@@ -353,49 +353,38 @@ genuine divergence).
 
 ### B.3 E2 — gold over-fire oracle dry-run
 
-`MIX_ENV=test mix run gold_oracle.exs` from the credence root:
+The runner is checked in at `gold_oracle.exs`. By default it expects the
+dataset in a sibling checkout; set `DATASET_ROOT` for any other location. It
+fails loudly instead of reporting a vacuous clean result when no golds exist.
 
-```elixir
-golds = Path.wildcard("/home/kamil/projects/elixir-sft-dataset/tasks/*_01/solution.ex") |> Enum.sort()
-
-{t, results} =
-  :timer.tc(fn ->
-    golds
-    |> Task.async_stream(
-      fn path ->
-        src = File.read!(path)
-        task = path |> Path.dirname() |> Path.basename()
-        issues = try do Credence.Pattern.analyze(src) rescue e -> [%{rule: {:crash, inspect(e.__struct__)}}] end
-        {task, Enum.map(issues, & &1.rule)}
-      end,
-      max_concurrency: System.schedulers_online(), timeout: 120_000, ordered: false
-    )
-    |> Enum.map(fn {:ok, r} -> r end)
-  end)
-
-findings =
-  results
-  |> Enum.flat_map(fn {task, rules} ->
-    for r <- rules, r != :parse_error, not match?({:crash, _}, r), do: {r, task}
-  end)
-
-IO.puts("golds=#{length(results)} time=#{Float.round(t / 1_000_000, 1)}s")
-IO.puts("clean=#{Enum.count(results, fn {_, rs} -> rs == [] end)}")
-findings |> Enum.frequencies_by(&elem(&1, 0)) |> Enum.sort_by(fn {_, n} -> -n end)
-|> Enum.each(fn {r, n} -> IO.puts("  #{n}\t#{r}") end)
+```bash
+DATASET_ROOT=/path/to/elixir-sft-dataset MIX_ENV=test \
+  maintainer_tools/pr_review/run_capped.sh mix run gold_oracle.exs
 ```
 
 ### B.4 E2b — executable fix-safety, standalone runner
 
 ```bash
-T=~/projects/elixir-sft-dataset/tasks/007_002_weightedmovingaverage_01
-cp $T/solution.ex /tmp/backup.ex
-MIX_ENV=test mix run -e '
-  path = "'$T'/solution.ex"
+export TASK_DIR=/path/to/elixir-sft-dataset/tasks/007_002_weightedmovingaverage_01
+cp "$TASK_DIR/solution.ex" /tmp/backup.ex
+MIX_ENV=test maintainer_tools/pr_review/run_capped.sh mix run -e '
+  path = Path.join(System.fetch_env!("TASK_DIR"), "solution.ex")
   fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEagerWithIndexInReduce, File.read!(path))
   File.write!(path, fixed)'
-time elixir -e "ExUnit.start(); Code.compile_file(\"$T/solution.ex\"); Code.compile_file(\"$T/test_harness.exs\")"
-cp /tmp/backup.ex $T/solution.ex     # restore!
+MIX_ENV=test maintainer_tools/pr_review/run_capped.sh mix run -e '
+  task_dir = System.fetch_env!("TASK_DIR")
+  source =
+    "ExUnit.start(autorun: false)\n" <>
+      File.read!(Path.join(task_dir, "solution.ex")) <>
+      "\n" <>
+      File.read!(Path.join(task_dir, "test_harness.exs")) <>
+      "\ncase ExUnit.run() do\n  %{failures: 0} -> :ok\n  result -> raise \"harness failed: #{inspect(result)}\"\nend\n"
+
+  case Credence.RuleHelpers.compile_and_capture(source) do
+    {:ok, _diagnostics} -> :ok
+    {:error, diagnostics} -> raise "bounded compile failed: #{inspect(diagnostics)}"
+  end'
+cp /tmp/backup.ex "$TASK_DIR/solution.ex"     # restore!
 ```
 
 The standalone runner works for any pure-OTP task; dep-needing tasks (jason/
