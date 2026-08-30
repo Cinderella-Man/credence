@@ -12,6 +12,18 @@ defmodule Credence.Pattern.HallucinatedGuard do
       is_non_neg_integer(x)  →  is_integer(x) and x >= 0
       is_neg_integer(x)      →  is_integer(x) and x < 0
       is_non_pos_integer(x)  →  is_integer(x) and x <= 0
+
+  ## Bad
+
+      defmodule MHG do
+        def valid?(x), do: is_pos_integer(x)
+      end
+
+  ## Good
+
+      defmodule MHG do
+        def valid?(x), do: is_integer(x) and x > 0
+      end
   """
 
   use Credence.Pattern.Rule
@@ -28,15 +40,12 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def check(ast, _opts) do
-    active =
-      if imports_or_uses?(ast),
-        do: [],
-        else: @guard_names -- defined_guards(ast)
+    protected = protected_calls(ast)
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {name, meta, [_arg]} = node, issues when is_atom(name) ->
-          if name in active do
+          if name in @guard_names and call_key(name, meta) not in protected do
             {node, [build_issue(name, meta) | issues]}
           else
             {node, issues}
@@ -51,21 +60,17 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def fix_patches(ast, _opts) do
-    if imports_or_uses?(ast) do
-      []
-    else
-      do_fix(ast)
-    end
+    do_fix(ast)
   end
 
   defp do_fix(ast) do
-    defined = defined_guards(ast)
+    protected = protected_calls(ast)
 
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      {name, _, [arg]} = node when is_atom(name) ->
+      {name, meta, [arg]} = node when is_atom(name) ->
         case Map.get(@hallucinated_guards, name) do
           {op, bound} ->
-            if name in defined do
+            if call_key(name, meta) in protected do
               node
             else
               {:and, [], [{:is_integer, [], [arg]}, {op, [], [arg, bound]}]}
@@ -80,43 +85,125 @@ defmodule Credence.Pattern.HallucinatedGuard do
     end)
   end
 
-  # A module that `import`s or `use`s another module may bring these guard names
-  # into scope as REAL custom guards (e.g. `import MyApp.Guards` defining
-  # `is_pos_integer/1`). We can't resolve the other module's definitions, and an
-  # unqualified guard call that compiles must be locally defined OR imported — so
-  # if any `import`/`use` is present, do not treat these names as hallucinated
-  # (unrolling an imported guard, possibly to a divergent definition, is unsafe).
-  defp imports_or_uses?(ast) do
-    {_ast, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true -> {nil, true}
-        {directive, _, [_ | _]} = node, _ when directive in [:import, :use] -> {node, true}
-        node, acc -> {node, acc}
-      end)
+  # Record calls whose name can resolve in their own lexical module. This must
+  # be module-local: a directive or definition in a sibling module has no effect.
+  defp protected_calls(ast) do
+    root_names = protected_names(ast)
 
-    found
+    {_ast, {_scopes, protected}} =
+      Macro.traverse(
+        ast,
+        {[root_names], MapSet.new()},
+        fn
+          {:defmodule, _, args} = node, {scopes, protected} ->
+            {node, {[protected_names(module_body(args)) | scopes], protected}}
+
+          {name, meta, [_arg]} = node, {[names | _] = scopes, protected}
+          when is_atom(name) ->
+            protected =
+              if name in names, do: MapSet.put(protected, call_key(name, meta)), else: protected
+
+            {node, {scopes, protected}}
+
+          node, acc ->
+            {node, acc}
+        end,
+        fn
+          {:defmodule, _, _args} = node, {[_module | scopes], protected} ->
+            {node, {scopes, protected}}
+
+          node, acc ->
+            {node, acc}
+        end
+      )
+
+    protected
   end
 
-  # Names from `@guard_names` that the module DEFINES as a guard via
-  # `defguard`/`defguardp` at arity 1. A defined guard is not hallucinated — it
-  # exists — so it must be left untouched everywhere: rewriting it would corrupt
-  # the definition head (`defguardp is_pos_integer(x) when ...` → invalid) and
-  # needlessly unroll the user's own abstraction at its call sites.
-  defp defined_guards(ast) do
-    {_ast, defined} =
-      Macro.prewalk(ast, [], fn
-        {dg, _, [head | _]} = node, acc when dg in [:defguard, :defguardp] ->
-          case guard_head(head) do
-            {name, 1} -> {node, [name | acc]}
-            _ -> {node, acc}
-          end
+  defp protected_names(ast) do
+    {_ast, {_nested, names}} =
+      Macro.traverse(
+        ast,
+        {0, MapSet.new()},
+        fn
+          {:defmodule, _, _} = node, {nested, names} ->
+            {node, {nested + 1, names}}
 
-        node, acc ->
-          {node, acc}
-      end)
+          {definition, _, [head | _]} = node, {0, names}
+          when definition in [:def, :defp, :defguard, :defguardp] ->
+            names =
+              case guard_head(head) do
+                {name, 1} when name in @guard_names -> MapSet.put(names, name)
+                _ -> names
+              end
 
-    Enum.filter(@guard_names, &(&1 in defined))
+            {node, {0, names}}
+
+          {:use, _, [_ | _]} = node, {0, _names} ->
+            {node, {0, MapSet.new(@guard_names)}}
+
+          {:import, _, args} = node, {0, names} ->
+            {node, {0, MapSet.union(names, imported_names(args))}}
+
+          node, acc ->
+            {node, acc}
+        end,
+        fn
+          {:defmodule, _, _} = node, {nested, names} -> {node, {nested - 1, names}}
+          node, acc -> {node, acc}
+        end
+      )
+
+    names
   end
+
+  defp imported_names([_module, opts]) when is_list(opts) do
+    cond do
+      only = ast_keyword_get(opts, :only) ->
+        MapSet.new(
+          for entry <- ast_list(only),
+              import_entry(entry) in Enum.map(@guard_names, &{&1, 1}),
+              do: elem(import_entry(entry), 0)
+        )
+
+      except = ast_keyword_get(opts, :except) ->
+        excluded = for entry <- ast_list(except), {name, 1} = import_entry(entry), do: name
+        MapSet.new(@guard_names -- excluded)
+
+      true ->
+        MapSet.new(@guard_names)
+    end
+  end
+
+  defp imported_names([_module]), do: MapSet.new(@guard_names)
+
+  defp ast_keyword_get(keywords, wanted) do
+    Enum.find_value(keywords, fn
+      {^wanted, value} -> value
+      {{:__block__, _, [^wanted]}, value} -> value
+      _ -> nil
+    end)
+  end
+
+  defp import_entry({name, arity}) when is_atom(name) and is_integer(arity), do: {name, arity}
+
+  defp import_entry({{:__block__, _, [name]}, {:__block__, _, [arity]}}),
+    do: {name, arity}
+
+  defp ast_list({:__block__, _, [list]}) when is_list(list), do: list
+  defp ast_list(list) when is_list(list), do: list
+
+  defp module_body([_name, keywords]) do
+    Enum.find_value(keywords, fn
+      {:do, body} -> body
+      {{:__block__, _, [:do]}, body} -> body
+      _ -> nil
+    end)
+  end
+
+  # Sourceror's patch walk normalizes column metadata, while line metadata is
+  # stable between the parsed tree and the patch callback.
+  defp call_key(name, meta), do: {name, Keyword.get(meta, :line)}
 
   # The `name/arity` a `defguard(p)` head defines, stripping the `when` guard.
   defp guard_head({:when, _, [call, _guard]}), do: guard_head(call)

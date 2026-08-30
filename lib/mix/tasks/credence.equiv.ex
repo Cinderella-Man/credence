@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Credence.Equiv do
-  @shortdoc "Classify a before/after rewrite: EQUIVALENT | REPAIR | DIVERGES"
+  @shortdoc "Classify a before/after rewrite: EQUIVALENT | REPAIR | DIVERGES | SKIPPED"
 
   @moduledoc """
   Classify-time behavioural-equivalence pre-check (Tunex `07` §3.11, `08` T1.4).
@@ -20,6 +20,10 @@ defmodule Mix.Tasks.Credence.Equiv do
       exception class + `N/N raised` for the implementer's reason string.
     * **DIVERGES** — `before` produced a valid value on some input that `after`
       disagrees with (a real behaviour change), or `after` does not compile.
+    * **SKIPPED** — nothing was compared, so no verdict was reached: the battery
+      admitted no inputs (every multi-var snippet without `--dim`), or every
+      input made both sides raise. Both used to report EQUIVALENT, which is the
+      strongest verdict this task can give, from having compared nothing (C2.4).
 
   ## Run env
 
@@ -35,7 +39,8 @@ defmodule Mix.Tasks.Credence.Equiv do
     * `--vars a,b` — ordered free-var names of the expression (required).
     * `--dim d1,d2` — `EquivalenceInputs` dimension(s) to run (default: all that
       fit the var count). Names: term_lists, signed_integers, unicode_strings,
-      single_codepoint_strings, multi_codepoint_strings, stability_lists.
+      single_codepoint_strings, multi_codepoint_strings, stability_lists, maps,
+      keyword_lists, tuples, mixed_numeric.
     * `--inputs-file FILE` — an Elixir term (a list) overriding the battery; for
       multi-var, each element is a tuple/list of positional args. (The escape
       hatch for the unresolved multi-var input-set question.)
@@ -63,7 +68,22 @@ defmodule Mix.Tasks.Credence.Equiv do
   # domain when `single_codepoint_graphemes` is promised.
   @multi_codepoint_dims [:multi_codepoint_strings, :unicode_strings]
   @all_string_dims [:unicode_strings, :single_codepoint_strings, :multi_codepoint_strings]
-  @all_dims [:term_lists, :signed_integers, :stability_lists | @all_string_dims]
+  # C2.1. `maps`/`keyword_lists`/`tuples`/`mixed_numeric` close the gaps the
+  # original battery left: the Map-vs-Keyword duplicate-key divergence, tuple
+  # arity, and the int/float traps that survive `==`. C2.2's dimension-mapping
+  # meta-test keys on this list, and H3's `--dim` inference reads it.
+  @collection_dims [:maps, :keyword_lists, :tuples, :mixed_numeric, :mapsets]
+
+  # Structs the original battery could not produce at all. Escalation-ledger
+  # H-A: ten diverged rows sat at `after_ok 0/44` purely because a struct-shaped
+  # repair had no struct to succeed on, and a missing input type reads exactly
+  # like a broken fix.
+  @struct_dims [:structs]
+  @all_dims [:term_lists, :signed_integers, :stability_lists] ++
+              @all_string_dims ++ @collection_dims ++ @struct_dims
+
+  @eval_max_heap_words 8_000_000
+  @eval_timeout_ms 1_000
 
   @impl Mix.Task
   def run(argv) do
@@ -97,6 +117,7 @@ defmodule Mix.Tasks.Credence.Equiv do
   #   {:repair, exc_module, n_raised, n_total}
   #   {:diverges, input, before_outcome, after_outcome}
   #   {:diverges_compile, reason}
+  #   {:vacuous, :no_admitted_inputs | :all_raised}
   defp classify(before, after_src, vars, inputs, compare_messages?) do
     with {:ok, before_fn} <- compile_fn(vars, before),
          {:ok, after_fn} <- compile_fn(vars, after_src) do
@@ -109,12 +130,35 @@ defmodule Mix.Tasks.Credence.Equiv do
         end
 
       cond do
+        # C2.4. `Enum.all?/2` over an empty list is `true`, so a run that
+        # admitted no inputs at all used to report EQUIVALENT — the strongest
+        # verdict this task can give, from having compared nothing. The default
+        # battery is empty for every multi-var snippet without `--dim`
+        # (`base_inputs/2`), so this was not a corner case: it was the ordinary
+        # outcome for a whole class of rewrite, and it read as a pass.
+        pairs == [] ->
+          {:vacuous, :no_admitted_inputs}
+
+        # The same hole one level in: if every input made both sides raise the
+        # SAME way, the battery never reached the behaviour under test. `ob ===
+        # oa` is true of two identical `{:raise, ArgumentError}` outcomes, so
+        # this passed as EQUIVALENT while proving only that the inputs are wrong
+        # for this function.
+        #
+        # Deliberately narrower than "every input raised on both sides": when the
+        # two sides raise *different* classes on every input, that is a real
+        # behaviour change and must stay DIVERGES. This clause only intercepts
+        # the cases that would otherwise have been called EQUIVALENT, so it can
+        # never hide a divergence.
+        Enum.all?(pairs, fn {_i, ob, oa} -> raised?(ob) and ob === oa end) ->
+          {:vacuous, :all_raised}
+
         Enum.all?(pairs, fn {_i, ob, oa} -> ob === oa end) ->
           :equivalent
 
         repair?(pairs) ->
-          raised = Enum.filter(pairs, fn {_i, ob, _oa} -> match?({:raise, _}, ob) end)
-          {:raise, exc} = elem(hd(raised), 1)
+          raised = Enum.filter(pairs, fn {_i, ob, _oa} -> raised?(ob) end)
+          exc = raised |> hd() |> elem(1) |> exception_module()
           {:repair, exc, length(raised), length(pairs)}
 
         true ->
@@ -126,12 +170,41 @@ defmodule Mix.Tasks.Credence.Equiv do
     end
   end
 
-  # REPAIR iff `before` raised on EVERY input and `after` succeeded on ≥1 — the
-  # before has no valid output on any input, so the fix is a correction.
+  # REPAIR iff the before always raised and the after succeeded at least once,
+  # or, for a partial repair, every input either already AGREES or changes a
+  # raise into a value. A partial repair may not change one exception into a
+  # different exception: that is a divergence under the task's own policy.
+  #
+  # The "already agree" half is escalation-ledger H-B. Demanding the before
+  # raise on *every* input killed row 185, where the hallucinated call is
+  # short-circuited away on 3 of 44 inputs (`Enum.all?([], &DateTime.valid?/1)`
+  # is `true` without ever calling it). One input the repair never reaches
+  # should not decide that the repair is a behaviour change.
+  #
+  # It stays narrow in the way that matters: an input where the before produced
+  # a value and the after produced a DIFFERENT one still disqualifies the whole
+  # verdict, so this can only ever admit pairs that were already going to be
+  # `:equivalent` on that input. And the `after succeeded on ≥1` clause is
+  # untouched, so a repair that is itself broken — row 105's `File.stream/1` —
+  # remains DIVERGES.
   defp repair?(pairs) do
-    Enum.all?(pairs, fn {_i, ob, _oa} -> match?({:raise, _}, ob) end) and
-      Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
+    after_succeeds? = Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
+    before_always_raises? = Enum.all?(pairs, fn {_i, ob, _oa} -> raised?(ob) end)
+
+    admissible_partial_repair? =
+      Enum.all?(pairs, fn {_i, ob, oa} ->
+        ob === oa or (raised?(ob) and match?({:ok, _}, oa))
+      end)
+
+    after_succeeds? and (before_always_raises? or admissible_partial_repair?)
   end
+
+  defp raised?({:raise, _module}), do: true
+  defp raised?({:raise, _module, _message}), do: true
+  defp raised?(_outcome), do: false
+
+  defp exception_module({:raise, module}), do: module
+  defp exception_module({:raise, module, _message}), do: module
 
   # ── Minimal switch set ──────────────────────────────────────────────────
 
@@ -164,8 +237,10 @@ defmodule Mix.Tasks.Credence.Equiv do
   defp base_inputs(opts, vars) do
     cond do
       file = opts[:inputs_file] ->
-        {term, _} = Code.eval_string(File.read!(file))
-        term
+        case bounded(fn -> Code.eval_string(File.read!(file)) end) do
+          {:ok, {term, _binding}} -> term
+          {:aborted, reason} -> Mix.raise("inputs file evaluation aborted: #{abort_text(reason)}")
+        end
 
       opts[:dim] ->
         opts[:dim]
@@ -250,8 +325,59 @@ defmodule Mix.Tasks.Credence.Equiv do
     # test/support module, absent under :dev, so a static call would warn
     # "undefined function" at compile time. The task only runs under :test.
     # credo:disable-for-next-line Credo.Check.Refactor.Apply
-    apply(Credence.BehaviourEquivalence, :eval_outcome, [thunk, compare_messages?])
+    case bounded(fn ->
+           apply(Credence.BehaviourEquivalence, :eval_outcome, [thunk, compare_messages?])
+         end) do
+      {:ok, outcome} -> outcome
+      {:aborted, reason} -> {:aborted, reason}
+    end
   end
+
+  defp bounded(fun) do
+    parent = self()
+    tag = make_ref()
+    {heap_words, timeout_ms} = eval_bounds()
+
+    {pid, monitor} =
+      spawn_monitor(fn ->
+        Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
+        send(parent, {tag, fun.()})
+      end)
+
+    receive do
+      {^tag, result} ->
+        Process.demonitor(monitor, [:flush])
+        {:ok, result}
+
+      {:DOWN, ^monitor, :process, ^pid, :killed} ->
+        {:aborted, :heap_limit}
+
+      {:DOWN, ^monitor, :process, ^pid, reason} ->
+        {:aborted, {:exited, reason}}
+    after
+      timeout_ms ->
+        Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
+        after
+          1_000 -> :ok
+        end
+
+        {:aborted, :timeout}
+    end
+  end
+
+  defp eval_bounds do
+    {
+      Application.get_env(:credence, :equiv_max_heap_words, @eval_max_heap_words),
+      Application.get_env(:credence, :equiv_timeout_ms, @eval_timeout_ms)
+    }
+  end
+
+  defp abort_text(:heap_limit), do: "heap ceiling exceeded"
+  defp abort_text(:timeout), do: "time budget exceeded"
+  defp abort_text({:exited, reason}), do: "evaluator exited (#{inspect(reason)})"
 
   defp to_args(_input, []), do: []
 
@@ -281,6 +407,19 @@ defmodule Mix.Tasks.Credence.Equiv do
     do: "DIVERGES input=#{inspect(input)} before=#{inspect(ob)} after=#{inspect(oa)}"
 
   defp format({:diverges_compile, reason}), do: "DIVERGES after-#{reason}"
+
+  # Deliberately not EQUIVALENT and deliberately not DIVERGES: nothing was
+  # compared, so the honest verdict is that no verdict was reached. The guidance
+  # names the repair, because both causes are fixed by choosing inputs.
+  defp format({:vacuous, :no_admitted_inputs}),
+    do:
+      "SKIPPED no_admitted_inputs — nothing was compared. A multi-var snippet " <>
+        "has no default battery; pass --dim or --inputs-file."
+
+  defp format({:vacuous, :all_raised}),
+    do:
+      "SKIPPED all_raised — every input made BOTH sides raise, so the battery " <>
+        "never reached the behaviour under test. Choose inputs in the admitted domain."
 
   # ── Helpers ─────────────────────────────────────────────────────────────
 

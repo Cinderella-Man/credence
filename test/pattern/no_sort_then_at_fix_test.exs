@@ -9,24 +9,24 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
     # Regression: previously the lone `:desc` was misread as the collection
     # (default :asc), producing `Enum.min(xs |> Enum.sort(), …)`. The collection
     # is piped in, so the replacement must drop the sort and use `xs` directly.
-    test "xs |> Enum.sort(:desc) |> Enum.at(0) → Enum.max(xs, fn -> nil end)" do
+    test "xs |> Enum.sort(:desc) |> Enum.at(0) → Enum.max(xs, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "xs |> Enum.sort(:desc) |> Enum.at(0)"),
-        "Enum.max(xs, fn -> nil end)"
+        "Enum.max(xs, &>/2, fn -> nil end)"
       )
     end
 
-    test "xs |> Enum.sort(:asc) |> Enum.at(-1) → Enum.max(xs, fn -> nil end)" do
+    test "xs |> Enum.sort(:asc) |> Enum.at(-1) → Enum.max(xs, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "xs |> Enum.sort(:asc) |> Enum.at(-1)"),
-        "Enum.max(xs, fn -> nil end)"
+        "Enum.max(xs, &>/2, fn -> nil end)"
       )
     end
 
-    test "xs |> Enum.sort(&>=/2) |> Enum.at(0) → Enum.max(xs, fn -> nil end)" do
+    test "xs |> Enum.sort(&>=/2) |> Enum.at(0) → Enum.max(xs, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "xs |> Enum.sort(&>=/2) |> Enum.at(0)"),
-        "Enum.max(xs, fn -> nil end)"
+        "Enum.max(xs, &>/2, fn -> nil end)"
       )
     end
   end
@@ -48,24 +48,24 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       )
     end
 
-    test "Enum.sort(nums, :desc) |> Enum.at(0) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.sort(nums, :desc) |> Enum.at(0) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, :desc) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
-    test "Enum.sort(nums) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.sort(nums) |> Enum.at(-1) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums) |> Enum.at(-1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
-    test "Enum.sort(nums, :asc) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.sort(nums, :asc) |> Enum.at(-1) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, :asc) |> Enum.at(-1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
@@ -88,7 +88,7 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       expected = """
       defmodule M do
         def largest(nums) do
-          Enum.max(nums, fn -> nil end)
+          Enum.max(nums, &>/2, fn -> nil end)
         end
       end
       """
@@ -105,17 +105,17 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       )
     end
 
-    test "Enum.at(Enum.sort(nums, :desc), 0) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.at(Enum.sort(nums, :desc), 0) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.at(Enum.sort(nums, :desc), 0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
-    test "Enum.at(Enum.sort(nums), -1) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.at(Enum.sort(nums), -1) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.at(Enum.sort(nums), -1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
@@ -150,10 +150,10 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
   # ── Function captures ───────────────────────────────────────────────────
 
   describe "pipeline form – function captures" do
-    test "Enum.sort(nums, &>=/2) |> Enum.at(0) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.sort(nums, &>=/2) |> Enum.at(0) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, &>=/2) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
@@ -171,26 +171,26 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       )
     end
 
-    test "Enum.sort(nums, &<=/2) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.sort(nums, &<=/2) |> Enum.at(-1) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, &<=/2) |> Enum.at(-1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
   end
 
   describe "nested form – function captures" do
-    test "Enum.at(Enum.sort(nums, &>=/2), 0) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.at(Enum.sort(nums, &>=/2), 0) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.at(Enum.sort(nums, &>=/2), 0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
-    test "Enum.at(Enum.sort(nums, &<=/2), -1) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.at(Enum.sort(nums, &<=/2), -1) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.at(Enum.sort(nums, &<=/2), -1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
   end
@@ -201,14 +201,14 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
     test "fn a, b -> a > b end at(0) → Enum.max (desc + first)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
     test "fn a, b -> a >= b end at(0) → Enum.max (desc + first)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, fn a, b -> a >= b end) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
@@ -236,7 +236,7 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
     test "fn a, b -> a < b end at(-1) → Enum.max (asc + last)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(-1)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
   end
@@ -245,14 +245,14 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
     test "fn a, b -> b < a end at(0) → Enum.max (desc + first)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, fn a, b -> b < a end) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
     test "fn a, b -> b <= a end at(0) → Enum.max (desc + first)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.sort(nums, fn a, b -> b <= a end) |> Enum.at(0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 
@@ -272,10 +272,10 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
   end
 
   describe "nested form – anonymous comparators" do
-    test "Enum.at(Enum.sort(fn a, b -> a > b end), 0) → Enum.max(nums, fn -> nil end)" do
+    test "Enum.at(Enum.sort(fn a, b -> a > b end), 0) → Enum.max(nums, &>/2, fn -> nil end)" do
       confirm_fix(
         fix(NoSortThenAt, "Enum.at(Enum.sort(nums, fn a, b -> a > b end), 0)"),
-        "Enum.max(nums, fn -> nil end)"
+        "Enum.max(nums, &>/2, fn -> nil end)"
       )
     end
 

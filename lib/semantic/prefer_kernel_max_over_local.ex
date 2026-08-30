@@ -29,6 +29,25 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
   equal terms (e.g. `max(1, 1.0)` returns `1`, not `1.0`). Anything else —
   a different body, another arity sharing the name, a `&max/2` capture, or a
   piped `x |> max(y)` we can't safely requalify — is left untouched.
+
+  ## Bad
+
+      defmodule SolutionPKMOL do
+        def calculate do
+          max(3, 5)
+        end
+
+        defp max(a, b) when a >= b, do: a
+        defp max(a, b) when b > a, do: b
+      end
+
+  ## Good
+
+      defmodule SolutionPKMOL do
+        def calculate do
+          Kernel.max(3, 5)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

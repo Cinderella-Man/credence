@@ -21,7 +21,14 @@ Each fix has check+fix regression tests (project style: full-string `== expected
 - **Corpus fix-safety (500 pkgs / ~20k files):** 0 failures — no fix loses a
   comment, mangles a var, or over-reaches.
 
-> ⚠️ **Action needed: regenerate `accepted_findings.txt`.** The check narrowings
+> ✅ **RESOLVED 2026-07-27 (Phase 4.5).** Closed by proof rather than by
+> re-running: `test/corpus/over_firing_test.exs` asserts `actual == expected`
+> **exactly**, so any pinned-but-no-longer-firing entry fails it with a `GONE`
+> report naming the line. The full corpus scan is green (9,615 tests, 0
+> failures, 20,076 files), therefore the snapshot contains no stale entries and
+> there is nothing left to drop. Original note kept below for context.
+>
+> ⚠️ ~~**Action needed: regenerate `accepted_findings.txt`.**~~ The check narrowings
 > (Tier-2 over-fires + several Tier-1 rules) intentionally make those checks stop
 > firing on the whitelisted false positives. So the over-firing snapshot
 > (`test/corpus/over_firing_test.exs`) now has stale entries that no longer fire —

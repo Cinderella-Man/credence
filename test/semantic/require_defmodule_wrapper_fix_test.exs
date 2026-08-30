@@ -83,6 +83,137 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     assert compiles?(fix(input, "cannot invoke @/1 outside module"))
   end
 
+  # `move_attrs/1` builds the replacement block with the ROOT node's metadata,
+  # and it only ever runs when `relocation/1` already matched the root as a
+  # `{:__block__, _, children}`. These cases pin that every other root shape
+  # (single statement, lone `defmodule`, unparseable source) reaches `fix/2`
+  # without ever entering that branch — so no non-block root can get there.
+  test "single-statement root (no block) wraps without entering the move branch" do
+    input = ~S'@doc "x"'
+
+    expected = """
+    defmodule Solution do
+    @doc "x"
+    end
+    """
+
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
+  end
+
+  test "lone defmodule root (no block) is a no-op" do
+    input = """
+    defmodule A do
+      def a, do: 1
+    end
+    """
+
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), input)
+  end
+
+  test "unparseable source with no defmodule is wrapped, not crashed" do
+    input = ~S'@doc "x'
+
+    expected = """
+    defmodule Solution do
+    @doc "x
+    end
+    """
+
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
+  end
+
+  test "moves attrs when a non-attr statement precedes them" do
+    input = """
+    import List
+    @moduledoc "m"
+    defmodule A do
+      def a, do: 1
+    end
+    """
+
+    expected = """
+    import List
+    defmodule A do
+      @moduledoc "m"
+      def a, do: 1
+    end
+    """
+
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
+  end
+
+  test "moves attrs into the FIRST module when several modules follow" do
+    input = """
+    @doc "d"
+    @spec f() :: :ok
+    defmodule A do
+      def f, do: :ok
+    end
+
+    defmodule B do
+      def g, do: :ok
+    end
+    """
+
+    expected = """
+    defmodule A do
+      @doc "d"
+      @spec f() :: :ok
+      def f, do: :ok
+    end
+
+    defmodule B do
+      def g, do: :ok
+    end
+    """
+
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
+  end
+
+  test "keeps an orphaned spec when the module specifies a different function" do
+    input = """
+    @spec first() :: :first
+    defmodule RequireDefmoduleDistinctSpecTest do
+      @spec second() :: :second
+      def first, do: :first
+      def second, do: :second
+    end
+    """
+
+    expected = """
+    defmodule RequireDefmoduleDistinctSpecTest do
+      @spec first() :: :first
+      @spec second() :: :second
+      def first, do: :first
+      def second, do: :second
+    end
+    """
+
+    result = fix(input, "cannot invoke @/1 outside module")
+    confirm_fix(result, expected)
+    assert compiles?(result)
+  end
+
+  test "keeps an orphaned type when the module declares a different type" do
+    input = """
+    @type first() :: :first
+    defmodule RequireDefmoduleDistinctTypeTest do
+      @type second() :: :second
+    end
+    """
+
+    expected = """
+    defmodule RequireDefmoduleDistinctTypeTest do
+      @type first() :: :first
+      @type second() :: :second
+    end
+    """
+
+    result = fix(input, "cannot invoke @/1 outside module")
+    confirm_fix(result, expected)
+    assert compiles?(result)
+  end
+
   test "declines (no-op) when a module exists but nothing movable precedes it" do
     input = """
     defmodule Greeter do

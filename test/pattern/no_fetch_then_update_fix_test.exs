@@ -96,6 +96,66 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
   end
 
   describe "leaves dropped/unrelated shapes untouched" do
+    test "Map.update/4 preserves eager evaluation of the default" do
+      code = """
+      defmodule DefaultEvaluation827 do
+        def bump(map, key) do
+          case Map.fetch(map, key) do
+            {:ok, n} -> Map.update(map, key, raise("boom"), &(&1 + n))
+            :error -> map
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule DefaultEvaluation827 do
+        def bump(map, key) do
+          case Map.fetch(map, key) do
+            {:ok, n} -> case raise "boom" do
+              _ -> Map.put(map, key, (&(&1 + n)).(n))
+            end
+            :error -> map
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoFetchThenUpdate, code), expected)
+    end
+
+    test "does not rewrite updates inside quoted code" do
+      code = """
+      defmodule QuotedUpdate827 do
+        def build(map, key) do
+          case Map.fetch(map, key) do
+            {:ok, n} -> quote do: Map.update!(map, key, &(&1 + unquote(n)))
+            :error -> :error
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
+    end
+
+    test "does not rewrite calls when Map is an alias" do
+      code = """
+      defmodule AliasedUpdate827 do
+        alias CustomMap827, as: Map
+
+        def bump(map, key) do
+          case Map.fetch(map, key) do
+            {:ok, n} -> Map.update!(map, key, &(&1 + n))
+            :error -> :error
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
+    end
+
     test "no-op on a different map variable" do
       code = """
       defmodule DifferentMap do

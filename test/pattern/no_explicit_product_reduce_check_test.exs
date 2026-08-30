@@ -178,5 +178,16 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
 
       assert check(NoExplicitProductReduce, code) == []
     end
+
+    test "no issue: Enum is an alias for a custom module" do
+      code = """
+      defmodule AliasReduceProductCheck do
+        alias MyEnum, as: Enum
+        def product(list), do: Enum.reduce(list, 1, &*/2)
+      end
+      """
+
+      assert check(NoExplicitProductReduce, code) == []
+    end
   end
 end

@@ -35,6 +35,14 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
+  test "replaces standalone Map.new() nested in a pipe RHS argument" do
+    code = "items |> process(Map.new())"
+
+    expected = "items |> process(%{})"
+
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
+  end
+
   test "replaces every occurrence and preserves surrounding code" do
     code = """
     defmodule M do
@@ -72,6 +80,21 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
 
     test "leaves the %{} literal alone" do
       code = "memo = %{}"
+
+      confirm_fix(fix(NoEmptyMapNew, code), code)
+    end
+
+    test "leaves Map.new() through a lexical Map alias alone" do
+      code = """
+      alias MyMap, as: Map
+      Map.new()
+      """
+
+      confirm_fix(fix(NoEmptyMapNew, code), code)
+    end
+
+    test "leaves Map.new() inside quoted code alone" do
+      code = "quote do: Map.new()"
 
       confirm_fix(fix(NoEmptyMapNew, code), code)
     end

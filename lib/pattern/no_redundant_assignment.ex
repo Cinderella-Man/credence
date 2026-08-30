@@ -24,6 +24,19 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   ## Auto-fix
 
   Replaces the last two statements with just the RHS of the assignment.
+
+  ## Bad
+
+      def run(a, b) do
+        sum = a + b
+        sum
+      end
+
+  ## Good
+
+      def run(a, b) do
+        a + b
+      end
   """
 
   use Credence.Pattern.Rule

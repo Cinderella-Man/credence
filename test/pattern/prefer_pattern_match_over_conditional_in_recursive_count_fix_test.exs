@@ -101,6 +101,20 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCountFixT
     confirm_fix(fix(PreferPatternMatchOverConditionalInRecursiveCount, code), code)
   end
 
+  test "leaves a count variable that rebinds a remaining parameter untouched" do
+    code = """
+    defmodule RecursiveCountReboundParameterFixture do
+      def count([], target), do: target
+      def count([head | tail], target) do
+        target = if head == target, do: 1, else: 0
+        target + count(tail, target)
+      end
+    end
+    """
+
+    confirm_fix(fix(PreferPatternMatchOverConditionalInRecursiveCount, code), code)
+  end
+
   test "does not modify code without the anti-pattern" do
     code = """
     defmodule Example do

@@ -29,6 +29,11 @@ defmodule Credence.Pattern.NoMapKeysForMembership do
   """
 
   use Credence.Pattern.Rule
+  # ash_expr: rewrites `in`/`not in` — Ash's In operator — and moves the
+  # required bare-variable left operand, which inside `expr` is a field ref,
+  # into a raw `Map.has_key?/2` argument where it is a plain local
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   @impl true

@@ -54,6 +54,12 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
   end
 
   describe "check — negative cases" do
+    test "does not flag sort/2 with a custom comparator" do
+      code = "Enum.sort(list, &>=/2) |> Enum.at(0)"
+
+      assert check(NoSortForTopK, code) == []
+    end
+
     test "does not flag sort |> take(1) (returns a list, not the scalar min)" do
       code = """
       defmodule Good do

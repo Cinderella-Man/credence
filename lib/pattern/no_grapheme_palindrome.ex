@@ -56,6 +56,7 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
 
   @impl true
   def check(ast, _opts) do
+    ast = annotate_function_scopes(ast)
     fixable = fixable_decompose_vars(ast)
 
     if map_size(fixable) == 0 do
@@ -85,6 +86,7 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
+    ast = annotate_function_scopes(ast)
     fixable = fixable_decompose_vars(ast)
 
     if map_size(fixable) == 0 do
@@ -107,9 +109,9 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
           nil ->
             node
 
-          var ->
-            case Map.fetch(fixable, var) do
-              {:ok, {class, original}} -> rebuild_comparison(meta, l, var, class, original)
+          key ->
+            case Map.fetch(fixable, key) do
+              {:ok, {class, original}} -> rebuild_comparison(meta, l, key, class, original)
               :error -> node
             end
         end
@@ -122,7 +124,7 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
   # `:strip` keeps the variable and only swaps `Enum.reverse` → `String.reverse`.
   # `:inline` / `:keep_binding` substitute the original (bare) string on both
   # sides, so the comparison no longer depends on the decomposed variable.
-  defp rebuild_comparison(meta, l, var, class, original) do
+  defp rebuild_comparison(meta, l, {_scope, var}, class, original) do
     operand =
       case class do
         :strip -> {var, [], nil}
@@ -156,7 +158,9 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
 
   defp transform_binding({:=, meta, [{var, _, nil} = lhs, rhs]} = stmt, fixable)
        when is_atom(var) do
-    case Map.fetch(fixable, var) do
+    key = {Keyword.get(elem(lhs, 1), :credence_function_scope), var}
+
+    case Map.fetch(fixable, key) do
       # Inlined and not needed anywhere else → drop the binding entirely.
       {:ok, {:inline, _original}} -> []
       # Inlined into the comparison, but still referenced as a list elsewhere →
@@ -178,21 +182,21 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
   defp fixable_decompose_vars(ast) do
     ast
     |> collect_decompose_vars()
-    |> Enum.flat_map(fn {var, original} ->
-      case classify(ast, var, original) do
+    |> Enum.flat_map(fn {key, original} ->
+      case classify(ast, key, original) do
         :unfixable -> []
-        class -> [{var, {class, original}}]
+        class -> [{key, {class, original}}]
       end
     end)
     |> Map.new()
   end
 
-  defp classify(ast, var, original) do
-    comparisons = palindrome_comparison_count(ast, var)
+  defp classify(ast, key, original) do
+    comparisons = palindrome_comparison_count(ast, key)
     # Each palindrome comparison references the variable twice; the binding
     # references it once on its left-hand side. Anything beyond that is a use
     # we must not break.
-    used_elsewhere? = var_ref_count(ast, var) - 1 - 2 * comparisons > 0
+    used_elsewhere? = var_ref_count(ast, key) - 1 - 2 * comparisons > 0
     bare? = match?({name, _, nil} when is_atom(name), original)
 
     cond do
@@ -204,21 +208,26 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
     end
   end
 
-  defp palindrome_comparison_count(ast, var) do
+  defp palindrome_comparison_count(ast, key) do
     {_ast, count} =
       Macro.prewalk(ast, 0, fn
-        {:==, _, _} = node, acc -> {node, if(palindrome_var(node) == var, do: acc + 1, else: acc)}
+        {:==, _, _} = node, acc -> {node, if(palindrome_var(node) == key, do: acc + 1, else: acc)}
         node, acc -> {node, acc}
       end)
 
     count
   end
 
-  defp var_ref_count(ast, var) do
+  defp var_ref_count(ast, {scope, var}) do
     {_ast, count} =
       Macro.prewalk(ast, 0, fn
-        {^var, _, nil}, acc -> {nil, acc + 1}
-        node, acc -> {node, acc}
+        {^var, meta, nil} = node, acc ->
+          if Keyword.get(meta, :credence_function_scope) == scope,
+            do: {node, acc + 1},
+            else: {node, acc}
+
+        node, acc ->
+          {node, acc}
       end)
 
     count
@@ -230,11 +239,16 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
   defp palindrome_var(_node), do: nil
 
   defp pal_var(
-         {var, _, nil},
-         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var, _, nil}]}
+         {var, meta, nil},
+         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var, reverse_meta, nil}]}
        )
-       when is_atom(var),
-       do: var
+       when is_atom(var) do
+    scope = Keyword.get(meta, :credence_function_scope)
+
+    if Keyword.get(reverse_meta, :credence_function_scope) == scope,
+      do: {scope, var},
+      else: nil
+  end
 
   defp pal_var(_left, _right), do: nil
 
@@ -246,16 +260,18 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
   defp collect_decompose_vars(ast) do
     {_ast, {vars, _seen}} =
       Macro.prewalk(ast, {%{}, MapSet.new()}, fn
-        {:=, _, [{var, _, nil}, rhs]} = node, {vars, seen} when is_atom(var) ->
+        {:=, _, [{var, meta, nil}, rhs]} = node, {vars, seen} when is_atom(var) ->
+          key = {Keyword.get(meta, :credence_function_scope), var}
+
           cond do
-            MapSet.member?(seen, var) ->
-              {node, {Map.delete(vars, var), seen}}
+            MapSet.member?(seen, key) ->
+              {node, {Map.delete(vars, key), seen}}
 
             decomposition_call?(rightmost(rhs)) ->
-              {node, {Map.put(vars, var, strip_decomposition(rhs)), MapSet.put(seen, var)}}
+              {node, {Map.put(vars, key, strip_decomposition(rhs)), MapSet.put(seen, key)}}
 
             true ->
-              {node, {vars, MapSet.put(seen, var)}}
+              {node, {vars, MapSet.put(seen, key)}}
           end
 
         node, acc ->
@@ -263,6 +279,33 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
       end)
 
     vars
+  end
+
+  # Elixir variable metadata does not encode its enclosing function, so attach
+  # a private traversal marker before correlating bindings and comparisons.
+  defp annotate_function_scopes(ast) do
+    {ast, _scope} =
+      Macro.traverse(
+        ast,
+        [],
+        fn
+          {kind, _, _} = node, scopes when kind in [:def, :defp] ->
+            {node, [System.unique_integer([:positive]) | scopes]}
+
+          {var, meta, context}, [scope | _] = scopes
+          when is_atom(var) and is_list(meta) and is_atom(context) ->
+            {{var, Keyword.put(meta, :credence_function_scope, scope), context}, scopes}
+
+          node, scopes ->
+            {node, scopes}
+        end,
+        fn
+          {kind, _, _} = node, [_scope | scopes] when kind in [:def, :defp] -> {node, scopes}
+          node, scopes -> {node, scopes}
+        end
+      )
+
+    ast
   end
 
   # Strip the terminal String.graphemes from an expression

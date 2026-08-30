@@ -79,5 +79,14 @@ defmodule Credence.Pattern.NoUnusedComputationCheckTest do
              end
              """)
     end
+
+    test "an underscore-prefixed binding that is read later" do
+      assert clean?(Rule, """
+             def f do
+               _n = length([1])
+               _n
+             end
+             """)
+    end
   end
 end

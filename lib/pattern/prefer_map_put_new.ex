@@ -48,6 +48,12 @@ defmodule Credence.Pattern.PreferMapPutNew do
   """
 
   use Credence.Pattern.Rule
+  # ash_expr: deletes the `if`/`unless` (and its `!`) that Ash.Expr
+  # reinterprets, collapsing a bare-variable branch — a field ref inside `expr`
+  # — into a raw `Map.put_new/3` argument; the `Map.*` calls are no anchor,
+  # since Ash passes module-qualified calls through untouched
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
   alias Credence.RuleHelpers
 

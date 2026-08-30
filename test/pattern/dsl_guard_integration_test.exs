@@ -17,6 +17,7 @@ defmodule Credence.Pattern.DslGuardIntegrationTest do
   alias Credence.Pattern.{
     NoCondTwoClauses,
     NoRedundantAssignment,
+    PreferErlangFloat,
     PreferNegateIfTrueFalse
   }
 
@@ -39,6 +40,24 @@ defmodule Credence.Pattern.DslGuardIntegrationTest do
 
     test "the finding is suppressed (we do not report what we will not fix)" do
       assert Pattern.analyze(@ash, rules: [PreferNegateIfTrueFalse]) == []
+    end
+  end
+
+  describe "explicit Ecto.Query calls with a colliding alias" do
+    test "an unrelated Query alias cannot unguard the explicit Ecto expression" do
+      query = """
+      alias MyApp.Query
+
+      Ecto.Query.from(p in Post,
+        select: p.value * 1.0
+      )
+      """
+
+      plain = "record.value * 1.0\n"
+      fixed_plain = ":erlang.float(record.value)\n"
+
+      assert RuleHelpers.apply_rule_fix(PreferErlangFloat, query) == query
+      assert RuleHelpers.apply_rule_fix(PreferErlangFloat, plain) == fixed_plain
     end
   end
 

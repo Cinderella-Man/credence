@@ -1,5 +1,10 @@
 # 08 — Quality-Assurance Roadmap
 
+> **📜 SUPERSEDED (banner added 2026-07-28).** This pre-docs/12 roadmap was
+> folded into the C-items (its §1 ≈ C2, its §3 ≈ C18) and executed from there.
+> Open work is tracked in `docs/22-remaining-work.md` only. Kept for the
+> research citations.
+
 How Credence can raise its correctness guarantees and test rigor, grounded in
 compiler-verification and refactoring-engine research. Scope: **behaviour-preservation
 verification** of the auto-fixes and **corpus / test methodology**. Benchmarked against

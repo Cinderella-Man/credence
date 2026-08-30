@@ -95,6 +95,20 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateCheckTest do
       assert length(issues) == 1
     end
 
+    test "@doc false before a defp with a spec" do
+      issues =
+        check(NoDocFalseOnPrivate, """
+        defmodule BadWithSpec do
+          @doc false
+          @spec helper(integer()) :: integer()
+          defp helper(x), do: x + 1
+        end
+        """)
+
+      assert length(issues) == 1
+      assert hd(issues).meta.line == 2
+    end
+
     test "@doc with a string before a guarded defp" do
       issues =
         check(NoDocFalseOnPrivate, """

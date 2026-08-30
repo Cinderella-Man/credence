@@ -83,5 +83,13 @@ defmodule Credence.Pattern.PreferMapNewCheckTest do
 
       assert clean?(PreferMapNew, code)
     end
+
+    test "calls through custom Enum and Map aliases" do
+      enum_alias = "alias CustomEnum, as: Enum\nEnum.into(items, %{})"
+      map_alias = "alias CustomMap, as: Map\nEnum.into(items, %{})"
+
+      assert clean?(PreferMapNew, enum_alias)
+      assert clean?(PreferMapNew, map_alias)
+    end
   end
 end

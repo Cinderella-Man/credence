@@ -22,7 +22,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defp check(x) when x > 0 do
       :positive
     end
-    defp check(_x) do
+    defp check(x) do
       :non_positive
     end
     """
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defp check(val, default) when is_nil(val) do
       default
     end
-    defp check(val, _default) do
+    defp check(val, default) do
       val
     end
     """
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defp check(x) when x > 0 do
       :positive
     end
-    defp check(_x) do
+    defp check(x) do
       :non_positive
     end
     """
@@ -95,7 +95,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     confirm_fix(fix(PreferGuardOverIf, code), expected)
   end
 
-  test "underscores params unused in each clause" do
+  test "preserves params unused in each clause" do
     code = """
     defp classify(x, y) do
       if x > 0 do
@@ -107,10 +107,10 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     """
 
     expected = """
-    defp classify(x, _y) when x > 0 do
+    defp classify(x, y) when x > 0 do
       :positive
     end
-    defp classify(_x, y) do
+    defp classify(x, y) do
       y
     end
     """
@@ -118,7 +118,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     confirm_fix(fix(PreferGuardOverIf, code), expected)
   end
 
-  test "underscores all params in a constant catch-all clause" do
+  test "preserves all params in a constant catch-all clause" do
     code = """
     defp find_position(matrix, target, low, high) do
       if low <= high do
@@ -133,12 +133,43 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defp find_position(matrix, target, low, high) when low <= high do
       do_search(matrix, target, low, high)
     end
-    defp find_position(_matrix, _target, _low, _high) do
+    defp find_position(matrix, target, low, high) do
       false
     end
     """
 
     confirm_fix(fix(PreferGuardOverIf, code), expected)
+  end
+
+  test "preserves parameter bindings visible to macros" do
+    input = """
+    defmodule PreferGuardOverIfBindingRegression do
+      def run(x) do
+        if x > 0, do: binding(), else: binding()
+      end
+    end
+    """
+
+    expected = """
+    defmodule PreferGuardOverIfBindingRegression do
+      def run(x) when x > 0 do
+        binding()
+      end
+      def run(x) do
+        binding()
+      end
+    end
+    """
+
+    emitted = fix(PreferGuardOverIf, input)
+    confirm_fix(emitted, expected)
+
+    assertion = """
+    unless PreferGuardOverIfBindingRegression.run(-1) == [x: -1],
+      do: raise("parameter binding changed")
+    """
+
+    assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted <> assertion)
   end
 
   test "var == var equality uses when guard (Compress regression)" do
@@ -204,11 +235,11 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defmodule Solution do
       defp bfs_step([], _visited, _target_x, _target_y), do: 0
 
-      defp bfs_step([{cx, cy, moves} | _rest], _visited, target_x, target_y)
+      defp bfs_step([{cx, cy, moves} | rest], visited, target_x, target_y)
            when cx == target_x and cy == target_y do
         moves
       end
-      defp bfs_step([{_cx, _cy, _moves} | _rest], visited, target_x, target_y) do
+      defp bfs_step([{cx, cy, moves} | rest], visited, target_x, target_y) do
         possible_moves = []
         new_queue = []
         bfs_step(new_queue, visited, target_x, target_y)
@@ -323,8 +354,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
   end
 
   # A non-linear head (a variable repeated in the pattern) is a join/equality
-  # constraint. The unused copy must NOT be underscored — doing so would change
-  # the matched domain. It is left intact (an unused-var warning is harmless).
+  # constraint and must remain intact across the split.
   test "preserves a non-linear (repeated) head variable across the split" do
     input = """
     defp same(a, a) do
@@ -348,10 +378,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     confirm_fix(fix(PreferGuardOverIf, input), expected)
   end
 
-  # Underscoring an unused param must not collide with an existing `_name` in the
-  # head — `{v, _v}` would otherwise become `{_v, _v}`, an unintended equality
-  # constraint. The unused `v` is left as-is.
-  test "does not underscore a param when it would collide with an existing _name" do
+  test "preserves distinct names when an underscored name already exists" do
     input = """
     defp pick({v, _v}, flag) do
       if flag > 0 do
@@ -366,7 +393,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defp pick({v, _v}, flag) when flag > 0 do
       v
     end
-    defp pick({v, _v}, _flag) do
+    defp pick({v, _v}, flag) do
       :none
     end
     """

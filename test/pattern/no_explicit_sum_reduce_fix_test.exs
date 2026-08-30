@@ -26,6 +26,18 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       confirm_fix(fix(NoExplicitSumReduce, code), code)
     end
 
+    test "does not discard a nonzero or effectful initial accumulator" do
+      inputs = [
+        "Enum.reduce(list, 10, fn x, acc -> x + acc end)",
+        "Enum.reduce(list, initial_acc(), fn x, acc -> x + acc end)"
+      ]
+
+      for input <- inputs do
+        assert check(NoExplicitSumReduce, input) == []
+        confirm_fix(fix(NoExplicitSumReduce, input), input)
+      end
+    end
+
     test "preserves surrounding code" do
       input = """
       defmodule M do

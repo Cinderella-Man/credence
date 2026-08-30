@@ -2,6 +2,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantComparisonGuard
+  alias Credence.RuleHelpers
 
   describe "fix — removes the redundant comparison conjunct, keeps the type guard" do
     test "n >= 0 after n < 0 (with intermediate pattern clause)" do
@@ -130,6 +131,30 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
   end
 
   describe "fix — no-op on cases check does not flag" do
+    test "same-name clauses in different modules are left untouched" do
+      code = """
+      defmodule NRCGFixModuleA do
+        def f(n) when is_number(n) and n < 0, do: :negative
+      end
+
+      defmodule NRCGFixModuleB do
+        def f(n) when is_number(n) and n >= 0, do: :non_negative
+        def f(_n), do: :fallback
+      end
+      """
+
+      emitted = fix(NoRedundantComparisonGuard, code)
+      confirm_fix(emitted, code)
+
+      witness = """
+
+      unless NRCGFixModuleB.f(-1) == :fallback, do: raise("cross-module dispatch changed")
+      """
+
+      assert RuleHelpers.compile_and_capture(emitted <> witness) ==
+               RuleHelpers.compile_and_capture(code <> witness)
+    end
+
     test "different type guards left untouched" do
       code = """
       defmodule Good do

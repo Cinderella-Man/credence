@@ -10,10 +10,27 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   traversal without protocol dispatch:
 
       # Flagged — argument is provably a list
-      total = String.graphemes(text) |> Enum.count()
+      total = Map.keys(config) |> Enum.count()
 
       # Idiomatic — BIF, no protocol overhead
-      total = length(String.graphemes(text))
+      total = length(Map.keys(config))
+
+  ## The grapheme forms belong to the sibling rules, not to this one
+
+  This example used to be `String.graphemes(text) |> Enum.count()`, and that was
+  a bad thing to teach: the rewrite it shows —
+  `length(String.graphemes(text))` — still builds the whole grapheme list, which
+  is the exact allocation `AvoidGraphemesEnumCount` and `AvoidGraphemesLength`
+  exist to remove. Both of those go all the way to `String.length(text)`.
+
+  This rule still *matches* the grapheme form, so the family is convergent
+  rather than partitioned, and `test/pattern/graphemes_count_family_test.exs`
+  pins that convergence from every entry point: whichever of the three fires
+  first, the Pattern round settles on `String.length/1`. Worth knowing why that
+  holds, because today it holds for two different reasons — `AvoidGraphemes*`
+  happens to sort before `NoEnumCountForLength`, *and* the round is a cascade,
+  so even the weaker rewrite is picked up by `AvoidGraphemesLength` on the way
+  past. The second reason is the one that survives a rename.
 
   ## Why "provably a list"
 
@@ -36,9 +53,39 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   Only the **single-argument** form `Enum.count(x)` (direct or piped). The
   two-argument `Enum.count(x, predicate)` is not flagged (it filters and counts
   in one pass).
+
+  ## Bad
+
+      defmodule BadNECFL do
+        def grapheme_count(str) do
+          Enum.count(String.graphemes(str))
+        end
+      end
+
+  ## Good
+
+      defmodule BadNECFL do
+        def grapheme_count(str) do
+          length(String.graphemes(str))
+        end
+      end
   """
 
   use Credence.Pattern.Rule
+  # diverges in ash_expr: the fix rewrites the bare expression `Enum.count(<list
+  # expr>)` to a BARE local call `length(x)` (or `map_size(m)`) anywhere it
+  # appears, and inside `expr(...)` Ash reinterprets bare local calls as
+  # expression functions (it has a `length/1`), so the rewrite changes what the
+  # macro builds while still compiling — unlike its six siblings here, which
+  # only ever emit qualified `Enum.*`/`List.*`/`Map.*` calls. Ecto/Nx are
+  # omitted because `Enum.count/1` and `length/1` are both compile errors in a
+  # query expression / defn body, so the rule only ever touches code already
+  # broken there. The one check that would settle it: confirm
+  # `Ash.Query.Function.Length` (bare `length/1` inside `expr`) exists in the
+  # targeted Ash version — I could not verify it offline (no `ash` in deps/, no
+  # network)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   # Functions whose result is always a list. Keys are the AST alias atoms.

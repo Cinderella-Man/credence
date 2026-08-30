@@ -138,6 +138,20 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
   # ── max/3,4,5 wrap-args ────────────────────────────────────────
 
   describe "max/3 → Enum.max([a, b, c])" do
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"max(a, b, c)", max(a, b, c)}', msg("max", 3)),
+        ~S'{"max(a, b, c)", Enum.max([a, b, c])}'
+      )
+    end
+
+    test "uses byte offsets when non-ASCII text precedes the call" do
+      confirm_fix(
+        fix(~S'{"é", max(a, b, c)}', msg("max", 3)),
+        ~S'{"é", Enum.max([a, b, c])}'
+      )
+    end
+
     test "three simple args" do
       confirm_fix(
         fix(
@@ -481,6 +495,221 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
                  msg("infinity", 0)
                )
              )
+    end
+  end
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Byte scope: the rewrite must not reach a same-named call that is not code.
+  #
+  # Found by probing rather than by reading. Every per-line replacement in this
+  # rule used to run a plain `String.replace`/`Regex.replace` over the raw line,
+  # so a call spelled the same way inside a string literal or a trailing comment
+  # on that line was rewritten too. This is the T3.7/T3.10 byte-scope class, and
+  # the self-corruption oracle could not have caught it here — that oracle runs
+  # a rule's `fix/1` over its own source and only Syntax rules have one.
+  # ────────────────────────────────────────────────────────────────────────
+
+  describe "byte scope — literals and comments are not code" do
+    test "a same-named call inside a string on the fixed line is left alone" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(l), do: {len(l), "the helper len(x) is not real"}
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(l), do: {length(l), "the helper len(x) is not real"}
+        end
+        """
+      )
+    end
+
+    test "a same-named call in a trailing comment is left alone" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(l), do: len(l)  # len(x) was the python spelling
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(l), do: length(l)  # len(x) was the python spelling
+        end
+        """
+      )
+    end
+
+    # This is the one that needs the FILE masked rather than the line. A
+    # per-line edit never reaches another line, so a heredoc elsewhere was never
+    # at risk; the real exposure is a diagnostic whose line number points INTO a
+    # multi-line literal. Masked line-by-line, that line reads as ordinary code
+    # and the docstring gets rewritten — the T3.7 `FixDivRem` defect exactly.
+    test "a diagnostic pointing INTO a heredoc rewrites nothing" do
+      source = ~S|defmodule M do
+  @moduledoc """
+  Call len(x) to measure it.
+  """
+  def f(l), do: length(l)
+end
+|
+
+      confirm_fix(fix(source, msg("len", 1), 3), source)
+    end
+
+    # The control that keeps the guard honest: blinding the rewrite to literals
+    # must not blind it to ordinary code.
+    test "CONTROL: two real calls on one line are both still rewritten" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(a, b), do: len(a) + len(b)
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(a, b), do: length(a) + length(b)
+        end
+        """
+      )
+    end
+  end
+
+  # ── exit/2 -> Process.exit/2, and the arity check it needs (docs/16 4.6d) ──
+  #
+  # `Kernel.exit/1` is real and `exit/2` is the invention, so the two spellings
+  # co-occur — which is why this row was deferred until the replacement could
+  # tell them apart. The table key `{name, arity}` was never the problem; the
+  # LINE-level replacement matched the name whatever the call's shape.
+
+  describe "exit/2" do
+    defp exit2(source, line \\ 2) do
+      UndefinedFunction.fix(source, %{
+        severity: :error,
+        message:
+          "undefined function exit/2 (expected M to define such a function or for it to be imported, but none are available)",
+        position: {line, 1}
+      })
+    end
+
+    test "repairs a real compiler diagnostic through the semantic pipeline" do
+      input = """
+      defmodule UndefinedFunctionExitTwoPipelineFixture do
+        def f(pid), do: exit(pid, :kill)
+      end
+      """
+
+      expected = """
+      defmodule UndefinedFunctionExitTwoPipelineFixture do
+        def f(pid), do: Process.exit(pid, :kill)
+      end
+      """
+
+      assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+
+      expected_message =
+        "undefined function exit/2 (expected UndefinedFunctionExitTwoPipelineFixture to define such a function or for it to be imported, but none are available)"
+
+      assert Enum.any?(
+               diagnostics,
+               &(&1.severity == :error and &1.message == expected_message and
+                   UndefinedFunction.match?(&1))
+             )
+
+      emitted = Credence.Semantic.fix(input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
+    test "qualifies the two-argument call" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitTwo do
+          def f(p), do: exit(p, :kill)
+        end
+        """),
+        """
+        defmodule ExitTwo do
+          def f(p), do: Process.exit(p, :kill)
+        end
+        """
+      )
+    end
+
+    test "leaves a one-argument exit alone" do
+      source = """
+      defmodule ExitOne do
+        def f, do: exit(:normal)
+      end
+      """
+
+      confirm_fix(exit2(source), source)
+    end
+
+    # The discriminating case. Stopping at the first match would decline the
+    # whole line, because the arity that does not match comes first.
+    test "on a line holding both, only the two-argument call is qualified" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitBoth do
+          def f(p), do: {exit(:normal), exit(p, :kill)}
+        end
+        """),
+        """
+        defmodule ExitBoth do
+          def f(p), do: {exit(:normal), Process.exit(p, :kill)}
+        end
+        """
+      )
+    end
+
+    # Arity is counted from top-level commas, so a comma inside the argument's
+    # own brackets must not raise the count. The line may not parse at all —
+    # the file has a compile error by construction — which is why this is a
+    # scan and not a parse.
+    test "commas nested inside an argument do not change the arity" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitNested do
+          def f(p), do: exit(p, {:shutdown, [1, 2]})
+        end
+        """),
+        """
+        defmodule ExitNested do
+          def f(p), do: Process.exit(p, {:shutdown, [1, 2]})
+        end
+        """
+      )
+    end
+
+    test "a comma inside a string is not an argument separator" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitString do
+          def f(p), do: exit(p, "a, b")
+        end
+        """),
+        """
+        defmodule ExitString do
+          def f(p), do: Process.exit(p, "a, b")
+        end
+        """
+      )
     end
   end
 end

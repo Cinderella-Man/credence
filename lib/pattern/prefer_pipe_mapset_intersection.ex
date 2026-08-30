@@ -108,7 +108,8 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
                 # replaced (no dangling assignment, no var evaluated twice). A
                 # reordered or duplicated chain would diverge on side-effecting
                 # args or leave dead code, so we leave it alone.
-                if vars == Enum.uniq(vars) and ordered_vars == vars do
+                if vars == Enum.uniq(vars) and ordered_vars == vars and
+                     independent_mapset_args?(assignments) do
                   {:ok, build_sets(ordered_vars, assignments), final_expr}
                 else
                   :error
@@ -133,6 +134,32 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
       {_, expr} = Enum.find(assignments, fn {av, _} -> av == v end)
       {v, expr}
     end
+  end
+
+  defp independent_mapset_args?(assignments) do
+    Enum.reduce_while(assignments, MapSet.new(), fn {var, expression}, assigned_vars ->
+      {:ok, arg} = extract_mapset_new_arg(expression)
+
+      if references_any_var?(arg, assigned_vars) do
+        {:halt, false}
+      else
+        {:cont, MapSet.put(assigned_vars, var)}
+      end
+    end)
+  end
+
+  defp references_any_var?(ast, vars) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {name, _meta, context} = node, found?
+        when is_atom(name) and (is_atom(context) or is_nil(context)) ->
+          {node, found? or MapSet.member?(vars, name)}
+
+        node, found? ->
+          {node, found?}
+      end)
+
+    found?
   end
 
   # Collect consecutive MapSet.new assignments from the start of a list.

@@ -83,6 +83,40 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
 
       confirm_fix(fix(NoMapKeysEnumLookup, input), expected)
     end
+
+    test "chooses a value binding that does not capture an existing v" do
+      input = "Map.keys(m) |> Enum.all?(fn k -> m[k] == v end)"
+      expected = "Enum.all?(m, fn {k, v1} -> v1 == v end)"
+
+      confirm_fix(fix(NoMapKeysEnumLookup, input), expected)
+    end
+
+    test "preserves eager evaluation of Map.get defaults" do
+      input =
+        "Map.keys(m) |> Enum.all?(fn k -> Map.get(m, k, send(self(), :default)) > 0 end)"
+
+      expected = """
+      Enum.all?(m, fn {k, v} ->
+        (
+          send(self(), :default)
+          v
+        ) > 0
+      end)
+      """
+
+      emitted = fix(NoMapKeysEnumLookup, input)
+      confirm_fix(emitted, expected)
+    end
+
+    test "does not replace a lookup whose key is shadowed by a nested callback" do
+      input =
+        "Map.keys(m) |> Enum.any?(fn k -> m[k] || Enum.any?(keys, fn k -> m[k] end) end)"
+
+      expected =
+        "Enum.any?(m, fn {k, v} -> v || Enum.any?(keys, fn k -> m[k] end) end)"
+
+      confirm_fix(fix(NoMapKeysEnumLookup, input), expected)
+    end
   end
 
   describe "fix (three-step pipeline)" do

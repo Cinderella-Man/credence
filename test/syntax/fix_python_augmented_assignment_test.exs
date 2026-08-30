@@ -4,6 +4,7 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixPythonAugmentedAssignment
+  alias Credence.RuleHelpers
 
   defp analyze(code), do: FixPythonAugmentedAssignment.analyze(code)
   defp fix(code), do: FixPythonAugmentedAssignment.fix(code)
@@ -100,6 +101,27 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   end
 
   describe "fix/1 — bare-variable rewrites (RHS parenthesised)" do
+    test "+= selects Elixir concatenation for literal lists and strings" do
+      cases = [
+        {"items += [1]", "items = items ++ ([1])", "[0]", "[0, 1]"},
+        {~S|text += "x"|, ~S|text = text <> ("x")|, ~S|"a"|, ~S|"ax"|}
+      ]
+
+      for {input, expected, initial, result} <- cases do
+        emitted = fix(input)
+        confirm_fix(emitted, expected)
+
+        actual =
+          "unless (fn #{variable(input)} -> #{emitted}; #{variable(input)} end).(#{initial}) == #{result}, do: raise(\"wrong result\")"
+
+        control =
+          "unless (fn #{variable(input)} -> #{expected}; #{variable(input)} end).(#{initial}) == #{result}, do: raise(\"wrong result\")"
+
+        assert RuleHelpers.compile_and_capture(actual) ==
+                 RuleHelpers.compile_and_capture(control)
+      end
+    end
+
     test "fixes += with simple variable" do
       confirm_fix(fix("count += 1"), "count = count + (1)")
     end
@@ -165,6 +187,8 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       confirm_fix(fix(source), expected)
     end
   end
+
+  defp variable(input), do: input |> String.split() |> hd()
 
   describe "fix/1 — parenthesising keeps Python operator precedence" do
     # Python `x *= 3 + 4` means `x = x * (3 + 4)` (== 14), NOT `x = x * 3 + 4`
@@ -252,6 +276,155 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
 
     test "fix output is well-formed (parses)" do
       assert valid_syntax?(fix("count += 1"))
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — an augmented assignment shown in a doc is not one
+  #
+  # The moduledoc's "Not flagged" list argued that a string literal is
+  # safe because the `op=` is "not the line's leading token". True of
+  # `x = "a += b"`, and irrelevant inside a heredoc, where a
+  # documentation line may begin with exactly this shape — as all four
+  # of this rule's own examples did (docs/22 T3.10).
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — only real code is rewritten" do
+    test "leaves an augmented assignment inside a moduledoc heredoc alone" do
+      code = ~S'''
+      defmodule Documented do
+        @moduledoc """
+        ## Bad
+
+            count += Map.get(freq, key, 0)
+            total *= factor
+        """
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves an augmented assignment inside a comment alone" do
+      code = "# count += 1"
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report an assignment that only appears in prose" do
+      code = ~S'''
+      @moduledoc """
+          total *= factor
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "still fixes real code in a file that also documents the broken form" do
+      code = ~S'''
+      defmodule Both do
+        @moduledoc """
+      documented += 1
+        """
+
+        def go(count) do
+          count += 1
+          count
+        end
+      end
+      '''
+
+      expected = ~S'''
+      defmodule Both do
+        @moduledoc """
+      documented += 1
+        """
+
+        def go(count) do
+          count = count + (1)
+          count
+        end
+      end
+      '''
+
+      confirm_fix(fix(code), expected)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/fix_python_augmented_assignment.ex")
+
+      confirm_fix(fix(source), source)
+    end
+  end
+
+  test "the syntax round discovers and retains the repair" do
+    input = """
+    defmodule AugmentedAssignmentPipelineTestSubject do
+      def run(count) do
+        count += 1
+        count
+      end
+    end
+    """
+
+    expected = """
+    defmodule AugmentedAssignmentPipelineTestSubject do
+      def run(count) do
+        count = count + (1)
+        count
+      end
+    end
+    """
+
+    {fixed, applied} = Credence.Syntax.fix_with_trace(input)
+
+    confirm_fix(fixed, expected)
+    assert applied == [{FixPythonAugmentedAssignment, 1}]
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # TRAILING COMMENTS — the closing paren must not land inside one
+  #
+  # A second defect, found while converting this rule and confirmed by
+  # running it: the right-hand side ran to the end of the line, so a
+  # trailing comment was captured as part of the expression and the
+  # emitted `)` landed inside it. The output did not parse at all.
+  # The shadow settles it — a comment is blanked to the line's end, and
+  # the raw byte at the start of that run separates a comment from a
+  # trailing string, which IS part of the expression.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — the expression ends where the comment starts" do
+    test "keeps the comment after the rewritten statement" do
+      confirm_fix(
+        fix("count += 1  # running total"),
+        "count = count + (1)  # running total"
+      )
+    end
+
+    test "output parses when a trailing comment follows a call" do
+      fixed = fix("count += Map.get(freq, key, 0) # lookup")
+
+      confirm_fix(fixed, "count = count + (Map.get(freq, key, 0)) # lookup")
+      assert valid_syntax?(fixed)
+    end
+
+    test "a `#` inside a string is not a comment" do
+      confirm_fix(fix(~S'msg += "a # b"'), ~S'msg = msg <> ("a # b")')
+    end
+
+    test "a trailing string stays in the expression and its comment does not" do
+      fixed = fix(~S'msg += "abc"  # trailing note')
+
+      confirm_fix(fixed, ~S'msg = msg <> ("abc")  # trailing note')
+      assert valid_syntax?(fixed)
+    end
+
+    test "a line that is only an assignment to a comment is declined" do
+      code = "count += # nothing here"
+
+      confirm_fix(fix(code), code)
     end
   end
 end

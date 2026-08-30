@@ -17,6 +17,8 @@ defmodule Credence do
           round: :syntax | :semantic | :pattern,
           rule: module(),
           name: String.t(),
+          priority: integer(),
+          unsafe_in_dsl: [atom()] | :all | nil,
           assumptions: [atom()],
           enabled: boolean(),
           missing: [atom()]
@@ -37,10 +39,39 @@ defmodule Credence do
     end
   end
 
+  @typedoc """
+  What a round did with one rule: how many findings it fixed, or why its output
+  is not in the returned code — `:reverted` (the rule made things worse),
+  `:rolled_back` (the Syntax round discarded every change because the result
+  still did not parse), `:patch_rejected` (the patch broke a safety invariant),
+  `:no_op` (the check fired and the fix returned identical source) or
+  `:crashed`.
+
+  This is a **closed set, and a cross-repo contract**. The evolution harness
+  parses these atoms out of the `APPLIED_RULES:` line to build the closed set its
+  classifier is allowed to name; an outcome its regex does not recognise is not
+  an error there but a silent *drop*, which removes the rule from that set and
+  makes a correct bug report about it unfileable. Adding a member here means
+  widening `Cev.AppliedRules` in the same change — `test/applied_rules_contract_test.exs`
+  pins the vocabulary on this side so the two cannot drift apart unnoticed.
+  """
+  @type rule_outcome ::
+          non_neg_integer() | :reverted | :rolled_back | :patch_rejected | :crashed | :no_op
+
+  @doc """
+  The closed set of non-numeric `t:rule_outcome/0` atoms, as data.
+
+  Exposed so the contract test — and the harness, which must accept every one of
+  them — can enumerate the vocabulary rather than restate it. A numeric outcome
+  (how many findings the rule fixed) is the other half and is not listed here.
+  """
+  @spec rule_outcomes() :: [atom()]
+  def rule_outcomes, do: [:reverted, :rolled_back, :patch_rejected, :crashed, :no_op]
+
   @spec fix(String.t(), keyword()) :: %{
           code: String.t(),
           issues: [Issue.t()],
-          applied_rules: [{module(), non_neg_integer() | :reverted}]
+          applied_rules: [{module(), rule_outcome()}]
         }
   def fix(code_string, opts \\ []) do
     # Phase 1: Syntax (with trace)
@@ -53,8 +84,24 @@ defmodule Credence do
     {fixed, pattern_applied} = Credence.Pattern.fix_with_trace(after_semantic, opts)
 
     all_applied = syntax_applied ++ semantic_applied ++ pattern_applied
-    %{issues: remaining} = analyze(fixed, Keyword.put(opts, :source, fixed))
-    %{code: fixed, issues: remaining, applied_rules: all_applied}
+    %{code: fixed, issues: remaining_issues(fixed, opts), applied_rules: all_applied}
+  end
+
+  # The trailing analysis is a COMPLETE second pass — a compile for the Semantic
+  # round plus a parse and all 156 `check/2` walks for the Pattern round — and it
+  # roughly doubles the cost of `fix/2` for a caller that only wants `:code` and
+  # `:applied_rules`. Both in-repo mix tasks are exactly such callers.
+  #
+  # Opt-OUT rather than opt-in, deliberately: `:issues` is a documented field of
+  # the returned map (see the README), so the default has to keep answering it.
+  # A caller that passes `analyze_after: false` is saying it will not read the
+  # field, and gets `[]` — not a silently stale answer.
+  defp remaining_issues(fixed, opts) do
+    if Keyword.get(opts, :analyze_after, true) do
+      analyze(fixed, Keyword.put(opts, :source, fixed)).issues
+    else
+      []
+    end
   end
 
   @doc """
@@ -77,6 +124,14 @@ defmodule Credence do
   `enabled: true`. Whether a rule *actually fires* further depends on the code
   itself — Syntax only runs when the source won't parse, Semantic only on the
   compiler diagnostics it matches — which this opts-only view does not inspect.
+
+  `:priority` is the dispatch order within a round (lower first; 500 is the
+  default). It decides which rule wins a diagnostic when two match the same one,
+  and reading it here is how you see that cascade without opening the sources.
+
+  `:unsafe_in_dsl` is the macro-DSL families a Pattern rule declares itself unsafe
+  inside (Rule Standard item 5) — a list, or `:all` for a rule unsafe in every
+  family. It is `nil` for Syntax and Semantic, where the question does not arise.
   """
   @spec rule_status(keyword()) :: [rule_status_entry()]
   def rule_status(opts \\ []) do
@@ -91,6 +146,13 @@ defmodule Credence do
         round: round,
         rule: rule,
         name: RuleHelpers.rule_name(rule),
+        priority: rule.priority(),
+        # `nil`, not `[]`. DSL safety is a Pattern-round question: a Syntax rule
+        # only runs on source that does not parse and a Semantic rule only on a
+        # compiler diagnostic, so neither can land inside a macro DSL's block.
+        # `[]` would claim "declared safe everywhere", which is a different and
+        # unearned statement.
+        unsafe_in_dsl: nil,
         assumptions: [],
         enabled: true,
         missing: []

@@ -107,12 +107,21 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentity do
   defp identity_fn?({:&, _, [{:&, _, [{:__block__, _, [1]}]}]}), do: true
 
   # &Function.identity/1
+  #
+  # These two clauses were UNREACHABLE until 2026-08-16: they were written as
+  # `{:&, [...]}` and `{:__aliases__, [:Function]}` — two-tuples, where the AST
+  # nodes are three-tuples carrying metadata. A two-tuple pattern is perfectly
+  # valid Elixir, so nothing warned, and no test covered the shape, so
+  # `Enum.flat_map(l, &Function.identity/1)` was silently missed while the
+  # identical form on `Enum.map` was caught and pinned by its sibling. Found by
+  # the duplicate-detection probe (STATUS.md D8a), which noticed the two rules
+  # share a copy-pasted predicate and asked why only one of the copies worked.
   defp identity_fn?(
-         {:&,
+         {:&, _,
           [
             {:/, _,
              [
-               {{:., _, [{:__aliases__, [:Function]}, :identity]}, _, []},
+               {{:., _, [{:__aliases__, _, [:Function]}, :identity]}, _, []},
                1
              ]}
           ]}
@@ -121,11 +130,11 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentity do
 
   # &Function.identity/1 with __block__-wrapped 1
   defp identity_fn?(
-         {:&,
+         {:&, _,
           [
             {:/, _,
              [
-               {{:., _, [{:__aliases__, [:Function]}, :identity]}, _, []},
+               {{:., _, [{:__aliases__, _, [:Function]}, :identity]}, _, []},
                {:__block__, _, [1]}
              ]}
           ]}

@@ -15,6 +15,17 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmetic do
       div(numerator, denominator)
   """
   use Credence.Pattern.Rule
+  # Safe in all three families: un-pipes `a |> rem(b)` into `rem(a, b)` — the
+  # pipe operator's own expansion — so the identical `div`/`rem` call node with
+  # the identical operand order results in plain Elixir and inside any DSL that
+  # admits `|>`; no operator is introduced, removed or reordered (the same
+  # argument the allowlist already accepts for `no_unless_else`). The source
+  # scan flags this rule because the construct appears in it, but the matcher
+  # cannot reach a DSL expression, so the deliberate answer is the empty list
+  # rather than an allowlist entry — the fixture-level oracle does not flag it
+  # at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 

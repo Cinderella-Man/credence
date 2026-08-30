@@ -7,6 +7,33 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
 
   The fix strips the `@doc` attribute — output-identical since the compiler
   already ignores it.
+
+  ## Comments
+
+  A comment on its own line above the `@doc` is **kept** — it survives the
+  deletion and ends up above the `defp`, which is where a reader would expect a
+  note about the function.
+
+  A comment trailing the `@doc` line itself is kept as a standalone comment.
+  Such comments can contain tooling directives or notes whose meaning is
+  independent of the discarded documentation.
+
+  ## Bad
+
+      defmodule NdpDropNDOPF do
+        @doc "helper docs"  # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+
+  ## Good
+
+      defmodule NdpDropNDOPF do
+        # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+
   """
   use Credence.Semantic.Rule
 
@@ -69,7 +96,8 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
           # detect that and leave the source untouched (the warning stays, but
           # valid code is never broken nor traded for a new "unused literal").
           if parses?(Enum.join(removed, "\n")) do
-            Enum.join(before ++ after_doc, "\n")
+            comments = trailing_comments(removed)
+            Enum.join(before ++ comments ++ after_doc, "\n")
           else
             source
           end
@@ -81,6 +109,26 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
   defp line(%{position: line}) when is_integer(line), do: line
 
   defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
+
+  defp trailing_comments(lines) do
+    source = Enum.join(lines, "\n")
+
+    case Code.string_to_quoted_with_comments(source, columns: true) do
+      {:ok, _quoted, comments} ->
+        Enum.map(comments, fn %{line: line_no, text: text} ->
+          indentation = lines |> Enum.at(line_no - 1) |> leading_whitespace()
+          indentation <> text
+        end)
+
+      _ ->
+        []
+    end
+  end
+
+  defp leading_whitespace(line) do
+    byte_count = byte_size(line) - byte_size(String.trim_leading(line))
+    binary_part(line, 0, byte_count)
+  end
 
   # Find the @doc attribute belonging to the private function at `target_line`.
   #

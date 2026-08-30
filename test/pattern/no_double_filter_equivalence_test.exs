@@ -27,4 +27,35 @@ defmodule Credence.Pattern.NoDoubleFilterEquivalenceTest do
       inputs: [[], [1, -2, 3, -4], [1, 2, 3], [-1, -2], [0, -1, 5, -9, 3]]
     )
   end
+
+  test "does not change the second filter's input after source rebinding" do
+    before = """
+    defmodule NoDoubleFilterRebindingFixture do
+      def split(numbers) do
+        numbers = Enum.filter(numbers, &(&1 >= 0))
+        neg = Enum.filter(numbers, &(&1 < 0))
+        {numbers, neg}
+      end
+    end
+    """
+
+    fixed = Credence.RuleCase.fix(NoDoubleFilter, before)
+
+    confirm_fix(fixed, before)
+
+    for input <- [[1, -2, 3, -4], [-1], [1]] do
+      assert Credence.RuleCase.call_fixed(
+               before,
+               NoDoubleFilterRebindingFixture,
+               :split,
+               [input]
+             ) ==
+               Credence.RuleCase.call_fixed(
+                 fixed,
+                 NoDoubleFilterRebindingFixture,
+                 :split,
+                 [input]
+               )
+    end
+  end
 end

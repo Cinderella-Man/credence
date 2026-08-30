@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.NoUnclosedFnDelimiterAnalyzeTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Issue
   alias Credence.Syntax.NoUnclosedFnDelimiter
 
@@ -20,6 +22,35 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiterAnalyzeTest do
                end
              end
              """)
+  end
+
+  test "reports every unclosed fn delimiter repaired in the same source" do
+    source = """
+    defmodule NoUnclosedFnDelimiterMultipleAnalyzeFixture do
+      def a(list), do: Enum.map(list, fn x -> x + 1)
+      def b(list), do: Enum.filter(list, fn x -> x > 0)
+    end
+    """
+
+    assert analyze(source) == [
+             %Issue{
+               rule: :no_unclosed_fn_delimiter,
+               message: "`fn` block closed with `)` instead of `end`; insert the missing `end`.",
+               meta: %{line: 2}
+             },
+             %Issue{
+               rule: :no_unclosed_fn_delimiter,
+               message: "`fn` block closed with `)` instead of `end`; insert the missing `end`.",
+               meta: %{line: 3}
+             }
+           ]
+
+    confirm_fix(NoUnclosedFnDelimiter.fix(source), """
+    defmodule NoUnclosedFnDelimiterMultipleAnalyzeFixture do
+      def a(list), do: Enum.map(list, fn x -> x + 1 end)
+      def b(list), do: Enum.filter(list, fn x -> x > 0 end)
+    end
+    """)
   end
 
   test "does not flag a properly closed fn" do

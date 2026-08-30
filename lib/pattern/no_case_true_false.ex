@@ -20,6 +20,9 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
       case expr do false -> B; _ -> A end
       expr |> case do true -> A; false -> B end
 
+  Wildcard-**first** (`_ -> A; true -> B`) is not flagged: the second clause is
+  unreachable, so no `if` preserves the expression's value.
+
   ## Bad
 
       case rem(n, 2) == 0 do
@@ -54,7 +57,8 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
           case extract_do_clauses(kw) do
             [clause_a, clause_b] ->
               if provably_boolean?(subject) and
-                   boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
+                   fixable_clause_pair(clause_pattern(clause_a), clause_pattern(clause_b)) !=
+                     :skip do
                 {node, [build_issue(meta) | acc]}
               else
                 {node, acc}
@@ -74,7 +78,8 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
           case extract_do_clauses(kw) do
             [clause_a, clause_b] ->
               if provably_boolean?(expr) and
-                   boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
+                   fixable_clause_pair(clause_pattern(clause_a), clause_pattern(clause_b)) !=
+                     :skip do
                 {node, [build_issue(case_meta) | acc]}
               else
                 {node, acc}
@@ -105,12 +110,12 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
 
   # Only a *provably boolean* subject is safe to rewrite to `if`: a `case` on a
   # boolean literal raises `CaseClauseError` on a non-boolean, whereas `if`
-  # treats any truthy value as `true`. Comparisons, boolean operators, `is_*`
-  # guards, `?`-suffixed predicate calls (local or remote), and known boolean
-  # stdlib calls qualify; plain variables, `Access` (`opts[:flag]`), and opaque
-  # calls (`fun.(x)`, non-`?` functions) do not.
+  # treats any truthy value as `true`. Comparisons, boolean-only operators,
+  # `is_*` guards, and known boolean stdlib calls qualify; plain variables,
+  # `Access` (`opts[:flag]`), and opaque calls do not.
   @comparison_ops [:==, :!=, :===, :!==, :<, :>, :<=, :>=, :=~]
-  @boolean_ops [:and, :or, :not, :!, :in]
+  @boolean_ops [:not, :!, :in]
+  @boolean_remote_calls [{Enum, :empty?}, {Map, :has_key?}, {String, :contains?}]
   @type_guards [
     :is_atom,
     :is_binary,
@@ -135,41 +140,15 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp provably_boolean?({op, _, args}) when op in @boolean_ops and is_list(args), do: true
   defp provably_boolean?({op, _, args}) when op in @type_guards and is_list(args), do: true
 
-  # A pipe takes the type of its right-most step: `x |> f() |> valid?()`.
+  # A pipe takes the type of its right-most step: `x |> f() |> Enum.empty?()`.
   defp provably_boolean?({:|>, _, [_left, right]}), do: provably_boolean?(right)
 
-  # Remote predicate call `Mod.fun?(...)`
-  defp provably_boolean?({{:., _, [_mod, fun]}, _, args}) when is_atom(fun) and is_list(args),
-    do: predicate_name?(fun)
-
-  # Local predicate call `fun?(...)` (operator/guard atoms are handled above)
-  defp provably_boolean?({fun, _, args}) when is_atom(fun) and is_list(args),
-    do: predicate_name?(fun)
+  # Calls whose contracts guarantee a boolean result.
+  defp provably_boolean?({{:., _, [{:__aliases__, _, parts}, fun]}, _, args})
+       when is_atom(fun) and is_list(args),
+       do: {Module.concat(parts), fun} in @boolean_remote_calls
 
   defp provably_boolean?(_), do: false
-
-  defp predicate_name?(name), do: name |> Atom.to_string() |> String.ends_with?("?")
-
-  # Recognises the boolean pairs we flag: true/false, true/_, false/_
-  # and their flipped orderings.
-  defp boolean_clause_pair?(a, b) do
-    case {normalize_pattern(a), normalize_pattern(b)} do
-      {true, false} -> true
-      {false, true} -> true
-      {true, :wildcard} -> true
-      {:wildcard, true} -> true
-      {false, :wildcard} -> true
-      {:wildcard, false} -> true
-      _ -> false
-    end
-  end
-
-  defp normalize_pattern(true), do: true
-  defp normalize_pattern(false), do: false
-  defp normalize_pattern({:__block__, _, [true]}), do: true
-  defp normalize_pattern({:__block__, _, [false]}), do: false
-  defp normalize_pattern({:_, _, _}), do: :wildcard
-  defp normalize_pattern(_), do: :other
 
   # Extracts the clause list from a case node's keyword block.
   defp extract_do_clauses([{{:__block__, _, [:do]}, clauses}]) when is_list(clauses),
@@ -233,25 +212,16 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp rewrite_clauses(clause_a, clause_b) do
     with {pat_a, body_a} <- extract_clause(clause_a),
          {pat_b, body_b} <- extract_clause(clause_b) do
-      ua = unwrap_pattern(pat_a)
-      ub = unwrap_pattern(pat_b)
       # The `->`/pattern of each clause may carry comments (e.g. a note
       # before `false ->`). Rewriting to `if` drops the clause wrappers, so
       # carry those comments onto the body that moves into `do`/`else`.
       da = with_clause_comments(clause_a, body_a)
       db = with_clause_comments(clause_b, body_b)
 
-      cond do
-        # true -> A; false -> B
-        ua == true and ub == false -> {:ok, da, db}
-        # false -> B; true -> A
-        ua == false and ub == true -> {:ok, db, da}
-        # true -> A; _ -> B
-        ua == true and ub == :wildcard -> {:ok, da, db}
-        # false -> B; _ -> A  (wildcard covers the true case)
-        ua == false and ub == :wildcard -> {:ok, db, da}
-        # Wildcard-first variants (unreachable second clause) — don't fix
-        true -> :skip
+      case fixable_clause_pair(pat_a, pat_b) do
+        {:ok, :ab} -> {:ok, da, db}
+        {:ok, :ba} -> {:ok, db, da}
+        :skip -> :skip
       end
     else
       _ -> :skip
@@ -267,6 +237,30 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
 
   defp extract_clause({:->, _, [[pattern], body]}), do: {pattern, body}
   defp extract_clause(_), do: :error
+
+  # The ONE predicate `check/2` and `rewrite_clauses/2` share: which ORDERED
+  # clause-pattern pairs the fix will actually rewrite. `:ab` means clause A's
+  # body becomes the `do`; `:ba` means clause B's does.
+  #
+  # Wildcard-FIRST is absent on purpose. In `case x > 0 do _ -> :a; true -> :b end`
+  # the leading `_` makes the second clause unreachable, so the expression yields
+  # `:a` for every subject; the only behaviour-preserving `if` is
+  # `if x > 0, do: :a, else: :a`, which is not a target worth emitting, and the
+  # readable-looking `if x > 0, do: :b, else: :a` changes behaviour.
+  #
+  # This used to be two functions — `boolean_clause_pair?/2` on check's side and
+  # this `cond` on the fix's — with `normalize_pattern/1` a byte-identical
+  # duplicate of `unwrap_pattern/1`. They disagreed exactly on wildcard-first, so
+  # the rule reported a finding it then declined to repair.
+  defp fixable_clause_pair(pat_a, pat_b) do
+    case {unwrap_pattern(pat_a), unwrap_pattern(pat_b)} do
+      {true, false} -> {:ok, :ab}
+      {false, true} -> {:ok, :ba}
+      {true, :wildcard} -> {:ok, :ab}
+      {false, :wildcard} -> {:ok, :ba}
+      _ -> :skip
+    end
+  end
 
   # Normalise a clause pattern, handling Sourceror's __block__ wrapping.
   defp unwrap_pattern({:__block__, _, [true]}), do: true

@@ -242,12 +242,15 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
 
   defp extract_graphemes_arg(_), do: :error
 
-  defp immediate_graphemes?({:|>, _, [_, rhs]}), do: graphemes_call?(rhs)
+  defp immediate_graphemes?(
+         {:|>, _, [_, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, []}]}
+       ),
+       do: true
+
   defp immediate_graphemes?(other), do: graphemes_call?(other)
 
-  defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, args})
-       when is_list(args),
-       do: true
+  defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [_subject]}),
+    do: true
 
   defp graphemes_call?(_), do: false
 

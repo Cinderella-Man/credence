@@ -110,15 +110,6 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
              """)
     end
 
-    test "wildcard then true (flipped)" do
-      assert flagged?(NoCaseTrueFalse, """
-             case x > 0 do
-               _ -> :non_positive
-               true -> :positive
-             end
-             """)
-    end
-
     test "false then wildcard" do
       assert flagged?(NoCaseTrueFalse, """
              case x > 0 do
@@ -136,7 +127,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
   describe "flags piped case true/false" do
     test "simple pipe into case true/false" do
       assert flagged?(NoCaseTrueFalse, """
-             valid_digits?()
+             is_list([])
              |> case do
                true -> :ok
                false -> :error
@@ -148,7 +139,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
       assert flagged?(NoCaseTrueFalse, """
              number
              |> Integer.digits()
-             |> valid_digits?()
+             |> Enum.empty?()
              |> case do
                true -> :valid
                false -> :invalid
@@ -158,7 +149,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
 
     test "pipe into case with multi-line true body" do
       assert flagged?(NoCaseTrueFalse, """
-             valid?(x)
+             is_list(x)
              |> case do
                true ->
                  value = process(x)
@@ -175,6 +166,36 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "does not flag legitimate case statements" do
+    test "and/or expressions and predicate names do not prove a boolean result" do
+      assert clean?(NoCaseTrueFalse, "case true and :unknown do true -> :yes; false -> :no end")
+      assert clean?(NoCaseTrueFalse, "case false or :unknown do true -> :yes; false -> :no end")
+      assert clean?(NoCaseTrueFalse, "case ready?() do true -> :yes; false -> :no end")
+    end
+
+    # Wildcard FIRST makes the second clause unreachable, so the case yields
+    # `:non_positive` for every subject. No `if` preserves that except
+    # `if x > 0, do: :non_positive, else: :non_positive`, and the readable-looking
+    # rewrite would change behaviour — so the fix declines, and after sharing one
+    # predicate the check declines too. It used to report this and leave it
+    # unrepaired.
+    test "wildcard first, which makes the true clause unreachable" do
+      assert clean?(NoCaseTrueFalse, """
+             case x > 0 do
+               _ -> :non_positive
+               true -> :positive
+             end
+             """)
+    end
+
+    test "wildcard first, with false second" do
+      assert clean?(NoCaseTrueFalse, """
+             case x > 0 do
+               _ -> :positive
+               false -> :non_positive
+             end
+             """)
+    end
+
     test "case on atoms" do
       assert clean?(NoCaseTrueFalse, """
              case result do

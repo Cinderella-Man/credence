@@ -34,61 +34,122 @@ defmodule Credence.Pattern.NoUnlessElse do
 
   @impl true
   def check(ast, _opts) do
-    if defines_unless?(ast) do
-      []
-    else
-      {_ast, issues} =
-        Macro.prewalk(ast, [], fn
-          {:unless, meta, [_condition, clauses]} = node, acc ->
-            if has_else?(clauses) do
-              {node, [build_issue(meta) | acc]}
-            else
-              {node, acc}
-            end
+    eligible = eligible_unless_keys(ast)
 
-          node, acc ->
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:unless, meta, [_condition, clauses]} = node, acc ->
+          if has_else?(clauses) and MapSet.member?(eligible, location(meta)) do
+            {node, [build_issue(meta) | acc]}
+          else
             {node, acc}
-        end)
-
-      Enum.reverse(issues)
-    end
-  end
-
-  @impl true
-  def fix_patches(ast, _opts) do
-    if defines_unless?(ast) do
-      []
-    else
-      Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
-    end
-  end
-
-  # A module may define its own `unless/2,3` (e.g. a query DSL like
-  # `Explorer.Query`). Then `unless` is NOT `Kernel.unless`, and its `def`
-  # head — `def unless(c, do: x, else: y)` — is itself shaped exactly like an
-  # `unless cond, do:, else:` call. Rewriting either the head or in-module calls
-  # to `if` breaks the DSL. If the file defines an `unless` function/macro,
-  # leave every `unless` in it untouched.
-  defp defines_unless?(ast) do
-    {_ast, found} =
-      Macro.prewalk(ast, false, fn
-        node, true ->
-          {node, true}
-
-        {dt, _, [{:unless, _, args} | _]} = node, false
-        when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
-          {node, true}
-
-        {dt, _, [{:when, _, [{:unless, _, args} | _]} | _]} = node, false
-        when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
-          {node, true}
+          end
 
         node, acc ->
           {node, acc}
       end)
 
-    found
+    Enum.reverse(issues)
   end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    eligible = eligible_unless_keys(ast)
+
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      {:unless, meta, _args} = node ->
+        if MapSet.member?(eligible, location(meta)), do: maybe_rewrite(node), else: node
+
+      node ->
+        node
+    end)
+  end
+
+  # Parsing cannot expand an unqualified call to discover its origin. Track the
+  # two lexical facts that make it unsafe to treat one as Kernel.unless: a local
+  # definition in the current module, or a preceding custom import in scope.
+  defp eligible_unless_keys(ast) do
+    {keys, _imported?} = collect_eligible(ast, false, false)
+    MapSet.new(keys)
+  end
+
+  defp collect_eligible({:__block__, _, forms}, imported?, local?) when is_list(forms) do
+    Enum.reduce(forms, {[], imported?}, fn form, {keys, imported?} ->
+      {form_keys, next_imported?} = collect_eligible(form, imported?, local?)
+      {keys ++ form_keys, next_imported?}
+    end)
+  end
+
+  defp collect_eligible({:import, _, args}, imported?, _local?) do
+    {[], imported? or custom_import?(args)}
+  end
+
+  defp collect_eligible({:defmodule, _, args}, imported?, _local?) do
+    body = extract_clause(List.last(args), :do)
+    {keys, _inner_imported?} = collect_eligible(body, imported?, defines_unless_here?(body))
+    {keys, imported?}
+  end
+
+  defp collect_eligible({:unless, meta, [_condition, clauses]} = node, imported?, local?) do
+    own =
+      if has_else?(clauses) and not imported? and not local?, do: [location(meta)], else: []
+
+    {nested, _} = collect_children(node, imported?, local?)
+    {own ++ nested, imported?}
+  end
+
+  defp collect_eligible(node, imported?, local?) do
+    {keys, _} = collect_children(node, imported?, local?)
+    {keys, imported?}
+  end
+
+  defp collect_children({_, _, children}, imported?, local?) when is_list(children) do
+    collect_children(children, imported?, local?)
+  end
+
+  defp collect_children(items, imported?, local?) when is_list(items) do
+    keys = Enum.flat_map(items, fn item -> elem(collect_eligible(item, imported?, local?), 0) end)
+    {keys, imported?}
+  end
+
+  defp collect_children(tuple, imported?, local?) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> collect_children(imported?, local?)
+  end
+
+  defp collect_children(_node, imported?, _local?), do: {[], imported?}
+
+  defp custom_import?([{:__aliases__, _, [:Kernel]} | _]), do: false
+  defp custom_import?([:Kernel | _]), do: false
+  defp custom_import?(_args), do: true
+
+  defp defines_unless_here?(ast) do
+    case ast do
+      {:defmodule, _, _} ->
+        false
+
+      {dt, _, [{:unless, _, args} | _]}
+      when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+        true
+
+      {dt, _, [{:when, _, [{:unless, _, args} | _]} | _]}
+      when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+        true
+
+      {_, _, children} when is_list(children) ->
+        Enum.any?(children, &defines_unless_here?/1)
+
+      items when is_list(items) ->
+        Enum.any?(items, &defines_unless_here?/1)
+
+      tuple when is_tuple(tuple) ->
+        tuple |> Tuple.to_list() |> Enum.any?(&defines_unless_here?/1)
+
+      _ ->
+        false
+    end
+  end
+
+  defp location(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
   # Checks if a keyword list (from unless/if args) has an :else clause.
   defp has_else?(clauses) when is_list(clauses) do

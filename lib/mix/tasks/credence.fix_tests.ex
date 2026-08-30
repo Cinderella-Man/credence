@@ -227,11 +227,35 @@ defmodule Mix.Tasks.Credence.FixTests do
     end
   end
 
+  # Sourceror parses with `unescape: false`, so `v` here is the heredoc's RAW
+  # source bytes — `\"` is still two characters. ExUnit, running the same file
+  # later, sees the *decoded* value. Those differ for any fixture containing an
+  # escape, and this function feeds both the rule's input and the expected-output
+  # comparison, so returning the raw bytes made the tool reason about a string no
+  # test ever holds:
+  #
+  #   * the rule was handed `~c"say \"hi\""` (with backslashes) as its INPUT,
+  #     rather than the `~c"say "hi""` the runtime test passes it;
+  #   * and a fixture that was correctly escaped compared unequal to the rule's
+  #     real output, so the tool rewrote it on every run — churn that looks like
+  #     the rule being unstable.
+  #
+  # Decoding here makes this the exact inverse of `heredoc/1`'s escaping, which is
+  # what keeps `mix credence.fix_tests` idempotent.
   defp heredoc_value({:__block__, meta, [v]}) when is_binary(v) do
-    if Keyword.get(meta, :delimiter) == "\"\"\"", do: {:ok, v}, else: :error
+    if Keyword.get(meta, :delimiter) == "\"\"\"", do: {:ok, unescape(v)}, else: :error
   end
 
   defp heredoc_value(_), do: :error
+
+  # A heredoc that reached here came out of a file that compiles, so its escapes
+  # are valid — but a raw byte sequence is not a promise, and an unreadable escape
+  # should degrade to "leave this fixture alone" rather than kill the whole task.
+  defp unescape(raw) do
+    Macro.unescape_string(raw)
+  rescue
+    _ -> raw
+  end
 
   defp safe_fix(module, source) do
     RuleHelpers.apply_rule_fix(module, source)
@@ -243,7 +267,32 @@ defmodule Mix.Tasks.Credence.FixTests do
   # is column-0 here; Sourceror.patch_string re-indents the whole replacement
   # uniformly to the node's column, so the closing-delimiter dedent cancels and
   # the value is preserved.
-  defp heredoc(value), do: "\"\"\"\n" <> value <> "\"\"\""
+  #
+  # `value` is the rule's real output as BYTES, while a `"""` heredoc is read back
+  # through the same escape rules as a plain string — so splicing it in raw is only
+  # correct for output that happens to contain neither `\` nor `#{`. It silently
+  # broke for everything else, which meant precisely the escaping-sensitive rules:
+  #
+  #   * `~c"say \"hi\""` was written verbatim and read back as `~c"say "hi""` —
+  #     the backslashes consumed as heredoc escapes. The fixture then no longer
+  #     equalled the rule's output and the test failed with a diff whose two sides
+  #     looked almost identical, which is how this survived (escalation ledger row
+  #     134, misfiled against `PreferSigilCharlist` — that rule's output was right
+  #     all along; this emitter corrupted the fixture recording it).
+  #   * output containing `#{` was worse than corrupted: the heredoc parsed as an
+  #     interpolation, so the node was a `{:<<>>, _, [...]}` rather than a binary
+  #     literal and `heredoc_value/1` could not read it back at all.
+  #
+  # Escape order is load-bearing: backslashes first, then `#{`. The other order
+  # doubles the backslash this function just added in front of `#{` and the
+  # interpolation comes back.
+  defp heredoc(value), do: "\"\"\"\n" <> escape_heredoc(value) <> "\"\"\""
+
+  defp escape_heredoc(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("\#{", "\\\#{")
+  end
 
   defp statements({:__block__, _, stmts}) when is_list(stmts), do: stmts
   defp statements(single), do: [single]

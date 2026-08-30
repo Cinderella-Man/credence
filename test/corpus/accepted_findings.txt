@@ -58,7 +58,6 @@ absinthe/lib/absinthe/utils.ex:121  no_identity_function_in_enum
 absinthe/lib/absinthe/utils.ex:136  no_identity_function_in_enum
 absinthe/lib/absinthe/utils.ex:45  prefer_map_new
 absinthe/lib/absinthe/utils.ex:98  no_identity_function_in_enum
-absinthe/lib/absinthe/utils/render.ex:51  no_list_append_in_recursion
 absinthe_error_payload/lib/absinthe_error_payload/test_helper.ex:33  prefer_map_new
 absinthe_federation/lib/absinthe/federation/notation.ex:630  prefer_then_over_capture_invocation
 absinthe_federation/lib/absinthe/federation/notation.ex:639  prefer_then_over_capture_invocation
@@ -181,6 +180,8 @@ archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:13  pr
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:22  prefer_map_new
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:567  no_case_true_false
 archethic/lib/archethic/contracts/interpreter/legacy/utils_interpreter.ex:589  no_case_true_false
+archethic/lib/archethic/contracts/interpreter/library/common/evm.ex:27  no_negative_step_in_string_slice
+archethic/lib/archethic/contracts/interpreter/library/common/evm.ex:65  no_negative_step_in_string_slice
 archethic/lib/archethic/contracts/wasm/contract.ex:112  no_length_comparison_for_empty
 archethic/lib/archethic/contracts/wasm/module.ex:164  prefer_map_new
 archethic/lib/archethic/contracts/wasm/spec.ex:273  prefer_map_new
@@ -279,7 +280,6 @@ archethic/lib/archethic_web/dashboard_metrics_aggregator.ex:183  prefer_map_new
 archethic/lib/archethic_web/dashboard_metrics_aggregator.ex:78  prefer_map_new
 archethic/lib/archethic_web/explorer/faucet_rate_limiter.ex:142  prefer_map_new
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:114  prefer_map_new
-archethic/lib/archethic_web/explorer/live/dashboard_live.ex:124  no_redundant_list_traversal
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:143  prefer_map_new
 archethic/lib/archethic_web/explorer/live/dashboard_live.ex:93  prefer_map_new
 archethic/lib/archethic_web/explorer/live/node_details_live.ex:39  prefer_guard_over_if
@@ -502,7 +502,6 @@ ash_postgres/lib/migration_generator/migration_generator.ex:760  no_sort_then_re
 ash_postgres/lib/migration_generator/migration_generator.ex:794  no_sort_then_reverse
 ash_postgres/lib/migration_generator/operation.ex:716  prefer_cond_for_nested_if
 ash_postgres/lib/mix/tasks/ash_postgres.install.ex:53  no_case_boolean_result
-ash_postgres/lib/mix/tasks/ash_postgres.squash_snapshots.ex:65  no_redundant_list_traversal
 ash_postgres/lib/mix/tasks/ash_postgres.squash_snapshots.ex:74  no_length_comparison_for_empty
 ash_postgres/lib/resource_generator/spec.ex:521  no_duplicate_function_clauses
 ash_postgres/lib/resource_generator/spec.ex:820  no_length_comparison_for_empty
@@ -846,7 +845,6 @@ blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/messages_to_l2_matcher.ex:2
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/messaging.ex:268  no_reduce_for_map_building
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/utils/helper.ex:116  no_reduce_for_map_building
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/utils/logging.ex:96  no_case_true_false
-blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/backfill.ex:243  no_redundant_list_traversal
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/batches/discovery_utils.ex:65  no_is_nil_guard
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/batches/tasks.ex:318  prefer_guard_over_if
 blockscout/apps/indexer/lib/indexer/fetcher/arbitrum/workers/confirmations/discovery.ex:291  no_reduce_for_map_building
@@ -1192,6 +1190,7 @@ credo/lib/credo/cli/output/summary.ex:128  prefer_guard_over_if
 credo/lib/credo/cli/output/summary.ex:95  prefer_explicit_binary_arithmetic
 credo/lib/credo/cli/output/summary.ex:96  prefer_explicit_binary_arithmetic
 credo/lib/credo/cli/task/prepare_checks_to_run.ex:20  prefer_map_new
+credo/lib/credo/code/interpolation_helper.ex:274  no_negative_step_in_string_slice
 credo/lib/credo/config_file.ex:157  avoid_length_guard_less_than2
 credo/lib/credo/execution.ex:152  no_doc_false_on_private
 credo/lib/credo/execution.ex:659  no_doc_false_on_private
@@ -3697,7 +3696,6 @@ livebook/lib/livebook/hubs/team_client.ex:1248  no_unless_else
 livebook/lib/livebook/intellisense/elixir.ex:193  no_cond_two_clauses
 livebook/lib/livebook/intellisense/elixir/docs.ex:112  no_empty_map_new
 livebook/lib/livebook/k8s_api.ex:252  prefer_map_new
-livebook/lib/livebook/live_markdown/import.ex:322  no_list_append_in_recursion
 livebook/lib/livebook/live_markdown/import.ex:649  prefer_enum_reverse_two
 livebook/lib/livebook/live_markdown/markdown_helpers.ex:361  no_zip_then_map
 livebook/lib/livebook/runtime/evaluator/formatter.ex:202  no_case_on_param_dispatch
@@ -4638,7 +4636,6 @@ ratatouille/lib/ratatouille/renderer/canvas.ex:146  use_map_join
 ratatouille/lib/ratatouille/renderer/element/chart.ex:34  no_eager_with_index_in_reduce
 ratatouille/lib/ratatouille/renderer/element/sparkline.ex:20  use_map_join
 ratatouille/lib/ratatouille/renderer/element/sparkline.ex:30  no_redundant_list_traversal
-ratatouille/lib/ratatouille/renderer/element/table.ex:105  no_redundant_list_traversal
 ratatouille/lib/ratatouille/view.ex:141  prefer_map_new
 ratatouille/lib/ratatouille/window.ex:49  prefer_map_new
 ratio/lib/ratio.ex:184  prefer_explicit_binary_arithmetic
@@ -4662,7 +4659,6 @@ realtime/lib/realtime/monitoring/distributed_metrics.ex:27  prefer_map_new
 realtime/lib/realtime/nodes.ex:40  no_case_on_param_dispatch
 realtime/lib/realtime/operations.ex:42  no_identity_enum_map
 realtime/lib/realtime/postgres_cdc.ex:46  no_case_true_false
-realtime/lib/realtime/rate_counter/rate_counter.ex:210  no_redundant_list_traversal
 realtime/lib/realtime/signal_handler.ex:8  no_case_true_false
 realtime/lib/realtime/syn_handler.ex:139  no_enum_take_negative
 realtime/lib/realtime/tenants/connect.ex:475  no_enum_take_negative
@@ -4788,7 +4784,6 @@ sequin/lib/mix/tasks/bench.ex:573  no_map_then_aggregate
 sequin/lib/sequin/aws/sqs.ex:209  no_length_comparison_for_empty
 sequin/lib/sequin/bench/bench.ex:235  prefer_erlang_float
 sequin/lib/sequin/bench/stats_tracker.ex:113  no_length_guard_to_pattern
-sequin/lib/sequin/bench/stats_tracker.ex:132  no_redundant_list_traversal
 sequin/lib/sequin/config_parser.ex:154  no_redundant_assignment
 sequin/lib/sequin/consumers/consumers.ex:1531  prefer_function_capture
 sequin/lib/sequin/consumers/consumers.ex:1790  prefer_cond_for_nested_if
@@ -5780,6 +5775,7 @@ surface/lib/surface/compiler.ex:211  no_filter_then_count
 surface/lib/surface/compiler.ex:229  no_enum_count_for_length
 surface/lib/surface/compiler/converter_0_8.ex:79  use_map_join
 surface/lib/surface/formatter/phases/indent.ex:53  no_list_append_in_recursion
+surface/lib/surface/formatter/phases/newlines.ex:26  prefer_concat_over_flat_map_identity
 surface/lib/surface/formatter/phases/render.ex:220  no_map_then_aggregate
 surface/lib/surface/formatter/phases/render.ex:232  no_if_true_false
 surface/lib/surface/formatter/phases/render.ex:232  no_length_comparison_for_empty
@@ -5787,8 +5783,6 @@ surface/lib/surface/formatter/phases/render.ex:293  use_map_join
 surface/lib/surface/formatter/phases/render.ex:421  no_case_on_param_dispatch
 surface/lib/surface/formatter/phases/render.ex:422  no_case_boolean_result
 surface/lib/surface/formatter/phases/render.ex:486  no_length_comparison_for_empty
-surface/lib/surface/formatter/phases/spaces_to_newlines.ex:128  no_list_append_in_recursion
-surface/lib/surface/formatter/phases/spaces_to_newlines.ex:60  no_list_append_in_recursion
 surface/lib/surface/type_handler.ex:223  no_length_comparison_for_empty
 surface/lib/surface/type_handler/css_class.ex:39  prefer_enum_reverse_two
 surface/lib/surface/type_handler/types_helper.ex:4  no_case_on_param_dispatch

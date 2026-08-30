@@ -6,22 +6,26 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
 
   ## Bad
 
-      def my_fun([], _k), do: 0
-      def my_fun(list, k) when is_list(list) and is_integer(k) and k >= 0 do
-        case list do
-          [] -> 0
-          [_single] -> 0
-          [h | t] ->
-            # ... complex body
+      defmodule TallyPFCFLP do
+        def my_fun([], _k), do: 0
+
+        def my_fun(list, k) when is_list(list) and is_integer(k) and k >= 0 do
+          case list do
+            [] -> 0
+            [_single] -> 0
+            [h | t] -> h + length(t) + k
+          end
         end
       end
 
   ## Good
 
-      def my_fun([], _k), do: 0
-      def my_fun([_single], k) when is_integer(k) and k >= 0, do: 0
-      def my_fun([h | t], k) when is_integer(k) and k >= 0 do
-        # ... complex body (without wrapping case)
+      defmodule TallyPFCFLP do
+        def my_fun([], _k), do: 0
+
+        def my_fun([_single], k) when is_integer(k) and k >= 0, do: 0
+
+        def my_fun([h | t], k) when is_integer(k) and k >= 0, do: h + length(t) + k
       end
 
   ## Scope — what it flags
@@ -91,48 +95,73 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
     source = Keyword.get(opts, :source) || Sourceror.to_string(ast)
 
     RuleHelpers.patches_from_ast_transform(ast, source, fn ast ->
-      Macro.prewalk(ast, fn
-        # Module with single def statement (no __block__ wrapper)
-        {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, body}]]} = node ->
-          case body do
-            {:__block__, block_meta, stmts} when is_list(stmts) ->
-              {:defmodule, mod_meta,
-               [
-                 aliases,
-                 [
-                   {{:__block__, do_meta, [:do]},
-                    {:__block__, block_meta, transform_stmts(stmts)}}
-                 ]
-               ]}
-
-            single_stmt ->
-              case transform_single_stmt(single_stmt) do
-                {:ok, new_stmts} ->
-                  {:defmodule, mod_meta,
-                   [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, [], new_stmts}}]]}
-
-                :no ->
-                  node
-              end
+      case ast do
+        # A bare top-level `def … when … do case … end end` with no `defmodule`
+        # and no surrounding block. Sourceror returns the `def` tuple itself for a
+        # one-expression source, so it matched none of `prewalk_stmts/1`'s three
+        # clauses and fell through unchanged — while `check/2`, which runs
+        # `convertible/1` on every node it visits, reported it. Three findings
+        # reported and never repaired, on a rule that already owned the code to
+        # repair them.
+        #
+        # Dispatched at the ROOT rather than as a fourth prewalk clause on
+        # purpose: a prewalk clause would also visit the clauses
+        # `transform_stmts/1` has just built, so a promoted head whose own guard
+        # happens to contain `is_list/1` would be re-entered.
+        {def_type, _, [{:when, _, [_, _]}, _]} when def_type in [:def, :defp] ->
+          case transform_single_stmt(ast) do
+            {:ok, [single]} -> single
+            {:ok, stmts} -> {:__block__, [], stmts}
+            :no -> prewalk_stmts(ast)
           end
 
-        # Module with __block__ wrapper
+        _ ->
+          prewalk_stmts(ast)
+      end
+    end)
+  end
+
+  defp prewalk_stmts(ast) do
+    Macro.prewalk(ast, fn
+      # Module with single def statement (no __block__ wrapper)
+      {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, body}]]} = node ->
+        case body do
+          {:__block__, block_meta, stmts} when is_list(stmts) ->
+            {:defmodule, mod_meta,
+             [
+               aliases,
+               [
+                 {{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}
+               ]
+             ]}
+
+          single_stmt ->
+            case transform_single_stmt(single_stmt) do
+              {:ok, new_stmts} ->
+                {:defmodule, mod_meta,
+                 [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, [], new_stmts}}]]}
+
+              :no ->
+                node
+            end
+        end
+
+      # Module with __block__ wrapper
+      {:defmodule, mod_meta,
+       [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, stmts}}]]}
+      when is_list(stmts) ->
         {:defmodule, mod_meta,
-         [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, stmts}}]]}
-        when is_list(stmts) ->
-          {:defmodule, mod_meta,
-           [
-             aliases,
-             [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}]
-           ]}
+         [
+           aliases,
+           [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}]
+         ]}
 
-        # Regular __block__
-        {:__block__, meta, stmts} when is_list(stmts) ->
-          {:__block__, meta, transform_stmts(stmts)}
+      # Regular __block__
+      {:__block__, meta, stmts} when is_list(stmts) ->
+        {:__block__, meta, transform_stmts(stmts)}
 
-        node ->
-          node
-      end)
+      node ->
+        node
     end)
   end
 
@@ -276,7 +305,6 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
     Enum.all?(elements, fn
       {:|, _, _} -> true
       {name, _, ctx} when is_atom(name) and is_atom(ctx) -> true
-      {name, _, nil} when is_atom(name) -> true
       {:_, _, _} -> true
       _ -> false
     end)

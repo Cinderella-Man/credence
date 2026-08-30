@@ -45,6 +45,24 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
   end
 
   describe "does NOT flag" do
+    test "invalid String.graphemes arities" do
+      assert check(AvoidGraphemesEnumCount, "Enum.count(String.graphemes())") == []
+
+      assert check(
+               AvoidGraphemesEnumCount,
+               "value |> String.graphemes(extra) |> Enum.count()"
+             ) == []
+    end
+
+    test "String alias that names a custom module" do
+      code = """
+      alias CustomString, as: String
+      Enum.count(String.graphemes(value))
+      """
+
+      assert check(AvoidGraphemesEnumCount, code) == []
+    end
+
     test "String.length/1" do
       assert check(AvoidGraphemesEnumCount, "String.length(str)") == []
     end

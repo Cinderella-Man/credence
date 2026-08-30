@@ -32,6 +32,22 @@ defmodule Credence.Pattern.NoManualMax do
   `max/2` when the operands are equal in value but different in type — e.g.
   `max(1, 1.0)` is `1`, but `if 1 > 1.0, do: 1, else: 1.0` yields `1.0`. So they
   are not rewritten.
+
+  ## Bad
+
+      defmodule BadNoManualMaxNMM do
+        def bigger(a, b) do
+          if a >= b, do: a, else: b
+        end
+      end
+
+  ## Good
+
+      defmodule BadNoManualMaxNMM do
+        def bigger(a, b) do
+          max(a, b)
+        end
+      end
   """
   use Credence.Pattern.Rule
 

@@ -257,7 +257,8 @@ defmodule Credence.Pattern.NoListAppendInReduce do
       {:++, meta, [lhs, rhs]} ->
         case extract_single_elem_list(rhs) do
           {:ok, single_expr} ->
-            if same_var?(lhs, acc_var) and not cons_cell?(single_expr) do
+            if same_var?(lhs, acc_var) and not cons_cell?(single_expr) and
+                 not references_var?(single_expr, acc_var) do
               {:ok, single_expr, meta}
             else
               :error
@@ -295,6 +296,15 @@ defmodule Credence.Pattern.NoListAppendInReduce do
 
   defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
   defp same_var?(_, _), do: false
+
+  defp references_var?(ast, var) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn node, found? ->
+        {node, found? or same_var?(node, var)}
+      end)
+
+    found?
+  end
 
   defp cons_cell?({:|, _, _}), do: true
   defp cons_cell?(_), do: false

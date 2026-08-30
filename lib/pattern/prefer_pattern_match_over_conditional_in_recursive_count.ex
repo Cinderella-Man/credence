@@ -162,7 +162,7 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCount do
           ]} <- last,
          {:ok, rest_names} <- simple_var_names(rest_args),
          {:ok, param_names} <- simple_var_names(tl(params)) do
-      rest_names == param_names
+      rest_names == param_names and count_var not in param_names
     else
       _ -> false
     end

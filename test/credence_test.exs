@@ -1377,6 +1377,48 @@ defmodule CredenceTest do
       end
     end
 
+    # C16. Both were defined on the rules and readable only by opening 298 files or
+    # by a gate; `rule_status/1` is the API that answers "what will run, in what
+    # order, and where is it declared unsafe" without either.
+    test "every entry carries its dispatch priority" do
+      status = Credence.rule_status()
+
+      assert Enum.all?(status, &is_integer(&1.priority))
+
+      # Not a constant read back: the rounds really do carry a cascade, and a
+      # test that passed with every priority at 500 would be testing nothing.
+      pattern_priorities = for e <- status, e.round == :pattern, do: e.priority
+      semantic_priorities = for e <- status, e.round == :semantic, do: e.priority
+
+      assert length(Enum.uniq(pattern_priorities)) > 1
+      assert length(Enum.uniq(semantic_priorities)) > 1
+      assert Enum.min(semantic_priorities) < 500, "a Semantic rule must sort ahead of the default"
+    end
+
+    test "unsafe_in_dsl is the Pattern round's answer, and nil where the question does not arise" do
+      status = Credence.rule_status()
+
+      for entry <- status, entry.round in [:syntax, :semantic] do
+        assert entry.unsafe_in_dsl == nil,
+               "#{entry.name}: a Syntax/Semantic rule cannot land inside a DSL block, " <>
+                 "so [] would claim more than is known"
+      end
+
+      # `[atom()] | :all` per the callback — five rules are unsafe in every family
+      # and say so with `:all`, which is not a list.
+      pattern = for e <- status, e.round == :pattern, do: e
+      assert Enum.all?(pattern, &(is_list(&1.unsafe_in_dsl) or &1.unsafe_in_dsl == :all))
+      assert Enum.any?(pattern, &(&1.unsafe_in_dsl == :all)), "the :all form must survive the API"
+
+      declared = Enum.filter(pattern, &(&1.unsafe_in_dsl != []))
+      assert declared != [], "rules DO declare DSL families; an all-empty answer is vacuous"
+
+      for entry <- declared do
+        assert entry.unsafe_in_dsl == entry.rule.unsafe_in_dsl(),
+               "#{entry.name}: the reported list must be the rule's own"
+      end
+    end
+
     test "Pattern entries mirror Credence.Pattern.rule_status/1 under the same opts" do
       opts = [assumptions: :strict]
 

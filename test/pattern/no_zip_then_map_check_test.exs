@@ -129,6 +129,15 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
     end
   end
 
+  describe "does not flag visible stream inputs" do
+    test "stream enumeration must finish before the mapper runs" do
+      assert clean?(
+               NoZipThenMap,
+               "Enum.zip(Stream.map(xs, &tap(&1, fn x -> Process.put(:seen, x) end)), ys) |> Enum.map(fn {x, y} -> {x, y, Process.get(:seen)} end)"
+             )
+    end
+  end
+
   describe "does not flag tuple pattern with literals" do
     test "pattern matching on literal values" do
       assert clean?(NoZipThenMap, "Enum.map(some_list, fn {1, 2} -> :match end)")

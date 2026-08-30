@@ -14,6 +14,39 @@ defmodule Credence.Semantic.MissingUseExunitCase do
 
   Inserts `use ExUnit.Case` at the top of the module body, after any
   existing `@moduledoc`, `use`, `import`, `require`, or `alias` directives.
+
+  ## Why this rule beats `UndefinedFunction`
+
+  `UndefinedFunction` claims the same `undefined function describe/2 (there is
+  no such import)`, since its matcher accepts any name and arity. This rule
+  declares `priority: 100` against that rule's 501, so the ordering is declared
+  on both sides, not inherited from where the module names sort (docs/20 §1).
+  The catch-all repairs local calls by `{name, arity}` table lookup and has no
+  row for `test`, `describe` or `setup`, so it can only hand the source back
+  unchanged — the repair here is a `use ExUnit.Case` line the module lacks,
+  not a renamed call.
+
+  ## Bad
+
+      defmodule MyAppTestMUEC do
+        describe "feature" do
+          test "works" do
+            assert true
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule MyAppTestMUEC do
+        use ExUnit.Case
+
+        describe "feature" do
+          test "works" do
+            assert true
+          end
+        end
+      end
   """
 
   @behaviour Credence.Semantic.Rule
@@ -26,7 +59,8 @@ defmodule Credence.Semantic.MissingUseExunitCase do
   def match?(%{severity: :error, message: message}) do
     String.contains?(message, "undefined function test/") or
       String.contains?(message, "undefined function describe/") or
-      String.contains?(message, "undefined function setup/")
+      String.contains?(message, "undefined function setup/") or
+      String.contains?(message, "undefined function setup_all/")
   end
 
   def match?(_), do: false
@@ -63,10 +97,10 @@ defmodule Credence.Semantic.MissingUseExunitCase do
         _node, true ->
           {nil, true}
 
-        {:defmodule, _, [_name, kw]}, false ->
+        {:defmodule, _, [_name, kw]} = node, false ->
           case extract_do_body(kw) do
             nil ->
-              {:__skip__, false}
+              {node, false}
 
             body ->
               statements = block_to_list(body)
@@ -74,7 +108,7 @@ defmodule Credence.Semantic.MissingUseExunitCase do
               if has_exunit_calls?(body) and not has_use_exunit?(statements) do
                 {:__skip__, true}
               else
-                {:__skip__, false}
+                {node, false}
               end
           end
 

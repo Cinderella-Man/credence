@@ -4,8 +4,35 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
   alias Credence.Pattern.NoLengthGuardToPattern
 
   describe "NoLengthGuardToPattern fix" do
-    test "fixes length(list) > 0 into [_ | _] = list pattern" do
+    test "leaves length(list) > 0 unchanged because improper lists must fall through" do
       input = """
+      defmodule NoLengthGuardImproperListFixture do
+        def classify(list) when length(list) > 0, do: :guarded
+        def classify(_), do: :fallback
+      end
+      """
+
+      emitted = fix(NoLengthGuardToPattern, input)
+
+      confirm_fix(emitted, input)
+
+      control = String.replace(input, "NoLengthGuardImproperListFixture", "NoLengthGuardControl")
+      fixed = String.replace(emitted, "NoLengthGuardImproperListFixture", "NoLengthGuardFixed")
+
+      program =
+        control <>
+          fixed <>
+          """
+          unless NoLengthGuardControl.classify([1 | 2]) ==
+                   NoLengthGuardFixed.classify([1 | 2]),
+            do: raise("improper-list behavior changed")
+          """
+
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(program)
+    end
+
+    test "does not rewrite length(list) > 0" do
+      code = """
       defmodule Example do
         def process(list) when length(list) > 0 do
           Enum.sum(list)
@@ -13,15 +40,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      expected = """
-      defmodule Example do
-        def process([_ | _] = list) do
-          Enum.sum(list)
-        end
-      end
-      """
-
-      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
     test "fixes length(list) == 1 into [_] = list pattern" do
@@ -84,8 +103,8 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
-    test "preserves remaining guard in compound expression" do
-      input = """
+    test "does not rewrite a compound guard containing length(list) > 0" do
+      code = """
       defmodule Example do
         def process(list, x) when length(list) > 0 and is_integer(x) do
           :ok
@@ -93,19 +112,11 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      expected = """
-      defmodule Example do
-        def process([_ | _] = list, x) when is_integer(x) do
-          :ok
-        end
-      end
-      """
-
-      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
-    test "preserves remaining guard when length check is on the right of and" do
-      input = """
+    test "does not rewrite length(list) > 0 on the right of and" do
+      code = """
       defmodule Example do
         def process(list, x) when is_atom(x) and length(list) > 0 do
           :ok
@@ -113,15 +124,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      expected = """
-      defmodule Example do
-        def process([_ | _] = list, x) when is_atom(x) do
-          :ok
-        end
-      end
-      """
-
-      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
     test "does not modify when variable is not a direct parameter" do
@@ -161,7 +164,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
-    test "fixed code has no remaining issues for > 0" do
+    test "length(list) > 0 is not reported as fixable" do
       code = """
       defmodule Example do
         def process(list) when length(list) > 0 do
@@ -170,7 +173,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert check(NoLengthGuardToPattern, fix(NoLengthGuardToPattern, code)) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "fixed code has no remaining issues for == N" do

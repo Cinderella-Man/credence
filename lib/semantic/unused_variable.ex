@@ -27,6 +27,45 @@ defmodule Credence.Semantic.UnusedVariable do
   When the diagnostic carries only a line (no column), the fix falls
   back to "rewrite only if `var_name` appears exactly once on the line
   as a standalone identifier" — same safety principle.
+
+  ## Name collisions
+
+  A plain `_` prefix is not always behaviour-preserving. In
+
+      def f({_ref, ref}), do: :ok
+
+  rewriting `ref` to `_ref` would produce `{_ref, _ref}`, and an
+  underscored name repeated in a pattern still *binds*: the clause then
+  only matches when both elements are equal (`f({1, 2})` stops matching).
+  So when `_<var_name>` already occurs in the source as a standalone
+  identifier, the fix picks the first free `_<var_name>_<n>` instead.
+  Renaming is safe precisely because the binding is unused — nothing
+  reads it.
+
+  The converse warning — *"the underscored variable `_x` appears more
+  than once in a match"* — is deliberately **not** handled. The compiler
+  itself says the two repairs are "remove the leading underscore"
+  (keeps the equality constraint) or "give the variables different
+  names" (drops it), and only the first preserves the answer; picking
+  either automatically would be guessing at intent.
+
+  ## Bad
+
+      defmodule UnusedVarInteg1UV do
+        def run do
+          {current, max} = {1, 2}
+          max
+        end
+      end
+
+  ## Good
+
+      defmodule UnusedVarInteg1UV do
+        def run do
+          {_current, max} = {1, 2}
+          max
+        end
+      end
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
@@ -74,7 +113,8 @@ defmodule Credence.Semantic.UnusedVariable do
       offset = col - 1
 
       if at_standalone_token?(line, offset, var_name) do
-        insert_underscore_at(line, offset)
+        new_name = unique_underscore_name(source, var_name)
+        replace_token_at(line, offset, var_name, new_name)
       else
         line
       end
@@ -98,8 +138,12 @@ defmodule Credence.Semantic.UnusedVariable do
   defp rewrite_unambiguous(source, line_no, var_name) do
     rewrite_line(source, line_no, fn line ->
       case standalone_offsets(line, var_name) do
-        [single] -> insert_underscore_at(line, single)
-        _ -> line
+        [single] ->
+          new_name = unique_underscore_name(source, var_name)
+          replace_token_at(line, single, var_name, new_name)
+
+        _ ->
+          line
       end
     end)
   end
@@ -136,10 +180,37 @@ defmodule Credence.Semantic.UnusedVariable do
       not followed_by_word_char?(line, offset + name_size)
   end
 
-  defp insert_underscore_at(line, offset) do
+  # Build a unique underscore-prefixed name that doesn't collide with
+  # existing bindings, including bindings on another line of the same pattern.
+  defp unique_underscore_name(source, var_name) do
+    target = "_" <> var_name
+
+    if has_standalone_occurrence?(source, target) do
+      next_available_name(source, var_name, 1)
+    else
+      target
+    end
+  end
+
+  defp next_available_name(source, base, n) do
+    candidate = "_#{base}_#{n}"
+
+    if has_standalone_occurrence?(source, candidate) do
+      next_available_name(source, base, n + 1)
+    else
+      candidate
+    end
+  end
+
+  defp has_standalone_occurrence?(line, name) do
+    standalone_offsets(line, name) != []
+  end
+
+  defp replace_token_at(line, offset, old_name, new_name) do
     prefix = binary_part(line, 0, offset)
-    suffix = binary_part(line, offset, byte_size(line) - offset)
-    prefix <> "_" <> suffix
+    suffix_start = offset + byte_size(old_name)
+    suffix = binary_part(line, suffix_start, byte_size(line) - suffix_start)
+    prefix <> new_name <> suffix
   end
 
   defp preceded_by_word_char?(_line, 0), do: false

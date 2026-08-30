@@ -272,4 +272,69 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
              )
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — a modifier shown in an example is not a modifier
+  #
+  # All three of this rule's own "Examples" sit in its moduledoc heredoc
+  # and all three were rewritten (docs/22 T3.10), deleting the very
+  # prefixes the examples exist to demonstrate. Matching now runs against
+  # a `Credence.SourceMask` shadow.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — only real code is rewritten" do
+    test "leaves a modifier inside a moduledoc heredoc alone" do
+      code = ~S'''
+      defmodule Documented do
+        @moduledoc """
+        ## Examples
+
+            private defp helper(x), do: x + 1
+        """
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves a modifier inside a comment alone" do
+      code = "# private defp helper(x), do: x + 1"
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report a modifier that only appears in prose" do
+      code = ~S'''
+      @moduledoc """
+          public def calculate(x), do: x * 2
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "still fixes real code in a file that also documents the broken form" do
+      code = ~S'''
+      defmodule Both do
+        @moduledoc """
+      private defp documented(x), do: x
+        """
+
+        private defp real(x), do: x * 2
+      end
+      '''
+
+      fixed = fix(code)
+
+      assert fixed =~ "  defp real(x), do: x * 2"
+      assert fixed =~ "private defp documented(x), do: x"
+      assert valid_syntax?(fixed)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/fix_stale_access_modifier.ex")
+
+      confirm_fix(fix(source), source)
+    end
+  end
 end

@@ -26,7 +26,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       [issue] = check(NoManualCountWithPredicate, code)
       assert issue.rule == :no_manual_count_with_predicate
       assert issue.message =~ "do_count/3"
-      assert issue.message =~ "Enum.count"
+      assert issue.message =~ "Enum.reduce"
     end
 
     test "detects with different function names" do
@@ -68,7 +68,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       assert issue.message =~ "tally/3"
     end
 
-    test "detects with clauses in different order" do
+    test "does not flag when the unguarded clause precedes and shadows the guarded clause" do
       code = """
       defmodule Bad do
         defp cnt([_h | t], n, acc), do: cnt(t, n, acc)
@@ -77,8 +77,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(NoManualCountWithPredicate, code)
-      assert issue.message =~ "cnt/3"
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "detects with inequality guard" do
@@ -130,7 +129,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       [issue] = check(NoManualCountWithPredicate, code)
       assert issue.rule == :no_manual_count_with_predicate
       assert issue.message =~ "do_count/3"
-      assert issue.message =~ "Enum.count"
+      assert issue.message =~ "Enum.reduce"
     end
 
     test "detects 2-clause if-based count with arity 2" do
@@ -355,7 +354,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
   describe "no issue — unsafe shapes the rule deliberately drops" do
     test "does not flag a guard that can raise (rem)" do
       # A guard silently SKIPS an element whose guard raises; the same
-      # expression as an `Enum.count/2` predicate would RAISE. Different
+      # expression as an `Enum.reduce/3` condition would RAISE. Different
       # answer on e.g. `[2, :a, 4]` (original returns a count, predicate
       # raises ArithmeticError), so this is dropped.
       code = """

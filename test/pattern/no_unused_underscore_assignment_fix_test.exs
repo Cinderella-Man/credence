@@ -89,4 +89,22 @@ defmodule Credence.Pattern.NoUnusedUnderscoreAssignmentFixTest do
 
     confirm_fix(fix(Rule, input), input)
   end
+
+  test "leaves an assignment to the __MODULE__ special form alone" do
+    input = """
+    defmodule NoUnusedUnderscoreAssignmentSpecialFormFixture do
+      def run do
+        __MODULE__ = :ok
+        :done
+      end
+    end
+    """
+
+    emitted = fix(Rule, input)
+
+    confirm_fix(emitted, input)
+
+    assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+             Credence.RuleHelpers.compile_and_capture(input)
+  end
 end

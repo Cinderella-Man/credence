@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   and the negated form `if !Enum.empty?(var), do: Enum.min(var), else: default`
   (also `not Enum.empty?(var)`).
 
-  Prefer `Enum.min(var, fn -> default end)` with the `empty_fallback` parameter.
+  Prefer an explicit `case` over the repeated condition in `if`.
 
   Only the `Enum.empty?/1` forms are flagged. The `if var == []` /
   `if var != []` and `case var do [] -> default; v -> Enum.min(v) end` forms are
@@ -12,8 +12,28 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   so on a non-list empty enumerable (`%{}`, an empty range, an empty `MapSet`) the
   original takes the non-empty branch and `Enum.min(var)` raises `Enum.EmptyError`,
   while `Enum.min(var, fn -> default end)` returns the default — a behaviour
-  change. `Enum.empty?/1` reports emptiness for every enumerable, matching
-  `Enum.min/2`'s empty_fallback exactly, so those forms rewrite identically.
+  change. The `Enum.empty?/1` forms retain their separate emptiness check and
+  min/max traversal because an enumerable may produce different values each
+  time it is traversed.
+
+  ## Bad
+
+      defmodule BadNIEFEMM do
+        def run(lengths) do
+          if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+        end
+      end
+
+  ## Good
+
+      defmodule BadNIEFEMM do
+        def run(lengths) do
+          case Enum.empty?(lengths) do
+            true -> 0
+            false -> Enum.min(lengths)
+          end
+        end
+      end
   """
 
   use Credence.Pattern.Rule
@@ -28,7 +48,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
             issue = %Issue{
               rule: :no_if_empty_for_enum_min_max,
               message:
-                "Prefer #{match.enum_fn}/#{match.arity} with empty_fallback instead of `if Enum.empty?` check.",
+                "Prefer an explicit `case` for the `Enum.empty?` check before #{match.enum_fn}/#{match.arity}.",
               meta: %{line: Keyword.get(meta, :line)}
             }
 
@@ -50,7 +70,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
       {:if, _meta, [condition, opts]} = node ->
         case detect_empty_guard(condition, opts) do
           %{var: var, default: default, enum_fn: enum_fn} ->
-            build_enum_call(enum_fn, var, default)
+            build_case(enum_fn, var, default)
 
           nil ->
             node
@@ -126,11 +146,12 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   defp same_var?(_, _), do: false
 
-  defp build_enum_call(fn_name, var, default) do
-    # Enum.min(var, fn -> default end) or Enum.max(var, fn -> default end)
-    fallback_fn = {:fn, [], [{:->, [], [[], default]}]}
+  defp build_case(fn_name, var, default) do
+    empty_call = {{:., [], [{:__aliases__, [], [:Enum]}, :empty?]}, [], [var]}
+    enum_call = {{:., [], [{:__aliases__, [], [:Enum]}, fn_name]}, [], [var]}
 
-    {{:., [], [{:__aliases__, [], [:Enum]}, fn_name]}, [], [var, fallback_fn]}
+    {:case, [],
+     [empty_call, [do: [{:->, [], [[true], default]}, {:->, [], [[false], enum_call]}]]]}
   end
 
   # Sourceror wraps keyword keys as {{:__block__, _, [:key]}, value}.

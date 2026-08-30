@@ -115,4 +115,73 @@ defmodule Credence.Syntax.NoDocWithDoBlockFixTest do
              """)
            )
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # HEREDOC BODIES — a documented example of the bug is not the bug
+  #
+  # The pattern is anchored to a whole line, so a trailing comment and a
+  # mid-line string were never reachable. A heredoc body line IS a whole
+  # line, and this rule rewrote the `## Bad` example in its own moduledoc.
+  # Found by running the rule over its own source file.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — heredoc bodies are not code" do
+    test "leaves a documented example of the bug alone" do
+      code = ~S'''
+      defmodule Doc do
+        @moduledoc """
+        ## Bad
+
+            @doc "top_n_items/2" do
+        """
+        def f(x), do: x
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report a documented example of the bug" do
+      code = ~S'''
+      defmodule Doc do
+        @moduledoc """
+            @doc "top_n_items/2" do
+        """
+        def f(x), do: x
+      end
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "still repairs the real bug below a heredoc that documents it" do
+      input = ~S'''
+      defmodule Doc do
+        @moduledoc """
+            @doc "top_n_items/2" do
+        """
+        @doc "find/2" do
+        def f(x), do: x
+      end
+      '''
+
+      expected = ~S'''
+      defmodule Doc do
+        @moduledoc """
+            @doc "top_n_items/2" do
+        """
+        @doc "find/2"
+        def f(x), do: x
+      end
+      '''
+
+      confirm_fix(fix(input), expected)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/no_doc_with_do_block.ex")
+
+      confirm_fix(fix(source), source)
+    end
+  end
 end

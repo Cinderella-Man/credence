@@ -61,28 +61,66 @@ defmodule Credence.Pattern.NoFetchThenUpdate do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case fetch_case_info(node) do
-          {:ok, bound_val, body, fetch_map, fetch_key} ->
-            new_issues =
-              body
-              |> fixable_updates(fetch_map, fetch_key)
-              |> Enum.map(&build_issue(&1, bound_val))
-
-            {node, Enum.reverse(new_issues) ++ acc}
-
-          :none ->
-            {node, acc}
-        end
-      end)
-
-    Enum.reverse(issues)
+    if has_map_alias?(ast), do: [], else: collect_issues(ast)
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &rewrite_fetch_case/1)
+    if has_map_alias?(ast) do
+      []
+    else
+      transformed = transform_code(ast, &rewrite_fetch_case/1)
+      Credence.RuleHelpers.patches_from_diff(ast, transformed)
+    end
+  end
+
+  defp collect_issues({:quote, _, _}), do: []
+
+  defp collect_issues(node) do
+    own =
+      case fetch_case_info(node) do
+        {:ok, bound_val, body, fetch_map, fetch_key} ->
+          body
+          |> fixable_updates(fetch_map, fetch_key)
+          |> Enum.map(&build_issue(&1, bound_val))
+
+        :none ->
+          []
+      end
+
+    own ++ Enum.flat_map(code_child_nodes(node), &collect_issues/1)
+  end
+
+  # A textual `Map` is not Elixir.Map when a source aliases another module to
+  # that name. Conservatively leave such a source alone; without expansion in
+  # a compiler environment the two meanings cannot be distinguished reliably.
+  defp has_map_alias?(ast) do
+    any_code?(ast, fn
+      {:alias, _, [_, opts]} when is_list(opts) -> alias_as_map?(opts)
+      _ -> false
+    end)
+  end
+
+  defp alias_as_map?(opts) do
+    Enum.any?(opts, fn
+      {{:__block__, _, [:as]}, {:__aliases__, _, [:Map]}} -> true
+      {:as, {:__aliases__, _, [:Map]}} -> true
+      _ -> false
+    end)
+  end
+
+  defp any_code?({:quote, _, _}, _predicate), do: false
+
+  defp any_code?(node, predicate) do
+    predicate.(node) or Enum.any?(code_child_nodes(node), &any_code?(&1, predicate))
+  end
+
+  defp transform_code({:quote, _, _} = node, _fun), do: node
+
+  defp transform_code(node, fun) do
+    node
+    |> map_code_child_nodes(&transform_code(&1, fun))
+    |> fun.()
   end
 
   # --- Detection of the `case Map.fetch(map, key) do {:ok, val} -> ... end` shape
@@ -144,13 +182,10 @@ defmodule Credence.Pattern.NoFetchThenUpdate do
   end
 
   defp has_binding_construct?(ast) do
-    {_ast, found?} =
-      Macro.prewalk(ast, false, fn
-        {form, _, _} = node, _acc when form in @binding_construct_forms -> {node, true}
-        node, acc -> {node, acc}
-      end)
-
-    found?
+    any_code?(ast, fn
+      {form, _, _} when form in @binding_construct_forms -> true
+      _ -> false
+    end)
   end
 
   # Custom walk that gathers matching update calls WITHOUT descending into a
@@ -206,6 +241,7 @@ defmodule Credence.Pattern.NoFetchThenUpdate do
   # Children for the pruning walk: never descend into captures or fns.
   defp child_nodes({:&, _, _}), do: []
   defp child_nodes({:fn, _, _}), do: []
+  defp child_nodes({:quote, _, _}), do: []
 
   defp child_nodes({form, _meta, args}) when is_list(args) do
     if is_tuple(form), do: [form | args], else: args
@@ -217,6 +253,7 @@ defmodule Credence.Pattern.NoFetchThenUpdate do
 
   defp map_child_nodes({:&, _, _} = node, _fun), do: node
   defp map_child_nodes({:fn, _, _} = node, _fun), do: node
+  defp map_child_nodes({:quote, _, _} = node, _fun), do: node
 
   defp map_child_nodes({form, meta, args}, fun) when is_list(args) do
     {if(is_tuple(form), do: fun.(form), else: form), meta, Enum.map(args, fun)}
@@ -226,20 +263,44 @@ defmodule Credence.Pattern.NoFetchThenUpdate do
   defp map_child_nodes(list, fun) when is_list(list), do: Enum.map(list, fun)
   defp map_child_nodes(other, _fun), do: other
 
+  # General code traversal used to find fetch cases. Unlike the update walker,
+  # it enters function bodies, but quoted AST is data and is always opaque.
+  defp code_child_nodes({form, _meta, args}) when is_list(args) do
+    if is_tuple(form), do: [form | args], else: args
+  end
+
+  defp code_child_nodes({a, b}), do: [a, b]
+  defp code_child_nodes(list) when is_list(list), do: list
+  defp code_child_nodes(_), do: []
+
+  defp map_code_child_nodes({form, meta, args}, fun) when is_list(args) do
+    {if(is_tuple(form), do: fun.(form), else: form), meta, Enum.map(args, fun)}
+  end
+
+  defp map_code_child_nodes({a, b}, fun), do: {fun.(a), fun.(b)}
+  defp map_code_child_nodes(list, fun) when is_list(list), do: Enum.map(list, fun)
+  defp map_code_child_nodes(other, _fun), do: other
+
   # --- Building output
 
   # `Map.update*(map, key, ..., fun)` -> `Map.put(map, key, fun.(val))`.
   # Reuses the original map, key and fun subtrees verbatim.
   defp build_put({_callee, _meta, args}, bound_val) do
-    {map, key, fun} =
+    {map, key, default, fun} =
       case args do
-        [m, k, fun] -> {m, k, fun}
-        [m, k, _default, fun] -> {m, k, fun}
+        [m, k, fun] -> {m, k, nil, fun}
+        [m, k, default, fun] -> {m, k, default, fun}
       end
 
     applied = {{:., [], [fun]}, [], [{bound_val, [], nil}]}
 
-    {{:., [], [{:__aliases__, [], [:Map]}, :put]}, [], [map, key, applied]}
+    put = {{:., [], [{:__aliases__, [], [:Map]}, :put]}, [], [map, key, applied]}
+
+    if default && !simple?(default) do
+      {:case, [], [default, [do: [{:->, [], [[{:_, [], nil}], put]}]]]}
+    else
+      put
+    end
   end
 
   defp rewrite_fetch_case(node) do

@@ -19,6 +19,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       defmodule Example do
         def extract(graphemes, start, len) do
           graphemes
+          |> Enum.to_list()
           |> Enum.slice(2, 5)
         end
       end
@@ -39,7 +40,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.slice(list, 2, 5)
+          Enum.slice(Enum.to_list(list), 2, 5)
         end
       end
       """
@@ -59,7 +60,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.slice(list, 2, 5)
+          Enum.slice(Enum.to_list(list), 2, 5)
         end
       end
       """
@@ -86,6 +87,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
           list
           |> Enum.map(&(&1 * 2))
           |> Enum.filter(&(&1 > 10))
+          |> Enum.to_list()
           |> Enum.slice(5, 3)
         end
       end
@@ -108,8 +110,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       defmodule Example do
         def process(list) do
-          a = Enum.slice(list, 0, 5)
-          b = Enum.slice(list, 3, 10)
+          a = Enum.slice(Enum.to_list(list), 0, 5)
+          b = Enum.slice(Enum.to_list(list), 3, 10)
           {a, b}
         end
       end
@@ -130,6 +132,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       Enum.map(list, fn x ->
         x
+        |> Enum.to_list()
         |> Enum.slice(2, 5)
       end)
       """

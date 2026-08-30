@@ -140,4 +140,58 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityCheckTest do
       assert check(PreferConcatOverFlatMapIdentity, code) == []
     end
   end
+
+  # ── &Function.identity/1 (clauses that were unreachable until 2026-08-16) ──
+  #
+  # The matcher had these two clauses all along, written as two-tuples
+  # (`{:&, [...]}`, `{:__aliases__, [:Function]}`) where the AST nodes are
+  # three-tuples carrying metadata. Valid Elixir, so nothing warned; no test
+  # covered the shape, so the rule silently missed it while its sibling
+  # `no_identity_enum_map` caught the identical form on `Enum.map`.
+
+  describe "&Function.identity/1" do
+    test "direct call" do
+      input = """
+      defmodule CredencePreferConcatIdentityDirectFixture do
+        def f(l), do: Enum.flat_map(l, &Function.identity/1)
+      end
+      """
+
+      expected = """
+      defmodule CredencePreferConcatIdentityDirectFixture do
+        def f(l), do: Enum.concat(l)
+      end
+      """
+
+      assert flagged?(PreferConcatOverFlatMapIdentity, input)
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
+    end
+
+    test "piped" do
+      input = """
+      defmodule CredencePreferConcatIdentityPipedFixture do
+        def f(l), do: l |> Enum.flat_map(&Function.identity/1)
+      end
+      """
+
+      expected = """
+      defmodule CredencePreferConcatIdentityPipedFixture do
+        def f(l), do: l |> Enum.concat()
+      end
+      """
+
+      assert flagged?(PreferConcatOverFlatMapIdentity, input)
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
+    end
+
+    # The control: a capture that is NOT identity must stay unflagged, so the
+    # newly-reachable clauses did not simply widen the rule to every capture.
+    test "CONTROL: a different captured function is not identity" do
+      assert clean?(PreferConcatOverFlatMapIdentity, """
+             defmodule CredencePreferConcatIdentityControlFixture do
+               def f(l), do: Enum.flat_map(l, &List.wrap/1)
+             end
+             """)
+    end
+  end
 end

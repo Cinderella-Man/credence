@@ -32,4 +32,13 @@ defmodule Credence.Pattern.PreferEnumSliceEquivalenceTest do
       inputs: [[], [1], [1, 2, 3, 4, 5]]
     )
   end
+
+  test "the rewrite fully consumes side-effecting enumerables like Enum.drop/2" do
+    assert_effect_trace_equivalent(
+      "Enum.drop(Stream.map(list, effect), 1) |> Enum.take(1)",
+      rule: PreferEnumSlice,
+      vars: [:list],
+      inputs: [[1], [1, 2], [1, 2, 3, 4]]
+    )
+  end
 end

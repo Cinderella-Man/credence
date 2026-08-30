@@ -35,7 +35,7 @@ output channel is the verdict file `../_verdict`, containing exactly one of:
 
 ## Run
 ```
-./review_loop.sh [cap] [wait_min]      # cap=0 → run until candidates.md empty; wait_min default 15
+./review_loop.sh [cap] [wait_min]      # cap=0 → run until candidates.md empty; wait_min default 1
 SISTER=/path CLAUDE_MODEL=… ./review_loop.sh
 ```
 Each row prints a one-line digest (verdict, files, suite count, list size,
@@ -55,7 +55,7 @@ real); the test shape matches the kind; the diff is confined to the set; the ful
 A set is classified **greenfield** (brand-new rule, reviewed from scratch) or
 **delta** (already live; only the evolution change is judged). Transient agent
 failures (no verdict / crash / token-limit) are not followups — the row reverts
-and retries with backoff (15/30/45/60 min, then hourly) until Claude recovers.
+and retries with backoff (2-min steps, capped at 10 min) until Claude recovers.
 
 ## Per-script index
 - `generate_candidates.sh` — (re)build `candidates.md` from the sister: every rule

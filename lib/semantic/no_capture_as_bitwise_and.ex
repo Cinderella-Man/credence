@@ -17,15 +17,75 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
   `Bitwise.band(IDENT, <integer>)` (no `import` needed). It is targeted by the
   diagnostic column, so only that one operator changes — never a legitimate
   capture elsewhere on the line (`&foo/1`, `&(&1 + 1)`).
+
+  ## Integer literals
+
+  Every Elixir integer literal form is accepted as the right operand: decimal
+  (`255`), underscore-separated (`1_000`), hex (`0xFF`), binary (`0b1010`) and
+  octal (`0o17`). For a long time only bare decimal digits were, so the very
+  literals bitmask code is usually written with were cut in half:
+
+      flags & 0xFF   ->  Bitwise.band(flags, 0)xFF   *** did not parse ***
+
+  ## What is deliberately declined
+
+  Python's `&` binds *looser* than every arithmetic and shift operator, so the
+  operands of the source `&` are whole expressions, not single tokens. This
+  rule only ever rewrites a bare identifier against a literal, and declines
+  anything where that would change the grouping or splice into the middle of a
+  larger term:
+
+      h * 31 + c & 0xFFFFFFFF    left operand is `(h * 31 + c)`, not `c`
+      m.flags & 0xFF             a chain — the `Bitwise.band` would land after `m.`
+      @state.flags & 0xFF        likewise, and `@` would capture the call
+      :erlang.system_time & 0xFF likewise, and the `:` would make an atom of it
+      -m.flags & 0xFF            the unary minus belongs inside the mask
+      flags & 0xFF + 1           right operand is `(0xFF + 1)`
+      naïve & 0xFF               a non-ASCII identifier byte precedes the match
+
+  A declined line keeps its compile error, which is loud. Rewriting it would
+  produce code that compiles and returns a different number, which is not.
+
+  Matching runs against a `Credence.SourceMask` shadow, so a `&` inside a
+  string literal or comment is never mistaken for an operator.
+
+  ## Bad
+
+      defmodule CaptureAndCheckInteg1NCABA do
+        def low_bit(n) do
+          n & 1
+        end
+      end
+
+  ## Good
+
+      defmodule CaptureAndCheckInteg1NCABA do
+        def low_bit(n) do
+          Bitwise.band(n, 1)
+        end
+      end
   """
   use Credence.Semantic.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # `IDENT & <integer literal>` — the exact shape that yields the
-  # "capture argument &N" diagnostic. Used for the bare-line fallback when no
-  # column is available.
-  @band_regex ~r/([A-Za-z_]\w*)\s*&\s*(\d+)/
+  # "capture argument &N" diagnostic.
+  #
+  # Both operands are POSSESSIVE. A plain `\w+` hands characters back to
+  # satisfy the trailing lookahead, which would let `0xFF` match as `0` with
+  # `xFF` left over — the original defect, reintroduced by a lazy quantifier.
+  @band_regex ~r/([A-Za-z_]\w*+)\s*&\s*(0[xXbBoO][0-9a-fA-F_]++|\d[\d_]*+)(?![\w.])/
+
+  # Characters that may immediately precede the left operand. Anything else —
+  # `.`, `@`, `:`, an operator, or a non-ASCII identifier byte — means the
+  # match starts in the middle of a larger term.
+  @safe_immediate_prefix [?\s, ?\t, ?(, ?,, ?[, ?{, ?=]
+
+  # Operators that bind tighter than `&` in Python. One of these on either
+  # side means the source's operand is a compound expression.
+  @precedence_hazard [?+, ?-, ?*, ?/, ?%, ?^, ?&, ?|, ?~, ?<, ?>, ?., ?@]
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
@@ -46,11 +106,11 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
   @impl true
   def fix(source, %{position: {line, col}}) when is_integer(line) and is_integer(col) do
-    fix_at_column(source, line, col)
+    rewrite(source, line, col)
   end
 
   def fix(source, %{position: line}) when is_integer(line) do
-    update_line(source, line, fn text -> rewrite_first(text) || text end)
+    rewrite(source, line, nil)
   end
 
   def fix(source, _diagnostic), do: source
@@ -59,51 +119,89 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
   defp extract_line(line) when is_integer(line), do: line
   defp extract_line(_), do: nil
 
-  defp fix_at_column(source, line_no, col) do
-    update_line(source, line_no, fn text ->
-      with true <- col >= 1 and col <= String.length(text),
-           {before, "&" <> _ = at} <- String.split_at(text, col - 1),
-           rewritten when is_binary(rewritten) <- rewrite_split(before, at) do
-        rewritten
-      else
-        _ -> rewrite_first(text) || text
-      end
-    end)
-  end
-
-  # `before` ends with the left operand, `at` begins with `& <digits>`.
-  # Rewrite just `LHS & DIGITS` → `Bitwise.band(LHS, DIGITS)`, keeping the
-  # surrounding text on the line intact.
-  defp rewrite_split(before, at) do
-    with [lhs_with_ws] <- Regex.run(~r/[A-Za-z_]\w*\s*$/, before),
-         [amp_with_digits] <- Regex.run(~r/^&\s*\d+/, at) do
-      lhs = String.trim_trailing(lhs_with_ws)
-      digits = amp_with_digits |> String.trim_leading("&") |> String.trim()
-      prefix = binary_part(before, 0, byte_size(before) - byte_size(lhs_with_ws))
-
-      rest =
-        binary_part(at, byte_size(amp_with_digits), byte_size(at) - byte_size(amp_with_digits))
-
-      prefix <> "Bitwise.band(" <> lhs <> ", " <> digits <> ")" <> rest
-    else
-      _ -> nil
-    end
-  end
-
-  # Rewrite the first `IDENT & DIGITS` on a line; nil when the line has none.
-  defp rewrite_first(text) do
-    if Regex.match?(@band_regex, text) do
-      Regex.replace(@band_regex, text, "Bitwise.band(\\1, \\2)", global: false)
-    end
-  end
-
-  defp update_line(source, line_no, fun) do
+  # Matches are found in the masked shadow and spliced into the real line;
+  # both are the same byte length and every code byte is identical, so the
+  # match offsets are valid in either.
+  defp rewrite(source, line_no, col) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
     |> Enum.map_join("\n", fn
-      {text, ^line_no} -> fun.(text)
-      {text, _} -> text
+      {{text, shadow}, ^line_no} -> rewrite_line(text, shadow, col)
+      {{text, _shadow}, _} -> text
     end)
+  end
+
+  defp rewrite_line(text, shadow, col) do
+    case pick_match(shadow, col) do
+      nil ->
+        text
+
+      [{_ms, _ml}, {ls, ll}, {rs, rl}] ->
+        lhs = binary_part(text, ls, ll)
+        rhs = binary_part(text, rs, rl)
+        before = binary_part(text, 0, ls)
+        after_end = rs + rl
+        rest = binary_part(text, after_end, byte_size(text) - after_end)
+
+        before <> "Bitwise.band(" <> lhs <> ", " <> rhs <> ")" <> rest
+    end
+  end
+
+  # The diagnostic column points at the `&`. When it is available, take the
+  # match that owns that column so an unrelated `&` elsewhere on the line is
+  # never touched; otherwise fall back to the first safe match.
+  defp pick_match(shadow, col) do
+    matches =
+      @band_regex
+      |> Regex.scan(shadow, return: :index)
+      |> Enum.filter(&safe?(shadow, &1))
+
+    case col do
+      nil -> List.first(matches)
+      _ -> Enum.find(matches, &owns_column?(shadow, &1, col))
+    end
+  end
+
+  defp owns_column?(_shadow, [{ms, ml}, _lhs, _rhs], col),
+    do: (col - 1) in ms..(ms + ml - 1)
+
+  defp safe?(shadow, [{ms, ml}, {ls, _ll}, {rs, rl}]) do
+    left_boundary_safe?(shadow, ls) and right_boundary_safe?(shadow, rs + rl) and
+      ms + ml <= byte_size(shadow)
+  end
+
+  defp left_boundary_safe?(_shadow, 0), do: true
+
+  defp left_boundary_safe?(shadow, start) do
+    prev = :binary.at(shadow, start - 1)
+
+    cond do
+      prev not in @safe_immediate_prefix -> false
+      prev in [?\s, ?\t] -> not hazard_before?(binary_part(shadow, 0, start - 1))
+      true -> true
+    end
+  end
+
+  defp hazard_before?(prefix) do
+    case prefix |> String.trim_trailing() |> String.last() do
+      nil -> false
+      <<c>> -> c in @precedence_hazard
+      _ -> true
+    end
+  end
+
+  defp right_boundary_safe?(shadow, stop) when stop >= byte_size(shadow), do: true
+
+  defp right_boundary_safe?(shadow, stop) do
+    shadow
+    |> binary_part(stop, byte_size(shadow) - stop)
+    |> String.trim_leading()
+    |> String.first()
+    |> case do
+      nil -> true
+      <<c>> -> c not in @precedence_hazard
+      _ -> false
+    end
   end
 end

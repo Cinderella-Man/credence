@@ -22,6 +22,18 @@ defmodule Credence.Pattern.NoSortThenReverse do
   Unresolvable directions such as `Enum.sort(nums, dir) |> Enum.reverse()` or
   opaque comparators like `Enum.sort(nums, &MyModule.compare/2) |> Enum.reverse()`
   are not flagged because we cannot determine the flipped direction.
+
+  ## Bad
+
+      defmodule MNSTR do
+        def f(x), do: Enum.reverse(Enum.sort(x))
+      end
+
+  ## Good
+
+      defmodule MNSTR do
+        def f(x), do: Enum.sort(x, :desc)
+      end
   """
 
   use Credence.Pattern.Rule
@@ -182,14 +194,13 @@ defmodule Credence.Pattern.NoSortThenReverse do
   defp direct_sort_direction(_), do: :unknown
 
   # Function captures: &>=/2, &>/2 → :desc; &<=/2, &</2 → :asc
-  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, 2]}]})
-       when op in [:>=, :>],
-       do: :desc
-
-  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, 2]}]})
-       when op in [:<=, :<],
-       do: :asc
-
+  #
+  # The arity is matched ONLY in its wrapped form. Sourceror parses with a
+  # `literal_encoder`, so a capture's arity always arrives as
+  # `{:__block__, _, [2]}` and never as a bare `2`. Two clauses matching the bare
+  # form used to sit above these — dead, and dead in a way that hid a test gap:
+  # the mutation sweep could not kill any mutant on them, while the identical
+  # mutation on these live twins IS separable (`&>/2`, docs/25).
   defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, {:__block__, _, [2]}]}]})
        when op in [:>=, :>],
        do: :desc

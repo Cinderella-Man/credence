@@ -3,6 +3,7 @@ defmodule Credence.Syntax.PreferSpecArrowOperatorFixTest do
 
   import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
+  alias Credence.RuleHelpers
   alias Credence.Syntax.PreferSpecArrowOperator
 
   defp analyze(code), do: PreferSpecArrowOperator.analyze(code)
@@ -19,6 +20,26 @@ defmodule Credence.Syntax.PreferSpecArrowOperatorFixTest do
 
     test "single param" do
       confirm_fix(fix("@spec foo(integer()) string()"), "@spec foo(integer()) :: string()")
+    end
+
+    test "quoted atom containing a close parenthesis" do
+      input = ~S'@spec foo(:"a)") integer()'
+      expected = ~S'@spec foo(:"a)") :: integer()'
+      emitted = fix(input)
+
+      confirm_fix(emitted, expected)
+
+      module = fn spec ->
+        """
+        defmodule PreferSpecArrowQuotedAtomFixture do
+          #{spec}
+          def foo(:"a)"), do: 1
+        end
+        """
+      end
+
+      assert RuleHelpers.compile_and_capture(module.(emitted)) ==
+               RuleHelpers.compile_and_capture(module.(expected))
     end
 
     test "module return type" do
@@ -163,6 +184,71 @@ defmodule Credence.Syntax.PreferSpecArrowOperatorFixTest do
       """
 
       assert valid_syntax?(fix(code))
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — an @spec quoted in documentation is not an @spec
+  #
+  # The decision now runs against a `Credence.SourceMask` shadow. Found
+  # by running this rule over its own source file, whose `## Bad`
+  # example it rewrote into the `## Good` one (docs/22 T3.10).
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — only real code is rewritten" do
+    test "leaves an @spec inside a moduledoc heredoc alone" do
+      code = ~S'''
+      defmodule Documented do
+        @moduledoc """
+        ## Bad
+
+            @spec get_days(String.t()) integer()
+        """
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves an @spec inside a comment alone" do
+      code = "# @spec get_days(String.t()) integer()"
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report an @spec that only appears in prose" do
+      code = ~S'''
+      @moduledoc """
+          @spec get_days(String.t()) integer()
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "still fixes real code in a file that also documents the broken form" do
+      code = ~S'''
+      defmodule Both do
+        @moduledoc """
+            @spec documented(String.t()) integer()
+        """
+
+        @spec real(String.t()) integer()
+        def real(a), do: a
+      end
+      '''
+
+      fixed = fix(code)
+
+      assert fixed =~ "@spec real(String.t()) :: integer()"
+      assert fixed =~ "    @spec documented(String.t()) integer()"
+      assert valid_syntax?(fixed)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/prefer_spec_arrow_operator.ex")
+
+      confirm_fix(fix(source), source)
     end
   end
 end

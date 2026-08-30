@@ -34,6 +34,19 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "leaves unsafe shapes untouched" do
+    test "Enum alias shadowed by a custom module" do
+      code = """
+      defmodule DuplicateFlattenCustomEnum do
+        alias MyEnum, as: Enum
+
+        def run(list), do: Enum.concat(List.duplicate(list, 3))
+      end
+      """
+
+      assert clean?(NoListDuplicateFlatten, code)
+      confirm_fix(fix(NoListDuplicateFlatten, code), code)
+    end
+
     test "List.flatten variant (deep flatten)" do
       code = "List.flatten(List.duplicate(list, 3))"
 

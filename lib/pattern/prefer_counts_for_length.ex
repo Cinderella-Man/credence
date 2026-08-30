@@ -40,6 +40,10 @@ defmodule Credence.Pattern.PreferCountsForLength do
   # `counts`/`string` defined in one scope never matches a `length` call in an
   # unrelated one. check and fix share this so they always agree.
   defp collect_pairs(ast) do
+    if safe_call_resolution?(ast), do: collect_pairs_in_ast(ast), else: []
+  end
+
+  defp collect_pairs_in_ast(ast) do
     {_ast, pairs} =
       Macro.prewalk(ast, [], fn
         {:__block__, _, statements} = node, acc when is_list(statements) ->
@@ -50,6 +54,75 @@ defmodule Credence.Pattern.PreferCountsForLength do
       end)
 
     pairs
+  end
+
+  # Parsed source does not carry the compiler environment that resolves bare
+  # calls and aliases. Be conservative when the names used by this rewrite can
+  # resolve somewhere other than Kernel/String/Enum/Map.
+  defp safe_call_resolution?(ast) do
+    {_ast, safe?} =
+      Macro.prewalk(ast, true, fn
+        {:alias, _, args} = node, safe? ->
+          {node, safe? and safe_alias?(args)}
+
+        {:import, _, args} = node, safe? ->
+          {node, safe? and safe_import?(args)}
+
+        {kind, _, [{:length, _, args} | _]} = node, safe?
+        when kind in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+          {node, safe? and length(args) != 1}
+
+        {:defdelegate, _, [{:length, _, args} | _]} = node, safe? when is_list(args) ->
+          {node, safe? and length(args) != 1}
+
+        node, safe? ->
+          {node, safe?}
+      end)
+
+    safe?
+  end
+
+  defp safe_alias?([{:__aliases__, _, parts} | opts]) do
+    opts = List.first(opts, [])
+
+    aliased_name =
+      case ast_option(opts, :as) do
+        {:__aliases__, _, as_parts} -> List.last(as_parts)
+        nil -> List.last(parts)
+      end
+
+    aliased_name not in [:String, :Enum, :Map] or
+      parts in [[aliased_name], [:"Elixir", aliased_name]]
+  end
+
+  defp safe_alias?(_), do: true
+
+  defp safe_import?([{:__aliases__, _, [:Kernel]} | opts]) do
+    opts = List.first(opts, [])
+    not excludes_length_one?(ast_option(opts, :except) || [])
+  end
+
+  defp safe_import?([{:__aliases__, _, [:"Elixir", :Kernel]} | opts]) do
+    opts = List.first(opts, [])
+    not excludes_length_one?(ast_option(opts, :except) || [])
+  end
+
+  # An imported module may supply the bare length/1 call.
+  defp safe_import?(_), do: false
+
+  defp excludes_length_one?(entries) do
+    ast_option(entries, :length) in [1, {:__block__, [], [1]}] or
+      match?({:__block__, _, [1]}, ast_option(entries, :length))
+  end
+
+  defp ast_option({:__block__, _, [entries]}, key), do: ast_option(entries, key)
+
+  defp ast_option(entries, key) when is_list(entries) do
+    Enum.find_value(entries, fn
+      {^key, value} -> value
+      {{:__block__, _, [^key]}, value} -> value
+      _ -> nil
+    end)
   end
 
   defp scan_block([]), do: []
@@ -68,7 +141,7 @@ defmodule Credence.Pattern.PreferCountsForLength do
   @impl true
   def fix_patches(ast, opts) do
     RuleHelpers.patches_from_ast_transform(ast, Keyword.get(opts, :source, ""), fn ast ->
-      transform_ast(ast)
+      if safe_call_resolution?(ast), do: transform_ast(ast), else: ast
     end)
   end
 
@@ -117,7 +190,7 @@ defmodule Credence.Pattern.PreferCountsForLength do
              ]}
           ]}
        )
-       when is_atom(counts_var) and is_atom(string_var) do
+       when is_atom(counts_var) and counts_var != :_ and is_atom(string_var) and string_var != :_ do
     if frequencies_call?(frequencies_call) and codepoints_call?(codepoints_call) do
       {:ok, counts_var, string_var}
     else

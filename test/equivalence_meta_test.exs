@@ -23,6 +23,15 @@ defmodule Credence.EquivalenceMetaTest do
   """
   use ExUnit.Case, async: true
 
+  # These gates parse every rule module and every rule test file on each run, so
+  # they are I/O- and CPU-bound in a way an ordinary unit test is not. Under a
+  # full `mix test` the ~20k-file corpus scan runs alongside them and starves
+  # them enough to blow the 60s default — observed as a spurious
+  # `ExUnit.TimeoutError` in `Credence.SemanticMetaTest`, which passes in 106s
+  # for the whole module when run alone. The gate is not slow because anything
+  # is wrong; it is slow because it reads the tree.
+  @moduletag timeout: :timer.minutes(10)
+
   import Credence.MetaTestSupport
 
   # The predicates (`defines_module?/2`, `assert_fns/0`, `mark_fns/0`,

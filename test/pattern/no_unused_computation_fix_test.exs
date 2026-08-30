@@ -39,6 +39,22 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     confirm_fix(fix(Rule, input), expected)
   end
 
+  test "keeps an underscore-prefixed binding that is read later" do
+    input = """
+    defmodule NoUnusedComputationUsedUnderscoreFixture do
+      def f do
+        _n = length([1])
+        _n
+      end
+    end
+    """
+
+    emitted = fix(Rule, input)
+
+    confirm_fix(emitted, input)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
+
   test "leaves a bare-variable argument unchanged (unsafe)" do
     input = """
     def f(x) do

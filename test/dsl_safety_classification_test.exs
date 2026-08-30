@@ -55,6 +55,8 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "prefer_pattern_match_over_conditional_in_recursive_count" =>
       "matches only a def whose body is recursive list counting",
     "prefer_lookup_for_digit_conversion" => "matches and rewrites only module-level defp clauses",
+    "prefer_stdlib_gcd" =>
+      "removes module-level Euclidean defp gcd/2 clauses and rewrites a call site; never rewrites a rem expression inside a DSL",
     "no_case_on_param_dispatch" =>
       "matches only a def/defp body that is `case param`; splits to clause heads, never inside a DSL expression",
     # Match an EXISTING `case` over a subject (booleans, tuples, Map results,
@@ -76,6 +78,10 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     # The flagged `/` is function-capture arity (`&fun/N`), not the division operator.
     "no_identity_enum_map" => "the `/` is capture arity in an identity-fn matcher, not division",
     "no_redundant_local_capture" => "the `/` is capture arity (`&fn/arity`), not division",
+    "no_sort_then_at" =>
+      "the `/` is capture arity in the strict max sorter `&>/2`, not division; the Enum.sort |> Enum.at pipeline isn't valid DSL-expression code",
+    "no_sort_for_top_k" =>
+      "the `/` is capture arity in the strict max sorter `&>/2`, not division; the Enum.sort |> reverse |> Enum.at pipeline isn't valid DSL-expression code",
     "no_map_then_aggregate" =>
       "matches an Enum.map |> Enum.sum fusion; the `/` is capture arity and the introduced `+`/`*` — like all Enum.* here — never lands in a DSL expression",
     "unnecessary_grapheme_chunking" =>
@@ -107,7 +113,55 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_unless_else" =>
       "unless→if with branches swapped, condition unchanged (same as Kernel.unless)",
     "prefer_cond_for_nested_if" =>
-      "nested if→cond copying every condition/body verbatim; no operator change"
+      "nested if→cond copying every condition/body verbatim; no operator change",
+    "no_defp_already_defined_as_def" =>
+      "renames a defp clause to do_<name> or deletes a duplicate defp; operates only on def/defp definitions and bare call sites, never inside a DSL expression",
+    # ── C14 sweep, 2026-08-16: ledgered rules whose MATCHER is structurally out of
+    # reach of a DSL expression, so the reason holds for fixtures nobody has written
+    # yet. (Nine more were classified with a deliberate `unsafe_in_dsl []` in the rule
+    # itself instead — the fixture-level oracle here does not flag those.) ──
+    "avoid_graphemes_enum_count_with_predicate" =>
+      "matches a `String.graphemes` → `Enum.count/2`/`Enum.sum_by/2` pipeline whose `==` sits inside the lambda/capture predicate; that pipeline is not valid DSL-expression code, so it never fires inside a real block",
+    "no_dead_map_update" =>
+      "deletes a `Map.update(key, <literal>, & &1)` feeding `Map.drop`/`Map.delete`; the only `-` it can touch is a unary minus over a numeric literal default (`literal_default?` admits nothing else), never arithmetic over an expression, and the rewrite emits only qualified `Map.drop`/`Map.delete`",
+    "no_double_filter" =>
+      "matches two adjacent `v = Enum.filter(list, &(&1 op operand))` assignment statements in a block — an assignment pair with capture predicates is not part of any DSL expression grammar — and the surviving predicate is copied verbatim from source",
+    "no_explicit_product_reduce" =>
+      "the `*` lives in an `Enum.reduce/3` lambda (or the `&*/2` capture argument) that no DSL expression grammar can contain — the same bound as the already-verified `no_explicit_sum_reduce`",
+    "no_fetch_then_update" =>
+      "matches an existing `case Map.fetch(map, key)` `{:ok, val}` clause and only swaps a `Map.update`/`Map.update!` call for `Map.put` inside it, reusing the fun subtree verbatim and never descending into `&`/`fn`",
+    "no_find_value_default_case" =>
+      "every form requires an `Enum.find_value/2` call as its subject (the rest is an existing `case` with a `nil ->` then identity clause); `Enum.*` is never a DSL-expression construct",
+    "no_grapheme_palindrome" =>
+      "fires only on a `var = String.graphemes(...)` binding paired with `var == Enum.reverse(var)`; neither call is DSL-expression code, and a DSL expression has no rebinding statement",
+    "no_hd_tl_when_cons_bound" =>
+      "matches only a def/defp clause head whose parameter is an anonymous `[_ | _]` cons binding, and the only edits are that head plus `hd(var)`/`tl(var)` → the bound head/tail variable; guard and body are otherwise verbatim, so no reinterpreted construct can ever be added or removed",
+    "no_if_empty_for_enum_min_max" =>
+      "fires only on an `if Enum.empty?(v)` whose other branch is `Enum.min/max(v)` on the same var; `Enum.*` is never a DSL-expression construct",
+    "no_keyword_get_integer_key" =>
+      "the `-` is a negative integer literal in the key argument of a `Keyword.get/2` call — never reinterpreted arithmetic — and the replacement string is always a qualified `List.first/last` or `Enum.at` call, never a bare local call a DSL rereads",
+    "no_list_delete_at_length" =>
+      "matches only `List.delete_at(v, length(v) - 1)` with the same bare variable in both positions — a `List.*` call is not a construct any DSL expression grammar admits (Ecto rejects it, defn's remote-call restriction bars it, Ash has no list-surgery expression function), and the emitted `-1` is a literal index argument, never reinterpreted arithmetic",
+    "no_list_delete_at_with_length" =>
+      "the `-` it rewrites is always the index argument of a `List.delete_at(x, length(x) - 1)` call on one variable; a qualified `List.*` call with an inline `length/1` is not DSL-expression code, and the replacement is the literal `-1`",
+    "no_list_foldl" =>
+      "swaps `List.foldl/3` for a qualified `Enum.reduce/3` with every argument copied verbatim; the `++` is only read as a list proof and is never rewritten, and no operator or control form is built",
+    "no_manual_count_with_predicate" =>
+      "collapses a group of def/defp clauses and emits a def/defp head with a `when is_list` guard — a DSL expression has no def",
+    "no_manual_find" =>
+      "matches only a group of three `def`/`defp` clause heads in one block; a DSL expression has no def",
+    "no_manual_frequencies" =>
+      "matches only `Enum.reduce(_, %{}, fn e, acc -> Map.update(acc, k, 1, &(&1 + 1)) end)`; the deleted `+` lives in a reduce lambda, and the enum/key ASTs are carried over verbatim — a reduce + `fn` + `Map.update/4` is not in any DSL expression grammar",
+    "no_map_keys_or_values_for_iteration" =>
+      "matches only `Enum.<terminal>(Map.keys/values(m), …)` — an Enum-over-map call is never a DSL-expression construct — and the flagged `/` is capture arity (`&fun/1`), not division",
+    "no_sort_then_reverse" =>
+      "matches an `Enum.sort` paired with `Enum.reverse` (pipe or nested); `Enum.*` plus a comparator lambda / `&>=/2` capture is not DSL-expression code, the dropped `>`/`>=`/`<`/`<=` only ever sits inside that comparator, and the sort subject is copied verbatim",
+    "prefer_frequencies_over_group_by" =>
+      "matches three consecutive piped steps — `Enum.group_by(&identity)`, `Enum.map(fn {_k, v} -> length(v) end)`, `Enum.count(fn c -> c > 1 end)` — so the `>` it moves only ever lives inside an `Enum.count` lambda; an `Enum.*` pipeline of `fn` lambdas is not part of any DSL expression grammar",
+    "prefer_regex_match" =>
+      "matches only a `case` whose scrutinee is a literal `Regex.run/2` call — a remote call no DSL expression grammar admits",
+    "prefer_string_split_trim" =>
+      "matches only a `String.split/2 |> Enum.filter(&(&1 != ''))` pipeline; the `!=` it drops sits inside a capture argument to `Enum.filter`, which no DSL expression grammar admits"
   }
 
   test "every rule whose fix changes a reinterpreted construct is classified" do

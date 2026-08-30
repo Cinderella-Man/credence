@@ -2,6 +2,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoGroupByForFrequencies
+  alias Credence.RuleHelpers
 
   describe "rewrites to Enum.frequencies_by/2" do
     test "piped group_by/2 |> Map.new(length)" do
@@ -134,6 +135,31 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
   end
 
   describe "no-op — leaves code unchanged" do
+    test "local length/1 may shadow Kernel.length/1" do
+      code = """
+      defmodule NoGroupByForFrequenciesShadowedLengthFixture do
+        import Kernel, except: [length: 1]
+
+        def length(_group), do: 99
+
+        def freq(words) do
+          words
+          |> Enum.group_by(&String.downcase/1)
+          |> Map.new(fn {key, group} -> {key, length(group)} end)
+        end
+      end
+
+      %{"a" => 99} = NoGroupByForFrequenciesShadowedLengthFixture.freq(["A"])
+      """
+
+      emitted = fix(NoGroupByForFrequencies, code)
+
+      confirm_fix(emitted, code)
+      assert clean?(NoGroupByForFrequencies, code)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(code)
+      assert RuleHelpers.compile_and_capture(emitted) == RuleHelpers.compile_and_capture(code)
+    end
+
     test "non-frequency group_by (different transform)" do
       code = """
       words

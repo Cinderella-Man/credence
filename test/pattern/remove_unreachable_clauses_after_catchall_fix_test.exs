@@ -101,6 +101,18 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
     end
 
+    test "no-op when a non-definition separates duplicate catch-all clauses" do
+      code = """
+      defmodule InterveningExpressionRUCAC do
+        def f(x), do: x
+        IO.puts("side effect")
+        def f(_), do: nil
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
+    end
+
     # Regression (row 111548): removing trailing redundant catch-alls used to
     # re-render the whole module and swallow its closing `end` (non-compiling →
     # reverted). The merged-range delete keeps the module structure intact.

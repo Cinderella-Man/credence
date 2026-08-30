@@ -1,0 +1,188 @@
+defmodule Credence.Syntax.FixAssignmentDotSyntax do
+  @moduledoc """
+  Fixes the extra-dot-after-`=` syntax error LLMs (especially Qwen) produce.
+
+  `var =.function_call()` is a parse-breaking syntax error. The LLM inserts a
+  dot between `=` and the function name. The fix removes the spurious dot so
+  the assignment becomes `var = function_call()`.
+
+  ## Detected pattern
+
+  A line of the form `<indent><var> =.<identifier>` where `=` is followed
+  immediately (or with a single space) by a `.` and then an identifier.
+
+      ref =.make_ref()        →  ref = make_ref()
+      x =.some_function(a)    →  x = some_function(a)
+
+  The name on the left may hold non-ASCII characters — `café = make_ref()` is
+  valid Elixir, so `café =.make_ref()` is the same syntax error as any other
+  line here and gets the same repair.
+
+  ## Not flagged
+
+  - Valid assignments without the extra dot (`ref = make_ref()`)
+  - Comments (`# ref =.make_ref()`)
+  - String literals (`msg = "=.not_a_dot"`)
+  - A **digit** after the dot (`rate = .05`, `x =.5e3`) — see below
+  - Anonymous-call syntax (`f =.(1)`): `(` does not start an identifier either,
+    and the two readings disagree about the meaning the same way the digit case
+    does — dropping the dot gives `f = (1)`, dropping the `=` gives the call
+    `f.(1)`. Guessing between them is a human's job
+  - Anything but a bare identifier on the left — a destructuring pattern
+    (`{:ok, val} =.foo()`) or a module attribute (`@attr =.foo()`)
+  - A second `=` on the line *before* the dot (`x = y =.foo()`). One after the
+    dot is ordinary code and does not decline: `x =.foo(a = 1)` is repaired
+  - More than one space before the dot (`x =  .foo()`)
+  - A second `=.` later on the same line (`a =.foo(b =.bar())`)
+
+  The last four are declines, not oversights the pattern happens to cover:
+  the pattern wants a bare identifier at the start of the line and at most one
+  space before the dot, and anything else is left for a human rather than
+  guessed at. Each is pinned as a no-op in the fix battery.
+
+  The last one is a decline for a different reason. The pattern is anchored at
+  the start of the line, so a repair could only ever reach the first `=.`; the
+  half-repaired line still does not parse, and it no longer matches the
+  anchored pattern, so nothing would report the leftover afterwards. A repair
+  that cannot finish the line is worth less than none, so the whole line is
+  left alone.
+
+  ## Why a digit after the dot is left alone
+
+  `.5` after `=` is far more likely a Python float literal (`0.5`) than a
+  spurious dot before a call: Elixir has no `.5` literal, so the line is
+  broken either way, but the two readings disagree about the *value*. Dropping
+  the dot turns `rate = .05` into `rate = 05`, which parses — as the integer
+  `5`, a different value of a different type — and turns `x =.5e3` into
+  `x = 5e3`, which doesn't parse at all. Neither is a same-answer rewrite, so
+  the rule requires the character after the dot to start an identifier —
+  `a-z`, `A-Z`, `_`, or a non-ASCII byte, since `x =.über(y)` names a function
+  as legitimately as `x =.foo(y)` does. Python-style float literals are a
+  separate problem for a separate rule.
+
+  ## Only real code is rewritten
+
+  Matching runs against a `Credence.SourceMask` shadow, not the raw line, so
+  comments, string literals, sigils, charlists and heredoc bodies are invisible
+  to the pattern.
+
+  The "Not flagged" list above used to be true only by accident. The pattern is
+  anchored at `^`, so a literal like `msg = "=.not_a_dot"` was missed because the
+  `=` is followed by a quote rather than a dot — not because the rule knew it was
+  looking at a string. Inside a *heredoc* the accident runs out: the two
+  `→` examples in this very moduledoc sit at the start of their lines, and this
+  rule rewrote both of them (docs/22 T3.10). The shadow is what actually knows.
+
+  The shadow also subsumes the whole-line comment guard this rule used to carry
+  by hand: masking blanks a `#` comment to its last byte, so a commented-out
+  assignment cannot match in the first place.
+
+  ## Bad
+
+      ref =.make_ref()
+      x = .some_function(a)
+
+  ## Good
+
+      ref = make_ref()
+      x = some_function(a)
+  """
+
+  use Credence.Syntax.Rule
+  alias Credence.Issue
+
+  # Match: optional leading whitespace, a variable name, `=`, an optional space
+  # before a dot, then the start of an identifier.  The dot after `=` is the
+  # fault.  The lookahead admits anything that can start an identifier and
+  # deliberately excludes digits (see the moduledoc): a high byte after the dot
+  # is a Unicode callee (`x =.über(y)`), which carries none of the ambiguity a
+  # digit does.
+  # The capture group holds the prefix up to and including `=` (no trailing space)
+  # so the callback can append exactly one space.
+  #
+  # `\x80-\xff` widens the name to Unicode identifiers (`café = make_ref()` is
+  # valid Elixir) BYTE-WISE rather than with the `u` modifier, because a `/u`
+  # regex raises `ArgumentError` on a subject that is not valid UTF-8 — and
+  # output truncated mid-character is exactly the kind of broken input this
+  # phase exists to repair. Declining such a line costs a missed fix; raising
+  # inside the fix pipeline costs the whole file.
+  #
+  # Masking blanks every non-code byte to `0x01`, so a high byte reaching the
+  # pattern never came from a literal — but it is not therefore part of an
+  # identifier. Punctuation sits in code position too: `Credence.SourceMask`'s
+  # own moduledoc exists because an em dash can, in source that does not parse.
+  # So `x =.—dash()` is flagged and the dot removed, and the result still does
+  # not parse. Broken in, broken out — the rewrite neither helps nor harms, and
+  # telling a letter from an em dash would need `\p{L}`, which needs the `/u`
+  # modifier this class exists to avoid. Pinned in the fix battery.
+  @bad_pattern ~r/^(\s*[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=)\s?\.(?=[a-zA-Z_\x80-\xff])/
+
+  # The same shape again, un-anchored, used only to look at what is left of the
+  # line *after* the match above. The anchor means a repair can never reach a
+  # second occurrence, and a line repaired only at its start is a dead end: it
+  # still does not parse, and it no longer matches `@bad_pattern`, so nothing
+  # reports the leftover afterwards. Such a line is declined whole.
+  @second_occurrence ~r/[a-zA-Z_\x80-\xff][\w\x80-\xff]*\s*=\s?\.[a-zA-Z_\x80-\xff]/
+
+  @impl true
+  def analyze(source) do
+    source
+    |> Credence.SourceMask.lines()
+    |> Enum.with_index(1)
+    |> Enum.flat_map(fn {{line, shadow}, line_no} ->
+      case repair(line, shadow) do
+        {:ok, _repaired} -> [build_issue(line_no)]
+        :decline -> []
+      end
+    end)
+  end
+
+  @impl true
+  def fix(source) do
+    source
+    |> Credence.SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} ->
+      case repair(line, shadow) do
+        {:ok, repaired} -> repaired
+        :decline -> line
+      end
+    end)
+  end
+
+  # One decision, used by both `analyze/1` and `fix/1`: a line is reported
+  # exactly when it is repaired, so the rule cannot report what it will not fix
+  # or fix what it did not report.
+  #
+  # The match is found in the shadow and the bytes are taken from the real line.
+  # Both are the same byte length and every code byte is identical, so the
+  # offsets are valid in either — and the emitted text is always the author's,
+  # never a blanked literal. The pattern is `^`-anchored, so there is at most one
+  # match per line and the replacement is a prefix rewrite; the tail is checked
+  # in the shadow too, so a `=.` inside a string or a comment cannot decline a
+  # line the rule could repair.
+  defp repair(line, shadow) do
+    case Regex.run(@bad_pattern, shadow, return: :index) do
+      [{_match_start, match_len}, {prefix_start, prefix_len}] ->
+        tail = binary_part(shadow, match_len, byte_size(shadow) - match_len)
+
+        if Regex.match?(@second_occurrence, tail) do
+          :decline
+        else
+          {:ok,
+           binary_part(line, prefix_start, prefix_len) <>
+             " " <> binary_part(line, match_len, byte_size(line) - match_len)}
+        end
+
+      nil ->
+        :decline
+    end
+  end
+
+  defp build_issue(line_no) do
+    %Issue{
+      rule: :fix_assignment_dot_syntax,
+      message: "Extra dot after `=` in assignment — use `var = fun()` instead of `var =.fun()`.",
+      meta: %{line: line_no}
+    }
+  end
+end

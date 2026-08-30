@@ -23,7 +23,11 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   Converts single-line `@doc`/`@moduledoc`/`@typedoc` strings containing
   `\\n` escapes into heredoc format. The fixer preserves indentation and
   strips unnecessary trailing `\\n` (since heredocs naturally end with a
-  newline). Strings containing `\\\"\\\"\\\"` are left unchanged.
+  newline). A doc whose value contains an escaped triple quote is converted
+  like any other and the quote is re-escaped inside the heredoc — executed:
+  the output parses and the doc value is byte-identical. (This paragraph used
+  to claim such strings were "left unchanged", which is not what the code
+  does; there is no such guard in `fix_doc_node/1` and none is needed.)
 
   ## Scope
 

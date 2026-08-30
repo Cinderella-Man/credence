@@ -7,14 +7,18 @@ defmodule Credence.Pattern.NoSortForTopK do
   maximum element is needed, `Enum.min`/`Enum.max` provides the same result
   in O(n) without allocating a sorted intermediate list. The `fn -> nil end`
   empty_fallback preserves `Enum.at(0)`'s `nil`-on-empty behaviour (bare
-  `Enum.min/1` would raise `Enum.EmptyError`).
+  `Enum.min/1` would raise `Enum.EmptyError`). The max rewrite passes the
+  strict sorter `&>/2`: default `Enum.max/2` returns the *first* maximal
+  element while `sort |> reverse |> at(0)` yields the *last* — they diverge on
+  `==`-equal but `===`-distinct ties (`[1.0, 1]`: `1.0` vs `1`); `&>/2` keeps
+  the last-seen maximal, `===`-identical to the sort form on every input.
 
   ## Flagged patterns
 
-  | Pattern                                         | Suggested replacement          |
-  | ----------------------------------------------- | ------------------------------ |
-  | `Enum.sort/1 \|> Enum.at(0)`                    | `Enum.min(_, fn -> nil end)`   |
-  | `Enum.sort/1 \|> Enum.reverse() \|> Enum.at(0)` | `Enum.max(_, fn -> nil end)`   |
+  | Pattern                                         | Suggested replacement                |
+  | ----------------------------------------------- | ------------------------------------ |
+  | `Enum.sort/1 \|> Enum.at(0)`                    | `Enum.min(_, fn -> nil end)`         |
+  | `Enum.sort/1 \|> Enum.reverse() \|> Enum.at(0)` | `Enum.max(_, &>/2, fn -> nil end)`   |
 
   Only the `Enum.at(0)` terminal is rewritten. The `Enum.take(1)` and `hd/1`
   terminals are **deliberately not fixed**: `take(1)` returns a one-element
@@ -30,7 +34,7 @@ defmodule Credence.Pattern.NoSortForTopK do
   ## Good
 
       Enum.min(list, fn -> nil end)
-      Enum.max(list, fn -> nil end)
+      Enum.max(list, &>/2, fn -> nil end)
   """
 
   use Credence.Pattern.Rule
@@ -205,8 +209,12 @@ defmodule Credence.Pattern.NoSortForTopK do
 
   defp extract_sort_1(_), do: :error
 
-  defp enum_call(fun, arg) when fun in [:min, :max] do
-    {{:., [], [{:__aliases__, [], [:Enum]}, fun]}, [], [arg, empty_fallback()]}
+  defp enum_call(:min, arg) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :min]}, [], [arg, empty_fallback()]}
+  end
+
+  defp enum_call(:max, arg) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :max]}, [], [arg, strict_gt(), empty_fallback()]}
   end
 
   # `Enum.at(sorted, 0)` is `nil` on an empty collection; bare `Enum.min/1` would
@@ -215,6 +223,12 @@ defmodule Credence.Pattern.NoSortForTopK do
   # when this fix re-renders via `patches_from_ast_transform`.
   defp empty_fallback, do: Sourceror.parse_string!("fn -> nil end")
 
+  # Strict sorter for the max form: default `Enum.max/2` (`&>=/2`) picks the
+  # FIRST maximal element; `sort |> reverse |> at(0)` yields the LAST. `&>/2`
+  # makes max keep the last-seen maximal — `===`-identical to the sort form
+  # across the whole int/float tie divergence class (docs/14 B.11).
+  defp strict_gt, do: Sourceror.parse_string!("&>/2")
+
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]
   end
@@ -222,26 +236,12 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp flatten_pipeline(expr), do: [expr]
 
   defp analyze_pipeline([first | rest]) do
-    with {:ok, var} <- extract_sort(first),
+    with {:ok, arg} <- extract_sort_1(first),
+         var when var != nil <- var_name(arg),
          {:ok, op, _k, reverses} <- find_topk(rest) do
       {:ok, var, op, reverses}
     end
   end
-
-  # [arg | _] keeps compatibility with Enum.sort/2 calls — the check
-  # still flags them, even though fix only handles single-arg sort.
-  defp extract_sort({{:., _, [mod, :sort]}, _, [arg | _]}) do
-    if enum_module?(mod) do
-      case var_name(arg) do
-        nil -> :error
-        var -> {:ok, var}
-      end
-    else
-      :error
-    end
-  end
-
-  defp extract_sort(_), do: :error
 
   # Requires the terminal operation to be the LAST step in the
   # pipeline.  Intermediate steps must all be Enum.reverse().
@@ -275,12 +275,17 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp extract_topk(_), do: :error
 
   defp build_check_message(:at, var, reverses) do
+    replacement =
+      if rem(reverses, 2) == 1,
+        do: "Enum.max(#{var}, &>/2, fn -> nil end)",
+        else: "Enum.min(#{var}, fn -> nil end)"
+
     fun = if rem(reverses, 2) == 1, do: "Enum.max", else: "Enum.min"
 
     """
     Enum.sort/1 |> Enum.at(0) on `#{var}` is unnecessary sorting.
     Use #{fun} instead (empty_fallback preserves nil on []):
-        #{fun}(#{var}, fn -> nil end)
+        #{replacement}
     """
   end
 

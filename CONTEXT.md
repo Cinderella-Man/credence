@@ -17,12 +17,10 @@ A note on words used a lot here:
 
 ## Parser: Sourceror only
 
-Credence parses code with **Sourceror, and nothing else**. Sourceror is a
-parsing library; the tree it makes keeps extra notes about spacing and position
-that Elixir's built-in parser throws away. `Code.string_to_quoted/1` (Elixir's
-built-in parser) does **not** appear anywhere in `lib/` or `test/` — you can
-check this with grep, and it should stay that way. Every bit of parsing goes
-through `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
+Credence builds every **tree** with **Sourceror, and nothing else**. Sourceror is
+a parsing library; the tree it makes keeps extra notes about spacing and position
+that Elixir's built-in parser throws away. Every tree a rule reads or rewrites
+comes from `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
 
 - Both Pattern callbacks (`check/2` and `fix_patches/2`).
 - The Syntax round's "did it parse?" check.
@@ -30,6 +28,33 @@ through `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
 - Tests calling `check/2` (test files parse with `Sourceror.parse_string!/1`).
 - Building little bits of code inside a rule (e.g.
   `Sourceror.parse_string!("require Logger")`).
+
+### `Code.string_to_quoted` is not banned — it answers a different question
+
+This section used to say `Code.string_to_quoted/1` "does not appear anywhere in
+`lib/` or `test/` — you can check this with grep, and it should stay that way."
+That was false, and checkable: it is in **28 files under `lib/`** and 16 under
+`test/`, most of them Syntax rules. Corrected rather than enforced, because the
+files using it are right to.
+
+The real division is by *question asked*, not by library:
+
+* **"What is the tree?"** — Sourceror, always. Only it keeps the literal wrappers,
+  delimiters and positions a rule needs to patch bytes.
+* **"Does this parse, and if not, where does it stop?"** — either works and they
+  agree exactly. Measured on `x = :helper(1)`: both return
+  `{:error, {[line: 1, column: 12], "syntax error before: ", "'('"}}`, columns
+  included, with or without `columns: true`.
+
+So a Syntax rule that locates a defect by the parser's own error position may use
+either. `Code.string_to_quoted/2` is preferred where the source is *expected* to
+emit warnings, because `emit_warnings: false` suppresses them and Sourceror exposes
+no equivalent — a charlist elsewhere in the file otherwise adds a deprecation
+diagnostic to every probe.
+
+What is still true: never build or rewrite a tree with the built-in parser. A match
+written for its shape, like `{:==, _, [_, 1]}`, silently fails against Sourceror's
+`{:==, _, [_, {:__block__, _, [1]}]}`.
 
 Sourceror's tree is **not** the same shape as the built-in parser's tree. That
 shape difference is the main thing to keep in your head when writing or reading
@@ -45,15 +70,51 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
 
 1. **Syntax** (`lib/syntax/`) — text fixes for code that won't parse. No tree
    yet. Rules are `String.t() -> String.t()`.
+
+   ⚠️ **Two facts a Syntax rule author must know, because the per-rule gates
+   cannot see either.** The round is a single `Enum.reduce` over the rules
+   (`lib/syntax.ex:93`): each `fix/1` is called **exactly once**, and there is no
+   repeat-until-fixpoint loop. And `commit_or_roll_back/4` (`lib/syntax.ex:151`)
+   is **all-or-nothing** — if the source still does not parse at the end of the
+   round, every kept change is discarded and the ORIGINAL is returned, each rule's
+   trace entry rewritten to `{rule, :rolled_back}` (unless the caller passes
+   `syntax_partial_repairs: true`).
+
+   Together those mean **a rule must repair every occurrence it can in one call**.
+   One-per-call looks correct in isolation, passes every per-rule gate, and is
+   inert end to end: on a file with two defects it fixes one, the round still
+   fails to parse, and the work is thrown away. That happened to
+   `no_atom_as_function_name` while it was being written — its own 23 tests were
+   green and the full suite was green at 10,282, because nothing asserts the
+   round-level outcome. Assert it yourself:
+   `Credence.Syntax.fix_with_trace(src)` should come back `{rule, n}`, never
+   `{rule, :rolled_back}`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
    against `Code.with_diagnostics/1` output and patch the text.
-3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 117 rules that work on
-   the tree.
+3. **Pattern** (`lib/pattern/`) — the bulk of Credence, and the largest round by
+   far. (No count here on purpose: hand-copied rule totals in this repo have
+   drifted every time one landed. `Credence.Pattern.default_rules/0` is the
+   answer, and the gates compute it at run time.)
 
 The rounds run one after another; if syntax problems are still there, the
-semantic and pattern rounds are skipped. The Pattern round is skipped entirely
-if the code doesn't compile — rewriting broken code risks wasting an AI's
-retry.
+semantic and pattern rounds are skipped.
+
+The Pattern round **used to** be skipped entirely when the code did not compile.
+It no longer is (`lib/pattern.ex:85-99`). The gate was measured and it cost too
+much: 625 of 1,724 Pattern test fixtures parse but do not compile, and 292 of
+those have a Pattern rule firing that never ran. What replaced it is a *relative*
+oracle — `RuleHelpers.compiles_no_worse?/2` records the file's pre-existing
+compile errors as a baseline and reverts any rule whose output adds to them. On
+source that compiles, the baseline is empty and this reduces exactly to the old
+`compiles?/1` check.
+
+Compiling is **serialised per module name** (`RuleHelpers.with_module_lock/2`,
+`lib/rule_helpers.ex:214`). Two files that define the same module, analysed
+concurrently, returned `[]` — a silent false negative, which is the worst direction
+for a linter, and `defmodule Example` is not a rare name in generated code. Files
+defining different modules still compile in parallel, so the common case pays
+nothing. Anything that adds concurrency around analysis has to keep that lock; the
+measurement and the reasoning are at `lib/rule_helpers.ex:190-224` and `docs/24` §A8.
 
 ## The Pattern round — what a rule looks like
 
@@ -87,8 +148,18 @@ Rules differ in *how* they work out their patches, not in what they hand back:
   hands back one patch per outermost change. The most common path (~75 rules).
 - **`RuleHelpers.patches_from_ast_transform(ast, source, transform_fn)`** — any
   tree-to-tree change; the helper prints the result with `Sourceror.to_string/1`,
-  re-parses, and compares. Use this when the change drops or reorders siblings,
-  or adds statements into a block (a single walk-matcher can't say that).
+  re-parses, and compares. Use it when the change drops siblings or adds statements
+  into a block (a single walk-matcher can't say that).
+
+  ⚠️ **Do NOT use it to REORDER siblings.** The comparison underneath pairs a
+  block's statements *positionally*, which is right for a substitution and wrong for
+  a permutation: after a move every position differs, so it emits one patch per
+  statement whose range covers the statement but **not the whitespace between
+  statements**. The result splices two statements onto one line — and it parses, as
+  an ambiguous keyword call, so the helper's own re-parse check does not catch it.
+  For a reorder, build the patches by hand from the original bytes (below);
+  `non_grouped_clauses` is the worked example, and its `fix_patches/2` records the
+  two other designs that failed first.
 - **Building the patches by hand** — the rule walks the tree itself and builds
   `[%{range: ..., change: ...}]`. Use this when the *original bytes* of the kept
   part must stay exactly as written — usually because Sourceror's printer would
@@ -129,6 +200,26 @@ move-over and was deleted once the last rule switched off it.
 
 Sourceror's tree mostly mirrors the built-in parser's tree, but with a few
 important differences. Rules that don't account for them quietly fail to match.
+
+⚠️ **One of them is not about the tree but about RANGES, and it corrupts output
+rather than failing to match.** `Sourceror.get_range/1` reports an end column one
+past the truth for a bare `true`, `false` or `nil`: `range.ex` adds `+1` for "just
+the colon" on an atom, and those three are the atoms Elixir writes *without* one.
+Measured:
+
+    @impl true                     10 chars, reported end column 12, true end 11
+    @x nil                          6 chars, reported end column  8, true end  7
+    @x :foo                         correct
+    @decorate telemetry([:demo])    correct — its argument is a call with :closing
+
+A patch whose range ends there therefore covers the trailing newline as well.
+`Sourceror.patch_string/2` splits with `String.split_at/2`, which returns an empty
+suffix rather than erroring, so the newline is silently eaten and the following
+line fuses onto the patched one. No shipped rule hits this today — their ranges end
+at `end` or at a whole expression — but a rule that patches a range ending in a bare
+boolean will, and the symptom looks like a formatting bug rather than a range bug.
+Found while widening `NonGroupedClauses`; that rule now moves whole source lines,
+which sidesteps it.
 
 - **Simple values are wrapped.** Sourceror wraps simple values (atoms, numbers,
   floats, strings, 2-tuples, lists) in `{:__block__, meta, [value]}` to carry

@@ -104,17 +104,67 @@ defmodule Credence.RuleCase do
   def valid_syntax?(code), do: match?({:ok, _}, Sourceror.parse_string(code))
 
   @doc """
+  The `@doc` strings, `@spec`s and `def` clauses `code` actually carries, in
+  source order, as `%{docs: [...], specs: [...], defs: [{name, arity}, ...]}`.
+
+  Use it to assert what emitted source *means* where "it parses" is not enough:
+  a repair that truncates a doc, folds an `@spec` into the doc string, or turns a
+  documented example into a live extra clause still parses and still compiles
+  without a warning. Reads the shape back off the source itself so the test never
+  reaches for the parser.
+  """
+  def module_shape(code) do
+    {:ok, ast} = Code.string_to_quoted(code)
+
+    {_ast, shape} =
+      Macro.prewalk(ast, %{docs: [], specs: [], defs: []}, fn
+        {:@, _, [{:doc, _, [text]}]} = node, acc when is_binary(text) ->
+          {node, %{acc | docs: acc.docs ++ [text]}}
+
+        {:@, _, [{:spec, _, [spec]}]} = node, acc ->
+          {node, %{acc | specs: acc.specs ++ [Macro.to_string(spec)]}}
+
+        {:def, _, [{:when, _, [{name, _, args} | _]} | _]} = node, acc when is_atom(name) ->
+          {node, %{acc | defs: acc.defs ++ [{name, length(args || [])}]}}
+
+        {:def, _, [{name, _, args} | _]} = node, acc when is_atom(name) ->
+          {node, %{acc | defs: acc.defs ++ [{name, length(args || [])}]}}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    shape
+  end
+
+  @doc """
   True when `code` compiles. Use to assert a fix turned non-compiling input
   (e.g. an attribute outside a module) into a compiling module — hiding the
   `Code.compile_string` reach from the test.
   """
   def compiles?(code) do
-    # `with_diagnostics` keeps fixture-compile warnings (deprecated charlist,
-    # redefined module, …) out of the suite output; it is process-local, so it
-    # is safe under `async: true`.
-    Code.with_diagnostics(fn -> Code.compile_string(code) end)
-    true
-  rescue
-    _ -> false
+    match?({:ok, _diagnostics}, RuleHelpers.compile_and_capture(code))
+  end
+
+  @doc """
+  Compiles `code`, calls `module.fun(args)`, and returns the result. The module
+  is purged afterwards so repeated fixtures do not leak between tests.
+
+  Use this to assert what a fix *means*, not just what it looks like. A repair
+  that drops a branch — emitting a discarded expression where an early exit was
+  written — still compiles, still parses, and still satisfies every string
+  comparison in a test file. Only running the result catches it. That is not
+  hypothetical: two tests in this suite asserted exactly such an output as
+  correct, and passed for as long as the defect shipped.
+
+  The fixture module name must be unique across the suite, since compiling it
+  redefines any module of the same name.
+  """
+  def call_fixed(code, module, fun, args) do
+    {:ok, _diagnostics} = RuleHelpers.compile_and_capture(code, cleanup_modules: false)
+    apply(module, fun, args)
+  after
+    :code.purge(module)
+    :code.delete(module)
   end
 end

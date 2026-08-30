@@ -22,30 +22,98 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, issues ->
-        case detect_pattern(node) do
-          {:ok, meta} -> {node, [build_issue(meta) | issues]}
-          :error -> {node, issues}
-        end
-      end)
-
-    Enum.reverse(issues)
+    ast
+    |> eligible_nodes()
+    |> Enum.map(fn node ->
+      {:ok, meta} = detect_pattern(node)
+      build_issue(meta)
+    end)
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      node ->
-        case detect_pattern(node) do
-          {:ok, _meta} -> rewrite(node)
-          :error -> node
-        end
+    eligible = ast |> eligible_nodes() |> MapSet.new()
+
+    RuleHelpers.patches_from_postwalk(ast, fn node ->
+      if MapSet.member?(eligible, node), do: rewrite(node), else: node
     end)
   end
+
+  # A bare `Enum` is resolved lexically. Track aliases in source order so check
+  # and fix share one admission decision, and never rewrite a call that actually
+  # targets a user module imported as `Enum`.
+  defp eligible_nodes(ast) do
+    {nodes, _enum_shadowed?} = collect_eligible(ast, [], false)
+    Enum.reverse(nodes)
+  end
+
+  defp collect_eligible({:quote, _, _args}, nodes, shadowed?), do: {nodes, shadowed?}
+
+  defp collect_eligible({:__block__, _, expressions}, nodes, shadowed?) do
+    Enum.reduce(expressions, {nodes, shadowed?}, fn expression, {acc, current_shadowed?} ->
+      collect_eligible(expression, acc, current_shadowed?)
+    end)
+  end
+
+  defp collect_eligible({:alias, _, args}, nodes, shadowed?) do
+    {nodes, shadowed? or alias_shadows_enum?(args)}
+  end
+
+  defp collect_eligible(node, nodes, shadowed?)
+       when is_tuple(node) and tuple_size(node) == 3 do
+    {_form, _meta, args} = node
+
+    nodes =
+      if not shadowed? and match?({:ok, _}, detect_pattern(node)),
+        do: [node | nodes],
+        else: nodes
+
+    if is_list(args) do
+      nodes =
+        Enum.reduce(args, nodes, fn arg, acc ->
+          {acc, _nested_shadowed?} = collect_eligible(arg, acc, shadowed?)
+          acc
+        end)
+
+      {nodes, shadowed?}
+    else
+      {nodes, shadowed?}
+    end
+  end
+
+  defp collect_eligible({left, right}, nodes, shadowed?) do
+    {nodes, _} = collect_eligible(left, nodes, shadowed?)
+    {nodes, shadowed?} = collect_eligible(right, nodes, shadowed?)
+    {nodes, shadowed?}
+  end
+
+  defp collect_eligible(nodes, acc, shadowed?) when is_list(nodes) do
+    collected =
+      Enum.reduce(nodes, acc, fn node, inner_acc ->
+        {inner_acc, _} = collect_eligible(node, inner_acc, shadowed?)
+        inner_acc
+      end)
+
+    {collected, shadowed?}
+  end
+
+  defp collect_eligible(_node, nodes, shadowed?), do: {nodes, shadowed?}
+
+  defp alias_shadows_enum?([
+         {:__aliases__, _, target},
+         [{{:__block__, _, [:as]}, {:__aliases__, _, [:Enum]}}]
+       ]),
+       do: target not in [[:Enum], [:"Elixir", :Enum]]
+
+  defp alias_shadows_enum?([{:__aliases__, _, target}]) do
+    List.last(target) == :Enum and target not in [[:Enum], [:"Elixir", :Enum]]
+  end
+
+  defp alias_shadows_enum?(_args), do: false
 
   # ── Detection ──────────────────────────────────────────────────────────
 
@@ -153,9 +221,9 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
             {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _,
              [range, {:__block__, _, [[]]}, fn_ast]},
             {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, []}
-          ]}
+          ]} = node
        ) do
-    build_comprehension(range, fn_ast)
+    carry_discarded_comments(build_comprehension(range, fn_ast), node)
   end
 
   # Direct form
@@ -164,9 +232,23 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
           [
             {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _,
              [range, {:__block__, _, [[]]}, fn_ast]}
-          ]}
+          ]} = node
        ) do
-    build_comprehension(range, fn_ast)
+    carry_discarded_comments(build_comprehension(range, fn_ast), node)
+  end
+
+  defp carry_discarded_comments(replacement, original) do
+    discarded =
+      RuleHelpers.collect_comments(original) -- RuleHelpers.collect_comments(replacement)
+
+    replacement
+    |> inherit_position(original)
+    |> RuleHelpers.carry_comments(discarded, [])
+  end
+
+  defp inherit_position({form, meta, args}, {_original_form, original_meta, _original_args}) do
+    position = Keyword.take(original_meta, [:line, :column])
+    {form, Keyword.merge(meta, position), args}
   end
 
   # ── Comprehension builder ──────────────────────────────────────────────

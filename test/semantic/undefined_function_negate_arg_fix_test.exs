@@ -116,5 +116,19 @@ defmodule Credence.Semantic.UndefinedFunction.NegateArgFixTest do
         "Enum.take(list, -10)"
       )
     end
+
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"Enum.take_last(x, 2)", Enum.take_last(xs, 2)}', @msg),
+        ~S'{"Enum.take_last(x, 2)", Enum.take(xs, -2)}'
+      )
+    end
+
+    test "uses byte offsets when non-ASCII text precedes the call" do
+      confirm_fix(
+        fix(~S'{"é", Enum.take_last(xs, 2)}', @msg),
+        ~S'{"é", Enum.take(xs, -2)}'
+      )
+    end
   end
 end

@@ -2,6 +2,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferPipeMapsetIntersection
+  alias Credence.RuleHelpers
 
   test "rewrites three MapSet.new assignments with nested intersection" do
     input = """
@@ -98,6 +99,26 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
       """
 
       confirm_fix(fix(PreferPipeMapsetIntersection, code), code)
+    end
+
+    test "leaves dependent MapSet.new assignments alone and compilable" do
+      code = """
+      defmodule DependentMapSetFixFixture do
+        def get_common do
+          set_a = MapSet.new([1])
+          set_b = MapSet.new(set_a)
+
+          MapSet.intersection(set_a, set_b) |> MapSet.to_list()
+        end
+      end
+      """
+
+      assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(code)
+
+      fixed = fix(PreferPipeMapsetIntersection, code)
+
+      confirm_fix(fixed, code)
+      assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(fixed)
     end
   end
 

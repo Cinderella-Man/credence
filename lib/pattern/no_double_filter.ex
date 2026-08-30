@@ -35,6 +35,7 @@ defmodule Credence.Pattern.NoDoubleFilter do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # Operator pairs that are exact complements for the *same* operand over
   # Elixir's total term ordering. `>=`/`<`, `>`/`<=` cover the whole order;
@@ -73,11 +74,12 @@ defmodule Credence.Pattern.NoDoubleFilter do
       r1 = Sourceror.get_range(s1)
       r2 = Sourceror.get_range(s2)
       src_txt = slice(source, Sourceror.get_range(src))
-      pred_txt = slice(source, Sourceror.get_range(pred))
+      pred_txt = capture_slice(source, Sourceror.get_range(pred))
 
       %{
         range: %{start: r1.start, end: r2.end},
-        change: "{#{v1}, #{v2}} = Enum.split_with(#{src_txt}, #{pred_txt})"
+        change: "{#{v1}, #{v2}} = Enum.split_with(#{src_txt}, #{pred_txt})",
+        preserve_indentation: false
       }
     end)
   end
@@ -121,6 +123,8 @@ defmodule Credence.Pattern.NoDoubleFilter do
          {op2, operand2} <- pred_parts(pred2),
          true <- Map.get(@complement, op1) == op2,
          true <- simple_operand?(operand1),
+         false <- same_var?({v1, [], c1}, src1),
+         false <- same_var?({v1, [], c1}, operand1),
          true <- same_operand?(operand1, operand2) do
       {:ok, %{s1: s1, s2: s2, v1: v1, v2: v2, src: src1, pred: pred1, line: m1[:line]}}
     else
@@ -169,9 +173,25 @@ defmodule Credence.Pattern.NoDoubleFilter do
     end)
   end
 
-  # Single-line source slice for the operand/predicate/variable text.
   defp slice(source, %Sourceror.Range{start: s, end: e}) do
-    line = source |> String.split("\n") |> Enum.at(s[:line] - 1)
-    String.slice(line, s[:column] - 1, e[:column] - s[:column])
+    {:ok, start_offset} = SourceMask.byte_offset(source, s[:line], s[:column])
+    {:ok, end_offset} = SourceMask.byte_offset(source, e[:line], e[:column])
+    binary_part(source, start_offset, end_offset - start_offset)
+  end
+
+  defp capture_slice(source, %Sourceror.Range{start: s}) do
+    {:ok, start_offset} = SourceMask.byte_offset(source, s[:line], s[:column])
+    shadow = SourceMask.mask(source)
+    end_offset = capture_end(shadow, start_offset + 1, 0)
+    binary_part(source, start_offset, end_offset - start_offset)
+  end
+
+  defp capture_end(shadow, offset, depth) do
+    case :binary.at(shadow, offset) do
+      ?( -> capture_end(shadow, offset + 1, depth + 1)
+      ?) when depth == 1 -> offset + 1
+      ?) -> capture_end(shadow, offset + 1, depth - 1)
+      _ -> capture_end(shadow, offset + 1, depth)
+    end
   end
 end

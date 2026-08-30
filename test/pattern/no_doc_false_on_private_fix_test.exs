@@ -94,6 +94,27 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
+    test "defp with a spec keeps the spec and removes @doc false" do
+      input = """
+      defmodule BadWithSpec do
+        @doc false
+        @spec helper(integer()) :: integer()
+        defp helper(x), do: x + 1
+      end
+      """
+
+      expected = """
+      defmodule BadWithSpec do
+        @spec helper(integer()) :: integer()
+        defp helper(x), do: x + 1
+      end
+      """
+
+      fixed = fix(NoDocFalseOnPrivate, input)
+      confirm_fix(fixed, expected)
+      confirm_fix(fix(NoDocFalseOnPrivate, fixed), fixed)
+    end
+
     test "mix of public @doc and private @doc — only removes private ones" do
       input = """
       defmodule Mixed do

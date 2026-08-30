@@ -1,5 +1,13 @@
 # How the Pattern rules got their shape (a look back)
 
+> **📜 HISTORICAL (banner added 2026-07-28).** This document describes the
+> interface as it stood in an earlier era. The `fix/2` callback it presents no
+> longer exists — the live behaviour (`lib/pattern/rule.ex`) declares
+> `priority/0`, `check/2`, `fix_patches/2`, `assumptions/0` and
+> `unsafe_in_dsl/0` only — and the rule counts ("76 fixing Pattern rules") are
+> from that era (155 Pattern rules live today). Kept for the design reasoning;
+> do not treat any interface detail here as current.
+
 ## Where we started
 
 The Pattern round began with one shape for every rule: each rule had a

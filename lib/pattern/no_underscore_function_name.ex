@@ -32,6 +32,18 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   Renames the function definition and all call sites from `_name` to
   `do_name` throughout the module.
+
+  ## Bad
+
+      defmodule BadNUFN do
+        def _helper(x), do: x + 1
+      end
+
+  ## Good
+
+      defmodule BadNUFN do
+        def do_helper(x), do: x + 1
+      end
   """
 
   use Credence.Pattern.Rule

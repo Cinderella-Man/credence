@@ -1,8 +1,7 @@
 defmodule Credence.Pattern.NoLengthGuardToPatternEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call). `def f(list) when length(list) > 0` → `def f([_ | _] = list)`.
-  A proper list has `length > 0` iff it is a cons, so the pattern selects exactly
-  the same inputs; the empty list still falls through to the next clause.
+  Tier 2 (module-call). Exact-length guards become exact-length list patterns,
+  which reject the same improper lists as `length/1` in a guard.
   """
   use Credence.RuleCase, async: true
 
@@ -11,16 +10,16 @@ defmodule Credence.Pattern.NoLengthGuardToPatternEquivalenceTest do
 
   @before """
   defmodule Bad do
-    def process(list) when length(list) > 0, do: Enum.sum(list)
+    def process(list) when length(list) == 2, do: Enum.sum(list)
     def process(_), do: 0
   end
   """
 
-  test "length(list) > 0 guard → [_|_] pattern preserves dispatch incl. empty" do
+  test "length(list) == 2 guard preserves dispatch including improper lists" do
     assert_equivalent_module(@before,
       rule: NoLengthGuardToPattern,
       call: {:process, 1},
-      inputs: [[], [5], [1, 2, 3], [-1, -2], Enum.to_list(1..20)]
+      inputs: [[], [5], [1, 2], [1, 2, 3], [1 | 2]]
     )
   end
 end

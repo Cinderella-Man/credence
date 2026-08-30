@@ -87,6 +87,16 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
   end
 
   describe "leaves non-numeric content unchanged" do
+    test "hexadecimal literals and identifiers containing exponent-like text" do
+      code = """
+      hex = 0x1e5
+      value1e5 = :unchanged
+      """
+
+      confirm_fix(fix(code), code)
+      assert FixScientificNotation.analyze(code) == []
+    end
+
     test "comments" do
       code = "# tolerance is 1e-10"
 
@@ -113,6 +123,91 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
 
     test "fix output is well-formed (parses)" do
       assert valid_syntax?(fix("x = 1e-10"))
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — an exponent inside a string is prose, not a number
+  #
+  # Every case below shipped corrupted. The outputs parsed AND compiled,
+  # so nothing downstream noticed the program had started printing
+  # something the author never wrote. The whole-line `#` guard this rule
+  # used to carry caught only the pure-comment case below; the other six
+  # were live.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — string literals are not code" do
+    test "leaves an exponent inside a string alone" do
+      code = ~S'IO.puts("version 1e5 build")'
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves the string alone while still fixing real code on the same line" do
+      confirm_fix(
+        fix(~S'IO.puts("build 1e5"); x = 1e-10'),
+        ~S'IO.puts("build 1e5"); x = 1.0e-10'
+      )
+    end
+
+    test "fixes inside interpolation — that IS code" do
+      confirm_fix(fix(~S'IO.puts("#{1e5}")'), ~S'IO.puts("#{1.0e5}")')
+    end
+
+    test "leaves an uppercase sigil alone — it does not interpolate" do
+      code = ~S'IO.puts(~S(raw 1e5))'
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves a charlist alone" do
+      code = ~S'x = ~c"tolerance 1e-10"'
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves a heredoc body alone" do
+      code = ~S'''
+      @moduledoc """
+      tolerance is 1e-10
+      """
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves a trailing comment alone while fixing the code before it" do
+      confirm_fix(fix("x = 1e5  # bump to 1e9 later"), "x = 1.0e5  # bump to 1e9 later")
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # END-TO-END through the syntax phase
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "integration through Credence.Syntax" do
+    test "repairs the exponent without touching the version string" do
+      source = """
+      defmodule SciNotationInteg do
+        def render do
+          IO.puts("version 1e5 build")
+          assert_in_delta 0.5, 0.5, 1e-10
+        end
+      end
+      """
+
+      expected = """
+      defmodule SciNotationInteg do
+        def render do
+          IO.puts("version 1e5 build")
+          assert_in_delta 0.5, 0.5, 1.0e-10
+        end
+      end
+      """
+
+      fixed = Credence.Syntax.fix(source)
+      confirm_fix(fixed, expected)
+      assert valid_syntax?(fixed)
     end
   end
 end

@@ -12,10 +12,10 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       confirm_fix(fix(NoSortForTopK, input), expected)
     end
 
-    test "sort |> reverse |> Enum.at(0) → Enum.max(_, fn -> nil end)" do
+    test "sort |> reverse |> Enum.at(0) → Enum.max(_, &>/2, fn -> nil end)" do
       input = "Enum.sort(list) |> Enum.reverse() |> Enum.at(0)"
 
-      expected = "Enum.max(list, fn -> nil end)"
+      expected = "Enum.max(list, &>/2, fn -> nil end)"
 
       confirm_fix(fix(NoSortForTopK, input), expected)
     end
@@ -67,7 +67,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       defmodule Example do
         def f(a, b) do
           x = Enum.min(a, fn -> nil end)
-          y = Enum.max(b, fn -> nil end)
+          y = Enum.max(b, &>/2, fn -> nil end)
           {x, y}
         end
       end

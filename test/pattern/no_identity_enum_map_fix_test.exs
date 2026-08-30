@@ -81,5 +81,29 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
 
       confirm_fix(fix(NoIdentityEnumMap, input), input)
     end
+
+    test "does not rewrite map on a module aliased as Enum" do
+      input = """
+      defmodule NoIdentityEnumMapAliasedEnumFixture do
+        alias Custom, as: Enum
+
+        def run(value), do: Enum.map(value, fn x -> x end)
+      end
+      """
+
+      confirm_fix(fix(NoIdentityEnumMap, input), input)
+    end
+
+    test "does not treat identity on a module aliased as Function as identity" do
+      input = """
+      defmodule NoIdentityEnumMapAliasedFunctionFixture do
+        alias Custom, as: Function
+
+        def run(value), do: Enum.map(value, &Function.identity/1)
+      end
+      """
+
+      confirm_fix(fix(NoIdentityEnumMap, input), input)
+    end
   end
 end

@@ -30,4 +30,20 @@ Logger.configure(level: :info)
 # canonical fixtures. Idempotent; a no-op once everything is canonical.
 Credence.FixtureHealer.heal_dirs()
 
+# The `:idempotency` layer (test/idempotency_test.exs) sweeps `Credence.fix/1`
+# twice over all ~5,200 fix-test fixtures — ~9 minutes, roughly tripling the suite.
+# It RUNS BY DEFAULT anyway, like `:corpus` above, and the tag exists only so it can
+# be skipped for a quicker local loop:
+#
+#     mix test --exclude idempotency
+#
+# It used to be excluded by default for exactly the runtime reason, and that is how
+# it went red for three fixtures across four rules and stayed red undetected: the
+# only thing left running by default was the fast stale-ledger half, and "idempotency
+# green" was read as the whole gate. A layer nobody runs is not a gate. Excluding by
+# default puts the burden on remembering; excluding by flag puts it on the person who
+# chose to skip it.
+#
+# NOTHING ELSE IS EXCLUDED HERE. If a layer is too slow to run every time, tag it and
+# document the flag — do not add it to this list.
 ExUnit.start(formatters: [Credence.QuietFormatter])

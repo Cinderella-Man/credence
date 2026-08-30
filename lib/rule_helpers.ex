@@ -147,41 +147,523 @@ defmodule Credence.RuleHelpers do
     :ok
   end
 
+  # A compile is an EXECUTION. `Code.compile_string/2` evaluates every top-level
+  # expression in `source`, so analysing a file runs it — and the population this
+  # linter exists for is LLM-generated code, which is exactly where a top-level
+  # expression that never terminates is likely.
+  #
+  # This is not hypothetical. `Enum.flat_map(1..10, &Stream.cycle([&1]))` — the
+  # *expected output* of one of `UndefinedFunction`'s own fix tests, harvested as
+  # a witness candidate — takes this VM from 200 MB to 62 GB in about six
+  # minutes. On 2026-07-28 the kernel OOM killer killed `beam.smp` seven times
+  # for it, taking the editor down each time.
+  #
+  # So the compile runs in a throwaway process carrying a heap ceiling and a
+  # deadline: a runaway now costs one process instead of the machine. Both
+  # numbers are deliberately far above any legitimate compile — the entire
+  # 9,911-test suite peaks at ~1.2 GB — because this bounds catastrophe rather
+  # than tuning performance. Overridable via application env so the bounds
+  # themselves can be tested; see `test/compile_bounds_test.exs`.
+  @compile_max_heap_words 64_000_000
+  @compile_timeout_ms 30_000
+
   @doc """
   Compiles `source` with `Code.with_diagnostics/1` and returns
   `{:ok, diagnostics}` or `{:error, diagnostics}`.
+
+  Pass `cleanup_modules: false` only when the caller needs to execute a module
+  compiled from a uniquely named fixture after this function returns. A compile
+  that raises or aborts is always cleaned up because it has no usable result to
+  retain.
 
   Uses `:code.soft_purge/1` for cleanup so that compiling source
   which redefines a currently-executing module does not kill the BEAM
   (see `:code.purge/1` — it sends an unconditional kill signal to
   any process still running the old version of the module).
-  """
-  @spec compile_and_capture(String.t()) :: {:ok, [map()]} | {:error, [map()]}
-  def compile_and_capture(source) do
-    {result, diagnostics} =
-      Code.with_diagnostics(fn ->
-        try do
-          Code.compile_string(source, "credence_check.ex")
-        rescue
-          e ->
-            Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
 
-            {:raised, e}
+  **Compiling is running.** Top-level code in `source` executes, so the compile
+  happens inside a bounded child process. Source that exhausts the heap ceiling,
+  outruns the deadline, or exits the process is reported as `{:error, [_]}` with
+  a synthesized diagnostic rather than being allowed to take the VM with it.
+  `System.halt/0` remains outside anyone's reach.
+  """
+  @spec compile_and_capture(String.t(), keyword()) :: {:ok, [map()]} | {:error, [map()]}
+  def compile_and_capture(source, opts \\ []) do
+    with_module_lock(source, fn -> do_compile_and_capture(source, opts) end)
+  end
+
+  # Compiling is a GLOBAL side effect: `Code.compile_string/2` loads the modules
+  # into the code server, and `safe_cleanup_modules/1` deletes them again. Two
+  # concurrent analyses of DIFFERENT files that happen to define the SAME module
+  # name therefore race — one deletes the module the other is still working
+  # with — and the loser silently reports **no issues at all**.
+  #
+  # Measured, and it is not marginal: two files each containing one unused
+  # variable, analysed concurrently.
+  #
+  #     same module name       30 of 30 runs divergent
+  #     different module names  0 of 30 runs divergent
+  #
+  # The divergence is a false NEGATIVE — `[]` where `[:unused_variable]` was
+  # expected — which is the worst direction for a linter: it does not fail, it
+  # quietly approves. It was found as a test flake (`pipeline_witness` reporting
+  # a healthy rule as dead) but the flake was only the symptom; anything that
+  # analyses files in parallel hits it, and `defmodule Example` is not a rare
+  # name in generated code.
+  #
+  # The lock is keyed on the module names in the source rather than held
+  # globally. Files defining different modules still compile concurrently, which
+  # is the common case and the one that would otherwise pay for this. `:global`
+  # is used because it needs no supervision tree — this library has none — and
+  # `[node()]` keeps it local.
+  defp with_module_lock(source, fun) do
+    source
+    |> module_keys()
+    |> lock_modules(fun)
+  end
+
+  # The module names a source defines, each locked independently. A cheap regex rather than a
+  # parse: this runs before every compile, the answer only has to be *stable*
+  # for a given source, and over-matching (a `defmodule` inside a string) costs
+  # a little needless serialisation rather than a wrong answer.
+  @defmodule ~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/m
+
+  defp module_keys(source) do
+    @defmodule
+    |> Regex.scan(source, capture: :all_but_first)
+    |> List.flatten()
+    |> Enum.sort()
+    |> Enum.uniq()
+  end
+
+  @dynamic_module_load ~r/(?:\bModule\.create\s*\(|\bCode\.(?:compile|eval)_(?:string|quoted|file)\s*\(|:code\.(?:load_binary|load_file|load_abs)\s*\()/
+
+  defp track_dynamic_modules?(source) do
+    Regex.match?(@dynamic_module_load, source) or
+      (String.contains?(source, "defmodule") and module_keys(source) == [])
+  end
+
+  # The lock already serializes these names against other Credence compiles.
+  # Remember which were loaded before this compile so an over-match in a string
+  # or a conditional `defmodule` cannot make exceptional cleanup delete a host
+  # module that this source never loaded.
+  defp declared_module_state(source) do
+    names = module_keys(source)
+
+    preloaded =
+      names
+      |> Enum.flat_map(&existing_module/1)
+      |> Enum.filter(&(:code.is_loaded(&1) != false))
+      |> MapSet.new()
+
+    {names, preloaded}
+  end
+
+  defp newly_loaded_declared_modules({names, preloaded}) do
+    names
+    |> Enum.flat_map(&existing_module/1)
+    |> Enum.reject(&MapSet.member?(preloaded, &1))
+    |> Enum.filter(&(:code.is_loaded(&1) != false))
+  end
+
+  defp existing_module("Elixir." <> _ = name), do: to_existing_atom(name)
+  defp existing_module(name), do: to_existing_atom("Elixir." <> name)
+
+  defp to_existing_atom(name) do
+    [String.to_existing_atom(name)]
+  rescue
+    ArgumentError -> []
+  end
+
+  defp lock_modules([], fun), do: fun.()
+
+  defp lock_modules([module | rest], fun) do
+    :global.trans(
+      {{__MODULE__, module}, self()},
+      fn -> lock_modules(rest, fun) end,
+      [node()]
+    )
+  end
+
+  defp do_compile_and_capture(source, opts) do
+    declared_module_state = declared_module_state(source)
+
+    case bounded_compile(source, track_dynamic_modules?(source)) do
+      {:ok, {result, diagnostics}, loaded_modules} ->
+        case result do
+          # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
+          # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
+          # captured nothing. Synthesize an error diagnostic from the exception so
+          # the semantic round can still match + fix it (without this, every such
+          # error was a 0-diagnostic dead end). Append to any captured diagnostics.
+          {:raised, e} ->
+            safe_cleanup_modules(
+              loaded_modules ++ newly_loaded_declared_modules(declared_module_state)
+            )
+
+            {:error, diagnostics ++ [exception_diagnostic(e)]}
+
+          modules when is_list(modules) ->
+            if Keyword.get(opts, :cleanup_modules, true) do
+              safe_cleanup_modules(loaded_modules ++ modules)
+            end
+
+            {:ok, drop_phantom_redefinitions(diagnostics, source)}
         end
+
+      {:aborted, why, loaded_modules} ->
+        safe_cleanup_modules(
+          loaded_modules ++ newly_loaded_declared_modules(declared_module_state)
+        )
+
+        Logger.warning("[credence] compile aborted: #{abort_reason_text(why)} — not analysed")
+
+        {:error, [abort_diagnostic(why)]}
+    end
+  end
+
+  # Runs the compile in a monitored child bounded by heap and wall clock.
+  #
+  # The child sends its result before exiting, so a `:DOWN` reaching us first
+  # means it never got that far — it was killed by the heap ceiling, or the
+  # source called `exit/1` on it. Either way the caller survives, which the
+  # unwrapped version did not: a top-level `exit/1` used to take down whichever
+  # process was running the pipeline.
+  #
+  # `Code.compile_string/2` only returns its module list when the whole compile
+  # returns normally. Literal `defmodule` names can be recovered from the source
+  # on that exceptional path. A source that can choose a module name at runtime
+  # cannot, so those uncommon sources get a per-compile trace session recording
+  # every successful `:code.load_binary/3` in the compiler process tree. The
+  # session is isolated, so concurrently compiled sources cannot donate modules
+  # to each other's cleanup sets. Ordinary compiles retain the cheaper process
+  # tracing they already used to contain spawned work.
+  defp bounded_compile(source, track_modules?) do
+    parent = self()
+    {heap_words, timeout_ms} = compile_bounds()
+
+    collector = spawn(fn -> collect_compile_activity(initial_compile_activity()) end)
+    session = start_module_load_trace(collector, track_modules?)
+
+    try do
+      {pid, ref} =
+        spawn_monitor(fn ->
+          unless track_modules? do
+            :erlang.trace(self(), true, [:procs, :set_on_spawn, {:tracer, collector}])
+          end
+
+          receive do
+            {__MODULE__, :start_compile} -> :ok
+          end
+
+          Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
+
+          captured =
+            Code.with_diagnostics(fn ->
+              try do
+                Code.compile_string(source, "credence_check.ex")
+              rescue
+                e ->
+                  Logger.debug(
+                    "[credence_fix] Code.compile_string raised: #{Exception.message(e)}"
+                  )
+
+                  {:raised, e}
+              end
+            end)
+
+          send(parent, {__MODULE__, :compiled, self(), captured})
+        end)
+
+      if session do
+        :trace.process(session, pid, true, [:call, :procs, :set_on_spawn])
+      end
+
+      send(pid, {__MODULE__, :start_compile})
+
+      outcome = await_compile(pid, ref, timeout_ms)
+      {spawned, loaded_modules} = finish_compile_activity(collector, session)
+      terminate_compile_processes(spawned)
+
+      case outcome do
+        {:ok, captured} -> {:ok, captured, loaded_modules}
+        {:aborted, why} -> {:aborted, why, loaded_modules}
+      end
+    after
+      stop_module_load_trace(session)
+      send(collector, :stop)
+    end
+  end
+
+  defp start_module_load_trace(_collector, false), do: nil
+
+  defp start_module_load_trace(collector, true) do
+    session = :trace.session_create(__MODULE__, collector, [])
+
+    :trace.function(
+      session,
+      {:code, :load_binary, 3},
+      [{:_, [], [{:return_trace}]}],
+      [:local]
+    )
+
+    session
+  end
+
+  defp stop_module_load_trace(nil), do: :ok
+  defp stop_module_load_trace(session), do: :trace.session_destroy(session)
+
+  defp await_compile(pid, ref, timeout_ms) do
+    receive do
+      {__MODULE__, :compiled, ^pid, captured} ->
+        receive do
+          {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+        end
+
+        {:ok, captured}
+
+      {:DOWN, ^ref, :process, ^pid, :killed} ->
+        {:aborted, :heap_limit}
+
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        {:aborted, {:exited, reason}}
+    after
+      timeout_ms ->
+        Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+        after
+          1_000 -> :ok
+        end
+
+        {:aborted, :timeout}
+    end
+  end
+
+  defp initial_compile_activity do
+    %{spawned: MapSet.new(), loading: %{}, loaded: MapSet.new()}
+  end
+
+  defp collect_compile_activity(activity) do
+    receive do
+      {__MODULE__, :finish_compile_activity, caller, session} ->
+        delivered = trace_delivered(session)
+        activity = collect_until_delivered(activity, delivered)
+
+        send(
+          caller,
+          {__MODULE__, :compile_activity, self(), activity.spawned,
+           MapSet.to_list(activity.loaded)}
+        )
+
+      :stop ->
+        terminate_compile_processes(activity.spawned)
+
+      trace_event ->
+        trace_event
+        |> record_compile_activity(activity)
+        |> collect_compile_activity()
+    end
+  end
+
+  defp trace_delivered(nil), do: :erlang.trace_delivered(:all)
+  defp trace_delivered(session), do: :trace.delivered(session, :all)
+
+  defp collect_until_delivered(activity, delivered) do
+    receive do
+      {:trace_delivered, :all, ^delivered} ->
+        activity
+
+      trace_event ->
+        trace_event
+        |> record_compile_activity(activity)
+        |> collect_until_delivered(delivered)
+    end
+  end
+
+  defp record_compile_activity(
+         {:trace, _parent, :spawn, child, _mfa},
+         activity
+       ) do
+    %{activity | spawned: MapSet.put(activity.spawned, child)}
+  end
+
+  defp record_compile_activity(
+         {:trace, child, :spawned, _parent, _mfa},
+         activity
+       ) do
+    %{activity | spawned: MapSet.put(activity.spawned, child)}
+  end
+
+  defp record_compile_activity(
+         {:trace, pid, :call, {:code, :load_binary, [module, _file, _binary]}},
+         activity
+       )
+       when is_atom(module) do
+    loading = Map.update(activity.loading, pid, [module], &[module | &1])
+    %{activity | loading: loading}
+  end
+
+  defp record_compile_activity(
+         {:trace, pid, :return_from, {:code, :load_binary, 3}, result},
+         activity
+       ) do
+    case Map.get(activity.loading, pid, []) do
+      [module | rest] ->
+        loading =
+          case rest do
+            [] -> Map.delete(activity.loading, pid)
+            _ -> Map.put(activity.loading, pid, rest)
+          end
+
+        loaded =
+          if result == {:module, module} and not compiler_temporary_module?(module) do
+            MapSet.put(activity.loaded, module)
+          else
+            activity.loaded
+          end
+
+        %{activity | loading: loading, loaded: loaded}
+
+      [] ->
+        activity
+    end
+  end
+
+  defp record_compile_activity(_trace_event, activity), do: activity
+
+  # `Code.compile_string/2` evaluates top-level expressions in short-lived
+  # `:elixir_compiler_N` modules and manages those modules itself. They are not
+  # source modules and deleting them here adds three serialized code-server
+  # calls per evaluator — enough to time out the suite's compile-heavy gates.
+  defp compiler_temporary_module?(module) do
+    module
+    |> Atom.to_string()
+    |> String.starts_with?("elixir_compiler_")
+  end
+
+  defp finish_compile_activity(collector, session) do
+    send(collector, {__MODULE__, :finish_compile_activity, self(), session})
+
+    receive do
+      {__MODULE__, :compile_activity, ^collector, spawned, loaded_modules} ->
+        {spawned, loaded_modules}
+    end
+  end
+
+  defp terminate_compile_processes(spawned) do
+    refs =
+      Enum.map(spawned, fn child ->
+        Process.unlink(child)
+        ref = Process.monitor(child)
+        Process.exit(child, :kill)
+        ref
       end)
 
-    case result do
-      # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
-      # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
-      # captured nothing. Synthesize an error diagnostic from the exception so
-      # the semantic round can still match + fix it (without this, every such
-      # error was a 0-diagnostic dead end). Append to any captured diagnostics.
-      {:raised, e} ->
-        {:error, diagnostics ++ [exception_diagnostic(e)]}
+    Enum.each(refs, fn ref ->
+      receive do
+        {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+      end
+    end)
+  end
 
-      modules when is_list(modules) ->
-        safe_cleanup_modules(modules)
-        {:ok, diagnostics}
+  defp compile_bounds do
+    {
+      Application.get_env(:credence, :compile_max_heap_words, @compile_max_heap_words),
+      Application.get_env(:credence, :compile_timeout_ms, @compile_timeout_ms)
+    }
+  end
+
+  # Deliberately worded so no rule can plausibly key on it: this is credence
+  # talking about itself, not a compiler diagnostic about the source. It is an
+  # `:error` because "we could not compile this" and "this does not compile" are
+  # the same answer to every caller that asks — notably `compiles?/1`, whose
+  # `false` makes the Pattern round skip the file rather than guess.
+  defp abort_diagnostic(why) do
+    %{
+      severity: :error,
+      message: "credence: compilation aborted — #{abort_reason_text(why)}",
+      position: 0,
+      file: "credence_check.ex"
+    }
+  end
+
+  # Each reason gets its own sentence because they are three different events,
+  # and a message that calls an `exit/1` a "budget" is the kind of plausible
+  # wrong sentence this project keeps finding in its own output.
+  defp abort_reason_text(:heap_limit),
+    do: "the source exceeded credence's compile heap ceiling"
+
+  defp abort_reason_text(:timeout),
+    do: "the source exceeded credence's compile time budget"
+
+  defp abort_reason_text({:exited, reason}),
+    do: "the source exited during compilation (#{inspect(reason)})"
+
+  # `Code.compile_string/2` warns "redefining module M" whenever M is already
+  # loaded in the calling VM. That is a property of the HOST PROCESS, not of the
+  # source under analysis: the same source returns `{:ok, []}` on a cold VM and
+  # a warning on a warm one.
+  #
+  # It matters because credence is normally called from a warm VM. The evolution
+  # harness runs it via `mix run --no-compile` inside a persistent, already
+  # compiled workspace, so this fired on essentially every row — and the
+  # diagnostic was then offered to every Semantic rule's `match?/1`. At least one
+  # evolved rule keyed on it, which is to say it was generated to repair a
+  # "defect" that only exists inside the harness. It also produced findings on
+  # clean files, which is how `credence check` came to exit 1 on the phantom
+  # alone.
+  #
+  # It is not always phantom: source that genuinely defines the same module
+  # twice earns the warning. The discriminator is the source rather than the
+  # message — a module defined ONCE here cannot be redefining itself — so the
+  # drop is conservative: if the source cannot be parsed, or the module name
+  # cannot be resolved, the diagnostic is kept.
+  defp drop_phantom_redefinitions(diagnostics, source) do
+    if Enum.any?(diagnostics, &redefined_module/1) do
+      counts = module_definition_counts(source)
+
+      Enum.reject(diagnostics, fn d ->
+        case redefined_module(d) do
+          nil -> false
+          name -> Map.get(counts, name, 0) == 1
+        end
+      end)
+    else
+      diagnostics
+    end
+  end
+
+  @redefining_re ~r/redefining module ([A-Za-z_][A-Za-z0-9_.]*)/
+
+  defp redefined_module(%{message: msg}) when is_binary(msg) do
+    case Regex.run(@redefining_re, msg) do
+      [_, name] -> name
+      nil -> nil
+    end
+  end
+
+  defp redefined_module(_), do: nil
+
+  # How many times each module is defined in `source`, by written name. Returns
+  # an empty map when the source does not parse, so nothing is dropped.
+  defp module_definition_counts(source) do
+    case Code.string_to_quoted(source) do
+      {:ok, ast} ->
+        ast
+        |> Macro.prewalk([], fn
+          {:defmodule, _, [{:__aliases__, _, parts} | _]} = node, acc ->
+            {node, [Enum.map_join(parts, ".", &Atom.to_string/1) | acc]}
+
+          node, acc ->
+            {node, acc}
+        end)
+        |> elem(1)
+        |> Enum.frequencies()
+
+      {:error, _} ->
+        %{}
     end
   end
 
@@ -203,21 +685,110 @@ defmodule Credence.RuleHelpers do
     match?({:ok, _}, compile_and_capture(source))
   end
 
+  @doc """
+  The set of compile *errors* `source` produces, each reduced to a signature.
+
+  Both return statuses are inspected because `Code.with_diagnostics/1` can
+  report an error diagnostic even when `Code.compile_string/2` returns normally.
+  Warnings are excluded: `compiles?/1` has always accepted them, and a fix that
+  trades one warning for another must not be reverted on that basis alone.
+
+  A signature is `{message, occurrence}`, with no position. The occurrence
+  preserves multiplicity, so adding the same error at a second location is a
+  regression. Positions stay excluded because a fix may legitimately move an
+  existing error from line 7 to line 6.
+  """
+  @spec compile_errors(String.t()) :: MapSet.t()
+  def compile_errors(source) do
+    case compile_and_capture(source) do
+      {_status, diagnostics} ->
+        diagnostics
+        |> Enum.filter(&(Map.get(&1, :severity) == :error))
+        |> Enum.map(&to_string(Map.get(&1, :message, "")))
+        |> Enum.frequencies()
+        |> Enum.flat_map(fn {message, count} ->
+          Enum.map(1..count, &{message, &1})
+        end)
+        |> MapSet.new()
+    end
+  end
+
+  @doc """
+  Whether `fixed` compiles no worse than the source that produced it, given that
+  source's `baseline` error signatures (from `compile_errors/1`).
+
+  ## Why this replaced `compiles?(fixed)`
+
+  The Pattern round used to demand that a fixed file compile outright, and skip
+  the entire round when the input did not. Both halves came from the same
+  assumption, and the consequence was measured: **625 of 1,724 Pattern test
+  fixtures parse but do not compile, and 292 of those have at least one Pattern
+  rule firing that the pipeline refuses to run.** A single undefined helper —
+  `&even?/1` with no `def even?` anywhere, which is what LLM-generated code looks
+  like before anyone has written the rest of the module — disabled all 156 rules
+  for that file.
+
+  Demanding an absolute property (`it compiles`) of a repair to a file that
+  never compiled is asking the wrong question. The right one is relative: did
+  this fix make anything worse? So a fix is accepted when its errors are a
+  subset of the errors that were already there.
+
+  **On input that compiles this is exactly the old behaviour** — the baseline is
+  empty, so the output's error set must also be empty, which is `compiles?/1`.
+  The generalisation costs nothing on the path that already worked, which is why
+  it is safe to make.
+
+  It is deliberately conservative in one direction: a fix that *removes* one
+  error and *introduces* a different one is rejected, even though the error
+  count went down. Trading one compile error for another is not a repair the
+  Pattern round is allowed to make on its own — that is the Semantic round's
+  job, and it has already run by this point.
+  """
+  @spec compiles_no_worse?(String.t(), MapSet.t()) :: boolean()
+  def compiles_no_worse?(fixed, baseline) do
+    MapSet.subset?(compile_errors(fixed), baseline)
+  end
+
   defp safe_cleanup_modules(modules) do
-    for {mod, _binary} <- modules do
+    modules
+    |> Enum.map(fn
+      {module, _binary} -> module
+      module when is_atom(module) -> module
+    end)
+    |> Enum.uniq()
+    |> Enum.each(fn mod ->
       # soft_purge any pre-existing old code so that delete can proceed
       # (delete fails if old code exists and cannot be purged)
       :code.soft_purge(mod)
       :code.delete(mod)
       :code.soft_purge(mod)
-    end
+    end)
   end
 
   @doc """
   Computes a line-by-line diff between two strings.
 
   Returns a list of `{:removed, line_no, text}` and `{:added, line_no, text}`
-  tuples for every line that changed.
+  tuples for every line that changed. `:removed` line numbers index `before`,
+  `:added` line numbers index `after_fix`.
+
+  ## Why a real diff, not positional pairing
+
+  This paired the two files by INDEX — line 1 against line 1, and so on — so a
+  single inserted line shifted everything after it and the whole file rendered as
+  changed. That is not a cosmetic problem:
+
+    * it **fabricated bug reports**. A correct module reorder was reported to the
+      evolution harness as a "catastrophic replacement" (escalation ledger row
+      181), and a human then spent the row investigating a rule that had done
+      nothing wrong.
+    * it was the thing **blowing the log budget**. `log_diff/3` prints this for
+      every rule that changes the source, and Elixir's Logger truncates a message
+      at 8096 bytes — so a whole-file render pushed the `APPLIED_RULES:` line,
+      printed last, out of the log entirely (ledger row 120).
+
+  `List.myers_difference/2` reports only the lines that actually differ. It also
+  drops the old `Enum.at/2`-in-a-loop, which was quadratic in the file length.
   """
   @spec diff_lines(String.t(), String.t()) :: [
           {:removed, pos_integer(), String.t()} | {:added, pos_integer(), String.t()}
@@ -225,19 +796,28 @@ defmodule Credence.RuleHelpers do
   def diff_lines(before, after_fix) do
     before_lines = String.split(before, "\n")
     after_lines = String.split(after_fix, "\n")
-    max_len = max(length(before_lines), length(after_lines))
 
-    Enum.flat_map(0..(max_len - 1), fn i ->
-      b = Enum.at(before_lines, i)
-      a = Enum.at(after_lines, i)
+    {changes, _before_no, _after_no} =
+      before_lines
+      |> List.myers_difference(after_lines)
+      |> Enum.reduce({[], 1, 1}, fn
+        {:eq, lines}, {acc, before_no, after_no} ->
+          {acc, before_no + length(lines), after_no + length(lines)}
 
-      cond do
-        b == a -> []
-        is_nil(a) -> [{:removed, i + 1, b}]
-        is_nil(b) -> [{:added, i + 1, a}]
-        true -> [{:removed, i + 1, b}, {:added, i + 1, a}]
-      end
-    end)
+        {:del, lines}, {acc, before_no, after_no} ->
+          {prepend(acc, lines, before_no, :removed), before_no + length(lines), after_no}
+
+        {:ins, lines}, {acc, before_no, after_no} ->
+          {prepend(acc, lines, after_no, :added), before_no, after_no + length(lines)}
+      end)
+
+    Enum.reverse(changes)
+  end
+
+  defp prepend(acc, lines, first_no, tag) do
+    lines
+    |> Enum.with_index(first_no)
+    |> Enum.reduce(acc, fn {text, line_no}, inner -> [{tag, line_no, text} | inner] end)
   end
 
   @doc """
@@ -252,12 +832,38 @@ defmodule Credence.RuleHelpers do
   """
   @spec apply_rule_fix(module(), String.t(), keyword()) :: String.t()
   def apply_rule_fix(rule, source, opts \\ []) do
+    {_status, code} = apply_rule_fix_with_status(rule, source, opts)
+    code
+  end
+
+  @doc """
+  Like `apply_rule_fix/3`, but says *why* the source came back unchanged.
+
+    * `{:ok, fixed}`             — patches applied and kept
+    * `{:no_patches, source}`    — the rule produced no patches for this source
+    * `{:patch_rejected, source}` — patches were produced and then **discarded**
+      by the safety invariants below
+
+  That third case is the one worth naming (C5). It is the single undocumented
+  exception to "every Pattern rule fixes what it finds": the finding is
+  reported, the fix is dropped, and the caller sees `fixed == source` — exactly
+  what a rule that simply had nothing to do looks like. The DSL gate avoids this
+  by suppressing the finding whose fix it drops; this path had no such
+  counterpart, so a rule could report an issue it silently never fixed and
+  nothing downstream could tell.
+
+  `Credence.Pattern.fix_with_trace/2` records it as `{rule, :patch_rejected}`,
+  the sibling of `:reverted`, so the harness's bugfix lane can consume it.
+  """
+  @spec apply_rule_fix_with_status(module(), String.t(), keyword()) ::
+          {:ok | :no_patches | :patch_rejected, String.t()}
+  def apply_rule_fix_with_status(rule, source, opts \\ []) do
     opts = Keyword.put(opts, :source, source)
     ast = Sourceror.parse_string!(source)
 
     case drop_dsl_patches(rule.fix_patches(ast, opts), rule, ast, opts) do
       [] ->
-        source
+        {:no_patches, source}
 
       patches when is_list(patches) ->
         fixed =
@@ -276,7 +882,11 @@ defmodule Credence.RuleHelpers do
         # the fix rather than emit broken, lossy, or doubled output — the finding
         # is still reported, it just goes unfixed. Rules that carry comments
         # through the rewrite faithfully (multiset unchanged) keep their fix.
-        if parses?(fixed) and not comments_changed?(source, fixed), do: fixed, else: source
+        if parses?(fixed) and not comments_changed?(source, fixed) do
+          {:ok, fixed}
+        else
+          {:patch_rejected, source}
+        end
     end
   end
 
@@ -340,8 +950,6 @@ defmodule Credence.RuleHelpers do
         {kept, dropped |> Enum.map(&Map.get(&1, :range)) |> Enum.reject(&is_nil/1)}
     end
   end
-
-  defp dsl_partition(_rule, patches, _ast, _opts), do: {patches, []}
 
   defp dsl_unsafe_families(rule) do
     if function_exported?(rule, :unsafe_in_dsl, 0), do: rule.unsafe_in_dsl(), else: []
@@ -557,6 +1165,36 @@ defmodule Credence.RuleHelpers do
     case node_range(orig) do
       nil -> []
       range -> [%{range: range, change: render_replacement(modified, range)}]
+    end
+  end
+
+  # A `:__block__` wrapping a *list* literal. Only the wrapper carries the
+  # bracket positions — `line`/`column` for `[`, `closing` for `]`. The bare
+  # list underneath has no metadata of its own, so `node_range/1` synthesizes
+  # its range from its first and last elements and it comes out
+  # bracket-*exclusive*, while `Sourceror.to_string/1` renders a list
+  # bracket-*inclusive*. Recursing to the bare list and patching there
+  # therefore writes the brackets a second time:
+  #
+  #     call(:name, [:a, :b, :c])  ->  call(:name, [[:a, :c]])
+  #
+  # which parses and preserves every comment, so the safety invariants in
+  # `apply_rule_fix_with_status/3` pass it straight through (docs/22 T5.10).
+  #
+  # Same-length lists still recurse: each element carries its own range, so
+  # element-wise patches are tighter and leave the surrounding layout alone.
+  # Only when the shape changes — an element added or removed, or the list
+  # replaced by a non-list — must the patch cover the list as a whole, and
+  # then it has to land at the *wrapper's* bracket-inclusive range.
+  defp diff_patches_structural(
+         {:__block__, _, [val_o]} = orig,
+         {:__block__, _, [val_m]} = modified
+       )
+       when is_list(val_o) do
+    if is_list(val_m) and length(val_o) == length(val_m) do
+      diff_patches(val_o, val_m)
+    else
+      whole_node_patch(orig, modified)
     end
   end
 
@@ -790,6 +1428,49 @@ defmodule Credence.RuleHelpers do
     |> strip_layout_meta()
     |> Sourceror.to_string(opts)
   end
+
+  @doc """
+  Does this expression provably evaluate to a boolean?
+
+  Conservative on purpose: `true` only for shapes whose result is a boolean for
+  every input — comparison and strict-equality operators, `and`/`or` over two
+  boolean operands, `not`, `is_nil/1`, `match?/2`, and the boolean-returning
+  `Enum` predicates (`all?`, `any?`, `empty?`) in both call and piped form.
+  Anything else, including a bare variable or a user function, is `false`.
+
+  A rule uses this before rewriting an `if` whose branches are `true`/`false`
+  into its own condition: the rewrite is only equivalent when the condition
+  already *is* a boolean, since `if` treats every non-`nil`/`false` value as
+  truthy and would otherwise turn, say, `0` or `""` into `true`.
+
+  Extracted from `NoIfTrueFalse` and `PreferNegateIfTrueFalse`, which carried
+  byte-identical 69-line private copies (docs/12 C11). Their sibling predicate
+  `boolean_expr?/1` was copied the same way and has since **drifted** — the
+  original grew a clause for a nested `if`, the copy did not, while a comment
+  in the copy still claimed the two mirror each other.
+  """
+  @spec boolean_condition?(Macro.t()) :: boolean()
+  def boolean_condition?({:__block__, _, [expr]}), do: boolean_condition?(expr)
+
+  def boolean_condition?({op, _, [_, _]})
+      when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :match?],
+      do: true
+
+  def boolean_condition?({op, _, [left, right]}) when op in [:and, :or],
+    do: boolean_condition?(left) and boolean_condition?(right)
+
+  def boolean_condition?({:not, _, [inner]}), do: boolean_condition?(inner)
+  def boolean_condition?({:is_nil, _, [_]}), do: true
+
+  def boolean_condition?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
+      when fun in [:all?, :any?, :empty?],
+      do: true
+
+  def boolean_condition?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
+      when fun in [:all?, :any?, :empty?],
+      do: true
+
+  def boolean_condition?(_), do: false
 
   @doc """
   The comments stored on `node`'s Sourceror metadata under `key`

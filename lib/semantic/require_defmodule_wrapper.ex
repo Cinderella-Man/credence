@@ -34,8 +34,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
 
   @impl true
   def match?(%{message: message}) when is_binary(message) do
-    String.contains?(message, "outside module") or
-      String.contains?(message, "redefining @")
+    String.contains?(message, "outside module")
   end
 
   def match?(_), do: false
@@ -100,7 +99,6 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   end
 
   defp block_meta({:__block__, meta, _}), do: meta
-  defp block_meta(_), do: []
 
   # Finds the contiguous run of movable attrs immediately preceding the first
   # top-level `defmodule`. Returns {:ok, attrs, kept_before, defmodule, rest}.
@@ -129,22 +127,23 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
     # module (the inner one takes precedence).  Exception: a real @moduledoc
     # being moved in should REPLACE a `@moduledoc false` — keep the incoming one
     # and strip the false one below.
-    existing_attr_names = existing_attr_names(existing_stmts)
+    existing_attrs = existing_attrs(existing_stmts)
     real_moduledoc_incoming = has_real_moduledoc?(attrs)
 
     filtered_attrs =
       Enum.filter(attrs, fn attr ->
-        name = attr_name(attr)
+        identity = attr_identity(attr)
 
         cond do
-          is_nil(name) ->
+          is_nil(identity) ->
             true
 
-          not MapSet.member?(existing_attr_names, name) ->
+          not MapSet.member?(existing_attrs, identity) ->
             true
 
           # @moduledoc false in body + real @moduledoc incoming → replace false with real
-          name == :moduledoc and real_moduledoc_incoming and moduledoc_false_in?(existing_stmts) ->
+          identity == :moduledoc and real_moduledoc_incoming and
+              moduledoc_false_in?(existing_stmts) ->
             true
 
           true ->
@@ -192,13 +191,19 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   defp moduledoc_false?({:@, _, [{:moduledoc, _, [{:__block__, _, [false]}]}]}), do: true
   defp moduledoc_false?(_), do: false
 
-  # Returns a MapSet of movable attribute names already present in the body.
-  defp existing_attr_names(stmts) do
+  # Returns a MapSet of movable attribute identities already present in the body.
+  defp existing_attrs(stmts) do
     stmts
-    |> Enum.map(&attr_name/1)
+    |> Enum.map(&attr_identity/1)
     |> Enum.reject(&is_nil/1)
     |> MapSet.new()
   end
+
+  defp attr_identity({:@, _, [{name, _, [{:"::", _, [{target, _, args}, _]}]}]})
+       when name in [:spec, :type, :typep] and is_atom(target) and is_list(args),
+       do: {name, target, length(args)}
+
+  defp attr_identity(attr), do: attr_name(attr)
 
   # Extracts the attribute name from a `@name ...` AST node, or nil.
   defp attr_name({:@, _, [{name, _, _}]}) when name in @movable, do: name

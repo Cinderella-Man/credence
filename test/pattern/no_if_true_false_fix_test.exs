@@ -623,6 +623,26 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
   end
 
   describe "does not modify if with non-boolean condition" do
+    test "Enum predicate through a shadowing alias" do
+      input = """
+      alias MyEnum, as: Enum
+
+      defmodule NoIfTrueFalseShadowedEnum do
+        def all?(_, _), do: 5
+
+        def run do
+          if Enum.all?([], fn _ -> true end) do
+            true
+          else
+            false
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoIfTrueFalse, input), input)
+    end
+
     test "bare variable condition with true/false branches" do
       input = """
       def run(x) do

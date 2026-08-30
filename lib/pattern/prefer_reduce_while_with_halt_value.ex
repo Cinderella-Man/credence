@@ -110,8 +110,6 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
     boolean_literal?(last) and unwrap_boolean(last) == false
   end
 
-  defp false_flag_acc?(_), do: false
-
   defp boolean_literal?({:__block__, _, [bool]}) when is_boolean(bool), do: true
   defp boolean_literal?(bool) when is_boolean(bool), do: true
   defp boolean_literal?(_), do: false
@@ -125,12 +123,31 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   defp callback_matches?({:fn, _, [{:->, _, [params, body]}]}) do
     case Enum.at(params, 1) do
       {:{}, _, param_elems} when is_list(param_elems) and length(param_elems) == 3 ->
-        check_body_if(body)
+        third_param_unused?(List.last(param_elems), body) and check_body_if(body)
 
       _ ->
         false
     end
   end
+
+  defp third_param_unused?({:_, _, _}, _body), do: true
+
+  defp third_param_unused?({name, _, context}, body)
+       when is_atom(name) and (is_atom(context) or is_nil(context)) do
+    {_body, used?} =
+      Macro.prewalk(body, false, fn
+        {^name, _, var_context} = node, _used
+        when is_atom(var_context) or is_nil(var_context) ->
+          {node, true}
+
+        node, used ->
+          {node, used}
+      end)
+
+    not used?
+  end
+
+  defp third_param_unused?(_, _body), do: false
 
   defp check_body_if(body) do
     case extract_if(body) do
@@ -140,10 +157,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   end
 
   defp extract_if({:__block__, _, stmts}) when is_list(stmts) do
-    Enum.find_value(stmts, fn
-      {:if, _, _} = if_node -> {:ok, if_node}
-      _ -> nil
-    end)
+    extract_if(List.last(stmts))
   end
 
   defp extract_if({:if, _, _} = if_node), do: {:ok, if_node}
@@ -156,6 +170,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
          {:cont, cont_tuple} <- extract_halt_or_cont(else_body),
          true <- tuple_arity?(halt_tuple, 3),
          true <- tuple_arity?(cont_tuple, 3),
+         true <- halt_prefix_safe_to_discard?(halt_tuple),
          true <- tuple_with_boolean_last?(halt_tuple, true),
          true <- tuple_with_boolean_last?(cont_tuple, false) do
       true
@@ -182,10 +197,27 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   defp extract_halt_or_cont(_), do: :error
 
   defp tuple_with_boolean_last?({:{}, _, elems}, expected_bool) when is_list(elems) do
-    unwrap_boolean(List.last(elems)) == expected_bool
+    last = List.last(elems)
+    boolean_literal?(last) and unwrap_boolean(last) == expected_bool
   end
 
-  defp tuple_with_boolean_last?(_, _), do: false
+  defp halt_prefix_safe_to_discard?({:{}, _, [first, second, _flag]}) do
+    discard_safe?(first) and discard_safe?(second)
+  end
+
+  defp halt_prefix_safe_to_discard?(_), do: false
+
+  defp discard_safe?({:__block__, _, [value]}), do: discard_safe?(value)
+
+  defp discard_safe?({name, _, context})
+       when is_atom(name) and (is_atom(context) or is_nil(context)),
+       do: true
+
+  defp discard_safe?(value)
+       when is_atom(value) or is_number(value) or is_binary(value) or is_nil(value),
+       do: true
+
+  defp discard_safe?(_), do: false
 
   # ── AST transformation ─────────────────────────────────────────────
 
@@ -314,7 +346,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   end
 
   defp transform_body({:__block__, meta, stmts}) when is_list(stmts) do
-    new_stmts = Enum.map(stmts, &transform_stmt/1)
+    new_stmts = List.update_at(stmts, -1, &transform_stmt/1)
     {:__block__, meta, new_stmts}
   end
 

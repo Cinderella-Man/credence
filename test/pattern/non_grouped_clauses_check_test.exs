@@ -41,8 +41,22 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
 
       assert length(check(NonGroupedClauses, code)) == 2
     end
+  end
 
-    test "def separated by another def is still flagged when later clause has an attribute" do
+  # These are the cases the fix deliberately declines, so the check must decline
+  # them too — the rule reported all of them and repaired none, which is the
+  # report-without-repair shape CONTEXT.md forbids and
+  # test/fix_or_drop_test.exs now gates. Both remain worth WIDENING later (the
+  # attribute run can travel with its clause; the block body needs a
+  # layout-metadata strip), and the fix-side no-op tests pin the current
+  # behaviour either way.
+  # Both of these used to be declines — the fix could not move a stray preceded by
+  # a module attribute (it would orphan the attribute) nor one with a multi-statement
+  # block body (it re-rendered as a `do:` one-liner, dropping every statement after
+  # the first). Both are repaired now: the annotation run travels with its clause,
+  # and the patch covers the whole module rather than diffing statements pairwise.
+  describe "flags strays that used to be unmovable" do
+    test "a stray preceded by an annotation attribute" do
       code = """
       defmodule M do
         def foo(1), do: 1
@@ -53,7 +67,69 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert [%Issue{rule: :non_grouped_clauses}] = check(NonGroupedClauses, code)
+      assert flagged?(NonGroupedClauses, code)
+    end
+
+    test "a stray whose body is a multi-statement block" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        def foo(x) do
+          y = x + 1
+          y * 2
+        end
+      end
+      """
+
+      assert flagged?(NonGroupedClauses, code)
+    end
+  end
+
+  # The one run that still cannot move. `@threshold 5` is a VALUE definition rather
+  # than an annotation: later clauses may read it and its position relative to them
+  # is load-bearing, so `attr_run_start/2` answers `:unmovable` and the check
+  # declines alongside the fix.
+  describe "does not flag a stray behind a non-annotation attribute" do
+    test "declines the whole function when a later clause follows a value attribute" do
+      code = """
+      defmodule ValueAttributeAfterMovableStray do
+        def foo(1), do: 1
+        def bar(x), do: x
+        def foo(2), do: 2
+        @threshold 9
+        def foo(x), do: x + @threshold
+      end
+      """
+
+      assert check(NonGroupedClauses, code) == []
+    end
+
+    test "declines modules whose statements share source lines" do
+      code = """
+      defmodule SameLineGrouping do
+        def foo(1), do: 1; def bar(x), do: x; def foo(x), do: x
+      end
+      """
+
+      assert check(NonGroupedClauses, code) == []
+      confirm_fix(fix(NonGroupedClauses, code), code)
+    end
+
+    test "a value-defining attribute in the run" do
+      code = """
+      defmodule M do
+        @threshold 5
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        @threshold 9
+        def foo(x), do: x + @threshold
+      end
+      """
+
+      assert clean?(NonGroupedClauses, code)
     end
   end
 

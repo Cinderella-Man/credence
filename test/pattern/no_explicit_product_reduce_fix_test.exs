@@ -78,5 +78,16 @@ defmodule Credence.Pattern.NoExplicitProductReduceFixTest do
 
       confirm_fix(fix(NoExplicitProductReduce, code), code)
     end
+
+    test "Enum is an alias for a custom module" do
+      code = """
+      defmodule AliasReduceProduct do
+        alias MyEnum, as: Enum
+        def product(list), do: Enum.reduce(list, 1, &*/2)
+      end
+      """
+
+      confirm_fix(fix(NoExplicitProductReduce, code), code)
+    end
   end
 end

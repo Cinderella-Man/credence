@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   ## Detection constraints
 
   Only flags when ALL of:
-  - `var = length(list)` or `var = Enum.count(list)` exists
+  - `var = length(list)` exists
   - `Enum.at(list, var - K)` appears in the same block (K is a positive integer literal)
   - Same list variable in both calls
   - No rebinding of either variable between the two calls
@@ -30,6 +30,16 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: rewrites only the index argument of
+  # `Enum.at(list, n - K)` selected by a sibling `n = length(list)` assignment
+  # statement in the same `__block__`; a qualified `Enum.at` call plus a bound
+  # length statement is not DSL-expression code, so the `-` is never a
+  # reinterpreted operator. The source scan flags this rule because the
+  # construct appears in it, but the matcher cannot reach a DSL expression, so
+  # the deliberate answer is the empty list rather than an allowlist entry — the
+  # fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
 
   @impl true
@@ -79,7 +89,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
     end)
   end
 
-  # Matches: var = length(list_var) or var = Enum.count(list_var)
+  # Matches: var = length(list_var)
   defp scan_length_assignment({:=, _, [lhs, rhs]}) do
     with {:ok, var_name} <- plain_variable_name(lhs),
          {:ok, list_var} <- extract_length_call(rhs) do
@@ -94,15 +104,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   # length(var)
   defp extract_length_call({:length, _, [arg]}) do
     plain_variable_name(arg)
-  end
-
-  # Enum.count(var) — arity 1 only
-  defp extract_length_call({{:., _, [mod, func_ref]}, _, [arg]}) do
-    if enum_module?(mod) and unwrap_atom(func_ref) == :count do
-      plain_variable_name(arg)
-    else
-      :skip
-    end
   end
 
   defp extract_length_call(_), do: :skip

@@ -151,11 +151,10 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
 
   defp adjacent_sort_take?(pipeline) do
     pipeline
+    # `:discard` drops the incomplete trailing chunk, so every element is a
+    # 2-list and the catch-all that used to sit here could not be reached.
     |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.any?(fn
-      [s, t] -> plain_sort?(s) and negative_take?(t)
-      _ -> false
-    end)
+    |> Enum.any?(fn [s, t] -> plain_sort?(s) and negative_take?(t) end)
   end
 
   defp negative_take?({{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]}),

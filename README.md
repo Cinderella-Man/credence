@@ -28,7 +28,7 @@ Credence.Pattern   → is it written the Elixir way?  (deeper idiomatic/performa
 them: an unused variable gets an `_` in front of it, a call to a function that
 doesn't exist gets corrected when we can tell what was meant.
 
-**Round 3 — Pattern** is the big one: ~117 rules that spot clumsy-but-working
+**Round 3 — Pattern** is the big one: ~155 rules that spot clumsy-but-working
 code and rewrite it. `Enum.sort |> Enum.reverse` becomes `Enum.sort(:desc)`,
 counting things by hand becomes `Enum.frequencies/1`, `acc ++ [x]` becomes
 `[x | acc]`.
@@ -420,7 +420,7 @@ what happened:
   L4 - unused = 1
   L4 + _unused = 1
 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
-[debug] [credence_fix] starting pattern fix pipeline (117 rules)
+[debug] [credence_fix] starting pattern fix pipeline (155 rules)
 [debug] [credence_fix] NoExplicitSumReduce: check found 1 issue(s), running fix...
 [debug] [credence_fix] NoExplicitSumReduce: source CHANGED:
   L5 - Enum.reduce(list, 0, fn x, acc -> acc + x end)

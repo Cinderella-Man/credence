@@ -94,7 +94,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
   defp strip_trailing_doc_newline(value) do
     cond do
       raw_trailing_only?(value) ->
-        {:ok, String.trim_trailing(value, "\\n")}
+        {:ok, drop_all_raw_escapes(value)}
 
       real_trailing_only?(value) ->
         {:ok, String.trim_trailing(value, "\n")}
@@ -104,10 +104,46 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
     end
   end
 
-  # Raw form: value ends with literal backslash + n (Sourceror on fresh source)
+  # Raw form: the value's last two characters are backslash + n, AND that
+  # backslash actually opens an escape.
+  #
+  # `String.ends_with?(value, "\\n")` alone is not that test, and the difference
+  # is a defect this rule shipped. Sourceror hands back the RAW text between the
+  # quotes, so `@doc "abc\\n"` — which documents a literal backslash followed by
+  # the letter n, no newline anywhere — arrives as `abc\\n` and satisfies
+  # `ends_with?`. Stripping two characters then left `abc\\`, a dangling backslash
+  # that escapes the closing quote, so the emitted source did not parse. The
+  # safety invariant in `apply_rule_fix_with_status/3` caught it every time and
+  # discarded the patch, which is why the rule reported six findings it never
+  # repaired instead of shipping broken docs.
+  #
+  # An escape needs an ODD run of backslashes before the `n`: `\\n` is a newline,
+  # `\\\\n` is a backslash and a letter.
   defp raw_trailing_only?(value) do
-    String.ends_with?(value, "\\n") and
-      not String.contains?(String.trim_trailing(value, "\\n"), "\\n")
+    raw_trailing_escape?(value) and not raw_newline_escape?(drop_all_raw_escapes(value))
+  end
+
+  defp raw_newline_escape?(value) do
+    Regex.scan(~r/(\\+)n/, value, capture: :all_but_first)
+    |> Enum.any?(fn [slashes] -> rem(byte_size(slashes), 2) == 1 end)
+  end
+
+  defp raw_trailing_escape?(value) do
+    case Regex.run(~r/(\\+)n\z/, value) do
+      [_match, slashes] -> rem(byte_size(slashes), 2) == 1
+      nil -> false
+    end
+  end
+
+  # Removes exactly the two-character trailing escape. Peeling them one at a time
+  # and re-testing is what `String.trim_trailing/2` could not do: it strips a fixed
+  # pattern blindly, so on `abc\\\\n\\n` it would eat into the escaped backslash. This
+  # keeps `@doc "Some text.\\n\\n"` strippable — the documented "only newlines are
+  # trailing" case — while leaving an escaped backslash intact.
+  defp drop_all_raw_escapes(value) do
+    if raw_trailing_escape?(value),
+      do: drop_all_raw_escapes(binary_part(value, 0, byte_size(value) - 2)),
+      else: value
   end
 
   # Resolved form: value ends with newline character (Sourceror on reformatted source)

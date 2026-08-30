@@ -71,6 +71,19 @@ defmodule Credence.Pattern.PreferMapNewWithTransformFixTest do
     confirm_fix(fix(PreferMapNewWithTransform, code), code)
   end
 
+  test "does not rewrite calls through custom Enum and Map aliases" do
+    code = """
+    defmodule PreferMapNewAliasFixFixture do
+      alias MyApp.Collection, as: Enum
+      alias MyApp.Dictionary, as: Map
+
+      def build(items), do: Enum.map(items, fn item -> {item, item} end) |> Map.new()
+    end
+    """
+
+    confirm_fix(fix(PreferMapNewWithTransform, code), code)
+  end
+
   # Head-of-pipe 1-arg Enum.map has no collection to recover, so the fix is a
   # no-op — and the check is narrowed to not flag it, keeping the two in agreement.
   test "does not change head-of-pipe 1-arg Enum.map" do

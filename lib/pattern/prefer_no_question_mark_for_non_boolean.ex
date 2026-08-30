@@ -73,19 +73,97 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
       names_to_rename =
         MapSet.new(flagged_names, fn {name, _line} -> :"#{name}?" end)
 
-      Credence.RuleHelpers.patches_from_postwalk(ast, fn
-        {name, meta, ctx} = node when is_atom(name) ->
-          if MapSet.member?(names_to_rename, name) do
-            # Remove the ? suffix
-            clean_name = name |> Atom.to_string() |> String.trim_trailing("?") |> String.to_atom()
-            {clean_name, meta, ctx}
-          else
-            node
-          end
+      assigned_names = assigned_names(ast, names_to_rename)
 
-        node ->
-          node
+      Credence.RuleHelpers.patches_from_postwalk(
+        ast,
+        &rename_function_reference(&1, names_to_rename, assigned_names)
+      )
+    end
+  end
+
+  # A three-tuple with an atom in its first position is not necessarily a
+  # function call: variables have the same shape, with an atom or nil context.
+  # Calls with arguments are unambiguous, while zero-arity definitions and
+  # captures are renamed through their enclosing AST node.
+  defp rename_function_reference({kind, meta, [head | body]}, names, _assigned)
+       when kind in [:def, :defp] do
+    {kind, meta, [rename_function_head(head, names) | body]}
+  end
+
+  defp rename_function_reference(
+         {:&, capture_meta, [{:/, slash_meta, [{name, name_meta, context}, arity]}]},
+         names,
+         _assigned
+       )
+       when is_atom(name) do
+    renamed = rename_name(name, names)
+    {:&, capture_meta, [{:/, slash_meta, [{renamed, name_meta, context}, arity]}]}
+  end
+
+  defp rename_function_reference({name, meta, args} = node, names, _assigned)
+       when is_atom(name) and is_list(args) do
+    case rename_name(name, names) do
+      ^name -> node
+      renamed -> {renamed, meta, args}
+    end
+  end
+
+  defp rename_function_reference({name, meta, context} = node, names, assigned)
+       when is_atom(name) and (is_atom(context) or is_nil(context)) do
+    if MapSet.member?(assigned, name) do
+      node
+    else
+      {rename_name(name, names), meta, context}
+    end
+  end
+
+  defp rename_function_reference(node, _names, _assigned), do: node
+
+  defp assigned_names(ast, names) do
+    {_ast, assigned} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:=, _, [left, _]} = node, acc ->
+          {node, collect_pattern_names(left, names, acc)}
+
+        node, acc ->
+          {node, acc}
       end)
+
+    assigned
+  end
+
+  defp collect_pattern_names(pattern, names, assigned) do
+    {_pattern, assigned} =
+      Macro.prewalk(pattern, assigned, fn
+        {name, _, context} = node, acc
+        when is_atom(name) and (is_atom(context) or is_nil(context)) ->
+          if MapSet.member?(names, name),
+            do: {node, MapSet.put(acc, name)},
+            else: {node, acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    assigned
+  end
+
+  defp rename_function_head({:when, meta, [head | guards]}, names) do
+    {:when, meta, [rename_function_head(head, names) | guards]}
+  end
+
+  defp rename_function_head({name, meta, context}, names) when is_atom(name) do
+    {rename_name(name, names), meta, context}
+  end
+
+  defp rename_function_head(head, _names), do: head
+
+  defp rename_name(name, names) do
+    if MapSet.member?(names, name) do
+      name |> Atom.to_string() |> String.trim_trailing("?") |> String.to_atom()
+    else
+      name
     end
   end
 

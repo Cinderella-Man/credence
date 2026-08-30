@@ -232,6 +232,9 @@ defmodule Credence.BehaviourEquivalence do
   end
 
   defp run_outcome(thunk, compare_messages?) do
+    # A successful return is opaque user data. A frame-shaped list returned as
+    # data is not distinguishable from a captured stacktrace, so normalising it
+    # here can turn genuinely different results into an apparent equivalence.
     {:ok, thunk.()}
   rescue
     e ->
@@ -239,9 +242,57 @@ defmodule Credence.BehaviourEquivalence do
         do: {:raise, e.__struct__, Exception.message(e)},
         else: {:raise, e.__struct__}
   catch
-    :throw, t -> {:throw, t}
-    :exit, t -> {:exit, t}
+    :throw, t -> {:throw, normalize_traces(t)}
+    :exit, t -> {:exit, normalize_traces(t)}
   end
+
+  # ── Stacktrace normalisation (docs/22 T3.4c) ──────────────────────────
+  #
+  # Outcomes are compared with strict `===`, so any term carrying a stacktrace
+  # is uncomparable to itself: the frames differ between the two runs by line
+  # number, and often by function, because the before and after are literally
+  # different code. Escalation-ledger H-C — row 33 died on a 7-frame trace,
+  # having been marked DIVERGES for the one thing that could never have matched.
+  #
+  # A stacktrace is a list of `{module, function, arity_or_args, location}`
+  # 4-tuples. Any such list is collapsed to the atom `:__stacktrace__`, so two
+  # runs agree on "there was a trace here" without agreeing on its frames.
+  # Deliberately shape-based rather than key-based: a trace arrives unlabelled
+  # inside an exit reason (`{reason, stacktrace}`) as often as it does anywhere
+  # nameable.
+  @doc false
+  @spec normalize_traces(term()) :: term()
+  def normalize_traces(term) do
+    cond do
+      stacktrace?(term) ->
+        :__stacktrace__
+
+      is_list(term) ->
+        Enum.map(term, &normalize_traces/1)
+
+      is_tuple(term) ->
+        term |> Tuple.to_list() |> Enum.map(&normalize_traces/1) |> List.to_tuple()
+
+      is_map(term) and not is_struct(term) ->
+        Map.new(term, fn {k, v} -> {k, normalize_traces(v)} end)
+
+      true ->
+        term
+    end
+  end
+
+  # Non-empty list whose every element is a stacktrace frame. The `location` is
+  # a keyword list (possibly empty); demanding that shape keeps ordinary data
+  # with module/function atoms from being mistaken for a trace.
+  defp stacktrace?([_ | _] = list), do: Enum.all?(list, &frame?/1)
+  defp stacktrace?(_), do: false
+
+  defp frame?({mod, fun, arity_or_args, location})
+       when is_atom(mod) and is_atom(fun) and
+              (is_integer(arity_or_args) or is_list(arity_or_args)) and is_list(location),
+       do: Keyword.keyword?(location)
+
+  defp frame?(_), do: false
 
   # ── internals ─────────────────────────────────────────────────────────
 
@@ -304,17 +355,121 @@ defmodule Credence.BehaviourEquivalence do
 
   defp compile_fn!(vars, expr) do
     arglist = Enum.join(vars, ", ")
-    code = "fn #{arglist} -> (#{expr}) end"
-    {fun, _binding} = silence(fn -> Code.eval_string(code) end)
-    fun
+    uniq = :"Eqv_Fn_#{System.unique_integer([:positive])}"
+    mod = Module.concat([uniq])
+
+    code = "defmodule #{inspect(mod)} do\n  def run(#{arglist}), do: (#{expr})\nend"
+    compile_loaded!(code)
+    Function.capture(mod, :run, length(vars))
   end
 
+  # T3.5. The before/after modules are renamed so the two versions can coexist
+  # in one VM. Renaming only the `defmodule` header — a `String.replace` of that
+  # one line — left every INTERNAL reference pointing at the original name:
+  #
+  #     defmodule Eqv_Before_7 do        # renamed
+  #       defstruct [:x]
+  #       def new, do: %Point{x: 1}      # NOT renamed — Point is undefined,
+  #     end                              # or worse, a stale earlier version
+  #
+  # so any struct-defining example was untestable, which is row 225's blocker.
+  # It also silently biased H4's scope estimate: that estimate was measuring
+  # this bug rather than a real limit on what can be checked.
+  #
+  # The rename is done on the AST instead, so every `__aliases__` node naming
+  # the module moves with the header — struct literals, struct patterns,
+  # qualified self-calls and all. Doing it on bytes cannot be made safe: the
+  # module's name is a substring of `PointExtra`, appears in its own docs, and
+  # a global replace would rewrite both.
   defp compile_module!(source, tag) do
-    [orig] = Regex.run(~r/defmodule\s+([A-Z][\w.]*)/, source, capture: :all_but_first)
-    uniq = "Eqv_#{tag}_#{System.unique_integer([:positive])}"
-    renamed = String.replace(source, "defmodule #{orig}", "defmodule #{uniq}", global: false)
-    {{:module, mod, _bin, _val}, _binding} = silence(fn -> Code.eval_string(renamed) end)
+    {:ok, ast} = Code.string_to_quoted(source)
+    segments = module_segments!(ast)
+    uniq = :"Eqv_#{tag}_#{System.unique_integer([:positive])}"
+    mod = Module.concat([uniq])
+
+    renamed = rename_fixture_module(ast, segments, uniq)
+    renamed_source = Macro.to_string(renamed)
+
+    compile_loaded!(renamed_source)
+
     mod
+  end
+
+  defp compile_loaded!(source) do
+    case RuleHelpers.compile_and_capture(source, cleanup_modules: false) do
+      {:ok, _diagnostics} -> :ok
+      {:error, diagnostics} -> raise CompileError, description: inspect(diagnostics)
+    end
+  end
+
+  defp rename_fixture_module(
+         {:defmodule, meta, [{:__aliases__, alias_meta, segments}, body]},
+         segments,
+         uniq
+       ) do
+    {:defmodule, meta,
+     [{:__aliases__, alias_meta, [uniq]}, rename_alias_scope(body, segments, uniq, false)]}
+  end
+
+  defp rename_fixture_module(ast, _segments, _uniq), do: ast
+
+  # Aliases are lexical. Once `alias External.Example` is in scope, a later
+  # short `Example` means that external module rather than the fixture itself.
+  defp rename_alias_scope({:__block__, meta, expressions}, segments, uniq, shadowed?) do
+    {expressions, _shadowed?} =
+      Enum.map_reduce(expressions, shadowed?, fn expression, shadowed? ->
+        renamed = rename_alias_scope(expression, segments, uniq, shadowed?)
+        {renamed, shadowed? or aliases_short_name?(expression, segments)}
+      end)
+
+    {:__block__, meta, expressions}
+  end
+
+  defp rename_alias_scope({:alias, _, _} = alias_ast, _segments, _uniq, _shadowed?),
+    do: alias_ast
+
+  defp rename_alias_scope({:__aliases__, meta, segments}, segments, uniq, false),
+    do: {:__aliases__, meta, [uniq]}
+
+  defp rename_alias_scope(tuple, segments, uniq, shadowed?) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&rename_alias_scope(&1, segments, uniq, shadowed?))
+    |> List.to_tuple()
+  end
+
+  defp rename_alias_scope(list, segments, uniq, shadowed?) when is_list(list),
+    do: Enum.map(list, &rename_alias_scope(&1, segments, uniq, shadowed?))
+
+  defp rename_alias_scope(node, _segments, _uniq, _shadowed?), do: node
+
+  defp aliases_short_name?(
+         {:alias, _, [{:__aliases__, _, external}, opts]},
+         segments
+       ) do
+    bound_name =
+      case Keyword.get(opts, :as) do
+        {:__aliases__, _, as_segments} -> List.last(as_segments)
+        nil -> List.last(external)
+      end
+
+    bound_name == List.last(segments)
+  end
+
+  defp aliases_short_name?(_node, _segments), do: false
+
+  # The alias segments of the first `defmodule` — `[:Point]`, or `[:A, :B]` for
+  # a dotted name. Taking the first matches the old regex's behaviour on a file
+  # with more than one module.
+  defp module_segments!(ast) do
+    {_ast, segments} =
+      Macro.prewalk(ast, nil, fn
+        {:defmodule, _meta, [{:__aliases__, _, segs} | _]} = node, nil -> {node, segs}
+        node, acc -> {node, acc}
+      end)
+
+    segments ||
+      raise ArgumentError, "no `defmodule` found in the module source under equivalence check"
   end
 
   defp run_with_trace(fun, data_args) do
@@ -349,16 +504,6 @@ defmodule Credence.BehaviourEquivalence do
   defp args_by_arity(input, _arity) when is_tuple(input), do: Tuple.to_list(input)
   defp args_by_arity(input, _arity) when is_list(input), do: input
   defp args_by_arity(input, _arity), do: [input]
-
-  # Suppress compiler warnings (unused var, deprecated charlist, redefined
-  # module, …) emitted while eval'ing fixture code, keeping the return value.
-  # `Code.with_diagnostics/1` collects diagnostics instead of printing them and
-  # is process-local — unlike `capture_io(:stderr, …)`, which races and leaks
-  # across the `async: true` suite.
-  defp silence(fun) do
-    {result, _diagnostics} = Code.with_diagnostics(fun)
-    result
-  end
 
   defp divergence_msg(rule, input, o, n, before, fixed) do
     """

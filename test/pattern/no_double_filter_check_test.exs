@@ -145,6 +145,28 @@ defmodule Credence.Pattern.NoDoubleFilterCheckTest do
     end
   end
 
+  describe "does not flag when the first assignment rebinds a later input" do
+    test "filter source" do
+      assert clean?(NoDoubleFilter, """
+             def split(numbers) do
+               numbers = Enum.filter(numbers, &(&1 >= 0))
+               neg = Enum.filter(numbers, &(&1 < 0))
+               {numbers, neg}
+             end
+             """)
+    end
+
+    test "predicate operand" do
+      assert clean?(NoDoubleFilter, """
+             def split(numbers, threshold) do
+               threshold = Enum.filter(numbers, &(&1 >= threshold))
+               low = Enum.filter(numbers, &(&1 < threshold))
+               {threshold, low}
+             end
+             """)
+    end
+  end
+
   describe "does not flag reversed-operand predicates" do
     test "operand on the left of the comparison" do
       assert clean?(NoDoubleFilter, """

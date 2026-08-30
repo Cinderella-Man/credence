@@ -20,25 +20,40 @@ defmodule Credence.Syntax.PreferSpecArrowOperator do
   followed by a type expression but no `::` separator. Lines with a
   guard clause (`when ...`) are not flagged — the missing-arrow after
   a guard is a different, more complex fault.
+
+  ## Only real code is rewritten
+
+  The decision runs against a `Credence.SourceMask` shadow rather than the raw
+  line, so an `@spec` written inside a heredoc, a string literal or a comment is
+  invisible to the pattern. Without that, this rule rewrote the `## Bad` example
+  in its *own* moduledoc — the one the Rule Standard requires it to carry — and
+  the result still parsed and compiled, so nothing downstream noticed.
+
+  The rewrite itself reads the **real** line, not the shadow: the shadow only
+  answers *is this line code?*, and the bytes that get emitted are always the
+  author's. That split matters here because this rule rebuilds the line from its
+  parts instead of splicing byte ranges, so a shadow-sourced rebuild would emit
+  blanked literals.
   """
   use Credence.Syntax.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      if missing_arrow?(line), do: [build_issue(line_no)], else: []
+    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
+      if missing_arrow?(shadow), do: [build_issue(line_no)], else: []
     end)
   end
 
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> Credence.SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
   end
 
   defp missing_arrow?(line) do
@@ -56,24 +71,21 @@ defmodule Credence.Syntax.PreferSpecArrowOperator do
     end
   end
 
-  defp fix_line(line) do
-    case extract_spec_parts(line) do
-      {:ok, prefix, inner, after_close} ->
-        if String.contains?(after_close, "::") do
-          line
-        else
-          trimmed = String.trim_leading(after_close)
+  # `missing_arrow?/1` is asked of the shadow and the rebuild is taken from the
+  # real line — one predicate, one source of bytes. Deciding twice (once per
+  # side) is the trap the family default warns about: `analyze` and `fix` must
+  # read the same shadow or the rule fixes what it never reported.
+  defp fix_line(line, shadow) do
+    with true <- missing_arrow?(shadow),
+         {:ok, _prefix, _inner, after_close} <- extract_spec_parts(shadow) do
+      trimmed_after = String.trim_leading(after_close)
+      match_size = byte_size(shadow) - byte_size(trimmed_after)
+      pattern = binary_part(shadow, 0, match_size)
+      replacement = binary_part(line, 0, match_size) |> String.trim_trailing()
 
-          if trimmed != "" and starts_with_type?(trimmed) and
-               not starts_with_guard?(trimmed) do
-            "#{prefix}(#{inner}) :: #{trimmed}"
-          else
-            line
-          end
-        end
-
-      :skip ->
-        line
+      SourceMask.replace_code(line, shadow, pattern, replacement <> " :: ", global: false)
+    else
+      _ -> line
     end
   end
 

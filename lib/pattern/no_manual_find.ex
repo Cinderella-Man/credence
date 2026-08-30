@@ -77,6 +77,20 @@ defmodule Credence.Pattern.NoManualFind do
     expression (head var / self-call / default), never a multi-statement block.
     A block could carry a side effect that the predicate-based rewrite would
     drop or move — a different answer.
+
+  ## Bad
+
+      defmodule BadNoManualFindNMF do
+        defp find([]), do: -7
+        defp find([h | _]) when h > 0, do: h
+        defp find([_ | t]), do: find(t)
+      end
+
+  ## Good
+
+      defmodule BadNoManualFindNMF do
+        defp find(list) when is_list(list), do: Enum.find(list, -7, fn h -> h > 0 end)
+      end
   """
 
   use Credence.Pattern.Rule

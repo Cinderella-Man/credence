@@ -36,6 +36,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   # DSL-unsafe: introduces `!` to negate the condition. In Ash.Expr `!x` builds
   # `%Ash.Query.Call{name: :!}` (no SQL translation) rather than `not`'s
@@ -138,38 +139,20 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   # `MapSet.member?/2` showcase) — exactly the cases where collapsing to a bare
   # boolean would be unsafe and only the negate-and-swap rewrite applies.
   defp handled_by_no_if_true_false?(condition, else_body) do
-    condition_bool?(condition) and (true_literal?(else_body) or boolean_expr?(else_body))
+    RuleHelpers.boolean_condition?(condition) and
+      (true_literal?(else_body) or boolean_expr?(else_body))
   end
 
   defp true_literal?({:__block__, _, [true]}), do: true
   defp true_literal?(true), do: true
   defp true_literal?(_), do: false
 
-  # Mirrors `Credence.Pattern.NoIfTrueFalse.condition_bool?/1`: conditions whose
-  # result is always a boolean. Kept self-contained (small, rule-local copy).
-  defp condition_bool?({:__block__, _, [expr]}), do: condition_bool?(expr)
-
-  defp condition_bool?({op, _, [_, _]})
-       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :match?],
-       do: true
-
-  defp condition_bool?({op, _, [left, right]}) when op in [:and, :or],
-    do: condition_bool?(left) and condition_bool?(right)
-
-  defp condition_bool?({:not, _, [inner]}), do: condition_bool?(inner)
-  defp condition_bool?({:is_nil, _, [_]}), do: true
-
-  defp condition_bool?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
-       when fun in [:all?, :any?, :empty?],
-       do: true
-
-  defp condition_bool?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
-       when fun in [:all?, :any?, :empty?],
-       do: true
-
-  defp condition_bool?(_), do: false
-
-  # Mirrors `Credence.Pattern.NoIfTrueFalse.boolean_expr?/1`.
+  # NOT a mirror of `Credence.Pattern.NoIfTrueFalse.boolean_expr?/1`, despite
+  # having been copied from it: that one has since grown a clause treating a
+  # nested `if` with boolean branches as a boolean expression, and this one has
+  # not. Left as-is rather than synced — widening it changes what this rule
+  # fires on and needs its own evidence — but recorded, because the comment
+  # that used to sit here claimed a mirroring that had stopped being true.
   defp boolean_expr?({:__block__, _, [expr]}), do: boolean_expr?(expr)
 
   defp boolean_expr?({op, _, [_, _]})

@@ -36,6 +36,15 @@ defmodule Credence.Pattern.NoCaseDestructureInPipe do
   """
 
   use Credence.Pattern.Rule
+  # nx_defn: the fix erases an existing `case` and emits `Kernel.then/2` + `fn`.
+  # Unlike the allowlisted case-rules, its subject is unrestricted (any piped
+  # value) and the clause head is a bare variable, so nothing stops it matching
+  # `subject |> case do v -> body end` inside a `defn` body — a shape Nx.Defn
+  # admits and reinterprets as a compile-time match, while `then/2` is not part
+  # of Nx.Defn.Kernel. (In Ash both the `case` and the `then` resolve to an
+  # unknown Call, so the family named is nx_defn.)
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   @impl true

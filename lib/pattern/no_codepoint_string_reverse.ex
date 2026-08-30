@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoCodepointStringReverse do
       Macro.prewalk(ast, [], fn
         # Pipeline: ... |> String.codepoints() |> Enum.reverse() |> REASSEMBLE()
         {:|>, meta, [left, right]} = node, issues ->
-          if reassemble_call?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
+          if reassemble_fixable?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
             grandparent =
               case left do
                 {:|>, _, [inner_left, _]} -> rightmost(inner_left)
@@ -137,10 +137,15 @@ defmodule Credence.Pattern.NoCodepointStringReverse do
   # Decompose step: String.codepoints only (graphemes is a separate rule).
   defp decompose_call?(node), do: remote_call?(node, :String, :codepoints)
 
-  defp reassemble_call?(node) do
-    remote_call?(node, :Enum, :join) or remote_call?(node, :IO, :iodata_to_binary)
-  end
-
+  # The ONE reassembly predicate, shared by `check/2` and `fix_patches/2`.
+  #
+  # `check/2` used a separate `reassemble_call?/1` that was arity-blind — it
+  # matched `Enum.join/1` with ANY separator — while the fix required an empty
+  # one. So `str |> String.codepoints() |> Enum.reverse() |> Enum.join("-")` was
+  # reported and never repaired. It cannot be repaired: that expression is
+  # `"c-b-a"`, and `String.reverse/1` gives `"cba"`. The only behaviour-preserving
+  # alternative reintroduces a second traversal, so there is nothing to rewrite
+  # into and the reporting had to go.
   defp reassemble_fixable?(node) do
     (remote_call?(node, :Enum, :join) and join_no_separator?(node)) or
       remote_call?(node, :IO, :iodata_to_binary)
@@ -154,7 +159,8 @@ defmodule Credence.Pattern.NoCodepointStringReverse do
              [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [subject]}]}
           ]}
        )
-       when outer_mod in [[:Enum], [:IO]] and outer_func in [:join, :iodata_to_binary] do
+       when (outer_mod == [:Enum] and outer_func == :join) or
+              (outer_mod == [:IO] and outer_func == :iodata_to_binary) do
     {:ok, meta, subject}
   end
 

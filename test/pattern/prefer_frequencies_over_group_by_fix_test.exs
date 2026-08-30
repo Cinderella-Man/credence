@@ -86,6 +86,42 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
   end
 
   describe "no-op — leaves code unchanged" do
+    test "local length/1 keeps its module's pipeline unchanged" do
+      code = """
+      defmodule CredencePreferFrequenciesLocalLengthFixture do
+        def length(_values), do: 99
+
+        def count_dupes(list) do
+          list
+          |> Enum.group_by(fn x -> x end)
+          |> Enum.map(fn {_, values} -> length(values) end)
+          |> Enum.count(fn count -> count > 1 end)
+        end
+      end
+      """
+
+      assert check(PreferFrequenciesOverGroupBy, code) == []
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), code)
+    end
+
+    test "an alias named Enum keeps its module's pipeline unchanged" do
+      code = """
+      defmodule CredencePreferFrequenciesEnumAliasFixture do
+        alias CredencePreferFrequenciesCustomEnum, as: Enum
+
+        def count_dupes(list) do
+          list
+          |> Enum.group_by(fn x -> x end)
+          |> Enum.map(fn {_, values} -> length(values) end)
+          |> Enum.count(fn count -> count > 1 end)
+        end
+      end
+      """
+
+      assert check(PreferFrequenciesOverGroupBy, code) == []
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), code)
+    end
+
     test "non-identity group_by" do
       code = """
       list

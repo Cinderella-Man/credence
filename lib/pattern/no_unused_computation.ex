@@ -34,6 +34,22 @@ defmodule Credence.Pattern.NoUnusedComputation do
   """
 
   use Credence.Pattern.Rule
+  # CONSERVATIVE. The rule rewrites no construct — it deletes a whole non-last
+  # `_v = <total call>` statement from a `__block__` — but a block of statements
+  # with `=` bindings is exactly what a `defn` body is, so the matcher is NOT
+  # structurally out of reach of nx_defn (Ash expr and Ecto query expressions
+  # admit neither blocks nor `=`, so those two are settled). Inside a defn, `x =
+  # a + b` types `x` as :number via expr_type's `[:+, :-, :*, :/]` clause, and
+  # `_n = abs(x)` is then deletable — dropping an `abs`/`+` node from what Nx
+  # traces. I believe the removed node is dead in the Nx expression graph (the
+  # graph is reachability from the returned value, and every whitelisted call is
+  # pure), but that is a semantic argument about Nx, not a structural one about
+  # the matcher. Declared rather than allowlisted because the deciding check
+  # needs the DSL itself as a dependency, which this repo does not carry;
+  # declaring costs a missed fix inside the block, allowlisting would cost a
+  # wrong rewrite.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   # `{module_or_nil, fun} => required arg type`. TOTAL when the argument has that
@@ -173,9 +189,13 @@ defmodule Credence.Pattern.NoUnusedComputation do
     {non_last, _last} = Enum.split(stmts, length(stmts) - 1)
 
     {dead, _bindings} =
-      Enum.reduce(non_last, {[], %{}}, fn stmt, {dead, bindings} ->
+      non_last
+      |> Enum.with_index()
+      |> Enum.reduce({[], %{}}, fn {stmt, index}, {dead, bindings} ->
+        later = Enum.drop(stmts, index + 1)
+
         cond do
-          dead_computation?(stmt, bindings) -> {[stmt | dead], bindings}
+          dead_computation?(stmt, bindings, later) -> {[stmt | dead], bindings}
           (b = binding(stmt, bindings)) != nil -> {dead, b}
           true -> {dead, bindings}
         end
@@ -185,12 +205,28 @@ defmodule Credence.Pattern.NoUnusedComputation do
   end
 
   # `_v = func(arg)` where func is total-given-type T and arg is provably type T.
-  defp dead_computation?({:=, _, [lhs, rhs]}, bindings) do
+  defp dead_computation?({:=, _, [lhs, rhs]}, bindings, later) do
     type = total_given_type_call(rhs)
-    underscore_var?(lhs) and type != nil and arg_type_of(rhs, bindings) == type
+
+    underscore_var?(lhs) and not referenced_later?(lhs, later) and type != nil and
+      arg_type_of(rhs, bindings) == type
   end
 
-  defp dead_computation?(_, _), do: false
+  defp dead_computation?(_, _, _), do: false
+
+  defp referenced_later?({:_, _, _}, _later), do: false
+
+  defp referenced_later?({name, _, ctx}, later) do
+    Enum.any?(later, fn stmt ->
+      {_stmt, found?} =
+        Macro.prewalk(stmt, false, fn
+          {^name, _, ^ctx} = node, _found? -> {node, true}
+          node, found? -> {node, found?}
+        end)
+
+      found?
+    end)
+  end
 
   # `var = <typed expr>` (non-underscore) → updated bindings, else nil.
   defp binding({:=, _, [{name, _, ctx}, rhs]}, bindings)

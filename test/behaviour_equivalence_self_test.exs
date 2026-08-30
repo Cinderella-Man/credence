@@ -29,6 +29,13 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
   alias Credence.Pattern.NoLengthComparisonForEmpty
   alias Credence.Pattern.NoTautologicalIf
 
+  defmodule ExternalExample do
+    def run({parent, value}) do
+      send(parent, {:external_example_called, value})
+      {:external, value}
+    end
+  end
+
   # Check 2 needs a rule that finds a problem but offers no fix. None of the real
   # rules behave that way (they all fix what they find), so here is a fake one:
   # `check` says "there's a problem", `fix_patches` returns [] (no change).
@@ -109,6 +116,155 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
                inputs: [1, 2, 3],
                allow_constant_output: true
              ) == :ok
+    end
+  end
+
+  # ── T3.5: the module rename must move internal references too ──────────
+
+  describe "assert_equivalent_module/2 with a struct-defining module" do
+    # The before/after modules are renamed so both can live in one VM. That
+    # rename used to be a `String.replace` of the `defmodule` line alone, so a
+    # module referring to ITSELF — the ordinary way to write a struct literal —
+    # kept pointing at the original name and either failed to compile or, worse,
+    # silently resolved to a stale version compiled by an earlier test.
+    #
+    # This is row 225's blocker, and it also biased H4's scope estimate: that
+    # estimate was measuring this bug rather than a real limit.
+    @struct_module """
+    defmodule PointT35 do
+      defstruct xs: []
+
+      # The self-reference. If the rename moves only the `defmodule` header,
+      # this still says `PointT35`, which no longer exists — the module does not
+      # compile and no struct-defining example can be checked at all.
+      def wrap(xs), do: %PointT35{xs: xs}
+
+      def empty?(xs), do: length(xs) == 0
+    end
+    """
+
+    test "a self-referencing struct literal survives the rename" do
+      assert :ok =
+               assert_equivalent_module(@struct_module,
+                 rule: NoLengthComparisonForEmpty,
+                 call: {:empty?, 1},
+                 inputs: [[], [1], [1, 2]]
+               )
+    end
+
+    test "a short alias shadowing the fixture name remains external" do
+      source = """
+      defmodule Example do
+        alias Credence.BehaviourEquivalenceSelfTest.ExternalExample, as: Example
+        def run(value), do: Example.run(value)
+        def flagged(value), do: length(value) == 0
+      end
+      """
+
+      assert :ok =
+               assert_equivalent_module(source,
+                 rule: NoLengthComparisonForEmpty,
+                 call: {:run, 1},
+                 inputs: [{self(), 1}, {self(), 2}, {self(), 3}]
+               )
+
+      for value <- 1..3 do
+        assert_receive {:external_example_called, ^value}
+        assert_receive {:external_example_called, ^value}
+      end
+    end
+
+    test "top-level fixture execution is isolated" do
+      source = """
+      defmodule BehaviourEquivalenceBoundedFixture do
+        exit(:behaviour_equivalence_fixture_exit)
+        def run(value), do: value
+        def flagged(value), do: length(value) == 0
+      end
+      """
+
+      assert_raise CompileError, fn ->
+        assert_equivalent_module(source,
+          rule: NoLengthComparisonForEmpty,
+          call: {:run, 1},
+          inputs: [[], [1], [1, 2]]
+        )
+      end
+    end
+  end
+
+  # ── Stacktrace normalisation (docs/22 T3.4c, ledger H-C) ─────────────
+  #
+  # Outcomes are compared with strict `===`, so a term carrying a stacktrace is
+  # uncomparable to itself: the before and after are different code, so the
+  # frames differ by line and often by function. Row 33 was marked DIVERGES for
+  # the one thing that could never have matched.
+
+  describe "normalize_traces/1" do
+    @frames [
+      {Foo, :bar, 1, [file: ~c"a.ex", line: 3]},
+      {Baz, :qux, 2, [file: ~c"b.ex", line: 9]}
+    ]
+
+    test "a bare stacktrace collapses" do
+      assert Credence.BehaviourEquivalence.normalize_traces(@frames) == :__stacktrace__
+    end
+
+    # A trace arrives unlabelled inside an exit reason as often as anywhere
+    # nameable, which is why the check is shape-based rather than key-based.
+    test "a stacktrace nested in an exit reason collapses" do
+      assert Credence.BehaviourEquivalence.normalize_traces({:badarg, @frames}) ==
+               {:badarg, :__stacktrace__}
+    end
+
+    test "and one nested in a map" do
+      assert Credence.BehaviourEquivalence.normalize_traces(%{err: {:x, @frames}}) ==
+               %{err: {:x, :__stacktrace__}}
+    end
+
+    # The controls. A shape-based check is exactly the kind that over-matches,
+    # and collapsing real data into `:__stacktrace__` would make two genuinely
+    # different results compare equal — a false EQUIVALENT, which is worse than
+    # the false DIVERGES this fixes.
+    test "CONTROL: ordinary lists and keyword lists are untouched" do
+      assert Credence.BehaviourEquivalence.normalize_traces([1, 2, 3]) == [1, 2, 3]
+      assert Credence.BehaviourEquivalence.normalize_traces(a: 1, b: 2) == [a: 1, b: 2]
+    end
+
+    test "CONTROL: a list of ordinary 4-tuples is not a stacktrace" do
+      ordinary_data = [{Foo, :bar, 1, :left}]
+
+      assert Credence.BehaviourEquivalence.normalize_traces(ordinary_data) == ordinary_data
+    end
+
+    test "CONTROL: a struct is left alone" do
+      assert Credence.BehaviourEquivalence.normalize_traces(~D[2024-01-01]) == ~D[2024-01-01]
+    end
+
+    # THE WIRING, not just the function. The unit tests above call
+    # `normalize_traces/1` directly and stay green even with it unwired from
+    # `run_outcome/2` — which is the shape of a control that proves nothing.
+    # These go through `eval_outcome/1`, the path the comparison actually uses.
+    test "successful frame-shaped user values remain distinct THROUGH eval_outcome" do
+      other_frames =
+        List.update_at(@frames, 0, fn {mod, fun, arity, location} ->
+          {mod, fun, arity, Keyword.put(location, :line, 4)}
+        end)
+
+      assert Credence.BehaviourEquivalence.eval_outcome(fn -> {:trace, @frames} end) ==
+               {:ok, {:trace, @frames}}
+
+      refute Credence.BehaviourEquivalence.eval_outcome(fn -> @frames end) ===
+               Credence.BehaviourEquivalence.eval_outcome(fn -> other_frames end)
+    end
+
+    test "and one inside an exit reason is too" do
+      assert Credence.BehaviourEquivalence.eval_outcome(fn -> exit({:boom, @frames}) end) ==
+               {:exit, {:boom, :__stacktrace__}}
+    end
+
+    test "CONTROL: an empty list is not a stacktrace" do
+      assert Credence.BehaviourEquivalence.normalize_traces([]) == []
     end
   end
 end

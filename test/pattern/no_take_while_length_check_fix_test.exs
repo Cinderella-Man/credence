@@ -87,6 +87,36 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
+    test "preserves predicates that capture elem and acc" do
+      input = """
+      defmodule NoTakeWhileLengthCheckCapturedNames do
+        def count(items, elem, acc) do
+          Enum.take_while(items, &(&1 > elem and &1 < acc)) |> length()
+        end
+      end
+
+      unless NoTakeWhileLengthCheckCapturedNames.count([4, 5, 9], 3, 8) == 2,
+        do: raise("wrong count")
+      """
+
+      emitted = fix(NoTakeWhileLengthCheck, input)
+
+      expected = """
+      defmodule NoTakeWhileLengthCheckCapturedNames do
+        def count(items, elem, acc) do
+          Enum.reduce_while(items, 0, fn elem_1, acc_1 -> if (&(&1 > elem and &1 < acc)).(elem_1), do: {:cont, acc_1 + 1}, else: {:halt, acc_1} end)
+        end
+      end
+
+      unless NoTakeWhileLengthCheckCapturedNames.count([4, 5, 9], 3, 8) == 2,
+        do: raise("wrong count")
+      """
+
+      confirm_fix(emitted, expected)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(input)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(emitted)
+    end
+
     test "fixes multiline fn predicate in pipeline" do
       input = """
       defmodule Fixed do

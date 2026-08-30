@@ -74,4 +74,36 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFnFixTest do
 
     assert check(PreferMultiClauseReduceFn, fix(PreferMultiClauseReduceFn, code)) == []
   end
+
+  test "uses a fresh name when underscoring an unused first parameter" do
+    input = """
+    result = Enum.reduce([1], {2, 1}, fn element, {_element, count} ->
+      if count == 0 do
+        {:zero, count}
+      else
+        if count == 1 do
+          {:one, count}
+        else
+          {:other, count}
+        end
+      end
+    end)
+    unless result == {:one, 1}, do: raise("wrong result")
+    """
+
+    expected = """
+    result = Enum.reduce([1], {2, 1}, fn
+      _element2, {_element, count} when count == 0 -> {:zero, count}
+      _element2, {_element, count} when count == 1 -> {:one, count}
+      _element2, {_element, count} -> {:other, count}
+    end)
+    unless result == {:one, 1}, do: raise("wrong result")
+    """
+
+    emitted = fix(PreferMultiClauseReduceFn, input)
+
+    assert [emitted] == [expected]
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(input)
+    assert {:ok, _diagnostics} = Credence.RuleHelpers.compile_and_capture(emitted)
+  end
 end

@@ -63,25 +63,74 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, issues ->
-        case check_node(node) do
-          {:ok, issue} -> {node, [issue | issues]}
-          :error -> {node, issues}
-        end
-      end)
+    if shadows_core_module?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn node, issues ->
+          case check_node(node) do
+            {:ok, issue} -> {node, [issue | issues]}
+            :error -> {node, issues}
+          end
+        end)
 
-    Enum.reverse(issues)
+      Enum.reverse(issues)
+    end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, fn node ->
-      case transform_node(node) do
-        {:ok, new_ast} -> new_ast
-        _ -> node
-      end
+    if shadows_core_module?(ast) do
+      []
+    else
+      RuleHelpers.patches_from_postwalk(ast, fn node ->
+        case transform_node(node) do
+          {:ok, new_ast} -> new_ast
+          _ -> node
+        end
+      end)
+    end
+  end
+
+  # Bare `Enum` and `Map` calls are only known to be the standard modules when
+  # neither name is replaced by an alias. Alias scope is lexical, so conservatively
+  # leave the whole file alone if either name is shadowed anywhere in it.
+  defp shadows_core_module?(ast) do
+    {_ast, shadowed?} =
+      Macro.prewalk(ast, false, fn
+        {:alias, _, args} = node, false -> {node, shadowing_alias?(args)}
+        node, acc -> {node, acc}
+      end)
+
+    shadowed?
+  end
+
+  defp shadowing_alias?([target, opts]) when is_list(opts) do
+    case alias_as(opts) do
+      nil -> aliases_core_name?(target)
+      as -> aliases_core_name?(as)
+    end
+  end
+
+  defp shadowing_alias?([target]), do: aliases_core_name?(target)
+  defp shadowing_alias?(_), do: false
+
+  defp alias_as(opts) do
+    Enum.find_value(opts, fn
+      {:as, value} -> value
+      {{:__block__, _, [:as]}, value} -> value
+      _ -> nil
     end)
+  end
+
+  defp aliases_core_name?(ast) do
+    {_ast, found?} =
+      Macro.prewalk(ast, false, fn
+        {:__aliases__, _, parts} = node, false -> {node, List.last(parts) in [:Enum, :Map]}
+        node, acc -> {node, acc}
+      end)
+
+    found?
   end
 
   # --- check ---

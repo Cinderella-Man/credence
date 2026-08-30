@@ -176,4 +176,67 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     confirm_fix(fix(input, 2), input)
     confirm_fix(fix(input, 3), input)
   end
+
+  # ── Comments around the deleted @doc ────────────────────────────────
+  #
+  # Comments are user-authored source, including tooling directives, and survive
+  # removal of the discarded documentation attribute.
+
+  describe "comments" do
+    test "keeps a tooling directive trailing the @doc line" do
+      source = """
+      defmodule NdpTrailingDirective do
+        @doc "helper docs" # credo:disable-for-next-line
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      expected = """
+      defmodule NdpTrailingDirective do
+        # credo:disable-for-next-line
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      confirm_fix(fix(source, 3), expected)
+    end
+
+    test "a comment on its own line above the @doc is KEPT" do
+      source = """
+      defmodule NdpKeep do
+        # TODO: revisit
+        @doc "helper docs"
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      fixed = fix(source, 4)
+
+      assert fixed =~ "# TODO: revisit"
+      refute fixed =~ "@doc"
+    end
+
+    test "a comment trailing the @doc line is kept as a standalone comment" do
+      source = """
+      defmodule NdpDrop do
+        @doc "helper docs"  # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      expected = """
+      defmodule NdpDrop do
+        # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      confirm_fix(fix(source, 3), expected)
+    end
+  end
 end

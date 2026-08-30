@@ -149,13 +149,13 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFn do
 
   # Final clause: catch-all that maps to the `else` branch (condition is nil).
   defp build_clause(first_param, acc_pattern, _condition, branch, true) do
-    param = maybe_underscore(first_param, [branch])
+    param = maybe_underscore(first_param, [acc_pattern, branch])
     {:->, [], [[param, acc_pattern], branch]}
   end
 
   # Guarded clause: keep the condition verbatim as a `when` guard.
   defp build_clause(first_param, acc_pattern, condition, branch, false) do
-    param = maybe_underscore(first_param, [condition, branch])
+    param = maybe_underscore(first_param, [acc_pattern, condition, branch])
     {:->, [], [[{:when, [], [param, acc_pattern, condition]}], branch]}
   end
 
@@ -196,11 +196,21 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFn do
     cond do
       String.starts_with?(to_string(name), "_") -> var
       Enum.any?(refs, &references?(&1, name)) -> var
-      true -> {:"_#{name}", meta, ctx}
+      true -> {fresh_underscored_name(name, refs), meta, ctx}
     end
   end
 
   defp maybe_underscore(other, _refs), do: other
+
+  defp fresh_underscored_name(name, refs, suffix \\ nil) do
+    candidate = String.to_atom("_#{name}#{suffix}")
+
+    if Enum.any?(refs, &references?(&1, candidate)) do
+      fresh_underscored_name(name, refs, (suffix || 1) + 1)
+    else
+      candidate
+    end
+  end
 
   defp references?(ast, name) do
     {_ast, found?} =

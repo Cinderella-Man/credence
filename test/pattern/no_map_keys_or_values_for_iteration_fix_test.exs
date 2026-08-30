@@ -190,4 +190,103 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       end
     end
   end
+
+  # ── T3.6 / escalation ledger row 54 ────────────────────────────────────
+  #
+  # `rebuild_call/2` covered a bare local and an Elixir alias. An ERLANG module
+  # capture — `&:queue.is_empty/1` — renders its module segment as
+  # `{:__block__, _, [:queue]}` and matched neither, raising FunctionClauseError.
+  # That killed the whole fix script (exit 1), discarding every earlier
+  # syntax/semantic fix and emitting no APPLIED_RULES at all: the one rule that
+  # broke the run was the one rule that could never be named.
+  describe "an Erlang module capture is rewritten" do
+    # This used to be a decline, and before that a crash. `rebuild_call/2` covered
+    # a bare local and an Elixir alias; an ERLANG module capture renders its module
+    # segment as `{:__block__, _, [:queue]}` and matched neither, raising
+    # FunctionClauseError — which killed the whole fix script (exit 1), discarding
+    # every earlier syntax/semantic fix and emitting no APPLIED_RULES at all: the
+    # one rule that broke the run was the one rule that could never be named
+    # (escalation ledger row 54). The `:no` fallback made it a safe decline; this
+    # clause makes it a repair. Verified by execution: with one empty queue the
+    # answer is `:done` before and after, and with a queued item `:pending` both.
+    test "nested form" do
+      input = """
+      defmodule Row54 do
+        def drained?(state) do
+          if Enum.all?(Map.values(state.queues), &:queue.is_empty/1) do
+            :done
+          else
+            :pending
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Row54 do
+        def drained?(state) do
+          if Enum.all?(state.queues, fn {_k, x} -> :queue.is_empty(x) end) do
+            :done
+          else
+            :pending
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(R, input), expected)
+    end
+
+    test "piped form" do
+      input = """
+      defmodule Row54Pipe do
+        def drained?(state) do
+          state.queues |> Map.values() |> Enum.all?(&:queue.is_empty/1)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Row54Pipe do
+        def drained?(state) do
+          Enum.all?(state.queues, fn {_k, x} -> :queue.is_empty(x) end)
+        end
+      end
+      """
+
+      confirm_fix(fix(R, input), expected)
+    end
+  end
+
+  # `wrap_fns/2`'s invariant: a callback this module cannot rewrite must refuse the
+  # WHOLE rewrite, not pass that argument through. The rewrite replaces
+  # `Map.values(m)` with `m`, so a callback left un-destructured starts receiving
+  # `{k, v}` pairs where it expects a value — a silent behaviour change, worse than
+  # the crash it replaced.
+  describe "a callback this rule cannot rewrite refuses the whole rewrite" do
+    # Regression for a live silent miscompilation. `wrap_arg/2`'s catch-all used to
+    # pass the argument through, so this WAS rewritten to `Enum.all?(m, cb)`.
+    # Executed with `cb = fn v -> v > 0 end` and `m = %{a: -1, b: 2}`: `false`
+    # before, `true` after, because `{:a, -1}` compares greater than `0` in Erlang
+    # term order. Compiles, warns about nothing, wrong answer.
+    test "a bare variable holding a function" do
+      input = """
+      defmodule CbVar do
+        def all_positive?(m, cb), do: Enum.all?(Map.values(m), cb)
+      end
+      """
+
+      confirm_fix(fix(R, input), input)
+    end
+
+    test "a capture whose module is a variable" do
+      input = """
+      defmodule CbVarMod do
+        def drained?(state, mod), do: Enum.all?(Map.values(state.q), &mod.is_empty/1)
+      end
+      """
+
+      confirm_fix(fix(R, input), input)
+    end
+  end
 end

@@ -3,9 +3,11 @@ defmodule Credence.Pattern.PreferEnumSlice do
   Readability rule: flags `Enum.drop/2` followed by `Enum.take/2` and rewrites it
   to `Enum.slice/3`.
 
-  `Enum.drop(list, start) |> Enum.take(len)` keeps elements `[start, start+len)`,
-  which is exactly `Enum.slice(list, start, len)` — **but only when both `start`
-  and `len` are non-negative**. With a negative `start`, `Enum.drop` counts from
+  `Enum.drop(enumerable, start) |> Enum.take(len)` keeps elements
+  `[start, start+len)`. The replacement first calls `Enum.to_list/1`, preserving
+  `Enum.drop/2`'s eager traversal of the complete enumerable, and then slices
+  that list. The rewrite is valid **only when both `start` and `len` are
+  non-negative**. With a negative `start`, `Enum.drop` counts from
   the end while `Enum.slice`'s start indexes from the end differently; with a
   negative `len`, `Enum.take` keeps the *last* `len` while `Enum.slice` rejects a
   negative length. So the rule fires only when **both amounts are non-negative
@@ -89,7 +91,7 @@ defmodule Credence.Pattern.PreferEnumSlice do
         if slice_safe?(drop_amount, take_amount) do
           {:|>, pipe_meta,
            [
-             left,
+             {:|>, [], [left, {{:., [], [{:__aliases__, [], [:Enum]}, :to_list]}, [], []}]},
              {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [drop_amount, take_amount]}
            ]}
         else
@@ -104,7 +106,11 @@ defmodule Credence.Pattern.PreferEnumSlice do
        ]} = node ->
         if slice_safe?(drop_amount, take_amount) do
           {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [],
-           [collection, drop_amount, take_amount]}
+           [
+             {{:., [], [{:__aliases__, [], [:Enum]}, :to_list]}, [], [collection]},
+             drop_amount,
+             take_amount
+           ]}
         else
           node
         end
@@ -117,7 +123,11 @@ defmodule Credence.Pattern.PreferEnumSlice do
        ]} = node ->
         if slice_safe?(drop_amount, take_amount) do
           {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [],
-           [collection, drop_amount, take_amount]}
+           [
+             {{:., [], [{:__aliases__, [], [:Enum]}, :to_list]}, [], [collection]},
+             drop_amount,
+             take_amount
+           ]}
         else
           node
         end

@@ -8,6 +8,43 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "inserts require Logger" do
+    test "function-local require does not satisfy a sibling Logger call" do
+      input = """
+      defmodule MyAppNMRLSiblingFixScope do
+        def first do
+          require Logger
+          Logger.info("first")
+        end
+
+        def second do
+          Logger.info("second")
+        end
+      end
+      """
+
+      expected = """
+      defmodule MyAppNMRLSiblingFixScope do
+        require Logger
+
+        def first do
+          require Logger
+          Logger.info("first")
+        end
+
+        def second do
+          Logger.info("second")
+        end
+      end
+      """
+
+      emitted = fix(NoMissingRequireLogger, input)
+
+      confirm_fix(emitted, expected)
+
+      assert Credence.RuleHelpers.compile_and_capture(emitted) ==
+               Credence.RuleHelpers.compile_and_capture(expected)
+    end
+
     test "basic module with Logger.info" do
       input = """
       defmodule MyApp do

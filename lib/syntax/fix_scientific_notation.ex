@@ -5,6 +5,23 @@ defmodule Credence.Syntax.FixScientificNotation do
   LLMs frequently translate Python's `1e-10` notation directly, but Elixir
   requires a decimal point before the exponent: `1.0e-10`.
 
+  ## Only real code is rewritten
+
+  Matching runs against a `Credence.SourceMask` shadow, not the raw line, so
+  string literals, charlists, sigils, heredocs, character literals and comments
+  are invisible to the pattern. Without that, this rule rewrote the inside of
+  strings — `IO.puts("version 1e5 build")` became
+  `IO.puts("version 1.0e5 build")`, which parses *and* compiles, so nothing
+  downstream noticed that the program had started printing something the author
+  never wrote.
+
+  The whole-line `#` guard it used before caught only a line that *began* with a
+  comment. A trailing comment was rewritten with the code: `x = 1e5 # bump to
+  1e9 later` became `x = 1.0e5 # bump to 1.0e9 later`. The shadow blanks a
+  comment wherever it starts.
+
+  Interpolation is the exception: `\#{1e5}` is real code and is still fixed.
+
   ## Bad (won't parse)
 
       assert_in_delta result, 0.5, 1e-10
@@ -16,42 +33,44 @@ defmodule Credence.Syntax.FixScientificNotation do
   use Credence.Syntax.Rule
   alias Credence.Issue
 
-  # Matches bare integer followed by e/E and exponent, but NOT preceded by a dot
-  # (which would mean it already has a decimal part like 1.5e-10) or a digit
-  # (which would mean the match is a suffix of a larger number like 123.456e7).
-  @pattern ~r/(?<![.\d])(\d+)[eE]([+-]?\d+)/
+  # Matches bare integer followed by e/E and exponent, but not when it is part
+  # of another token, such as a decimal, hexadecimal literal, or identifier.
+  @pattern ~r/(?<![.\p{L}\p{N}_])(\d+)[eE]([+-]?\d+)(?![\p{L}\p{N}_])/u
 
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      trimmed = String.trim(line)
-
-      if not String.starts_with?(trimmed, "#") and Regex.match?(@pattern, line) do
-        [build_issue(line_no)]
-      else
-        []
-      end
+    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
+      if Regex.match?(@pattern, shadow), do: [build_issue(line_no)], else: []
     end)
   end
 
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> Credence.SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
   end
 
-  defp fix_line(line) do
-    trimmed = String.trim(line)
+  # Matches are found in the shadow and spliced into the real line. Both are the
+  # same byte length and every code byte is identical, so the match offsets are
+  # valid in either. `Regex.replace/3` cannot be used here: it would rewrite the
+  # shadow, and the shadow is not the file.
+  defp fix_line(line, shadow) do
+    {chunks, pos} =
+      @pattern
+      |> Regex.scan(shadow, return: :index)
+      |> Enum.reduce({[], 0}, fn [{ms, ml}, {ds, dl}, {es, el}], {acc, pos} ->
+        before = binary_part(line, pos, ms - pos)
+        digits = binary_part(line, ds, dl)
+        exponent = binary_part(line, es, el)
+        # ".0e" is written literally, which also normalises `1E5` to `1.0e5`.
+        {[acc, before, digits, ".0e", exponent], ms + ml}
+      end)
 
-    if String.starts_with?(trimmed, "#") do
-      line
-    else
-      Regex.replace(@pattern, line, "\\1.0e\\2")
-    end
+    IO.iodata_to_binary([chunks, binary_part(line, pos, byte_size(line) - pos)])
   end
 
   defp build_issue(line) do

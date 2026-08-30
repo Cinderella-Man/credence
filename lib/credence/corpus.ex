@@ -640,12 +640,58 @@ defmodule Credence.Corpus do
   trees (`test/`, `deps/`, `_build/`, JS `node_modules/`) are excluded, since the
   over-fire premise is well-reviewed *production* code.
   """
+  @memo_table __MODULE__.Memo
+
   @spec lib_files(atom()) :: [String.t()]
   def lib_files(name) do
-    dir(name)
-    |> Path.join("**/lib/**/*.ex")
-    |> Path.wildcard()
-    |> Enum.reject(&excluded_path?/1)
+    ensure_memo_table!()
+
+    case :ets.lookup(@memo_table, {:lib_files, name}) do
+      [{_, files}] ->
+        files
+
+      [] ->
+        files =
+          dir(name)
+          |> Path.join("**/lib/**/*.ex")
+          |> Path.wildcard()
+          |> Enum.reject(&excluded_path?/1)
+
+        # The corpus suite calls this for every entry from several places
+        # (setup_all totals, the sweeps, per-entry tests) — ~2.5s of globbing
+        # per full pass. The listing is stable once an entry is fetched, so
+        # memoize non-empty results; an empty result may just mean "not
+        # fetched yet", and the fetchers invalidate on (re)fetch. ETS, not
+        # :persistent_term — hundreds of puts of growing lists during the
+        # sweeps stall every scheduler (each put copies the whole area).
+        if files != [], do: :ets.insert(@memo_table, {{:lib_files, name}, files})
+        files
+    end
+  end
+
+  # Same eternal-owner pattern as `Credence.Corpus.AnalysisCache`: the table
+  # must outlive whichever short-lived test process touches it first.
+  defp ensure_memo_table! do
+    if :ets.whereis(@memo_table) == :undefined, do: create_memo_table()
+    :ok
+  end
+
+  defp create_memo_table do
+    caller = self()
+
+    spawn(fn ->
+      try do
+        :ets.new(@memo_table, [:named_table, :public, :set, read_concurrency: true])
+        send(caller, {@memo_table, :ready})
+        Process.sleep(:infinity)
+      rescue
+        ArgumentError -> send(caller, {@memo_table, :ready})
+      end
+    end)
+
+    receive do
+      {@memo_table, :ready} -> :ok
+    end
   end
 
   @excluded_segments ["/deps/", "/_build/", "/test/", "/node_modules/", "/.git/"]
@@ -678,7 +724,15 @@ defmodule Credence.Corpus do
       git!(["-C", dir(name), "remote", "add", "origin", url], name, sha)
       git!(["-C", dir(name), "fetch", "-q", "--depth", "1", "origin", sha], name, sha)
       git!(["-C", dir(name), "checkout", "-q", "--detach", "FETCH_HEAD"], name, sha)
+      invalidate_lib_files(name)
     end
+
+    :ok
+  end
+
+  defp invalidate_lib_files(name) do
+    if :ets.whereis(@memo_table) != :undefined,
+      do: :ets.delete(@memo_table, {:lib_files, name})
 
     :ok
   end
@@ -712,6 +766,8 @@ defmodule Credence.Corpus do
       if status != 0 do
         raise "corpus fetch failed for #{pkg} #{version} (exit #{status}):\n#{out}"
       end
+
+      invalidate_lib_files(pkg)
     end
 
     :ok

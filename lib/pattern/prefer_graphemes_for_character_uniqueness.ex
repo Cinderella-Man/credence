@@ -24,6 +24,15 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
       String.graphemes(s) |> Enum.uniq() |> Enum.count() |> then(&(&1 == String.length(s)))
   """
   use Credence.Pattern.Rule
+  # Safe in all three families: matches only a `String.to_charlist |> … |>
+  # Enum.count() |> (&(&1 == …)).()` pipeline and copies that `==` verbatim into
+  # `then/2` — captures and Enum calls are not DSL-expression constructs and no
+  # operator is changed. The source scan flags this rule because the construct
+  # appears in it, but the matcher cannot reach a DSL expression, so the
+  # deliberate answer is the empty list rather than an allowlist entry — the
+  # fixture-level oracle does not flag it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
 
   @impl true
@@ -36,13 +45,8 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
         # Full pipeline: ... |> Enum.count() |> (&(&1 == String.length(var))).()
         {:|>, meta, [left, capture_invocation]} = node, issues ->
           if immediate_capture_invocation?(capture_invocation) and
-               enum_count_step?(rightmost_pipe_end(left)) do
-            # Walk the pipeline to find String.to_charlist
-            if pipeline_has_to_charlist?(left) do
-              {node, [build_issue(meta) | issues]}
-            else
-              {node, issues}
-            end
+               uniqueness_count_pipeline?(left) do
+            {node, [build_issue(meta) | issues]}
           else
             {node, issues}
           end
@@ -77,7 +81,7 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
     case capture_invocation do
       # Match the capture invocation pattern: (&expr).()
       {{:., _, [capture_expr = {:&, _, [{:==, _, _}]}]}, _, []} ->
-        if enum_count_step?(rightmost_pipe_end(left)) do
+        if uniqueness_count_pipeline?(left) do
           case find_and_replace_charlist(left) do
             {:ok, new_left} ->
               clean_capture = strip_parens_meta(capture_expr)
@@ -132,16 +136,24 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
   defp enum_count_step?({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}), do: true
   defp enum_count_step?(_), do: false
 
+  defp enum_uniq_step?({{:., _, [{:__aliases__, _, [:Enum]}, :uniq]}, _, []}), do: true
+  defp enum_uniq_step?(_), do: false
+
+  defp uniqueness_count_pipeline?({:|>, _, [before_count, count]}) do
+    enum_count_step?(count) and uniqueness_input?(before_count)
+  end
+
+  defp uniqueness_count_pipeline?(_), do: false
+
+  defp uniqueness_input?({:|>, _, [before_uniq, uniq]}) do
+    enum_uniq_step?(uniq) and to_charlist_call?(rightmost_pipe_end(before_uniq))
+  end
+
+  defp uniqueness_input?(_), do: false
+
   # Get the rightmost element of a pipe chain (the last step before current)
   defp rightmost_pipe_end({:|>, _, [_, right]}), do: right
   defp rightmost_pipe_end(other), do: other
-
-  # Check if the pipeline contains a String.to_charlist call
-  defp pipeline_has_to_charlist?({:|>, _, [left, right]}) do
-    to_charlist_call?(left) or to_charlist_call?(right) or pipeline_has_to_charlist?(left)
-  end
-
-  defp pipeline_has_to_charlist?(node), do: to_charlist_call?(node)
 
   # Find and replace String.to_charlist with String.graphemes in the pipe chain
   defp find_and_replace_charlist({:|>, meta, [left, right]}) do

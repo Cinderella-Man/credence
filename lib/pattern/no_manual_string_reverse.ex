@@ -32,7 +32,7 @@ defmodule Credence.Pattern.NoManualStringReverse do
       Macro.prewalk(ast, [], fn
         # Pipeline: ... |> String.graphemes() |> Enum.reverse() |> REASSEMBLE()
         {:|>, meta, [left, right]} = node, issues ->
-          if reassemble_call?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
+          if reassemble_fixable?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
             grandparent =
               case left do
                 {:|>, _, [inner_left, _]} -> rightmost(inner_left)
@@ -128,16 +128,21 @@ defmodule Credence.Pattern.NoManualStringReverse do
   # Decompose step: String.graphemes only (codepoints is a separate rule).
   defp decompose_call?(node), do: remote_call?(node, :String, :graphemes)
 
-  # Reassemble step: Enum.join or IO.iodata_to_binary (for check — any args).
-  defp reassemble_call?(node) do
-    remote_call?(node, :Enum, :join) or remote_call?(node, :IO, :iodata_to_binary)
-  end
-
-  # Reassemble that is safe to auto-fix (Enum.join without separator, or any
-  # IO.iodata_to_binary — it has no separator concept).
+  # The ONE reassembly predicate, shared by `check/2` and `fix_patches/2`:
+  # `Enum.join` with no separator (or an empty one), or
+  # `IO.iodata_to_binary` with no explicit pipeline arguments.
+  #
+  # `check/2` had its own arity-blind `reassemble_call?/1` accepting `Enum.join`
+  # with ANY argument, so `s |> String.graphemes() |> Enum.reverse() |> Enum.join("-")`
+  # was reported and never repaired. It is not a manual `String.reverse/1` at all:
+  # that pipeline interleaves the separator, and `String.reverse/1` produces none.
+  # The only order-preserving alternative is longer than the original AND
+  # reintroduces the `String.graphemes/1` this rule exists to remove, so there is
+  # nothing to rewrite into. Same defect and same repair as the sibling
+  # `NoCodepointStringReverse`.
   defp reassemble_fixable?(node) do
     (remote_call?(node, :Enum, :join) and join_no_separator?(node)) or
-      remote_call?(node, :IO, :iodata_to_binary)
+      match?({{:., _, [{:__aliases__, _, [:IO]}, :iodata_to_binary]}, _, []}, node)
   end
 
   # Nested form: REASSEMBLE(Enum.reverse(String.graphemes(subject)))
@@ -148,7 +153,8 @@ defmodule Credence.Pattern.NoManualStringReverse do
              [{{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}]}
           ]}
        )
-       when outer_mod in [[:Enum], [:IO]] and outer_func in [:join, :iodata_to_binary] do
+       when (outer_mod == [:Enum] and outer_func == :join) or
+              (outer_mod == [:IO] and outer_func == :iodata_to_binary) do
     {:ok, meta, subject}
   end
 

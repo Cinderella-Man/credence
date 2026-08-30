@@ -1,7 +1,10 @@
 defmodule Credence.Semantic.MissingUseExunitCaseCheckTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [confirm_fix: 2]
+
   alias Credence.Semantic.MissingUseExunitCase
+  alias Credence.RuleHelpers
 
   # ═══════════════════════════════════════════════════════════════════
   # match?/1 — diagnostic matching
@@ -42,6 +45,16 @@ defmodule Credence.Semantic.MissingUseExunitCaseCheckTest do
       diagnostic = %{
         severity: :error,
         message: "undefined function setup/1 (there is no such import)",
+        position: 3
+      }
+
+      assert MissingUseExunitCase.match?(diagnostic)
+    end
+
+    test "undefined function setup_all/1" do
+      diagnostic = %{
+        severity: :error,
+        message: "undefined function setup_all/1 (there is no such import)",
         position: 3
       }
 
@@ -115,6 +128,44 @@ defmodule Credence.Semantic.MissingUseExunitCaseCheckTest do
 
       issue = MissingUseExunitCase.to_issue(diagnostic)
       assert issue.meta.line == 7
+    end
+  end
+
+  describe "fix/2" do
+    test "inserts use ExUnit.Case into a nested test module" do
+      source = """
+      defmodule MissingUseExunitOuterTest do
+        defmodule MissingUseExunitInnerTest do
+          test "works" do
+            assert true
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule MissingUseExunitOuterTest do
+        defmodule MissingUseExunitInnerTest do
+          use ExUnit.Case
+
+          test "works" do
+            assert true
+          end
+        end
+      end
+      """
+
+      diagnostic = %{
+        severity: :error,
+        message: "undefined function test/2 (there is no such import)",
+        position: 3
+      }
+
+      fixed = MissingUseExunitCase.fix(source, diagnostic)
+
+      confirm_fix(fixed, expected)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(expected)
     end
   end
 end

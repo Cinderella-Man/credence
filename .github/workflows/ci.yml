@@ -1,0 +1,148 @@
+# The A4 matrix, run by a machine instead of by hand.
+#
+# STATUS.md A6: until this file existed there was no CI in the repo at all, so a
+# merge triggered zero checks and the local run was the only verification a
+# release would ever get. The four steps below are exactly the ones STATUS.md A5
+# lists as "the release acts on main", in the same order.
+#
+# Deliberately pinned to one Elixir/OTP pair rather than a version matrix. The
+# repo's `mix.exs` allows `~> 1.17`, but every behavioural claim in docs/ was
+# executed on 1.20.2 / OTP 29 — and docs/17 entry 11 records a case where 1.19.5
+# and 1.20.2 disagreed about whether a rule's output parsed. Widening this to a
+# real version matrix is worth doing and would need its own triage of whatever it
+# turns red; a green single-version build that matches the documented one is the
+# honest starting point.
+name: CI
+
+on:
+  push:
+    branches: [main, evolution_accepted]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  ELIXIR_VERSION: "1.20.2"
+  OTP_VERSION: "29"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Format, zero-warning compile, and every layer the other two jobs do not own.
+  # The split is for CI parallelism only; locally `mix test` runs all three layers.
+  # This is the fast gate: no 1 GB fetch, so it answers within a few minutes.
+  check:
+    name: format · warnings · suite (no corpus)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache deps and _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: mix deps.get
+
+      - run: mix format --check-formatted
+
+      # `--force` on purpose: a cached _build can hide a warning that a clean
+      # build would surface.
+      - run: mix compile --force --warnings-as-errors
+
+      # `--exclude idempotency` because the `idempotency` job below owns that layer.
+      # It is NOT excluded in test_helper.exs — a local `mix test` runs everything.
+      - run: mix test --exclude corpus --exclude idempotency
+
+      # The suite self-heals non-canonical test fixtures on disk before it
+      # compiles them (test/test_helper.exs). That is idempotent once everything
+      # is canonical, so a dirty tree here means a fixture was committed in a
+      # form the healer rewrites — which would otherwise only ever show up as an
+      # unexplained local diff.
+      - name: Fixture healer left the tree clean
+        run: git diff --exit-code
+
+  # The corpus layer: Credence over the lib/ of ~500 hex packages and pinned
+  # git checkouts, asserting it flags nothing beyond the reviewed allowlist.
+  # Split out because the first run fetches ~1 GB. Everything it fetches is
+  # immutable — exact hex versions and exact commit SHAs — so the cache key is
+  # the manifest itself.
+  corpus:
+    name: corpus over-firing + fix safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache deps and _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Cache the corpus
+        uses: actions/cache@v4
+        with:
+          path: corpus
+          key: ${{ runner.os }}-corpus-${{ hashFiles('lib/credence/corpus.ex') }}
+
+      - run: mix deps.get
+
+      # The corpus tests call `Corpus.ensure_fetched!/0` in setup, so this step
+      # is not strictly required — it is here so that a fetch failure (a hex
+      # outage, a deleted GitHub repo) reads as a fetch failure rather than as
+      # Credence having started over-firing.
+      - name: Fetch the corpus
+        run: mix credence.corpus.fetch
+
+      - run: mix test --only corpus
+
+  # ~11 minutes, and excluded from the default suite on purpose
+  # (test/test_helper.exs), so nothing else runs it. It applies the whole
+  # pipeline twice over every fix-test fixture and ratchets a frozen 29-row
+  # ledger of the fixtures that are not yet fixpoints.
+  idempotency:
+    name: idempotency sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache deps and _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: mix deps.get
+
+      - run: mix test --only idempotency
+        env:
+          MIX_ENV: test

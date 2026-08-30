@@ -52,6 +52,24 @@ defmodule Credence.Pattern.AvoidGraphemesLengthCheckTest do
   end
 
   describe "does NOT flag" do
+    test "invalid String.graphemes arities" do
+      for code <- [
+            "String.graphemes() |> length()",
+            "value |> String.graphemes(extra) |> length()"
+          ] do
+        assert check(AvoidGraphemesLength, code) == []
+      end
+    end
+
+    test "String alias that names a custom module" do
+      code = """
+      alias CustomString, as: String
+      length(String.graphemes(value))
+      """
+
+      assert check(AvoidGraphemesLength, code) == []
+    end
+
     test "String.length/1" do
       assert check(AvoidGraphemesLength, "String.length(str)") == []
     end

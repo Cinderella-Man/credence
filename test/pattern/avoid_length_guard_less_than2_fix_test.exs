@@ -227,4 +227,42 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
   end
+
+  describe "parameters containing the guarded variable" do
+    test "rewrites a guarded variable nested in a parameter pattern" do
+      input = """
+      defmodule AvoidLengthNestedParameter do
+        def f({list}) when length(list) < 2, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule AvoidLengthNestedParameter do
+        def f({[]}), do: :ok
+        def f({[_]}), do: :ok
+      end
+      """
+
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
+    end
+
+    test "keeps repeated occurrences of the guarded parameter equal" do
+      input = """
+      defmodule AvoidLengthRepeatedParameter do
+        def f(list, list) when length(list) < 2, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule AvoidLengthRepeatedParameter do
+        def f([] = list, list), do: :ok
+        def f([_] = list, list), do: :ok
+      end
+      """
+
+      fixed = fix(AvoidLengthGuardLessThan2, input)
+      confirm_fix(fixed, expected)
+      assert {:ok, []} = Credence.RuleHelpers.compile_and_capture(fixed)
+    end
+  end
 end

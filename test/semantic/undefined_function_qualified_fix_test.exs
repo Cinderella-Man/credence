@@ -4,6 +4,7 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   import Credence.RuleCase, only: [confirm_fix: 2]
 
   alias Credence.Semantic.UndefinedFunction
+  alias Credence.RuleHelpers
   alias Qualified
 
   defp fix(source, message, line \\ 1) do
@@ -585,6 +586,13 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
   end
 
   describe "Enum.length → length" do
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"Enum.length(x)", Enum.length(xs)}', "Enum.length/1 is undefined or private"),
+        ~S'{"Enum.length(x)", length(xs)}'
+      )
+    end
+
     test "direct call" do
       confirm_fix(
         fix(
@@ -858,6 +866,446 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       confirm_fix(
         fix("Enum.tail(chars)", "Enum.tail/1 is undefined or private"),
         "tl(chars)"
+      )
+    end
+  end
+
+  # ── Erlang modules ─────────────────────────────────────────────
+  #
+  # The compiler writes these with the leading colon (`:math.round/1 is
+  # undefined or private`), which `\w` cannot match — so the module capture
+  # used to come back as `"math"` and a `{:drop_module, "round"}` keyed on it
+  # emitted `:round(x)`, which does not parse.
+
+  describe "Erlang module keys keep their leading colon" do
+    test ":crypto.hex → Base.encode16" do
+      confirm_fix(
+        fix(":crypto.hex(data)", ":crypto.hex/1 is undefined or private"),
+        "Base.encode16(data)"
+      )
+    end
+
+    test ":erlang.warn → IO.warn" do
+      confirm_fix(
+        fix(":erlang.warn(msg)", ":erlang.warn/1 is undefined or private"),
+        "IO.warn(msg)"
+      )
+    end
+
+    test ":queue.empty → :queue.new" do
+      confirm_fix(
+        fix(":queue.empty()", ":queue.empty/0 is undefined or private"),
+        ":queue.new()"
+      )
+    end
+
+    test ":math.min → Kernel.min" do
+      confirm_fix(
+        fix(":math.min(a, b)", ":math.min/2 is undefined or private"),
+        "Kernel.min(a, b)"
+      )
+    end
+
+    test ":math.max → Kernel.max" do
+      confirm_fix(
+        fix(":math.max(a, b)", ":math.max/2 is undefined or private"),
+        "Kernel.max(a, b)"
+      )
+    end
+
+    test ":math.round drops the module" do
+      confirm_fix(
+        fix(":math.round(x)", ":math.round/1 is undefined or private"),
+        "round(x)"
+      )
+    end
+  end
+
+  # ── alias boundaries ───────────────────────────────────────────
+  #
+  # A diagnostic names only the LAST segment of an alias, so a user's own
+  # `MyApp.Input.List.reverse/1` is indistinguishable from stdlib
+  # `List.reverse/1` in the message. Rewriting the first as if it were the
+  # second invents a module that does not exist.
+
+  describe "nested aliases are left alone" do
+    test "does not rewrite a user's own nested module" do
+      source = "Input.List.reverse(l)"
+      confirm_fix(fix(source, "MyApp.Input.List.reverse/1 is undefined or private"), source)
+    end
+
+    test "does not rewrite a fully-qualified user module" do
+      source = "MyApp.Input.List.reverse(l)"
+      confirm_fix(fix(source, "MyApp.Input.List.reverse/1 is undefined or private"), source)
+    end
+
+    test "does not rewrite a module whose name merely ends with a table key" do
+      source = "MyList.reverse(l)"
+      confirm_fix(fix(source, "MyList.reverse/1 is undefined or private"), source)
+    end
+
+    test "still rewrites the unqualified stdlib call" do
+      confirm_fix(
+        fix("List.reverse(l)", "List.reverse/1 is undefined or private"),
+        "Enum.reverse(l)"
+      )
+    end
+  end
+
+  # ── Call-boundary anchoring (docs/16 4.6d) ──────────────────────────
+  #
+  # These replacements were plain substring searches, and a function name is a
+  # prefix of longer real names. `Base.hex_encode` is a prefix of
+  # `Base.hex_encode32` — which the compiler lists in that very diagnostic's
+  # did-you-mean block — so repairing one broken call produced two. docs/16
+  # deferred the Agent / NaiveDateTime / List.keystore / exit rows on this
+  # anchoring rather than on anything about the rows.
+
+  describe "a replacement stops at the call boundary" do
+    # NON-VACUOUS by construction, and it took two attempts to get there.
+    # `List.pop` IS a table row (-> `List.last`) and `List.pop_at/2` is a REAL
+    # function, so both sit on one line and only the broken one may be rewritten.
+    #
+    # Attempt 1 used `Base.hex_encode`, which has no table row — the fix was a
+    # no-op with or without the anchor, so the test passed while proving
+    # nothing. Attempt 2 put the broken call FIRST, and the replacement is
+    # `global: false`: it matched the right call before ever reaching the longer
+    # one, so it passed too. The longer name has to come first for the anchor to
+    # be what decides. Reverting the anchor reddens this.
+    test "the broken call is repaired and a longer real call beside it is not" do
+      source = """
+      defmodule AnchorPrefix do
+        def f(a, b), do: {List.pop_at(b, 0), List.pop(a)}
+      end
+      """
+
+      expected = """
+      defmodule AnchorPrefix do
+        def f(a, b), do: {List.pop_at(b, 0), List.last(a)}
+      end
+      """
+
+      diagnostic = %{
+        severity: :error,
+        message: "List.pop/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      confirm_fix(UndefinedFunction.fix(source, diagnostic), expected)
+    end
+
+    test "a line holding ONLY the longer real call is untouched" do
+      source = """
+      defmodule AnchorLongerOnly do
+        def f(b), do: List.pop_at(b, 0)
+      end
+      """
+
+      diagnostic = %{
+        severity: :error,
+        message: "List.pop/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      confirm_fix(UndefinedFunction.fix(source, diagnostic), source)
+    end
+  end
+
+  # ── Base.hex_encode / hex_encode64 (docs/16 4.6d, ledger row 119) ──────
+  #
+  # Deferred on call-boundary anchoring, not on themselves: `hex_encode` is a
+  # prefix of the REAL `hex_encode32`, which the compiler lists in this
+  # diagnostic's own did-you-mean block, so before the anchor one broken call
+  # became two. Verified against the actual `Base` module — only `hex_encode32`
+  # and `hex_decode32` exist; `hex_encode` and `hex_encode64` are both invented.
+
+  describe "Base.hex_encode" do
+    defp base_fix(source, message) do
+      diagnostic = %{severity: :warning, message: message, position: {2, 1}}
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
+    end
+
+    test "hex_encode/1 becomes encode16 with case: :lower" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexOne do
+            def f(x), do: Base.hex_encode(x)
+          end
+          """,
+          "Base.hex_encode/1 is undefined or private"
+        ),
+        """
+        defmodule HexOne do
+          def f(x), do: Base.encode16(x, case: :lower)
+        end
+        """
+      )
+    end
+
+    # `Base.encode16` defaults to UPPERCASE and an LLM reaching for `hex_encode`
+    # is translating Python's `bytes.hex()`, which is lowercase — so the option
+    # is the repair, not decoration. Two-argument callers keep their own.
+    test "hex_encode/2 keeps the caller's options" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexTwo do
+            def f(x), do: Base.hex_encode(x, case: :upper)
+          end
+          """,
+          "Base.hex_encode/2 is undefined or private"
+        ),
+        """
+        defmodule HexTwo do
+          def f(x), do: Base.encode16(x, case: :upper)
+        end
+        """
+      )
+    end
+
+    test "hex_encode64/1 becomes encode64 — base64 has no hex variant" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexB64 do
+            def f(x), do: Base.hex_encode64(x)
+          end
+          """,
+          "Base.hex_encode64/1 is undefined or private"
+        ),
+        """
+        defmodule HexB64 do
+          def f(x), do: Base.encode64(x)
+        end
+        """
+      )
+    end
+
+    # The trap this row was deferred for. `hex_encode32/1` is REAL; a
+    # `hex_encode/1` diagnostic must not touch it.
+    test "CONTROL: the real hex_encode32 is left alone" do
+      source = """
+      defmodule HexReal do
+        def f(x), do: Base.hex_encode32(x)
+      end
+      """
+
+      assert base_fix(source, "Base.hex_encode/1 is undefined or private") == source
+    end
+  end
+
+  # ── List.keystore/3 -> /4 (docs/16 4.6d) ────────────────────────────
+  #
+  # The last of the deferred rows, and the one that needed a new table verb.
+  # LLMs confuse `List.keystore/4` with `List.keyfind/3` and leave out the
+  # POSITION argument, which belongs THIRD — so appending (the only thing
+  # `:rename_add_arg` can do) would produce a call that compiles and means
+  # something else. `:insert_arg` puts it at an index.
+
+  describe "List.keystore/3" do
+    defp keystore(source) do
+      diagnostic = %{
+        severity: :warning,
+        message: "List.keystore/3 is undefined or private. Did you mean: * keystore/4",
+        position: {2, 1}
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
+    end
+
+    test "inserts the position argument third" do
+      confirm_fix(
+        keystore("""
+        defmodule KsPlain do
+          def f(l, k, t), do: List.keystore(l, k, t)
+        end
+        """),
+        """
+        defmodule KsPlain do
+          def f(l, k, t), do: List.keystore(l, k, 0, t)
+        end
+        """
+      )
+    end
+
+    # Arguments are split on top-level commas of the SHADOW, so a comma inside a
+    # string or a nested bracket is not a separator. Getting this wrong would
+    # insert the position into the middle of someone's tuple.
+    test "commas inside a string and a nested bracket are not separators" do
+      confirm_fix(
+        keystore("""
+        defmodule KsNested do
+          def f(l), do: List.keystore(l, "a, b", {:x, [1, 2]})
+        end
+        """),
+        """
+        defmodule KsNested do
+          def f(l), do: List.keystore(l, "a, b", 0, {:x, [1, 2]})
+        end
+        """
+      )
+    end
+
+    # The control, and it was a real bug before the guard existed: a CORRECT
+    # `List.keystore/4` on the line is not what the /3 diagnostic is about, and
+    # inserting into it produced `List.keystore(l, 0, :k, 0, {:k, 1})`.
+    test "CONTROL: an already-correct keystore/4 call is left alone" do
+      source = """
+      defmodule KsCorrect do
+        def f(l), do: List.keystore(l, :k, 0, {:k, 1})
+      end
+      """
+
+      assert keystore(source) == source
+    end
+  end
+
+  # `:queue.empty/0` and `:queue.empty/1` are DIFFERENT mistakes wearing one
+  # name: arity 0 is reaching for the constructor, arity 1 is asking a question.
+  # The table is keyed on arity precisely so one row cannot answer both, and the
+  # /1 row was missing until the docs/18 rebuild list was checked by running it.
+  describe ":queue.empty" do
+    test "arity 1 is the is_empty? question" do
+      diagnostic = %{
+        severity: :warning,
+        message: ":queue.empty/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+
+      fixed =
+        UndefinedFunction.fix(
+          """
+          defmodule QueueOne do
+            def f(q), do: :queue.empty(q)
+          end
+          """,
+          diagnostic
+        )
+
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+
+      confirm_fix(
+        fixed,
+        """
+        defmodule QueueOne do
+          def f(q), do: :queue.is_empty(q)
+        end
+        """
+      )
+    end
+
+    test "arity 0 is still the constructor" do
+      diagnostic = %{
+        severity: :warning,
+        message: ":queue.empty/0 is undefined or private",
+        position: {2, 1}
+      }
+
+      assert UndefinedFunction.match?(diagnostic)
+
+      fixed =
+        UndefinedFunction.fix(
+          """
+          defmodule QueueZero do
+            def f, do: :queue.empty()
+          end
+          """,
+          diagnostic
+        )
+
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+
+      confirm_fix(
+        fixed,
+        """
+        defmodule QueueZero do
+          def f, do: :queue.new()
+        end
+        """
+      )
+    end
+  end
+
+  # ── The three one-line rows docs/23 listed as cheapest ──────────────
+  #
+  # Each target was checked to EXIST before being written down
+  # (`function_exported?`), and each repaired module was compiled after the fix.
+
+  describe "docs/23 table rows" do
+    defp qfix(source, message) do
+      diagnostic = %{severity: :warning, message: message, position: {2, 1}}
+      assert UndefinedFunction.match?(diagnostic)
+      fixed = UndefinedFunction.fix(source, diagnostic)
+      assert {:ok, []} = RuleHelpers.compile_and_capture(fixed)
+      fixed
+    end
+
+    test "Map.reduce/3 becomes Enum.reduce/3" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule MapRed do
+            def f(m), do: Map.reduce(m, 0, fn _, a -> a end)
+          end
+          """,
+          "Map.reduce/3 is undefined or private"
+        ),
+        """
+        defmodule MapRed do
+          def f(m), do: Enum.reduce(m, 0, fn _, a -> a end)
+        end
+        """
+      )
+    end
+
+    # The generator requires a kind; `:ascii` is the widest that cannot emit
+    # surrogates or unassigned codepoints, so a generated fixture stays
+    # printable.
+    test "StreamData.string/0 gains the kind it requires" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule SdStr do
+            def f, do: StreamData.string()
+          end
+          """,
+          "StreamData.string/0 is undefined or private"
+        ),
+        """
+        defmodule SdStr do
+          def f, do: StreamData.string(:ascii)
+        end
+        """
+      )
+    end
+
+    # `:crypto.hash_equals/2` rather than `Plug.Crypto.secure_compare/2`:
+    # staying inside `:crypto` repairs the call without adding a dependency to
+    # the user's project.
+    test ":crypto.compare/2 becomes the constant-time :crypto.hash_equals/2" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule CryCmp do
+            def f(a, b), do: :crypto.compare(a, b)
+          end
+          """,
+          ":crypto.compare/2 is undefined or private"
+        ),
+        """
+        defmodule CryCmp do
+          def f(a, b), do: :crypto.hash_equals(a, b)
+        end
+        """
       )
     end
   end

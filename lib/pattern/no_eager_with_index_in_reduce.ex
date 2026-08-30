@@ -9,18 +9,16 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   ## Bad
 
-      Enum.reduce(Enum.with_index(list), acc, fn {val, idx}, acc -> ... end)
-
-      list |> Enum.with_index() |> Enum.reduce(acc, fn ...)
+      Enum.reduce(Enum.with_index(list), acc, fn {val, idx}, acc -> acc + val * idx end)
 
   ## Good
 
       # Option 1 (:stream strategy): Use Stream.with_index for lazy evaluation
-      list |> Stream.with_index() |> Enum.reduce(acc, fn {val, idx}, acc -> ... end)
+      list |> Stream.with_index() |> Enum.reduce(acc, fn {val, idx}, acc -> acc + val * idx end)
 
       # Option 2 (:reduce strategy): Track the index in the accumulator
       list
-      |> Enum.reduce({0, acc}, fn val, {idx, acc} -> {idx + 1, ...} end)
+      |> Enum.reduce({0, acc}, fn val, {idx, acc} -> {idx + 1, acc + val * idx} end)
       |> elem(1)
 
   ## Fix strategy
@@ -40,6 +38,15 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   """
 
   use Credence.Pattern.Rule
+  # Safe in all three families: matches `Enum.reduce(Enum.with_index(list), acc,
+  # fn …)` (or its pipe form), so the `idx + 1` the :reduce strategy introduces
+  # lands in a reduce lambda that no DSL expression grammar can contain. The
+  # source scan flags this rule because the construct appears in it, but the
+  # matcher cannot reach a DSL expression, so the deliberate answer is the empty
+  # list rather than an allowlist entry — the fixture-level oracle does not flag
+  # it at all.
+  @impl true
+  def unsafe_in_dsl, do: []
   alias Credence.Issue
   alias Credence.RuleHelpers
 

@@ -94,5 +94,19 @@ defmodule Credence.Semantic.UndefinedFunction.AddArgFixTest do
 
       confirm_fix(fix(input, @msg), expected)
     end
+
+    test "ignores matching text in a string before the code call" do
+      confirm_fix(
+        fix(~S'{"List.second(x)", List.second(xs)}', @msg),
+        ~S'{"List.second(x)", Enum.at(xs, 1)}'
+      )
+    end
+
+    test "uses byte offsets when non-ASCII text precedes the call" do
+      confirm_fix(
+        fix(~S'{"é", List.second(xs)}', @msg),
+        ~S'{"é", Enum.at(xs, 1)}'
+      )
+    end
   end
 end

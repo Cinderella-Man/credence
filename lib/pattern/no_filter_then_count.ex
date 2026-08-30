@@ -28,6 +28,24 @@ defmodule Credence.Pattern.NoFilterThenCount do
   - `Enum.filter(pred)` alone (no following count/length)
   - `Enum.count(enum, pred)` (already idiomatic)
   - `length(enum)` without preceding filter
+
+  ## Bad
+
+      defmodule BadNFTC do
+        def count_positives(items) do
+          items
+          |> Enum.filter(&(&1 > 0))
+          |> length()
+        end
+      end
+
+  ## Good
+
+      defmodule BadNFTC do
+        def count_positives(items) do
+          items |> Enum.count(&(&1 > 0))
+        end
+      end
   """
 
   use Credence.Pattern.Rule

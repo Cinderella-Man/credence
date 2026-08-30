@@ -19,6 +19,16 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
         _ -> body_a          # identical to nil body
       end
 
+  ## Bad
+
+      map
+      |> Map.get(key)
+      |> case do
+        nil -> :not_found
+        v when v > 0 -> {:ok, v}
+        _v -> :not_found
+      end
+
   ## Good
 
       case expr do
@@ -149,11 +159,15 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
   defp nil_clause?({:->, _, [[pattern], _body]}), do: nil_pattern?(pattern)
   defp nil_clause?(_), do: false
 
-  defp nil_pattern?(nil), do: true
+  # Only the wrapped form: Sourceror's `literal_encoder` wraps `nil` like any
+  # other literal, so a bare-`nil` clause here was unreachable.
   defp nil_pattern?({:__block__, _, [nil]}), do: true
   defp nil_pattern?(_), do: false
 
-  defp wildcard_clause?({:->, _, [[pattern], _body]}), do: wildcard_pattern?(pattern)
+  defp wildcard_clause?({:->, _, [[pattern], body]}) do
+    wildcard_pattern?(pattern) and not bound_wildcard_referenced?(pattern, body)
+  end
+
   defp wildcard_clause?(_), do: false
 
   defp wildcard_pattern?({:_, _, _}), do: true
@@ -162,6 +176,18 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
     do: name |> to_string() |> String.starts_with?("_")
 
   defp wildcard_pattern?(_), do: false
+
+  defp bound_wildcard_referenced?({:_, _, _}, _body), do: false
+
+  defp bound_wildcard_referenced?({name, _, ctx}, body) do
+    {_body, referenced?} =
+      Macro.prewalk(body, false, fn
+        {^name, _, ^ctx} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    referenced?
+  end
 
   # Only a *bare variable* middle pattern is a safe target. The fix reuses
   # the pattern as an expression inside `not is_nil(...)`; for a bare

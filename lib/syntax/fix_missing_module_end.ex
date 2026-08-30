@@ -31,9 +31,6 @@ defmodule Credence.Syntax.FixMissingModuleEnd do
 
   alias Credence.Issue
 
-  # Backstop on the append loop (each pass closes exactly one open block).
-  @max_appends 100
-
   @impl true
   def analyze(source) do
     case detect(source) do
@@ -52,16 +49,14 @@ defmodule Credence.Syntax.FixMissingModuleEnd do
   end
 
   @impl true
-  def fix(source), do: do_fix(source, 0)
+  def fix(source), do: do_fix(source)
 
-  defp do_fix(source, appended) when appended < @max_appends do
+  defp do_fix(source) do
     case detect(source) do
-      {:ok, _line} -> do_fix(append_end(source), appended + 1)
+      {:ok, _line} -> do_fix(append_end(source))
       :none -> source
     end
   end
-
-  defp do_fix(source, _appended), do: source
 
   # `{:ok, opening_line}` when the source fails to parse specifically because an
   # opened `do` block reached EOF without its `end`.

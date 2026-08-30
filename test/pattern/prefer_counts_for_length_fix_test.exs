@@ -2,6 +2,7 @@ defmodule Credence.Pattern.PreferCountsForLengthFixTest do
   use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferCountsForLength
+  alias Credence.RuleHelpers
 
   test "rewrites the anti-pattern" do
     input = """
@@ -63,5 +64,61 @@ defmodule Credence.Pattern.PreferCountsForLengthFixTest do
     """
 
     confirm_fix(fix(PreferCountsForLength, input), input)
+  end
+
+  test "does not rewrite a locally defined length/1 call" do
+    input = """
+    defmodule PreferCountsLocalLengthFixture do
+      import Kernel, except: [length: 1]
+
+      def length(_value), do: 41
+
+      def count(string) do
+        counts = string |> String.codepoints() |> Enum.frequencies()
+        n = length(String.codepoints(string))
+        {counts, n}
+      end
+    end
+    """
+
+    emitted = fix(PreferCountsForLength, input)
+    confirm_fix(emitted, input)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "does not rewrite calls through aliases that shadow standard modules" do
+    input = """
+    defmodule PreferCountsShadowedAliasesFixture do
+      alias PreferCountsStringFixture, as: String
+      alias PreferCountsEnumFixture, as: Enum
+      alias PreferCountsMapFixture, as: Map
+
+      def count(string) do
+        counts = string |> String.codepoints() |> Enum.frequencies()
+        n = length(String.codepoints(string))
+        {counts, n}
+      end
+    end
+    """
+
+    emitted = fix(PreferCountsForLength, input)
+    confirm_fix(emitted, input)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
+  end
+
+  test "does not use the unreadable underscore as the counts value" do
+    input = """
+    defmodule PreferCountsUnderscoreFixture do
+      def count(string) do
+        _ = string |> String.codepoints() |> Enum.frequencies()
+        n = length(String.codepoints(string))
+        n
+      end
+    end
+    """
+
+    emitted = fix(PreferCountsForLength, input)
+    confirm_fix(emitted, input)
+    assert {:ok, _diagnostics} = RuleHelpers.compile_and_capture(emitted)
   end
 end

@@ -49,7 +49,9 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the anti-pattern this rule detects and fixes.
+      TODO: one sentence saying what this rule detects and fixes.
+
+      TODO: the rest of the explanation, if it needs one.
 
       ## Bad
 
@@ -73,6 +75,20 @@ defmodule Credence.RuleScaffold do
         # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
         []
       end
+
+      # Rule Standard item 5 (docs/19). Declare this DELIBERATELY, even when the
+      # answer is `[]` — at runtime a considered `[]` and the inherited default are
+      # the same value, so this declaration is the only place the decision exists.
+      # List the macro-DSL families your FIX is not behaviour-preserving inside:
+      # `:ash_expr`, `:ecto_query`, `:nx_defn`, or `:all`. See the
+      # `Credence.DslGuard` moduledoc for what each family reinterprets — e.g.
+      # inside `Ash.Expr.expr/1` a `!` is not `not`, and inside an `Nx` `defn`
+      # arithmetic and `if` are element-wise tensor ops.
+      #
+      # TODO: decide, then delete this comment. `test/dsl_static_scan_test.exs`
+      # fails if you leave a construct-touching fix unclassified.
+      @impl true
+      def unsafe_in_dsl, do: []
     end
     """
   end
@@ -151,7 +167,19 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the unparseable syntax this rule detects and fixes.
+      TODO: one sentence saying what this rule repairs.
+
+      TODO: the rest of the explanation, if it needs one.
+
+      ## Bad (does not parse)
+
+          # TODO: the exact bytes this rule rewrites. NOT optional for a Syntax
+          # rule: `self_corruption_test.exs` runs this rule's own `fix/1` over
+          # this file, and this block is the adversarial input it needs.
+
+      ## Good
+
+          # TODO: the repaired form
       __TQ__
       use Credence.Syntax.Rule
 
@@ -242,7 +270,17 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the compiler diagnostic this rule matches and fixes.
+      TODO: one sentence saying what this rule repairs.
+
+      TODO: quote the compiler diagnostic this rule matches, verbatim.
+
+      ## Bad (compiles with error)
+
+          # TODO: example of the flagged code
+
+      ## Good
+
+          # TODO: example of the repaired code
       __TQ__
       use Credence.Semantic.Rule
 

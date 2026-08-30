@@ -209,5 +209,53 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
 
       confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
+
+    test "does not modify when the key variable is rebound before the fetch" do
+      code = """
+      defmodule ReboundKeyBeforeFetch do
+        def process(map, key) do
+          map = Map.update(map, key, 1, &(&1 + 1))
+          key = :other
+          val = Map.fetch!(map, key)
+          {map, val}
+        end
+      end
+      """
+
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
+    end
+
+    test "does not modify Map.get/3 because its default is eagerly evaluated" do
+      code = """
+      defmodule EagerGetDefault do
+        def process(map, key) do
+          map = Map.update(map, key, 1, &(&1 + 1))
+          val = Map.get(map, key, raise("evaluated"))
+          {map, val}
+        end
+      end
+      """
+
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
+    end
+
+    test "does not modify Map.update/4 with eager effectful arguments" do
+      code = """
+      defmodule EagerUpdateArguments do
+        def process(map, key) do
+          map = Map.update(map, key, send(self(), :default), make_fun())
+          val = Map.fetch!(map, key)
+          {map, val}
+        end
+
+        defp make_fun do
+          send(self(), :fun)
+          &Function.identity/1
+        end
+      end
+      """
+
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
+    end
   end
 end

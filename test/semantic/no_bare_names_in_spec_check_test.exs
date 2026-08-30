@@ -24,6 +24,28 @@ defmodule Credence.Semantic.NoBareNamesInSpecCheckTest do
     refute NoBareNamesInSpec.match?(diag)
   end
 
+  test "does not attribute undefined types outside @spec declarations" do
+    for {module, declaration} <- [
+          {"NoBareNamesInSpecNonSpecType", "@type t :: missing"},
+          {"NoBareNamesInSpecNonSpecCallback", "@callback f(missing) :: atom()"}
+        ] do
+      source = """
+      defmodule #{module} do
+        #{declaration}
+      end
+      """
+
+      assert {:error, diagnostics} = Credence.RuleHelpers.compile_and_capture(source)
+
+      expected_message =
+        "credence_check.ex:2: type missing/0 undefined (no such type in #{module})"
+
+      assert Enum.any?(diagnostics, &(&1.severity == :error and &1.message == expected_message))
+
+      assert Credence.Semantic.analyze(source, semantic_rules: [NoBareNamesInSpec]) == []
+    end
+  end
+
   test "attributes the issue to this rule" do
     assert NoBareNamesInSpec.to_issue(@diagnostic).rule == :no_bare_names_in_spec
   end

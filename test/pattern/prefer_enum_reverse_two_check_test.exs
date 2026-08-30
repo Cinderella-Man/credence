@@ -49,5 +49,22 @@ defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
 
       assert check(PreferEnumReverseTwo, code) == []
     end
+
+    test "ignores rewrites whose tail may change evaluation order" do
+      code = "Enum.reverse(acc) ++ effectful_tail()"
+
+      assert check(PreferEnumReverseTwo, code) == []
+    end
+
+    test "ignores Enum when it is an alias for another module" do
+      code = """
+      defmodule PreferEnumReverseTwoAliasedCheckFixture do
+        alias CustomEnum, as: Enum
+        def merge(acc, tail), do: Enum.reverse(acc) ++ tail
+      end
+      """
+
+      assert check(PreferEnumReverseTwo, code) == []
+    end
   end
 end

@@ -230,11 +230,42 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
     end
 
-    test "no-op when the body still references the matched variable" do
-      # Substituting x->nil would leave the body referencing an unbound `x`.
-      code = "def f(x) when x == nil, do: inspect(x)"
+    # This was a no-op, on the reasoning that "substituting x->nil would leave the
+    # body referencing an unbound `x`". True of a bare substitution, and the wrong
+    # conclusion: keep the binding and the body still has its variable. Executed
+    # on `f(nil)`, `f(1)` and `f(false)`, before and after agree — `"nil"`,
+    # `:other`, `:other`.
+    test "keeps the binding when the body still references the matched variable" do
+      input = "def f(x) when x == nil, do: inspect(x)"
+      expected = "def f(nil = x), do: inspect(x)"
 
-      confirm_fix(fix(NoGuardEqualityForPatternMatch, code), code)
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "keeps the binding when the remaining guard still references it" do
+      input = "def f(n) when is_atom(n) and n == :two, do: n"
+      expected = "def f(:two = n) when is_atom(n), do: n"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    # Regression for a silent miscompilation. The repeated `x` is a match
+    # constraint: `f(:a, {:b, 2})` must NOT match this clause. Substituting the
+    # literal into the first parameter alone dropped it, and executed, the result
+    # went from `:nomatch` to `2` — compiling, warning-free, wrong.
+    test "keeps the binding when another parameter repeats the variable" do
+      input = "def f(x, {x, y}) when x == :a, do: y"
+      expected = "def f(:a = x, {x, y}), do: y"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    # Per-variable, not all-or-nothing: only `x` is read afterwards.
+    test "rebinds only the variables that are still read" do
+      input = "def f(x, y) when x == nil and y == :ok, do: x"
+      expected = "def f(nil = x, :ok), do: x"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
     end
   end
 end

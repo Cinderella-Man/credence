@@ -37,6 +37,24 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
   end
 
   describe "no-ops" do
+    test "invalid String.graphemes arities are unchanged" do
+      for code <- [
+            "Enum.count(String.graphemes())",
+            "value |> String.graphemes(extra) |> Enum.count()"
+          ] do
+        confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
+      end
+    end
+
+    test "String alias that names a custom module is unchanged" do
+      code = """
+      alias CustomString, as: String
+      Enum.count(String.graphemes(value))
+      """
+
+      confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
+    end
+
     test "String.length unchanged" do
       code = "String.length(str)"
 

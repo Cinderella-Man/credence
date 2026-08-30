@@ -208,4 +208,203 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     input = "defmodule M do def f("
     confirm_fix(fix(input), input)
   end
+
+  # --- New: == with tuple containing underscore → match? ---
+
+  test "converts == with tuple containing underscore to match?" do
+    input = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> s == {:busy, _} end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> match?({:busy, _}, s) end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "converts reversed == with tuple containing underscore to match?" do
+    input = """
+    defmodule M do
+      def f(s) do
+        {:busy, _} == s
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def f(s) do
+        match?({:busy, _}, s)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "fixed == to match? output is well-formed (parses)" do
+    input = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> s == {:busy, _} end)
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
+
+  test "no-op when both sides of == contain underscore" do
+    input = """
+    defmodule M do
+      def f do
+        {:busy, _} == {:idle, _}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op when == has no underscore in tuple" do
+    input = """
+    defmodule M do
+      def f(s) do
+        s == {:busy, :idle}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "converts a 3-tuple of literals with an underscore" do
+    input = """
+    defmodule M do
+      def f(s) do
+        s == {:reply, 200, _}
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def f(s) do
+        match?({:reply, 200, _}, s)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "converts a tuple holding a string literal alongside the underscore" do
+    input = """
+    defmodule M do
+      def f(s) do
+        s == {"busy", _}
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def f(s) do
+        match?({"busy", _}, s)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  # --- Deliberately NOT converted: `==` cases where `match?` would compile but
+  # mean something different, or would not compile at all. ---
+
+  test "no-op when the tuple holds a variable (match? would rebind, not compare)" do
+    # `s == {a, _}` reads `a`; `match?({a, _}, s)` would instead bind a fresh
+    # `a` and match EVERY 2-tuple -- silently wrong rather than uncompilable.
+    input = """
+    defmodule M do
+      def f(s, a) do
+        s == {a, _}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op when the tuple holds a function call (not valid in a pattern)" do
+    input = """
+    defmodule M do
+      def f(s, x) do
+        s == {g(x), _}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op when the tuple holds a nested tuple" do
+    input = """
+    defmodule M do
+      def f(s) do
+        s == {{:a, :b}, _}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op inside a guard (match?/2 is not allowed in guards)" do
+    input = """
+    defmodule M do
+      def f(s) when s == {:busy, _}, do: :yes
+      def f(_), do: :no
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op inside a case clause guard" do
+    input = """
+    defmodule M do
+      def f(v) do
+        case v do
+          s when s == {:busy, _} -> :yes
+          _ -> :no
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op inside quote, where the comparison is valid AST-building code" do
+    input = """
+    defmodule M do
+      defmacro busy?(s) do
+        quote do
+          unquote(s) == {:busy, _}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end

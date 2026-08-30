@@ -13,6 +13,22 @@ defmodule Credence.Semantic.UndefinedStringAlphanumeric do
   The fix replaces:
   - `&String.alphanumeric?/1` → `fn char -> String.match?(char, ~r/^[a-zA-Z0-9]$/) end`
   - `String.alphanumeric?(expr)` → `String.match?(expr, ~r/^[a-zA-Z0-9]$/)`
+
+  ## Bad
+
+      defmodule AlphanumCheckInteg1USA do
+        def clean(s) do
+          s |> String.graphemes() |> Enum.filter(&String.alphanumeric?/1)
+        end
+      end
+
+  ## Good
+
+      defmodule AlphanumCheckInteg1USA do
+        def clean(s) do
+          s |> String.graphemes() |> Enum.filter(fn char -> String.match?(char, ~r/^[a-zA-Z0-9]$/) end)
+        end
+      end
   """
   use Credence.Semantic.Rule
   alias Credence.Issue

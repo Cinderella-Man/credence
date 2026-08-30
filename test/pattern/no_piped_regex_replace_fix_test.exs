@@ -139,5 +139,17 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
 
       confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
+
+    test "leaves a custom module aliased as Regex unchanged" do
+      code = """
+      defmodule NoPipedRegexReplaceCustomAliasFixFixture do
+        alias MyRegex, as: Regex
+
+        def clean(value, replacement), do: value |> Regex.replace(~r/x/, replacement)
+      end
+      """
+
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
+    end
   end
 end

@@ -10,6 +10,18 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   The auto-fix replaces `Enum.take(list, -n)` with `Enum.slice(list, -n..-1//1)`.
   When `Enum.take(-n)` directly follows `Enum.sort()` in a pipeline, the fix
   defers to `PreferDescSortOverNegativeTake`.
+
+  ## Bad
+
+      defmodule BadOneNETN do
+        def last(list), do: Enum.take(list, -1)
+      end
+
+  ## Good
+
+      defmodule BadOneNETN do
+        def last(list), do: Enum.slice(list, -1..-1//1)
+      end
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -132,7 +144,7 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
       rule: :no_enum_take_negative,
       message:
         "`Enum.take(list, -#{n})` forces a double traversal of the list to take from the end. " <>
-          "Sort in the opposite direction and use `Enum.take(list, #{n})` instead.",
+          "Use `Enum.slice(list, -#{n}..-1//1)` instead.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

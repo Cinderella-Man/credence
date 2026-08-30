@@ -112,6 +112,12 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
   end
 
   describe "no-ops" do
+    test "String.graphemes/0 piped to Enum.count/2 is unchanged" do
+      code = ~S'String.graphemes() |> Enum.count(&(&1 == "a"))'
+
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
+    end
+
     test "String.count unchanged" do
       code = ~S'String.count(str, "1")'
 

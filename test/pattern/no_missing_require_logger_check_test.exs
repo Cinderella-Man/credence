@@ -224,6 +224,21 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
              end
              """)
     end
+
+    test "require Logger in one function does not satisfy a sibling function" do
+      assert flagged?(NoMissingRequireLogger, """
+             defmodule MyAppNMRLSiblingScope do
+               def first do
+                 require Logger
+                 Logger.info("first")
+               end
+
+               def second do
+                 Logger.info("second")
+               end
+             end
+             """)
+    end
   end
 
   describe "does not flag when import Logger is present" do

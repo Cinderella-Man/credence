@@ -1,0 +1,438 @@
+diff --git a/lib/pattern/no_negative_step_in_string_slice.ex b/lib/pattern/no_negative_step_in_string_slice.ex
+new file mode 100644
+index 0000000..e90cd5d
+--- /dev/null
++++ b/lib/pattern/no_negative_step_in_string_slice.ex
+@@ -0,0 +1,106 @@
++defmodule Credence.Pattern.NoNegativeStepInStringSlice do
++  @moduledoc """
++  Warning & future-proofing rule: Detects `String.slice(str, n..-1)` where the
++  range has no explicit step. In Elixir 1.19+, `n..-1` defaults to step -1
++  (descending), which triggers a deprecation warning and will become a hard
++  error in a future release.
++
++  The auto-fix adds `//1` to make the step explicit and positive:
++  `String.slice(str, n..-1)` → `String.slice(str, n..-1//1)`.
++
++  Only literal `-1` as the range endpoint is flagged (the idiomatic "suffix"
++  idiom). Other negative endpoints (e.g. `-2..-1`) or ranges with an explicit
++  step are left alone.
++
++  ## Bad
++
++      String.slice(str, n..-1)
++
++  ## Good
++
++      String.slice(str, n..-1//1)
++  """
++  use Credence.Pattern.Rule
++  alias Credence.Issue
++  alias Credence.RuleHelpers
++
++  @impl true
++  def check(ast, _opts) do
++    {_ast, issues} =
++      Macro.prewalk(ast, [], fn
++        # Direct call: String.slice(str, n..-1)
++        {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _meta, args} = node, issues
++        when is_list(args) ->
++          case args do
++            [_, range] ->
++              if bare_neg_one_range?(range) do
++                line = get_line(range)
++                {node, [build_issue(line) | issues]}
++              else
++                {node, issues}
++              end
++
++            _ ->
++              {node, issues}
++          end
++
++        node, issues ->
++          {node, issues}
++      end)
++
++    Enum.reverse(issues)
++  end
++
++  @impl true
++  def fix_patches(ast, _opts) do
++    RuleHelpers.patches_from_postwalk(ast, fn
++      # Direct call: String.slice(str, n..-1) with 2 explicit args
++      {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _, [str_arg, range]} = node ->
++        case range do
++          {:.., range_meta, [start, {:-, neg_meta, [{:__block__, lit_meta, [1]}]}]} ->
++            new_range =
++              {:..//, range_meta,
++               [start, {:-, neg_meta, [{:__block__, lit_meta, [1]}]}, {:__block__, [], [1]}]}
++
++            put_elem(node, 2, [str_arg, new_range])
++
++          _ ->
++            node
++        end
++
++      # Piped call: str |> String.slice(n..-1) with 1 explicit arg
++      {{:., _, [{:__aliases__, _, [:String]}, :slice]}, _, [range]} = node ->
++        case range do
++          {:.., range_meta, [start, {:-, neg_meta, [{:__block__, lit_meta, [1]}]}]} ->
++            new_range =
++              {:..//, range_meta,
++               [start, {:-, neg_meta, [{:__block__, lit_meta, [1]}]}, {:__block__, [], [1]}]}
++
++            put_elem(node, 2, [new_range])
++
++          _ ->
++            node
++        end
++
++      node ->
++        node
++    end)
++  end
++
++  # A range `start..-1` with NO explicit step.
++  defp bare_neg_one_range?({:.., _, [_start, {:-, _, [{:__block__, _, [1]}]}]}), do: true
++  defp bare_neg_one_range?(_), do: false
++
++  defp get_line({_, meta, _}) when is_list(meta), do: Keyword.get(meta, :line)
++  defp get_line(_), do: nil
++
++  defp build_issue(line) do
++    %Issue{
++      rule: :no_negative_step_in_string_slice,
++      message:
++        "`String.slice(str, n..-1)` uses a range with implicit step -1 in Elixir 1.19+. " <>
++          "Use `String.slice(str, n..-1//1)` to make the positive step explicit.",
++      meta: %{line: line}
++    }
++  end
++end
+diff --git a/test/pattern/no_negative_step_in_string_slice_check_test.exs b/test/pattern/no_negative_step_in_string_slice_check_test.exs
+new file mode 100644
+index 0000000..ba97067
+--- /dev/null
++++ b/test/pattern/no_negative_step_in_string_slice_check_test.exs
+@@ -0,0 +1,130 @@
++defmodule Credence.Pattern.NoNegativeStepInStringSliceCheckTest do
++  use Credence.RuleCase, async: true
++
++  alias Credence.Issue
++  alias Credence.Pattern.NoNegativeStepInStringSlice
++
++  describe "NoNegativeStepInStringSlice check" do
++    test "flags String.slice(str, n..-1) with variable start" do
++      code = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1)
++        end
++      end
++      """
++
++      issues = check(NoNegativeStepInStringSlice, code)
++      assert length(issues) == 1
++      issue = hd(issues)
++      assert %Issue{} = issue
++      assert issue.rule == :no_negative_step_in_string_slice
++    end
++
++    test "flags String.slice(str, 0..-1) with literal start" do
++      code = """
++      defmodule M do
++        def full(str) do
++          String.slice(str, 0..-1)
++        end
++      end
++      """
++
++      assert flagged?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "flags String.slice(str, 2..-1) with positive literal start" do
++      code = """
++      defmodule M do
++        def skip_two(str) do
++          String.slice(str, 2..-1)
++        end
++      end
++      """
++
++      assert flagged?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "leaves String.slice(str, n..-1//1) alone" do
++      code = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1//1)
++        end
++      end
++      """
++
++      assert clean?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "leaves String.slice with non-negative range alone" do
++      code = """
++      defmodule M do
++        def mid(str) do
++          String.slice(str, 1..3)
++        end
++      end
++      """
++
++      assert clean?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "leaves String.slice with negative step alone" do
++      code = """
++      defmodule M do
++        def rev(str) do
++          String.slice(str, -1..-1//-1)
++        end
++      end
++      """
++
++      assert clean?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "leaves non-String.slice calls alone" do
++      code = """
++      defmodule M do
++        def range(n) do
++          Enum.to_list(n..-1)
++        end
++      end
++      """
++
++      assert clean?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "leaves String.slice with variable range alone" do
++      code = """
++      defmodule M do
++        def slice(str, r) do
++          String.slice(str, r)
++        end
++      end
++      """
++
++      assert clean?(NoNegativeStepInStringSlice, code)
++    end
++
++    test "check and fix agree on what to flag" do
++      bad = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1)
++        end
++      end
++      """
++
++      good = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1//1)
++        end
++      end
++      """
++
++      assert flagged?(NoNegativeStepInStringSlice, bad)
++      assert clean?(NoNegativeStepInStringSlice, good)
++      assert check(NoNegativeStepInStringSlice, fix(NoNegativeStepInStringSlice, bad)) == []
++    end
++  end
++end
+diff --git a/test/pattern/no_negative_step_in_string_slice_equivalence_test.exs b/test/pattern/no_negative_step_in_string_slice_equivalence_test.exs
+new file mode 100644
+index 0000000..1c10dfd
+--- /dev/null
++++ b/test/pattern/no_negative_step_in_string_slice_equivalence_test.exs
+@@ -0,0 +1,37 @@
++defmodule Credence.Pattern.NoNegativeStepInStringSliceEquivalenceTest do
++  @moduledoc """
++  Tier 1 (expression), bounds dimension.
++  `String.slice(str, n..-1)` → `String.slice(str, n..-1//1)`. In Elixir 1.19.5,
++  `String.slice` handles the deprecated `n..-1` range (step -1) gracefully and
++  returns the same result as `n..-1//1`, so the fix is behaviour-preserving.
++  The input set covers short/empty strings, out-of-bounds indices, negative
++  indices, and Unicode.
++  """
++  use Credence.RuleCase, async: true
++
++  import Credence.BehaviourEquivalence
++  alias Credence.Pattern.NoNegativeStepInStringSlice
++
++  test "String.slice(str, n..-1) → String.slice(str, n..-1//1) preserves behaviour" do
++    assert_equivalent(
++      "String.slice(str, n..-1)",
++      rule: NoNegativeStepInStringSlice,
++      vars: [:str, :n],
++      inputs: [
++        {"hello", 0},
++        {"hello", 1},
++        {"hello", 2},
++        {"hello", 3},
++        {"hello", 10},
++        {"", 0},
++        {"", 1},
++        {"abc", -1},
++        {"abc", -2},
++        {"abc", -10},
++        {"café", 1},
++        {"👨‍👩‍👧", 0},
++        {"🇵🇱", 0}
++      ]
++    )
++  end
++end
+diff --git a/test/pattern/no_negative_step_in_string_slice_fix_test.exs b/test/pattern/no_negative_step_in_string_slice_fix_test.exs
+new file mode 100644
+index 0000000..67bf3a7
+--- /dev/null
++++ b/test/pattern/no_negative_step_in_string_slice_fix_test.exs
+@@ -0,0 +1,141 @@
++defmodule Credence.Pattern.NoNegativeStepInStringSliceFixTest do
++  use Credence.RuleCase, async: true
++
++  alias Credence.Pattern.NoNegativeStepInStringSlice
++
++  describe "NoNegativeStepInStringSlice fix" do
++    test "rewrites String.slice(str, n..-1) to String.slice(str, n..-1//1)" do
++      input = """
++      defmodule M do
++        @doc false
++        def suffix(str, n) when is_binary(str) and is_integer(n) do
++          String.slice(str, n..-1)
++        end
++      end
++      """
++
++      expected = """
++      defmodule M do
++        @doc false
++        def suffix(str, n) when is_binary(str) and is_integer(n) do
++          String.slice(str, n..-1//1)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, input), expected)
++    end
++
++    test "rewrites String.slice(str, 0..-1) with literal start" do
++      input = """
++      defmodule M do
++        def full(str) do
++          String.slice(str, 0..-1)
++        end
++      end
++      """
++
++      expected = """
++      defmodule M do
++        def full(str) do
++          String.slice(str, 0..-1//1)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, input), expected)
++    end
++
++    test "rewrites String.slice(str, 2..-1) with positive literal start" do
++      input = """
++      defmodule M do
++        def skip_two(str) do
++          String.slice(str, 2..-1)
++        end
++      end
++      """
++
++      expected = """
++      defmodule M do
++        def skip_two(str) do
++          String.slice(str, 2..-1//1)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, input), expected)
++    end
++
++    test "rewrites multiple occurrences in one file" do
++      input = """
++      defmodule M do
++        def a(str, n) do
++          x = String.slice(str, n..-1)
++          y = String.slice(str, 0..-1)
++          {x, y}
++        end
++      end
++      """
++
++      expected = """
++      defmodule M do
++        def a(str, n) do
++          x = String.slice(str, n..-1//1)
++          y = String.slice(str, 0..-1//1)
++          {x, y}
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, input), expected)
++    end
++
++    test "does not modify String.slice with explicit step" do
++      code = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1//1)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, code), code)
++    end
++
++    test "does not modify String.slice with non-negative range" do
++      code = """
++      defmodule M do
++        def mid(str) do
++          String.slice(str, 1..3)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, code), code)
++    end
++
++    test "does not modify non-String.slice calls" do
++      code = """
++      defmodule M do
++        def range(n) do
++          Enum.to_list(n..-1)
++        end
++      end
++      """
++
++      confirm_fix(fix(NoNegativeStepInStringSlice, code), code)
++    end
++
++    test "fixed code has no remaining issues" do
++      code = """
++      defmodule M do
++        def suffix(str, n) do
++          String.slice(str, n..-1)
++        end
++      end
++      """
++
++      assert check(NoNegativeStepInStringSlice, fix(NoNegativeStepInStringSlice, code)) == []
++    end
++  end
++end

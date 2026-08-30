@@ -83,40 +83,75 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
 
         matches ->
           remaining_guard = remove_matched_equalities(guard, param_names)
-          matched_vars = MapSet.new(matches, fn {var, _, _} -> var end)
+          {_name, _, params} = call
 
-          if references_any?(remaining_guard, matched_vars) or
-               body_references_any?(rest, matched_vars) do
-            nil
-          else
-            {_name, _, params} = call
-            new_params = apply_fixes_to_params(params, matches)
-            new_call = put_elem(call, 2, new_params)
+          # Any matched variable that is still read once its `==` conjunct is gone
+          # keeps its binding, as `literal = var`. This replaced an all-or-nothing
+          # bail: if the remaining guard OR the body mentioned any matched var, the
+          # whole patch was discarded, so the rule reported findings it never
+          # repaired. The set is per-variable, not over the whole match set — in
+          # `def f(x, y) when x == nil and y == :ok, do: x` only `x` needs rebinding.
+          keep_bound = vars_to_keep_bound(matches, remaining_guard, rest, params)
+          new_params = apply_fixes_to_params(params, matches, keep_bound)
+          new_call = put_elem(call, 2, new_params)
 
-            new_head =
-              case remaining_guard do
-                nil -> new_call
-                remaining -> {:when, [], [new_call, remaining]}
-              end
+          new_head =
+            case remaining_guard do
+              nil -> new_call
+              remaining -> {:when, [], [new_call, remaining]}
+            end
 
-            # Render the WHOLE clause (new head + the untouched body) rather than
-            # patching just the `:when` node: Sourceror's range for `:when`
-            # over-extends to the trailing comma of a `head when g, do: …`
-            # one-liner, so a string patch there eats the comma and yields
-            # non-compiling `name(pattern) do: …`. Rebuilding the def renders the
-            # `, do:` correctly; the body is reused verbatim (mix format then
-            # normalises layout, so unchanged code is not reformatted).
-            {kind, _meta, _args} = node
-            new_def = {kind, [line: 1], [new_head | rest]}
+          # Render the WHOLE clause (new head + the untouched body) rather than
+          # patching just the `:when` node: Sourceror's range for `:when`
+          # over-extends to the trailing comma of a `head when g, do: …`
+          # one-liner, so a string patch there eats the comma and yields
+          # non-compiling `name(pattern) do: …`. Rebuilding the def renders the
+          # `, do:` correctly; the body is reused verbatim (mix format then
+          # normalises layout, so unchanged code is not reformatted).
+          {kind, _meta, _args} = node
+          new_def = {kind, [line: 1], [new_head | rest]}
 
-            %{
-              range: Sourceror.get_range(node),
-              change: Credence.RuleHelpers.render_replacement(new_def, %{})
-            }
-          end
+          %{
+            range: Sourceror.get_range(node),
+            change: Credence.RuleHelpers.render_replacement(new_def, %{})
+          }
       end
     end
   end
+
+  # Which matched variables must survive as a binding in the new head.
+  #
+  # The `other_params_reference?/2` clause is not only about keeping the rewrite
+  # complete — it closes a **silent miscompilation** the rule shipped. Given
+  #
+  #     def f(x, {x, y}) when x == :a, do: y
+  #
+  # the repeated `x` requires the tuple's first element to equal the first
+  # argument, so `f(:a, {:b, 2})` does not match this clause. Substituting the
+  # literal into the first parameter alone produced `def f(:a, {x, y}), do: y`,
+  # which drops that requirement: executed, `f(:a, {:b, 2})` went from `:nomatch`
+  # to `2`. The output compiles and the only warning is an unused variable, so
+  # nothing downstream could catch it. Keeping the binding — `def f(:a = x, {x, y})`
+  # — preserves the match.
+  defp vars_to_keep_bound(matches, remaining_guard, rest, params) do
+    for {var, _literal, _meta} <- matches,
+        single = MapSet.new([var]),
+        references_any?(remaining_guard, single) or body_references_any?(rest, single) or
+          other_params_reference?(params, var),
+        into: MapSet.new(),
+        do: var
+  end
+
+  # Does `var` appear anywhere in the parameter list OTHER than as its own
+  # top-level bare parameter? A repeated variable across parameters is a match
+  # constraint, not a coincidence.
+  defp other_params_reference?(params, var) when is_list(params) do
+    params
+    |> Enum.reject(&match?({^var, _, ctx} when is_atom(ctx), &1))
+    |> references_any?(MapSet.new([var]))
+  end
+
+  defp other_params_reference?(_params, _var), do: false
 
   defp extract_guard_matches({kind, _meta, [{:when, _, [call, guard]} | _]})
        when kind in [:def, :defp] do
@@ -223,7 +258,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   defp guard_has_or?({:and, _, [left, right]}), do: guard_has_or?(left) or guard_has_or?(right)
   defp guard_has_or?(_), do: false
 
-  defp apply_fixes_to_params(params, matches) do
+  defp apply_fixes_to_params(params, matches, keep_bound) do
     match_map = Map.new(matches, fn {var_name, literal, _meta} -> {var_name, literal} end)
 
     Enum.map(params, fn
@@ -233,8 +268,13 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
         # substituted into the head. Otherwise `f(x) when x == nil` lost its guard
         # WITHOUT gaining the `nil` pattern, making the clause match everything.
         case Map.fetch(match_map, name) do
-          {:ok, literal} -> literal
-          :error -> param
+          {:ok, literal} ->
+            if MapSet.member?(keep_bound, name),
+              do: {:=, [], [literal, {name, [], nil}]},
+              else: literal
+
+          :error ->
+            param
         end
 
       other ->

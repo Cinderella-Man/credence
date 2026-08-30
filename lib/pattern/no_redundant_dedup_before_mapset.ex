@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Pipe form: <dedup> |> MapSet.new(...)
-        {:|>, meta, [left, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, _}]} = node, acc ->
+        {:|>, meta, [left, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []}]} = node, acc ->
           case extract_dedup_expr(left) do
             {:ok, _} ->
               issue = %Issue{
@@ -58,7 +58,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
           end
 
         # Non-pipe form: MapSet.new(Enum.dedup(...))
-        {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, meta, [first_arg | _rest]} = node, acc ->
+        {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, meta, [first_arg]} = node, acc ->
           case extract_dedup_expr(first_arg) do
             {:ok, _} ->
               issue = %Issue{
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
         # Pipe form: <dedup> |> MapSet.new() → MapSet.new(expr)
-        {:|>, _, [left, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, _}]} = node, acc ->
+        {:|>, _, [left, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []}]} = node, acc ->
           case extract_dedup_expr(left) do
             {:ok, expr} ->
               range = Sourceror.get_range(node)
@@ -99,7 +99,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
           end
 
         # Non-pipe form: MapSet.new(Enum.dedup(expr)) → MapSet.new(expr)
-        {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, [first_arg | _rest]} = node, acc ->
+        {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, [first_arg]} = node, acc ->
           case extract_dedup_expr(first_arg) do
             {:ok, expr} ->
               range = Sourceror.get_range(first_arg)

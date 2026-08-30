@@ -35,7 +35,24 @@ maintainer_tools/stage_1_promote_fixable_rules/.review_logs/
 maintainer_tools/stage_2_promote_non_fixable/.review_logs/
 maintainer_tools/stage_3_resurrect_followups/.review_logs/
 
-.claudemaintainer_tools/corpus_whitelist_validator/accepted_findings.txt
+# Local Claude Code session state
+.claude/
+
+# Corpus whitelist validator working copies (generated artifacts)
+maintainer_tools/corpus_whitelist_validator/accepted_findings.txt
 maintainer_tools/corpus_whitelist_validator/data/
 maintainer_tools/corpus_whitelist_validator/reports/
 maintainer_tools/corpus_whitelist_validator/.logs/
+maintainer_tools/pr_review/_verdict
+maintainer_tools/pr_review/_briefing/
+maintainer_tools/pr_review/.review_logs/
+maintainer_tools/pr_review/.adversarial_logs/
+maintainer_tools/pr_review/.adversarial.lock
+maintainer_tools/pr_review/.lock
+maintainer_tools/pr_review/.manifest.*.json
+maintainer_tools/pr_review/_fix_report
+maintainer_tools/pr_review/.fix_logs/
+maintainer_tools/pr_review/.fix_scratch/
+maintainer_tools/pr_review/.fixes.*.json
+maintainer_tools/pr_review/.campaign.lock
+maintainer_tools/pr_review/.needs_refresh
