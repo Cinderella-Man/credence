@@ -1,8 +1,9 @@
 > **Provenance & verification status (added 2026-07-11 by the coordinating
 > session before hand-off).** Produced by an autonomous research agent (Claude
-> Opus); preserved verbatim below. Spot-verifications performed by the
-> coordinator all held: the Semantic round's lack of compile-revert
-> (`lib/semantic.ex:144-152`), the analyze/fix desync on the patch self-revert
+> Opus); subsequently updated where the implementation has moved on. The
+> current tree runs compilation in a heap- and timeout-bounded child process,
+> and the Semantic round re-measures every changed pass and reverts attributable
+> regressions. The analyze/fix desync on the patch self-revert
 > path (`lib/rule_helpers.ex:279` — the code comment itself documents
 > "reported, just goes unfixed"), and the corpus test structure. Two later
 > refinements from `docs/13`/`docs/14`: `discover_rules` measures 0.24 ms warm
@@ -20,8 +21,8 @@ Read-only research report. All paths absolute-relative to `/home/kamil/projects/
 Every claim cites `file:line`. Rule-level quality is out of scope (another agent); this is
 pipeline/architecture-level.
 
-Scale snapshot: **146 Pattern rules** (`lib/pattern/*.ex` minus `rule.ex`), **16 Semantic
-rules** (`lib/semantic/*.ex` minus `rule.ex`), **20 Syntax rules** (`lib/syntax/*.ex` minus
+Scale snapshot (updated 2026-08-30): **160 Pattern rules** (`lib/pattern/*.ex` minus `rule.ex`),
+**92 Semantic rules** (`lib/semantic/*.ex` minus `rule.ex`), **48 Syntax rules** (`lib/syntax/*.ex` minus
 `rule.ex`). Version 0.8.1 (`mix.exs:7`). Sole parse/patch dependency: `sourceror ~> 1.11`
 (`mix.exs:39`; lock is 1.12.0).
 
@@ -65,7 +66,7 @@ rules** (`lib/semantic/*.ex` minus `rule.ex`), **20 Syntax rules** (`lib/syntax/
 - `run_fixable_rules/3` (`:78-116`) is the core. It is a **single `Enum.reduce` over the
   rules in priority order** (`:80`). Per rule iteration:
   1. `Sourceror.parse_string(source)` **freshly every iteration** (`:83`) — re-parsed for
-     every one of the 146 rules regardless of whether the source changed.
+     every one of the 160 rules regardless of whether the source changed.
   2. `rule.check(ast, check_opts)` (`:86`).
   3. if issues non-empty → `invoke_fix` = `RuleHelpers.apply_rule_fix` (`:93`, `:120`) →
      `apply_or_revert` (`:94`).
@@ -89,15 +90,17 @@ rule creating work for an earlier-priority rule. See Weaknesses §6.1.
     `:79`). A warning fix that introduces a new warning is not re-fixed this phase.
   - Compilation **fails** → fix errors, and **retry** (`pass+1`) only if the source changed
     (`:89-115`). If no error fix changed the source, it stops (`:109-114`).
-- `apply_fixes_traced/2` (`:119-155`): sorts diagnostics **rightmost-column-first**
+- `apply_fixes_traced/3`: sorts diagnostics **rightmost-column-first**
   (`Enum.sort_by(&position_sort_key/1, :desc)`, `:126`, `:160-166`) so column-aware fixes
   don't see stale columns after an earlier edit shifts the line (comment `:120-124`). For each
   diagnostic, `find_matching_rule` = first rule whose `match?/1` returns true (`:175-177`),
-  then `rule.fix(src, diagnostic)` (`:144`). **There is NO compile-revert guard in the
-  Semantic round** — the fixed string is taken unconditionally (`:144-152`), unlike Pattern.
-- Semantic rule ordering also by `{priority(), module}`. Overrides: `missing_use_exunit_case`
-  = 100 (runs first), `no_non_negated_integer` = 400; the other 14 rules use the macro
-  default 500 (`lib/semantic/rule.ex:32-33`).
+  then `rule.fix(src, diagnostic)`. A changed pass is recompiled and compared with its
+  baseline health. Parse regressions, compile regressions, and strict additions to the error
+  multiset with no repair are attributed to individual fixes; culpable fixes are reverted and
+  recorded as `:reverted`. If attribution or replay is unsafe, the whole pass is reverted.
+- Semantic rule ordering is also by `{priority(), module}`. The current override inventory is
+  maintained in `docs/20-rule-ordering-policy.md`; first-match-wins dispatch makes those
+  priorities ownership decisions, not merely presentation order.
 
 ### 1.4 Syntax round (`lib/syntax.ex`) — text fixes, only when unparseable, no revert
 
@@ -107,13 +110,13 @@ rule creating work for an earlier-priority rule. See Weaknesses §6.1.
   Otherwise `Enum.reduce` over rules, each `rule.fix(src)` a **raw string→string transform**
   (`:71-83`); a change is logged but there is **no per-rule parse/compile revert**. After the
   reduce it re-parses once and only *logs* whether the source now parses (`:88-111`) — it does
-  not undo a rule that made things worse. All 20 syntax rules use the default priority 500
+  not undo a rule that made things worse. All 48 syntax rules use the default priority 500
   (`lib/syntax/rule.ex:23`), so order is purely alphabetical by module name.
 
 ### 1.5 How many compilations per `fix` call — and the cost
 
-`RuleHelpers.compiles?/1` (`lib/rule_helpers.ex:202-204`) and `compile_and_capture/1`
-(`:160-186`) call **`Code.compile_string`** (a real compile that *executes module-body code*).
+`RuleHelpers.compiles?/1` and `compile_and_capture/1` ultimately call **`Code.compile_string`**
+in a heap- and timeout-bounded child process (a real compile that *executes module-body code*).
 Per `Credence.fix` on a file that fires K Pattern rules:
 
 - Syntax: parse-only (no compile).
@@ -123,11 +126,11 @@ Per `Credence.fix` on a file that fires K Pattern rules:
   `lib/pattern.ex:135`). So ~K compiles.
 - Final `analyze`: **1 compile** (Semantic.analyze) (`lib/credence.ex:56`).
 
-Total ≈ `(1–3) + 1 + K + 1` full `Code.compile_string` invocations. Additionally, per fix
-call the Pattern reduce does **146 `Sourceror.parse_string` calls** (one per rule,
-`lib/pattern.ex:83`) and **146 `rule.check` AST prewalks**, plus the final `Pattern.analyze`
-does another 146 checks and 146 `dsl_dropped_ranges` calls (`lib/pattern.ex:19`,`:34-41`). So
-`check` runs ~292 times per fix. `apply_rule_fix` on each firing rule additionally re-parses
+Total is `(1–3) + one changed-pass health check per Semantic pass + 1 + K + 1` full
+compilations, with extra compiles only on the abnormal Semantic attribution path. Additionally,
+per fix call the Pattern reduce does **160 `Sourceror.parse_string` calls** (one per rule) and
+**160 `rule.check` AST prewalks**, plus the final `Pattern.analyze` does another 160 checks and
+160 `dsl_dropped_ranges` calls. So `check` runs ~320 times per fix. `apply_rule_fix` on each firing rule additionally re-parses
 (`Sourceror.parse_string!`, `lib/rule_helpers.ex:256`), runs `parses?` (`string_to_quoted`,
 `:354-357`) and `comments_changed?` (`string_to_quoted_with_comments`, `:365-377`). See §6.2.
 
@@ -163,8 +166,8 @@ Three-way branch:
 
 So the revert mechanism is per-rule and post-fix: it compiles the candidate output, and on
 failure keeps the previous good source while surfacing the offender as `:reverted`. This is
-the Pattern round's only compile-safety net; **Semantic and Syntax rounds have no
-equivalent** (§1.3, §1.4). Note there are effectively **two layers of self-protection** for
+the Pattern round's per-rule compile-safety net. Semantic instead gates and attributes a whole
+changed pass (§1.3), while Syntax has no equivalent (§1.4). Note there are effectively **two layers of self-protection** for
 Pattern: (a) the parse+comment guard inside `apply_rule_fix` (`lib/rule_helpers.ex:279`, which
 silently returns source), and (b) the compile guard in `apply_or_revert` (which marks
 `:reverted`). Only (b) is visible in the trace.
@@ -265,14 +268,23 @@ helpers `collect_comments`/`carry_comments` (`:827-869`) and `deletion_patch` (`
 
 ### 2.3 Priority distribution (collected)
 
-- **Pattern (146 rules):** 139 use the default 500. 7 override: `no_piped_regex_replace` = **50**
+Of 298 discovered rule modules, **18 rules declare a non-default priority**. The policy for
+adding an override is in `docs/20-rule-ordering-policy.md`; the inventory below is refreshed from
+the live dispatch lists because that policy document's adoption-time snapshot is now stale.
+
+- **Pattern (160 rules):** 153 use the default 500. 7 override: `no_piped_regex_replace` = **50**
   (a repair rule for always-crashing `x |> Regex.replace(...)`, runs first,
   `lib/pattern/no_piped_regex_replace.ex:22`), `no_identity_function_in_enum` = 499,
   `no_explicit_sum_reduce`/`no_explicit_product_reduce`/`prefer_heredoc_for_multi_line_doc` = 501,
   `no_chunk_by_identity_for_dedup` = 510, `no_identity_enum_map` = 520. So priority is barely used
   as an ordering tool — **effective order is alphabetical by module name for ~95% of rules**.
-- **Semantic (16):** `missing_use_exunit_case` = 100, `no_non_negated_integer` = 400, rest 500.
-- **Syntax (20):** all 500 → alphabetical.
+- **Semantic (92):** 11 override: `missing_use_exunit_case` and
+  `no_hallucinated_task_timeout_error_struct` = 100; `no_hallucinated_defpstruct`,
+  `no_non_negated_integer`, and `no_stream_data_integer_two_args` = 400;
+  `fix_reraise_keyword_in_catch` and `fix_truncated_special_form` = 450;
+  `fix_local_function_in_guard` and `fix_negated_capture_with_arity` = 490;
+  `undefined_function` and `no_unreachable_case_clause_by_type` = 501. The other 81 use 500.
+- **Syntax (48 source files, 46 discovered rule modules):** all 500 → alphabetical.
 
 ### 2.4 `assumptions()` mechanism (`lib/assumptions.ex`, `lib/rule_helpers.ex`)
 
@@ -324,8 +336,7 @@ no re-formatting before compare — so a rule that re-indents/reflows untouched 
 (`:29-41`).
 
 Each rule has **three** test files: `_check_test.exs`, `_fix_test.exs`, `_equivalence_test.exs`.
-Confirmed counts: **146 check + 146 fix + 146 equivalence** files under `test/pattern/`
-(445 files total).
+Confirmed counts: **160 check + 160 fix + 160 equivalence** files under `test/pattern/`.
 
 ### 3.2 Meta-gates (`test/support/meta_test_support.ex` + the `*_meta_test.exs` files)
 
@@ -494,7 +505,7 @@ Data files at `maintainer_tools/` root: `candidates.md` (empty now), `followup.m
   plus a warn-only mode nobody could act on. The move to `fix_patches/2` + `apply_or_revert` +
   parking 15 unfixable rules made "fix it or don't exist" a structural property. **Note: this doc
   is stale** — it still lists a `fix/2` callback and `fixable?/0`, both since removed; the counts
-  (76 rules) predate today's 146.
+  (76 rules) predate today's 160.
 - **02 `02_rule-review-process.md`** — the human step-by-step for accepting AI-written rules from
   `evolution`. States the one bar ("exact same answer for every admitted input; `:strict` = every
   possible input"), the one-set-at-a-time discipline, the correctness-check recipe (Unicode/edge/
@@ -528,7 +539,7 @@ Data files at `maintainer_tools/` root: `candidates.md` (empty now), `followup.m
   a *log of the backfill*: it classifies rules into T1/T2/T3a/T3b/T3c/PROBE, records the
   divergences found (shipped-rule bugs) and their resolutions (narrow/gate/fix/merge/drop/repair),
   and marks **BACKFILL COMPLETE — 0 skeletons, 0 excluded, every rule has a real equivalence
-  test** (`:441-443`), rule count 125→117 at that time (since grown to 146). The gate
+  test** (`:441-443`), rule count 125→117 at that time (since grown to 160). The gate
   (`equivalence_meta_test.exs`) is live and hard-flipped.
 - **08 `08-rule-scaffolding-generator.md`** — `mix credence.gen.rule <Name> [--type ...]`
   (`lib/mix/tasks/credence.gen.rule.ex`) + `Credence.RuleScaffold` + `Credence.RuleName` as the
@@ -557,7 +568,7 @@ Data files at `maintainer_tools/` root: `candidates.md` (empty now), `followup.m
 | Translation-validation spine (fire-safe-core, else no-action) | **DONE (core design)** | `apply_or_revert` `lib/pattern.ex:129-148`; `apply_rule_fix` self-revert `lib/rule_helpers.ex:279`; `:strict` |
 | §2 `DoesNotCompile` / compile-the-fixed-corpus oracle | **PARTLY DONE** | `fix_safety_test.exs` applies fixes + checks comment/mangle/over-reach; `FixBreakage` structural compile-proxy detectors. But it is metamorphic/structural, **not an actual `Code.compile` of the fixed corpus** (corpus files can't compile standalone — `fix_breakage.ex:6-12`). The generic compile oracle §2 asks for is **not** implemented. |
 | §1 property-based differential oracle (StreamData into the equivalence harness) | **NOT DONE** | `behaviour_equivalence.ex` uses **curated fixed inputs** (`EquivalenceInputs`); docs/07 explicitly leaves StreamData "additive, future" (`07:461`); `stream_data` is a test dep (`mix.exs:40`) but not wired into equivalence |
-| Behaviour-equivalence suite over every rule (the doc's own §1 prerequisite) | **DONE** | 146 `*_equivalence_test.exs`; `equivalence_meta_test.exs` hard gate; `test_helper.exs:11-15` |
+| Behaviour-equivalence suite over every rule (the doc's own §1 prerequisite) | **DONE** | 160 `*_equivalence_test.exs`; `equivalence_meta_test.exs` hard gate; `test_helper.exs:11-15` |
 | §3 mutation-testing the rules | **NOT DONE** | no `muzak`/`mutate` dep in `mix.exs`; no mutation harness found |
 | §4 shared differential-precondition / scope-binding library | **NOT DONE** | rules hand-roll their safe cores (docs explicitly keep rules self-contained); no shared read/write-var helper in `rule_helpers.ex` |
 | §5 bounded-exhaustive small-program generation (JDolly analog) | **NOT DONE** | no generator found |
@@ -577,7 +588,7 @@ compile-oracle* items are open.
 The Pattern round is one forward `Enum.reduce` in `{priority, module}` order
 (`lib/pattern.ex:80`), not a fixpoint. Consequences:
 - **A rule's fix can create work for an earlier-ordered rule that never runs again in this
-  call.** Because 139/146 rules share priority 500 and are ordered *alphabetically by module
+  call.** Because 153/160 rules share priority 500 and are ordered *alphabetically by module
   name* (§2.3), the ordering is essentially arbitrary w.r.t. fix dependencies. There is no way
   to express "run B after A" except by hand-tuning one of the 6 numeric priorities.
 - **`fix` is therefore not guaranteed idempotent in general.** A second `Credence.fix` pass
@@ -589,9 +600,9 @@ The Pattern round is one forward `Enum.reduce` in `{priority, module}` order
   `issues` are real, fixable-on-a-second-call findings.
 
 ### 6.2 Performance: parse-per-rule, check ×2, compile-per-firing-rule
-Per `fix` call (§1.5): **146 `Sourceror.parse_string` re-parses** and **146 `check` prewalks** in
-the reduce (`lib/pattern.ex:83`,`:86`), plus another 146 checks + 146 `dsl_dropped_ranges` in the
-final `analyze` (`lib/pattern.ex:19`) — check runs ~292×. The source is re-parsed on **every**
+Per `fix` call (§1.5): **160 `Sourceror.parse_string` re-parses** and **160 `check` prewalks** in
+the reduce, plus another 160 checks + 160 `dsl_dropped_ranges` in the final `analyze` — check
+runs ~320×. The source is re-parsed on **every**
 iteration even when unchanged (no caching between two non-firing rules). Each firing rule triggers
 a full `Code.compile_string` in `apply_or_revert` (`lib/pattern.ex:135`) on top of the round's gate
 compile (`:69`) and the final semantic analyze compile. `Code.compile_string` is the dominant cost
@@ -599,13 +610,13 @@ and it **executes module-body code** (§6.3). `discover_rules` is also re-run (n
 `rules()`/`default_rules()` call (`lib/rule_helpers.ex:20-24`, called from `analyze` and
 `fix_with_trace`).
 
-### 6.3 `fix`/`analyze` compile untrusted AI code with no process isolation
-`compiles?`/`compile_and_capture` run `Code.compile_string` (`lib/rule_helpers.ex:160-166`,`202`),
-which evaluates module-level code at compile time (module attributes, `@compile`, top-level
-expressions). Cleanup is `:code.soft_purge`+`:code.delete` (`:206-214`), **not** a separate
-process/timeout. AI-generated input with compile-time side effects or a long-running module body
-can hang or affect the host. The Pattern gate, every Pattern revert check, and the whole Semantic
-round all compile the (possibly adversarial) source in-process.
+### 6.3 Compilation is contained, but compile-time effects remain relevant
+`compiles?`/`compile_and_capture` run `Code.compile_string` in a monitored child with a default
+64-million-word heap ceiling and 30-second deadline. A heap breach, timeout, or child exit becomes
+an error diagnostic instead of taking down or indefinitely blocking the caller. The child also
+tracks and terminates processes spawned by the compiled source. Compilation still evaluates
+module-level code, so external side effects performed before termination cannot be rolled back;
+the containment guarantee is bounded execution, not transactional isolation.
 
 ### 6.4 No patch-level provenance to the caller
 `Credence.fix` returns `applied_rules :: [{module, count | :reverted}]` (`lib/credence.ex:40-44`)
@@ -615,13 +626,13 @@ changed**. Per-rule before/after diffs exist only as `Logger.debug` side effects
 provenance (which rule touched which line) programmatically. The `Issue` struct also carries no
 column and no rule module (`lib/issue.ex:5`), only `rule` atom + `meta[:line]`.
 
-### 6.5 Asymmetric safety across the three rounds
-Only the **Pattern** round has a compile-revert (`apply_or_revert`). The **Semantic** round applies
-`rule.fix(src, diagnostic)` unconditionally with no compile check and no revert
-(`lib/semantic.ex:144-152`) — a semantic fix that breaks compilation propagates to the next
-diagnostic/pass. The **Syntax** round applies each text fix and only *logs* whether the result
-parses at the end, never reverting (`lib/syntax.ex:71-111`). So the "never ship broken code"
-guarantee is Pattern-only; a bad Semantic or Syntax fix is not self-caught.
+### 6.5 Safety remains asymmetric across the three rounds
+The **Pattern** round compiles and reverts each changed rule. The **Semantic** round re-measures
+every changed pass, attributes parse/compile regressions or strictly-added unrepaired errors,
+reverts culpable fixes, and records them as `:reverted`; ambiguous unsafe replay reverts the whole
+pass. The **Syntax** round still applies each text fix and only logs whether the result parses at
+the end, without reverting. Thus Pattern and Semantic now have different repair-safety gates,
+while Syntax remains the unguarded phase.
 
 ### 6.6 analyze/fix desync on the parse/comment self-revert path
 The DSL gate keeps `analyze` and `fix` in lockstep (§1.8): a finding is suppressed iff its fix is
@@ -651,11 +662,13 @@ full re-pin (intended but heavy). One finding pins with a `:?` line placeholder 
 `prefer_map_new_with_transform` emits no line meta (`docs/09:476`) — a rule gap normalized into the
 snapshot.
 
-### 6.9 Sparse, near-unused priority scheme
-The priority mechanism exists (`{priority, module}` sort) but is barely used: 139/146 Pattern and
-all 20 Syntax rules share the default. Rule interactions that *should* be order-controlled are
-instead alphabetical accidents. There is no documented policy for when to set a non-default
-priority (the 7 that do — 50/499/501/510/520 — are ad hoc).
+### 6.9 Most rules still use the alphabetical tiebreak
+The priority mechanism is documented in `docs/20-rule-ordering-policy.md`: a non-default priority
+must state the ordering assertion it makes, contended Semantic diagnostics must be decided by a
+declared priority, and independent rules should remain at 500. Currently 18 rules declare an
+override (7 Pattern, 11 Semantic, no Syntax); 153/160 Pattern and all 46 discovered Syntax rules
+therefore still use the alphabetical tiebreak. That is expected for independent rules but remains
+a hazard if an interaction is not identified and declared under the policy.
 
 ### 6.10 Logging is debug-only and side-channel
 All fix tracing is `Logger.debug` with a `[credence_fix]` prefix (`lib/pattern.ex:67`,
@@ -664,10 +677,11 @@ consumer running at `:info` sees nothing about what happened inside a fix beyond
 `applied_rules` tuples. There is no structured event stream, no callback, no telemetry.
 
 ### 6.11 Config surface is minimal and undocumented centrally
-Only two config knobs exist: `config :credence, :assumptions` and `config :credence, :dsl_macros`
-(`lib/rule_helpers.ex:53`, `lib/dsl_guard.ex:491`). `max_passes` is opts-only for the Semantic
-round (`lib/semantic.ex:53`), with no config fallback. There is no config for logging, disabling
-rounds, per-round timeouts, or a compile timeout — the latter compounding §6.3.
+Four config knobs exist: `config :credence, :assumptions`, `:dsl_macros`,
+`:compile_max_heap_words`, and `:compile_timeout_ms`. `max_passes` remains opts-only for the
+Semantic round, with no config fallback. There is still no config for logging, disabling rounds,
+or phase-specific timeouts; the compile timeout and heap ceiling cover every compilation through
+`compile_and_capture/2`.
 
 ### 6.12 `Code.string_to_quoted` used in `lib/` despite the "Sourceror-only" policy
 The project's stated parsing policy is Sourceror-only (docs/08:78-82 claims the sole
