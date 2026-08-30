@@ -20,6 +20,23 @@ defmodule Credence.MetaTestSupport do
 
   alias Credence.RuleName
 
+  @input_eval_timeout 1_000
+  @input_remote_calls %{
+    Enum => MapSet.new([{:to_list, 1}]),
+    Map => MapSet.new([{:new, 2}]),
+    :unicode => MapSet.new([{:characters_to_nfd_binary, 1}]),
+    Credence.EquivalenceInputs =>
+      MapSet.new([
+        {:multi_codepoint_strings, 0},
+        {:signed_integers, 0},
+        {:single_codepoint_strings, 0},
+        {:stability_lists, 0},
+        {:term_lists, 0},
+        {:unicode_strings, 0}
+      ])
+  }
+  @input_ast_forms [:__aliases__, :__block__, :., :{}, :%{}, :fn, :->, :|, :.., :++, :|>, :+, :-]
+
   # --- discovery -------------------------------------------------------------
 
   @doc "Every discovered Pattern rule."
@@ -413,13 +430,44 @@ defmodule Credence.MetaTestSupport do
   end
 
   defp eval_data(node) do
-    {value, _binding} = Code.eval_quoted(node, [], __ENV__)
-    {:ok, value}
+    if safe_input_ast?(node) do
+      task = Task.async(fn -> Code.eval_quoted(node, [], __ENV__) end)
+
+      case Task.yield(task, @input_eval_timeout) || Task.shutdown(task, :brutal_kill) do
+        {:ok, {value, _binding}} -> {:ok, value}
+        _ -> :error
+      end
+    else
+      :error
+    end
   rescue
     _ -> :error
   catch
     _, _ -> :error
   end
+
+  defp safe_input_ast?(ast) do
+    {_ast, safe?} =
+      Macro.prewalk(ast, true, fn
+        {{:., _, [module_ast, fun]}, _, args} = node, safe when is_atom(fun) and is_list(args) ->
+          module = alias_module(module_ast)
+          allowed = Map.get(@input_remote_calls, module, MapSet.new())
+          {node, safe and MapSet.member?(allowed, {fun, length(args)})}
+
+        {name, _, args} = node, safe when is_atom(name) and is_list(args) ->
+          {node, safe and name in @input_ast_forms}
+
+        node, safe ->
+          {node, safe}
+      end)
+
+    safe?
+  end
+
+  defp alias_module({:__aliases__, _, parts}), do: Module.concat(parts)
+  defp alias_module({:__block__, _, [module]}) when is_atom(module), do: module
+  defp alias_module(module) when is_atom(module), do: module
+  defp alias_module(_), do: nil
 
   # --- syntax/semantic substance predicates ----------------------------------
   #

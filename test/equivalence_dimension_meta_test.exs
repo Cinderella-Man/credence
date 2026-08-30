@@ -246,6 +246,25 @@ defmodule Credence.EquivalenceDimensionMetaTest do
   end
 
   describe "adversarial controls" do
+    test "input inspection rejects non-data calls without executing them" do
+      path =
+        Path.join(System.tmp_dir!(), "credence-meta-input-#{System.unique_integer([:positive])}")
+
+      on_exit(fn -> File.rm(path) end)
+
+      ast = parse("[inputs: File.write!(#{inspect(path)}, \"ran\")]")
+
+      assert equivalence_input_values(ast) == :error
+      refute File.exists?(path)
+    end
+
+    test "input inspection puts a deadline around evaluation" do
+      ast = parse("[inputs: Stream.cycle([1]) |> Enum.to_list()]")
+      task = Task.async(fn -> equivalence_input_values(ast) end)
+
+      assert Task.yield(task, 1_200) == {:ok, :error}
+    end
+
     test "an unevaluable sensitive test remains a gate subject" do
       analysis = %{judgeable: true, value_kind_class: true, value_kind_unconstructible: false}
       refute class1_subjects([analysis]) == []
